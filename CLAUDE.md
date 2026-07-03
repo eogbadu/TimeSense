@@ -91,6 +91,29 @@ docker compose up -d
 - One ticket per branch/PR — no bundling
 - See `docs/workflows/jira_github_workflow.md`
 
+### REQUIRED: Ticket Creation — Before Writing Any Code
+
+Before starting any ticket, Claude must confirm it exists in Jira **with all required fields**. A ticket missing any field below is treated as not existing — stop and create it first.
+
+**Required fields:**
+- Title (`TIME-###: description`)
+- Goal (one paragraph)
+- Scope (bullet list of what will be built)
+- Non-goals (explicit list of what will NOT be done)
+- Files likely changed
+- Acceptance criteria (checkable)
+- Verification commands (runnable shell commands)
+- Dependencies (prior tickets)
+
+**To create a missing or incomplete ticket:**
+1. Add its full definition to `scripts/create_jira_tickets.py` (follow the ADF structure already used for TIME-001 through TIME-015)
+2. Run `python scripts/create_jira_tickets.py`
+3. Confirm it appears in Jira with all fields before starting code
+
+**Do not write a single line of code until the ticket is complete in Jira.**
+
+---
+
 ### REQUIRED: Ticket Transitions — Claude Must Run These Commands
 
 These are **mandatory, non-skippable checkpoints**. Claude must execute the exact command at each step. No exceptions.

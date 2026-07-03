@@ -697,6 +697,13 @@ TICKETS = [
                 "tests/test_onboarding.py — personality persists, steps advance, skip integration, complete",
             ]),
             divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No onboarding UI screens in this ticket (handled in mobile tickets)",
+                "No changes to the User model itself",
+                "No A/B testing of onboarding flows",
+            ]),
+            divider(),
             h2("Onboarding Steps"),
             bullet_list([
                 "welcome",
@@ -951,6 +958,14 @@ TICKETS = [
                 "43 backend tests passing",
             ]),
             divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_subscriptions.py -v\n"
+                "cd backend && pytest -q  # full suite\n"
+                "# Stripe webhook test:\n"
+                "stripe trigger invoice.paid --stripe-secret $STRIPE_SECRET_KEY"
+            ),
+            divider(),
             h2("Dependencies"),
             p("TIME-007 (user model), TIME-005 (Firebase auth) must be complete."),
             divider(),
@@ -1002,6 +1017,12 @@ TICKETS = [
                 "48 backend tests passing",
             ]),
             divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_entitlements.py -v\n"
+                "cd backend && pytest -q  # full suite"
+            ),
+            divider(),
             h2("Dependencies"),
             p("TIME-011 (subscription model) must be complete."),
             divider(),
@@ -1046,6 +1067,12 @@ TICKETS = [
                 "Provider errors propagate as HTTP 502 with a clean message",
                 "No real API calls in test suite",
             ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_llm_gateway.py -v\n"
+                "cd backend && pytest -q  # full suite"
+            ),
             divider(),
             h2("Dependencies"),
             p("TIME-005 (config/settings pattern) must be complete."),
@@ -1095,6 +1122,12 @@ TICKETS = [
                 "Tests cover approval and rejection flows with mocked provider",
             ]),
             divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_calendar.py -v\n"
+                "cd backend && pytest -q  # full suite"
+            ),
+            divider(),
             h2("Dependencies"),
             p("TIME-007 (user model), TIME-011 (entitlements for premium gate on calendar write)."),
             divider(),
@@ -1141,6 +1174,12 @@ TICKETS = [
                 "Tests cover approval, rejection, and mode-limit enforcement",
             ]),
             divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_notifications.py -v\n"
+                "cd backend && pytest -q  # full suite"
+            ),
+            divider(),
             h2("Dependencies"),
             p("TIME-011 (entitlements), TIME-014 (calendar provider) must be complete."),
             divider(),
@@ -1171,6 +1210,37 @@ def transition_ticket(issue_key: str, status: str) -> bool:
         data=json.dumps({"transition": {"id": tid}}),
     )
     return r.status_code == 204
+
+
+REQUIRED_ADF_HEADINGS = ["Goal", "Scope", "Non-Goals", "Acceptance Criteria", "Verification"]
+
+def validate_ticket(ticket: dict) -> list[str]:
+    """Return a list of missing/invalid fields. Empty list = ticket is valid."""
+    errors = []
+    if not ticket.get("summary", "").strip():
+        errors.append("missing: summary")
+    if "TIME-" not in ticket.get("summary", ""):
+        errors.append("summary must contain ticket key (e.g. TIME-###)")
+    desc = ticket.get("description")
+    if not desc:
+        errors.append("missing: description")
+        return errors
+    # Check ADF doc has the required heading sections
+    content_texts = []
+    def _collect(node):
+        if isinstance(node, dict):
+            if node.get("type") == "text":
+                content_texts.append(node.get("text", ""))
+            for v in node.values():
+                if isinstance(v, list):
+                    for child in v:
+                        _collect(child)
+    _collect(desc)
+    full_text = " ".join(content_texts)
+    for heading in REQUIRED_ADF_HEADINGS:
+        if heading.lower() not in full_text.lower():
+            errors.append(f"description missing section: {heading}")
+    return errors
 
 
 def create_ticket(ticket: dict) -> str:
@@ -1230,6 +1300,21 @@ def get_existing_tickets() -> dict[str, str]:
 
 def main():
     print(f"Connecting to {JIRA_BASE_URL}/rest/api/3 ...\n")
+
+    # Validate all tickets before touching Jira — fail fast on missing fields
+    validation_errors = []
+    for ticket in TICKETS:
+        errs = validate_ticket(ticket)
+        if errs:
+            validation_errors.append((ticket.get("summary", "(no summary)"), errs))
+
+    if validation_errors:
+        print("VALIDATION FAILED — fix these tickets before running:\n")
+        for summary, errs in validation_errors:
+            print(f"  {summary}")
+            for e in errs:
+                print(f"    ✗ {e}")
+        raise SystemExit(1)
 
     existing = get_existing_tickets()
     print(f"Found {len(existing)} existing tickets.\n")
