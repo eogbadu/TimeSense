@@ -12,6 +12,7 @@ from app.models.base import Base, TimestampMixin, UUIDMixin
 if TYPE_CHECKING:
     from app.models.calendar import CalendarIntegration, PendingCalendarAction
     from app.models.consent import ConsentRecord
+    from app.models.notification import Notification, ReplanRequest
     from app.models.onboarding import AssistantPersonality, OnboardingState
     from app.models.subscription import Subscription
 
@@ -48,6 +49,12 @@ class User(UUIDMixin, TimestampMixin, Base):
     )
     pending_calendar_actions: Mapped[list[PendingCalendarAction]] = relationship(
         "PendingCalendarAction", back_populates="user", cascade="all, delete-orphan"
+    )
+    notifications: Mapped[list[Notification]] = relationship(
+        "Notification", back_populates="user", cascade="all, delete-orphan"
+    )
+    replan_requests: Mapped[list[ReplanRequest]] = relationship(
+        "ReplanRequest", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

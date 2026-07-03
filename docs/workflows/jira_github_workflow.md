@@ -71,19 +71,44 @@ Rules:
 
 ---
 
+## Automatic Jira Sync via GitHub Actions
+
+`.github/workflows/jira-sync.yml` transitions tickets automatically:
+
+| Event | Transition |
+|---|---|
+| Push to `feature/TIME-*` | → In Progress |
+| PR opened targeting `main` | → In Review |
+| PR merged to `main` | → Done |
+
+**Required GitHub Secrets** (set once at https://github.com/eogbadu/TimeSense/settings/secrets/actions):
+
+| Secret | Value |
+|---|---|
+| `JIRA_BASE_URL` | `https://eogbadu.atlassian.net` |
+| `JIRA_EMAIL` | your Jira login email |
+| `JIRA_API_TOKEN` | from https://id.atlassian.com/manage-profile/security/api-tokens |
+
+Until secrets are set, run transitions manually with `python scripts/move_ticket.py TIME-### <status>`.
+
+---
+
 ## Pull Request Workflow
 
 1. **Read** project memory and the relevant spec before coding.
 2. **Confirm** the active Jira ticket.
 3. **Create** or **use** the branch named after the ticket.
-4. **Implement** only what the ticket scope allows.
-5. **Add or update** tests.
-6. **Run** verification commands.
-7. **Update** project memory files.
-8. **Update** `CHANGELOG.md`.
-9. **Create** PR using the template in `.github/PULL_REQUEST_TEMPLATE/pull_request_template.md`.
-10. **Link** the PR to the Jira ticket in the PR description.
-11. **Record** next step in project memory.
+4. **Move ticket → In Progress**: `python scripts/move_ticket.py TIME-### "in progress"` *(if Actions haven't fired)*
+5. **Implement** only what the ticket scope allows.
+6. **Add or update** tests.
+7. **Run** verification commands.
+8. **Update** project memory files.
+9. **Update** `CHANGELOG.md`.
+10. **Create** PR using the template in `.github/PULL_REQUEST_TEMPLATE/pull_request_template.md`.
+11. **Move ticket → In Review**: `python scripts/move_ticket.py TIME-### "in review"` *(immediately after `gh pr create`)*
+12. **Link** the PR to the Jira ticket in the PR description.
+13. **After merge — move ticket → Done**: `python scripts/move_ticket.py TIME-### done`
+14. **Record** next step in project memory.
 
 ---
 
