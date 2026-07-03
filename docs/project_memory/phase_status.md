@@ -1,42 +1,37 @@
 # Phase Status
 
 ## Current Phase
-Phase 2: Core Data Model and Auth (TIME-007 next)
+Phase 3: Cross-Platform Subscription Entitlements (TIME-011 next)
 
 ## Completed Phases
-- Phase 0: 2026-07-03 — All bootstrap files, docs, skills, memory, and workflow docs created. TIME-001 complete.
-- Phase 1: 2026-07-03 — Backend foundation complete. TIME-002 through TIME-006 done.
+- Phase 0: 2026-07-03 — Bootstrap files, docs, skills, memory, workflow docs. TIME-001 done.
+- Phase 1: 2026-07-03 — Backend foundation. FastAPI, PostgreSQL, Redis/Celery, Firebase Auth, migrations. TIME-002–TIME-006 done.
+- Phase 2: 2026-07-03 — Core data model and auth. User/Profile/Preferences, onboarding state, assistant personality, consent records, admin role enforcement. TIME-007–TIME-010 done.
 
-## Current Phase Acceptance Criteria
-- [x] README.md created
-- [x] AGENTS.md created
-- [x] CHANGELOG.md created
-- [x] docs/product/product_brief.md created
-- [x] docs/architecture/architecture_overview.md created
-- [x] docs/project_memory/context_summary.md created
-- [x] docs/project_memory/phase_status.md created (this file)
-- [x] docs/project_memory/implementation_log.md
-- [x] docs/project_memory/decision_log.md
-- [x] docs/project_memory/open_questions.md
-- [x] docs/project_memory/known_issues.md
-- [x] docs/project_memory/change_summary.md
-- [x] docs/workflows/jira_github_workflow.md
-- [x] docs/workflows/memory_compaction_policy.md
-- [x] tickets/implementation_sequence.md
-- [x] tickets/jira_ticket_template.md
-- [x] agents/subagents/ specs (8 core files)
-- [x] .claude/skills/ SKILL.md files (10 files)
-- [x] .github/PULL_REQUEST_TEMPLATE/pull_request_template.md
-- [x] Operational CLAUDE.md (shorter version)
-- [x] No product application code added during Phase 0
+## Phase 2 Acceptance Criteria
+- [x] Authenticated user can be created/resolved (get_or_create_user)
+- [x] User preferences can be saved and read
+- [x] Consent records can be created and read (append-only audit trail)
+- [x] Assistant personality can be saved
+- [x] Admin-only route protection works (403 for non-admins, 401 for unauthenticated)
+- [x] Tests cover core auth and data model behavior (35 tests passing)
+
+## Phase 3 Acceptance Criteria (upcoming)
+- [ ] User can start 14-day Premium trial
+- [ ] Stripe customer created for web subscriptions
+- [ ] Subscription status updates from Stripe webhooks
+- [ ] Apple/Google subscription notification handler stubs exist
+- [ ] Expired/canceled users move to Free Basic Mode
+- [ ] Premium gates work (feature flag check)
+- [ ] Referral reward logic implemented or stubbed with tests
+- [ ] Admin can view subscription/trial status
 
 ## Active Jira Tickets
-- TIME-001: Repository, Memory, and Workflow Bootstrap
+- Merging: TIME-007 (PR #6), TIME-008 (PR #7), TIME-009 (PR #8), TIME-010 (PR #9)
+- Next: TIME-011 (Stripe Trial Foundation)
 
 ## Blockers
-- Need GitHub repo URL from user
-- Need Jira project key confirmation (using TIME-### as specified)
-- Need Jira project URL from user
+- None
 
 ## Next Phase
-Phase 1: Backend Foundation (TIME-002)
+Phase 4: Mobile App Shells (iOS SwiftUI + Android Compose) — after Phase 3
