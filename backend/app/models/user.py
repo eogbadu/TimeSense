@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from app.models.onboarding import AssistantPersonality, OnboardingState
 
 
 class User(UUIDMixin, TimestampMixin, Base):
@@ -16,11 +22,17 @@ class User(UUIDMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     onboarding_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    profile: Mapped["UserProfile"] = relationship(
+    profile: Mapped[UserProfile] = relationship(
         "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-    preferences: Mapped["UserPreferences"] = relationship(
+    preferences: Mapped[UserPreferences] = relationship(
         "UserPreferences", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    assistant_personality: Mapped[AssistantPersonality | None] = relationship(
+        "AssistantPersonality", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    onboarding_state: Mapped[OnboardingState | None] = relationship(
+        "OnboardingState", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -43,7 +55,7 @@ class UserProfile(UUIDMixin, TimestampMixin, Base):
     avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     onboarding_path: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
-    user: Mapped["User"] = relationship("User", back_populates="profile")
+    user: Mapped[User] = relationship("User", back_populates="profile")
 
     def __repr__(self) -> str:
         return f"<UserProfile user_id={self.user_id} display_name={self.display_name}>"
@@ -64,7 +76,7 @@ class UserPreferences(UUIDMixin, TimestampMixin, Base):
     theme: Mapped[str] = mapped_column(String(10), nullable=False, default="light")
     language: Mapped[str] = mapped_column(String(10), nullable=False, default="en")
 
-    user: Mapped["User"] = relationship("User", back_populates="preferences")
+    user: Mapped[User] = relationship("User", back_populates="preferences")
 
     def __repr__(self) -> str:
         return f"<UserPreferences user_id={self.user_id}>"
