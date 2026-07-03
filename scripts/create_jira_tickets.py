@@ -904,6 +904,24 @@ TICKETS = [
 # Jira API calls
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Transition IDs for this project's workflow
+_TRANSITION_IDS = {"todo": "11", "inprogress": "21", "inreview": "31", "done": "41"}
+
+
+def transition_ticket(issue_key: str, status: str) -> bool:
+    """Move a ticket to a new status. status: todo | inprogress | inreview | done"""
+    tid = _TRANSITION_IDS.get(status.lower().replace(" ", ""))
+    if not tid:
+        return False
+    r = requests.post(
+        f"{JIRA_BASE_URL}/rest/api/3/issue/{issue_key}/transitions",
+        auth=AUTH,
+        headers=HEADERS,
+        data=json.dumps({"transition": {"id": tid}}),
+    )
+    return r.status_code == 204
+
+
 def create_ticket(ticket: dict) -> str:
     payload = {
         "fields": {
