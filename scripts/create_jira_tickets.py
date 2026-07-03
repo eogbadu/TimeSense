@@ -897,6 +897,257 @@ TICKETS = [
         ),
     },
 
+    # ── PHASE 3 ──────────────────────────────────────────────────────────────
+
+    {
+        "summary": "TIME-011: Stripe Customer and Trial Foundation",
+        "labels": ["phase-3", "backend", "subscriptions", "stripe"],
+        "description": doc(
+            h2("Goal"),
+            p("Build the unified Subscription model and Stripe customer creation so every new web user "
+              "can start a 14-day free trial. This is the foundation all monetisation flows build on."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Subscription SQLAlchemy model: user_id FK, platform (stripe/apple/google), status, platform_customer_id, platform_subscription_id, plan, trial_start/end, current_period_end, cancel_at_period_end",
+                "SubscriptionRepository: start_trial(), update(), get_by_user_id(), get_by_platform_customer_id()",
+                "SubscriptionService: start_trial() creates Stripe Customer on web path; handle_stripe_event() dispatches webhook types",
+                "Alembic migration: subscriptions table",
+                "POST /api/v1/subscriptions/trial — idempotent, 14-day trial",
+                "GET /api/v1/subscriptions/me — current subscription state",
+                "GET /api/v1/subscriptions/me/entitlement — {is_premium, status, platform}",
+                "POST /webhooks/stripe — validates Stripe signature before dispatch",
+                "POST /webhooks/apple and /webhooks/google — handler stubs",
+                "Apple and Google webhook handlers in SubscriptionService (stubbed)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No actual payment capture in this ticket (Stripe Checkout / payment links)",
+                "No subscription management UI",
+                "No cancellation flow",
+                "No referral logic",
+            ]),
+            divider(),
+            h2("Key Files"),
+            code_block(
+                "backend/app/models/subscription.py\n"
+                "backend/app/repositories/subscription_repository.py\n"
+                "backend/app/services/subscription_service.py\n"
+                "backend/app/schemas/subscription.py\n"
+                "backend/app/api/v1/subscriptions.py\n"
+                "backend/migrations/versions/d4e5f6a7b8c9_add_subscriptions.py\n"
+                "backend/tests/test_subscriptions.py",
+                "text"
+            ),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /subscriptions/trial creates subscription with status=trialing and Stripe customer ID",
+                "POST /subscriptions/trial is idempotent (same subscription returned on repeat calls)",
+                "GET /subscriptions/me/entitlement returns is_premium=True during trial",
+                "Stripe webhook returns 400 on bad signature, 503 if secret not configured",
+                "invoice.paid event moves status from trialing to active",
+                "43 backend tests passing",
+            ]),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-007 (user model), TIME-005 (Firebase auth) must be complete."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-012: Subscription Status Gates and Feature Flags"),
+        ),
+    },
+
+    {
+        "summary": "TIME-012: Subscription Gates and Feature Flags",
+        "labels": ["phase-3", "backend", "subscriptions", "entitlements"],
+        "description": doc(
+            h2("Goal"),
+            p("Implement the PremiumUser FastAPI dependency gate and a complete feature flag system "
+              "so every route and client knows exactly what a user can access based on their subscription tier."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "PremiumUser dependency: require_premium() — 403 SUBSCRIPTION_REQUIRED for non-premium users",
+                "feature_flags(is_premium) function: returns dict of all feature access flags",
+                "PREMIUM_FEATURES: ai_suggestions, calendar_write, replan, insight_trends, capture_unlimited, integrations, smart_scheduling, focus_modes",
+                "FREE_FEATURES: capture_basic (5/day), today_view, manual_task_entry, basic_reminders",
+                "GET /subscriptions/me/features — full feature flag dict for app launch",
+                "Demonstration endpoint: GET /subscriptions/premium-only-example",
+                "FeatureFlagsResponse schema",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No per-feature enforcement in business logic (enforcement is in service layer calls, not the flag dict itself)",
+                "No A/B testing or experiment flags",
+            ]),
+            divider(),
+            h2("Key Files"),
+            code_block(
+                "backend/app/core/entitlements.py\n"
+                "backend/app/api/v1/subscriptions.py (updated)\n"
+                "backend/app/schemas/subscription.py (updated)\n"
+                "backend/tests/test_entitlements.py",
+                "text"
+            ),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Free user gets 403 SUBSCRIPTION_REQUIRED on premium-gated route",
+                "Trialing user can access premium-gated route",
+                "GET /me/features returns is_premium=False and ai_suggestions=False for free user",
+                "GET /me/features returns all premium flags=True for trialing user",
+                "48 backend tests passing",
+            ]),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-011 (subscription model) must be complete."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-013: LLM Gateway Abstraction"),
+        ),
+    },
+
+    {
+        "summary": "TIME-013: LLM Gateway Abstraction",
+        "labels": ["phase-3", "backend", "llm", "ai"],
+        "description": doc(
+            h2("Goal"),
+            p("Build a provider-agnostic LLM gateway so all AI features (suggestions, scheduling, "
+              "coaching messages) call a single internal interface that can be swapped between "
+              "OpenAI, Anthropic, or other providers without changing feature code."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "LLMProvider abstract base class: complete(prompt, system, model, max_tokens) -> str",
+                "OpenAIProvider implementation using openai SDK",
+                "AnthropicProvider implementation using anthropic SDK (stub if SDK not installed)",
+                "LLMGateway: wraps provider, handles retries, timeout, cost logging",
+                "get_llm_gateway() FastAPI dependency returning configured gateway from settings",
+                "OPENAI_API_KEY and ANTHROPIC_API_KEY in settings (already in .env.example)",
+                "LLM_PROVIDER setting: openai | anthropic (default: openai)",
+                "Test with mocked provider — no real API calls in tests",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No streaming responses in this ticket",
+                "No function calling / tool use",
+                "No prompt versioning system",
+                "No cost tracking dashboard",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "LLMGateway.complete() returns string response from mocked provider in tests",
+                "Switching LLM_PROVIDER setting changes the active provider",
+                "Provider errors propagate as HTTP 502 with a clean message",
+                "No real API calls in test suite",
+            ]),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-005 (config/settings pattern) must be complete."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-014: Calendar Provider Abstraction"),
+        ),
+    },
+
+    {
+        "summary": "TIME-014: Calendar Provider Abstraction",
+        "labels": ["phase-3", "backend", "calendar", "integrations"],
+        "description": doc(
+            h2("Goal"),
+            p("Build a provider-agnostic calendar integration layer so Google Calendar and Apple Calendar "
+              "(via CalDAV) can be read and written through a single internal interface. "
+              "Calendar writes always require explicit user approval — never auto-write."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "CalendarProvider abstract base: list_events(user_id, start, end), create_event(user_id, event, approval_token)",
+                "GoogleCalendarProvider: OAuth2 token exchange, list/create events via Google Calendar API",
+                "AppleCalendarProvider stub: CalDAV endpoint (full impl deferred to mobile)",
+                "CalendarEvent schema: title, start, end, location, description, calendar_id",
+                "PendingCalendarAction model: stores calendar writes awaiting user approval",
+                "POST /calendar/events/pending — queue a calendar write for approval",
+                "POST /calendar/events/pending/{id}/approve — user approves, event is written",
+                "POST /calendar/events/pending/{id}/reject — user rejects, action discarded",
+                "GET /calendar/events — list upcoming events (read-only, no approval needed)",
+                "CalendarIntegration model: stores OAuth tokens per user per provider",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No drag-and-drop schedule editor",
+                "No recurring event management",
+                "No calendar conflict detection in this ticket",
+                "No Apple Calendar native integration (handled on-device in iOS ticket)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Calendar writes are never executed without an approval token",
+                "Pending calendar actions have a 24h expiry",
+                "Approved action calls provider.create_event() and marks action as approved",
+                "Rejected action is soft-deleted",
+                "Tests cover approval and rejection flows with mocked provider",
+            ]),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-007 (user model), TIME-011 (entitlements for premium gate on calendar write)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-015: Notification and Replan Approval System"),
+        ),
+    },
+
+    {
+        "summary": "TIME-015: Notification and Replan Approval System",
+        "labels": ["phase-3", "backend", "notifications", "replanning"],
+        "description": doc(
+            h2("Goal"),
+            p("Build the backend approval flow for AI-generated schedule replans. "
+              "The AI proposes a replan; the user must approve or reject before any calendar changes occur. "
+              "Also build the notification preference enforcement layer."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "ReplanProposal model: user_id, proposed_changes (JSON), status (pending/approved/rejected), expires_at",
+                "ReplanRepository: create, get, approve, reject",
+                "POST /replans — AI creates a replan proposal (premium only)",
+                "GET /replans/pending — list pending proposals for user",
+                "POST /replans/{id}/approve — user approves; triggers calendar writes",
+                "POST /replans/{id}/reject — user rejects; proposal discarded",
+                "NotificationQueue model: stores scheduled push notifications with delivery status",
+                "Notification modes: gentle (1x/day), balanced (3x/day), active_coach (unlimited)",
+                "Celery task: process_pending_notifications — checks mode limits before sending",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No actual push notification delivery in this ticket (FCM/APNs integration is a later ticket)",
+                "No smart scheduling algorithm (TIME-030+)",
+                "No replan UI (mobile tickets)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Replan proposals require Premium entitlement (403 for free users)",
+                "Replan cannot auto-approve — user action required",
+                "Approved replan triggers calendar write via CalendarProvider",
+                "Notification mode limits are enforced (gentle users don't get spammed)",
+                "Tests cover approval, rejection, and mode-limit enforcement",
+            ]),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-011 (entitlements), TIME-014 (calendar provider) must be complete."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-016: iOS App Shell and Navigation (Phase 4 kickoff)"),
+        ),
+    },
 ]
 
 
@@ -966,10 +1217,10 @@ def update_ticket(issue_key: str, ticket: dict) -> bool:
 def get_existing_tickets() -> dict[str, str]:
     """Return mapping of summary -> issue key for existing TIME tickets."""
     response = requests.get(
-        f"{JIRA_BASE_URL}/rest/api/3/search",
+        f"{JIRA_BASE_URL}/rest/api/3/search/jql",
         auth=AUTH,
         headers=HEADERS,
-        params={"jql": f"project={JIRA_PROJECT_KEY} ORDER BY created ASC", "maxResults": 100},
+        params={"jql": f"project={JIRA_PROJECT_KEY} ORDER BY created ASC", "maxResults": 100, "fields": "summary"},
     )
     if response.status_code != 200:
         return {}
