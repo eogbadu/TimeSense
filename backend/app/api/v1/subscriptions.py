@@ -4,8 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.entitlements import PremiumUser, feature_flags
 from app.core.security import CurrentUser
-from app.schemas.subscription import EntitlementResponse, StartTrialRequest, SubscriptionResponse
+from app.schemas.subscription import (
+    EntitlementResponse,
+    FeatureFlagsResponse,
+    StartTrialRequest,
+    SubscriptionResponse,
+)
 from app.services.subscription_service import SubscriptionService
 from app.services.user_service import UserService
 
@@ -42,6 +48,22 @@ async def get_entitlement(
     if sub is None:
         return EntitlementResponse(is_premium=False, status=None, platform=None)
     return EntitlementResponse(is_premium=sub.is_premium, status=sub.status, platform=sub.platform)
+
+
+@router.get("/me/features", response_model=FeatureFlagsResponse, summary="Get feature flags for current user")
+async def get_feature_flags(
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+) -> FeatureFlagsResponse:
+    user_id = await _get_user_id(current_user, db)
+    svc = SubscriptionService(db)
+    is_premium = await svc.is_premium(user_id)
+    return FeatureFlagsResponse(is_premium=is_premium, flags=feature_flags(is_premium))
+
+
+@router.get("/premium-only-example", summary="Example premium-gated endpoint")
+async def premium_only(_: PremiumUser = None) -> dict:  # type: ignore[assignment]
+    return {"message": "You have Premium access."}
 
 
 @router.post("/trial", response_model=SubscriptionResponse, status_code=201, summary="Start 14-day trial")
