@@ -62,6 +62,66 @@ Every agent must read these files before writing any code:
 
 ---
 
+## MANDATORY: Jira Ticket Creation
+
+Before writing any code for a ticket, Claude must verify the ticket exists in Jira **with full detail**. A ticket without all required fields is treated as missing — do not start coding until it is complete.
+
+### Required fields (every ticket must have all of these)
+
+1. **Title** — `TIME-###: Short descriptive title`
+2. **Goal** — one paragraph: what this ticket achieves and why
+3. **Scope** — bullet list of exactly what will be built
+4. **Non-goals** — explicit list of what will NOT be done
+5. **Files likely changed** — list of paths expected to be created or modified
+6. **Acceptance criteria** — checkable conditions that must pass before closing
+7. **Verification commands** — exact shell commands to confirm it works
+8. **Dependencies** — which tickets must be complete first
+
+### How to create a missing ticket
+
+Use `scripts/create_jira_tickets.py`. Add the ticket definition to the `TICKETS` list following the ADF structure already used for TIME-001 through TIME-015. Then run:
+
+```bash
+python scripts/create_jira_tickets.py
+```
+
+### Enforcement rule
+
+If the ticket for the work you are about to do does not exist in Jira, or exists but is missing required fields above:
+1. **Stop** — do not start coding
+2. Add the full ticket definition to `scripts/create_jira_tickets.py`
+3. Run `python scripts/create_jira_tickets.py` to create it
+4. Confirm the ticket appears in Jira with all fields populated
+5. Then proceed to code
+
+---
+
+## MANDATORY: Jira Ticket Transitions
+
+Claude must run these commands at each checkpoint — no exceptions, no skipping.
+
+**Checkpoint 1 — Before first commit on a ticket:**
+```bash
+python scripts/move_ticket.py <JIRA-KEY> "in progress"
+```
+
+**Checkpoint 2 — Immediately after `gh pr create` returns:**
+```bash
+python scripts/move_ticket.py <JIRA-KEY> "in review"
+```
+
+**Checkpoint 3 — Immediately after a PR is merged to main:**
+```bash
+python scripts/move_ticket.py <JIRA-KEY> done
+```
+
+`<JIRA-KEY>` is the Jira issue number (e.g. `TIME-17`, `TIME-20`). See `docs/project_memory/context_summary.md` for the mapping between internal ticket names (TIME-011) and Jira keys (TIME-17).
+
+The script is idempotent — safe to run even if the ticket is already in the target state.
+Skipping a transition = corrupted Jira board. Treat it the same as a failing test.
+
+---
+
 ## Code Generation Constraints
 
 **Do NOT:**
