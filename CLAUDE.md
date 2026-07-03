@@ -91,19 +91,25 @@ docker compose up -d
 - One ticket per branch/PR — no bundling
 - See `docs/workflows/jira_github_workflow.md`
 
-### Mandatory Ticket Transition Checklist
+### REQUIRED: Ticket Transitions — Claude Must Run These Commands
 
-GitHub Actions handle transitions automatically via `.github/workflows/jira-sync.yml`.
-The agent must still run these steps manually when working locally or if Actions haven't fired yet:
+These are **mandatory, non-skippable checkpoints**. Claude must execute the exact command at each step. No exceptions.
 
-| Step | When | Command |
-|---|---|---|
-| → **In Progress** | Before first commit on a ticket | `python scripts/move_ticket.py TIME-### "in progress"` |
-| → **In Review** | Immediately after `gh pr create` | `python scripts/move_ticket.py TIME-### "in review"` |
-| → **Done** | Immediately after PR is merged | `python scripts/move_ticket.py TIME-### done` |
+```bash
+# CHECKPOINT 1 — Before the first commit on any ticket
+python scripts/move_ticket.py <JIRA-KEY> "in progress"
 
-**These are not optional.** Missing a transition = broken Jira board.
-Run all three in sequence if catching up on a ticket that skipped states.
+# CHECKPOINT 2 — Immediately after `gh pr create` returns
+python scripts/move_ticket.py <JIRA-KEY> "in review"
+
+# CHECKPOINT 3 — Immediately after a PR is merged to main
+python scripts/move_ticket.py <JIRA-KEY> done
+```
+
+`<JIRA-KEY>` is the Jira issue number (e.g. `TIME-17`, `TIME-20`) — see the mapping in `docs/project_memory/context_summary.md`.
+
+If a ticket missed transitions, run all three commands in order to catch up.
+The script is idempotent — running it when a ticket is already in the target state is safe.
 
 ---
 

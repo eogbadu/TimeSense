@@ -62,6 +62,32 @@ Every agent must read these files before writing any code:
 
 ---
 
+## MANDATORY: Jira Ticket Transitions
+
+Claude must run these commands at each checkpoint — no exceptions, no skipping.
+
+**Checkpoint 1 — Before first commit on a ticket:**
+```bash
+python scripts/move_ticket.py <JIRA-KEY> "in progress"
+```
+
+**Checkpoint 2 — Immediately after `gh pr create` returns:**
+```bash
+python scripts/move_ticket.py <JIRA-KEY> "in review"
+```
+
+**Checkpoint 3 — Immediately after a PR is merged to main:**
+```bash
+python scripts/move_ticket.py <JIRA-KEY> done
+```
+
+`<JIRA-KEY>` is the Jira issue number (e.g. `TIME-17`, `TIME-20`). See `docs/project_memory/context_summary.md` for the mapping between internal ticket names (TIME-011) and Jira keys (TIME-17).
+
+The script is idempotent — safe to run even if the ticket is already in the target state.
+Skipping a transition = corrupted Jira board. Treat it the same as a failing test.
+
+---
+
 ## Code Generation Constraints
 
 **Do NOT:**
