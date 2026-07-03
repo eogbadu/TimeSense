@@ -1,0 +1,91 @@
+from functools import lru_cache
+from typing import Literal
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # App
+    app_name: str = "TimeSense"
+    app_env: Literal["development", "staging", "production"] = "development"
+    app_version: str = "0.1.0"
+    debug: bool = False
+    secret_key: str = "change_me"
+
+    # Database
+    database_url: str = "postgresql+asyncpg://timesense:timesense@localhost:5432/timesense"
+    database_url_sync: str = "postgresql://timesense:timesense@localhost:5432/timesense"
+
+    # Redis
+    redis_url: str = "redis://localhost:6379/0"
+
+    # CORS
+    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+
+    # Firebase
+    firebase_project_id: str = ""
+    firebase_service_account_json: str = "{}"
+
+    # Stripe
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_monthly: str = ""
+    stripe_price_annual: str = ""
+    stripe_price_founder: str = ""
+
+    # Apple
+    apple_bundle_id: str = "com.timesense.app"
+    apple_team_id: str = ""
+    apple_app_store_connect_key_id: str = ""
+    apple_app_store_connect_issuer_id: str = ""
+    apple_app_store_connect_private_key: str = ""
+
+    # Google Play
+    google_play_package_name: str = "com.timesense.app"
+    google_play_service_account_json: str = "{}"
+
+    # LLM
+    openai_api_key: str = ""
+    llm_default_provider: str = "openai"
+    llm_default_model: str = "gpt-4o"
+
+    # OAuth
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/api/v1/integrations/google/callback"
+    microsoft_client_id: str = ""
+    microsoft_client_secret: str = ""
+    microsoft_redirect_uri: str = "http://localhost:8000/api/v1/integrations/microsoft/callback"
+
+    # Slack
+    slack_client_id: str = ""
+    slack_client_secret: str = ""
+    slack_signing_secret: str = ""
+
+    # Todoist
+    todoist_client_id: str = ""
+    todoist_client_secret: str = ""
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env == "production"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()
