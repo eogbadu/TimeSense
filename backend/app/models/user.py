@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin, UUIDMixin
 
 if TYPE_CHECKING:
+    from app.models.calendar import CalendarIntegration, PendingCalendarAction
     from app.models.consent import ConsentRecord
     from app.models.onboarding import AssistantPersonality, OnboardingState
     from app.models.subscription import Subscription
@@ -41,6 +42,12 @@ class User(UUIDMixin, TimestampMixin, Base):
     )
     subscription: Mapped[Subscription | None] = relationship(
         "Subscription", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    calendar_integrations: Mapped[list[CalendarIntegration]] = relationship(
+        "CalendarIntegration", back_populates="user", cascade="all, delete-orphan"
+    )
+    pending_calendar_actions: Mapped[list[PendingCalendarAction]] = relationship(
+        "PendingCalendarAction", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
