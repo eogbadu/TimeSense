@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin, UUIDMixin
 
 if TYPE_CHECKING:
+    from app.models.consent import ConsentRecord
     from app.models.onboarding import AssistantPersonality, OnboardingState
 
 
@@ -33,6 +34,9 @@ class User(UUIDMixin, TimestampMixin, Base):
     )
     onboarding_state: Mapped[OnboardingState | None] = relationship(
         "OnboardingState", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    consent_records: Mapped[list[ConsentRecord]] = relationship(
+        "ConsentRecord", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
