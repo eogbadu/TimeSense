@@ -91,6 +91,20 @@ docker compose up -d
 - One ticket per branch/PR — no bundling
 - See `docs/workflows/jira_github_workflow.md`
 
+### Mandatory Ticket Transition Checklist
+
+GitHub Actions handle transitions automatically via `.github/workflows/jira-sync.yml`.
+The agent must still run these steps manually when working locally or if Actions haven't fired yet:
+
+| Step | When | Command |
+|---|---|---|
+| → **In Progress** | Before first commit on a ticket | `python scripts/move_ticket.py TIME-### "in progress"` |
+| → **In Review** | Immediately after `gh pr create` | `python scripts/move_ticket.py TIME-### "in review"` |
+| → **Done** | Immediately after PR is merged | `python scripts/move_ticket.py TIME-### done` |
+
+**These are not optional.** Missing a transition = broken Jira board.
+Run all three in sequence if catching up on a ticket that skipped states.
+
 ---
 
 ## GitHub Workflow
