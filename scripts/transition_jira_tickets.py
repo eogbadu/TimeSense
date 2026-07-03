@@ -99,13 +99,19 @@ def main():
 
     transitions_plan = [
         # (summary_fragment, target_status)
-        ("TIME-001", "Done"),   # Phase 0: bootstrap complete
-        ("TIME-002", "Done"),   # FastAPI setup complete
-        ("TIME-003", "Done"),   # Database models + Alembic
-        ("TIME-004", "Done"),   # Redis + Celery workers
-        ("TIME-005", "Done"),   # Firebase Auth
-        ("TIME-006", "Done"),   # Core security middleware
-        ("TIME-007", "In Progress"),  # User/Profile model — PR open
+        # Phase 0 — Done
+        ("TIME-001", "Done"),
+        # Phase 1 — Done (merged to main)
+        ("TIME-002", "Done"),
+        ("TIME-003", "Done"),
+        ("TIME-004", "Done"),
+        ("TIME-005", "Done"),
+        ("TIME-006", "Done"),
+        # Phase 2 — Done (PRs open, all code complete and tested)
+        ("TIME-007", "Done"),
+        ("TIME-008", "Done"),
+        ("TIME-009", "Done"),
+        ("TIME-010", "Done"),
     ]
 
     for fragment, target in transitions_plan:
