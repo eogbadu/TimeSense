@@ -25,3 +25,8 @@ class EntitlementResponse(BaseModel):
     is_premium: bool
     status: str | None
     platform: str | None
+
+
+class FeatureFlagsResponse(BaseModel):
+    is_premium: bool
+    flags: dict[str, bool]
