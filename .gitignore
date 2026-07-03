@@ -85,6 +85,7 @@ yarn-error.log*
 
 # Docker
 docker-compose.override.yml
+docker-compose.override.yaml
 
 # IDEs
 .idea/
