@@ -12,6 +12,7 @@ from app.models.base import Base, TimestampMixin, UUIDMixin
 if TYPE_CHECKING:
     from app.models.consent import ConsentRecord
     from app.models.onboarding import AssistantPersonality, OnboardingState
+    from app.models.subscription import Subscription
 
 
 class User(UUIDMixin, TimestampMixin, Base):
@@ -37,6 +38,9 @@ class User(UUIDMixin, TimestampMixin, Base):
     )
     consent_records: Mapped[list[ConsentRecord]] = relationship(
         "ConsentRecord", back_populates="user", cascade="all, delete-orphan"
+    )
+    subscription: Mapped[Subscription | None] = relationship(
+        "Subscription", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
