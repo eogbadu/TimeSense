@@ -1,0 +1,12 @@
+# Copy this to docker-compose.override.yml for local development hot-reload.
+# docker-compose.override.yml is gitignored.
+services:
+  backend:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+
+  worker:
+    command: celery -A app.workers.celery_app worker --loglevel=debug --concurrency=1
+    volumes:
+      - ./backend:/app

@@ -1,10 +1,11 @@
 # Phase Status
 
 ## Current Phase
-Phase 1: Backend Foundation (TIME-002 starting)
+Phase 2: Core Data Model and Auth (TIME-007 next)
 
 ## Completed Phases
 - Phase 0: 2026-07-03 — All bootstrap files, docs, skills, memory, and workflow docs created. TIME-001 complete.
+- Phase 1: 2026-07-03 — Backend foundation complete. TIME-002 through TIME-006 done.
 
 ## Current Phase Acceptance Criteria
 - [x] README.md created

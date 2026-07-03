@@ -11,11 +11,11 @@ Questions that require human input or external decisions before implementation c
 
 ## Jira Setup
 
-- Q: What is the Jira project URL and board for TimeSense?
-- Q: Is the ticket key confirmed as `TIME-###`?
-- Q: Who has admin access to create/manage tickets?
-- Status: Awaiting user input
-- Blocker for: Creating TIME-### tickets, linking branches and PRs
+- Jira project URL: https://eogbadu.atlassian.net/jira/software/projects/TIME
+- Project key: TIME (tickets are TIME-001, TIME-002, etc.)
+- Jira email: ekele_r@yahoo.com
+- Jira API token: stored in root `.env` as `JIRA_API_TOKEN`
+- Status: ANSWERED
 
 ## Firebase Project
 
