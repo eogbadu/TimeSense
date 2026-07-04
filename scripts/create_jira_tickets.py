@@ -1728,6 +1728,77 @@ TICKETS = [
             p("TIME-032: Now Screen — Current Context and Recommendation"),
         ),
     },
+
+    {
+        "summary": "TIME-032: Now Screen — Current Context and Recommendation",
+        "labels": ["phase-5", "ios", "android", "backend"],
+        "description": doc(
+            h2("Goal"),
+            p("Show the user's current moment: how much usable time is available right now, "
+              "the single best next task to work on, and quick action buttons (Done / Snooze / "
+              "Not Now / Ask). Data comes from GET /api/v1/now which returns context + "
+              "one best recommendation from the tasks scheduled today."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend: GET /api/v1/now — returns usable_minutes (hardcoded 60 for now), best_task (highest-priority pending task scheduled today or overdue), greeting string",
+                "Backend: NowResponse schema: greeting, usable_minutes, best_task (TaskResponse | null)",
+                "Backend: 5 tests: authenticated, no tasks returns null best_task, picks highest priority, picks overdue task, unauthenticated 401",
+                "iOS: NowView — hero card with greeting, usable time pill, task card with title/estimated time, quick action row (Done/Snooze/Not Now)",
+                "iOS: NowViewModel — loads /api/v1/now on .task, handles Done action (PATCH /tasks/{id} status=done), Snooze action (stub for now)",
+                "Android: NowScreen — same hero layout, LazyColumn not needed (single card), collectAsState",
+                "Android: NowViewModel — same logic as iOS ViewModel",
+                "Quick actions: Done calls PATCH /api/v1/tasks/{id} with {status: done}, then reloads; Snooze is no-op stub; Not Now reloads",
+                "Empty state: 'Nothing on your plate right now' when best_task is null",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No real usable-time calculation (Phase 8 — UsableTimeCalculator)",
+                "No LLM-generated recommendation explanations (Phase 8)",
+                "No 'Why this?' action in this ticket",
+                "No Replan action in this ticket",
+                "No calendar integration",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/api/v1/now.py (new)",
+                "backend/app/api/v1/__init__.py",
+                "backend/tests/test_now.py (new)",
+                "ios/TimeSense/Features/Now/NowView.swift",
+                "ios/TimeSense/Features/Now/NowViewModel.swift (new)",
+                "android/.../features/now/NowScreen.kt",
+                "android/.../features/now/NowViewModel.kt (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "GET /api/v1/now returns 200 with greeting, usable_minutes, best_task",
+                "best_task is null when no pending tasks exist",
+                "best_task is the highest-priority pending task for today",
+                "iOS Now tab shows hero card and task card on load",
+                "Tapping Done updates task status and reloads",
+                "iOS build succeeds",
+                "Android build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_now.py -v\n\n"
+                "xcodebuild -target TimeSense -sdk iphonesimulator18.0 CODE_SIGNING_ALLOWED=NO -quiet\n"
+                "# Expect: ** BUILD SUCCEEDED **\n\n"
+                "cd android && ./gradlew assembleDebug\n"
+                "# Expect: BUILD SUCCESSFUL"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-031 (Today screen, tasks endpoint), TIME-033 (Task model)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-034: Usable Time Calculator (Phase 8 — Recommendation Engine V1)"),
+        ),
+    },
 ]
 
 
