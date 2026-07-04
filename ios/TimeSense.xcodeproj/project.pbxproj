@@ -14,6 +14,7 @@
 		A1000005 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DesignTokens.swift */; };
 		A1000006 /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006 /* ViewModifiers.swift */; };
 		A1000007 /* NowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000007 /* NowView.swift */; };
+		A1000033 /* NowViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000033 /* NowViewModel.swift */; };
 		A1000008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008 /* TodayView.swift */; };
 		A1000031 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000031 /* TodayViewModel.swift */; };
 		A1000032 /* TimelineCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000032 /* TimelineCard.swift */; };
@@ -38,6 +39,7 @@
 		A2000005 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		A2000006 /* ViewModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
 		A2000007 /* NowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowView.swift; sourceTree = "<group>"; };
+		A2000033 /* NowViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowViewModel.swift; sourceTree = "<group>"; };
 		A2000008 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		A2000031 /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModel.swift; sourceTree = "<group>"; };
 		A2000032 /* TimelineCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCard.swift; sourceTree = "<group>"; };
@@ -183,6 +185,7 @@
 			isa = PBXGroup;
 			children = (
 				A2000007 /* NowView.swift */,
+				A2000033 /* NowViewModel.swift */,
 			);
 			path = Now;
 			sourceTree = "<group>";
@@ -339,6 +342,7 @@
 				A1000005 /* DesignTokens.swift in Sources */,
 				A1000006 /* ViewModifiers.swift in Sources */,
 				A1000007 /* NowView.swift in Sources */,
+				A1000033 /* NowViewModel.swift in Sources */,
 				A1000008 /* TodayView.swift in Sources */,
 				A1000031 /* TodayViewModel.swift in Sources */,
 				A1000032 /* TimelineCard.swift in Sources */,

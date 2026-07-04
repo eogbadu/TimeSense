@@ -1,105 +1,178 @@
 package com.timesense.app.features.now
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.timesense.app.components.EmptyState
+import com.timesense.app.core.design.Elevation
 import com.timesense.app.core.design.Radius
 import com.timesense.app.core.design.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NowScreen() {
+fun NowScreen(
+    viewModel: NowViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Now", style = MaterialTheme.typography.headlineMedium) })
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(padding)
-                .padding(horizontal = Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            Spacer(Modifier.height(Spacing.xs))
-            ContextSummaryCard()
-            CurrentFocusCard()
-            UpNextSection()
+            when (val state = uiState) {
+                is NowUiState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                is NowUiState.Error -> {
+                    EmptyState(
+                        icon = Icons.Filled.AutoAwesome,
+                        title = "Couldn't load",
+                        message = state.message,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                is NowUiState.Loaded -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = Spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                    ) {
+                        Spacer(Modifier.height(Spacing.xs))
+                        GreetingCard(
+                            greeting = state.context.greeting,
+                            usableMinutes = state.context.usable_minutes
+                        )
+                        val task = state.context.best_task
+                        if (task != null) {
+                            BestTaskCard(task = task, onDone = { viewModel.markDone(task.id) })
+                        } else {
+                            EmptyState(
+                                icon = Icons.Filled.AutoAwesome,
+                                title = "Nothing on your plate right now",
+                                message = "Capture a task to get started."
+                            )
+                        }
+                        Spacer(Modifier.height(Spacing.xl))
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ContextSummaryCard() {
+private fun GreetingCard(greeting: String, usableMinutes: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(Radius.lg),
-        elevation = CardDefaults.cardElevation(defaultElevation = com.timesense.app.core.design.Elevation.card)
+        shape = RoundedCornerShape(Radius.lg),
+        elevation = CardDefaults.cardElevation(defaultElevation = Elevation.card)
     ) {
         Column(modifier = Modifier.padding(Spacing.md)) {
-            Text("Good morning", style = MaterialTheme.typography.headlineSmall)
+            Text(greeting, style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(Spacing.xs))
             Text(
-                "Here's what matters right now.",
+                "$usableMinutes min available",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
 }
 
 @Composable
-private fun CurrentFocusCard() {
+private fun BestTaskCard(task: BestTask, onDone: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(Radius.lg),
-        elevation = CardDefaults.cardElevation(defaultElevation = com.timesense.app.core.design.Elevation.card)
+        shape = RoundedCornerShape(Radius.lg),
+        elevation = CardDefaults.cardElevation(defaultElevation = Elevation.card)
     ) {
         Column(modifier = Modifier.padding(Spacing.md)) {
             Text(
-                "CURRENT FOCUS",
+                "BEST NEXT TASK",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(Spacing.sm))
-            Text(
-                "No active focus block",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(Modifier.height(Spacing.xs))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(task.title, style = MaterialTheme.typography.titleMedium)
+                    task.estimated_minutes?.let { mins ->
+                        Text(
+                            "$mins min estimated",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                PriorityChip(priority = task.priority)
+            }
+            Spacer(Modifier.height(Spacing.md))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Button(onClick = onDone) { Text("Done") }
+                OutlinedButton(onClick = {}) { Text("Snooze") }
+                OutlinedButton(
+                    onClick = {},
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) { Text("Not now") }
+            }
         }
     }
 }
 
 @Composable
-private fun UpNextSection() {
+private fun PriorityChip(priority: Int) {
+    val label = "P$priority"
+    val color = when (priority) {
+        1 -> MaterialTheme.colorScheme.error
+        2 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Text(
-        "UP NEXT",
+        label,
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    EmptyState(
-        icon = Icons.Filled.AutoAwesome,
-        title = "Nothing scheduled",
-        message = "Add tasks via Capture to see them here."
+        color = color,
+        modifier = Modifier.padding(start = Spacing.sm)
     )
 }

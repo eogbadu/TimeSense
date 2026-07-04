@@ -11,6 +11,7 @@ from app.api.v1.onboarding import router as onboarding_router
 from app.api.v1.referrals import router as referrals_router
 from app.api.v1.capture import router as capture_router
 from app.api.v1.subscriptions import router as subscriptions_router
+from app.api.v1.now import router as now_router
 from app.api.v1.tasks import router as tasks_router
 from app.api.v1.timeline import router as timeline_router
 from app.api.v1.users import router as users_router
@@ -29,4 +30,5 @@ api_router.include_router(referrals_router)
 api_router.include_router(invites_router)
 api_router.include_router(tasks_router)
 api_router.include_router(timeline_router)
+api_router.include_router(now_router)
 api_router.include_router(capture_router)
