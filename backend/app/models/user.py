@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.models.onboarding import AssistantPersonality, OnboardingState
     from app.models.referral import ReferralCode
     from app.models.subscription import Subscription
+    from app.models.task import Task
 
 
 class User(UUIDMixin, TimestampMixin, Base):
@@ -60,6 +61,9 @@ class User(UUIDMixin, TimestampMixin, Base):
     referral_code: Mapped[ReferralCode | None] = relationship(
         "ReferralCode", back_populates="owner", foreign_keys="ReferralCode.owner_id",
         uselist=False, cascade="all, delete-orphan"
+    )
+    tasks: Mapped[list[Task]] = relationship(
+        "Task", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

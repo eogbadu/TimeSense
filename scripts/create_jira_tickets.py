@@ -1471,7 +1471,76 @@ TICKETS = [
             p("TIME-002 (FastAPI structure), TIME-003 (auth middleware), TIME-004 (DB + Alembic)."),
             divider(),
             h2("Next Ticket"),
-            p("TIME-023: Subscription Entitlement Service"),
+            p("TIME-033: Task Model and Internal Reminders"),
+        ),
+    },
+
+    {
+        "summary": "TIME-033: Task Model and Internal Reminders",
+        "labels": ["phase-5", "backend", "fastapi", "task"],
+        "description": doc(
+            h2("Goal"),
+            p("Build the core Task data model and CRUD API that all downstream features depend on: "
+              "capture, scheduling, the Today screen, scoring, and the recommendation engine. "
+              "A Task represents something a user needs to do; an InternalReminder is a generated "
+              "system reminder tied to a task or a time. After this ticket the mobile clients can "
+              "create, list, update, and delete tasks."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Task model: id, user_id, title, description, status (pending|in_progress|done|cancelled), "
+                "priority (1–5), estimated_minutes, scheduled_start, scheduled_end, due_at, "
+                "source (capture|calendar|manual), raw_input, created_at, updated_at",
+                "InternalReminder model: id, user_id, task_id (FK nullable), type, trigger_at, "
+                "delivered_at, status (pending|delivered|dismissed)",
+                "Alembic migration for tasks and internal_reminders tables",
+                "TaskRepository: create, get_by_id, list_by_user (status filter, date range), update, soft-delete",
+                "TaskService: create_from_capture (stores raw_input), update_status, reschedule, list_for_today",
+                "POST /api/v1/tasks — create task",
+                "GET  /api/v1/tasks — list tasks (query params: status, date)",
+                "GET  /api/v1/tasks/{task_id} — get single task",
+                "PATCH /api/v1/tasks/{task_id} — update task fields",
+                "DELETE /api/v1/tasks/{task_id} — soft-delete (status=cancelled)",
+                "Pydantic schemas: TaskCreate, TaskUpdate, TaskResponse",
+                "Unit tests: create, list by date, status transitions, delete idempotency",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No LLM parsing in this ticket — raw_input stored as-is",
+                "No scheduling algorithm — scheduled_start/end set by caller or null",
+                "No push notification delivery",
+                "No calendar event creation from tasks",
+                "No recurrence rules",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/tasks creates a task and returns TaskResponse",
+                "GET /api/v1/tasks?status=pending returns only pending tasks for the authenticated user",
+                "GET /api/v1/tasks?date=2026-07-03 returns tasks scheduled on that date",
+                "PATCH /api/v1/tasks/{id} updates only provided fields",
+                "DELETE /api/v1/tasks/{id} sets status=cancelled (not hard-deleted)",
+                "Tasks from one user are not visible to another user",
+                "Alembic migration applies cleanly",
+                "pytest -k tasks passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "# Expect: no errors\n\n"
+                "cd backend && pytest tests/test_tasks.py -v\n"
+                "# Expect: all pass\n\n"
+                "cd backend && pytest -q\n"
+                "# Full suite still green"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-022 (user profile API — user_id FK), TIME-002 (FastAPI structure)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-037: LLM Gateway"),
         ),
     },
 ]
