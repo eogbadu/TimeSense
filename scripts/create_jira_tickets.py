@@ -1653,6 +1653,81 @@ TICKETS = [
             p("TIME-031: Today Screen — Realistic Timeline"),
         ),
     },
+
+    {
+        "summary": "TIME-031: Today Screen — Realistic Timeline",
+        "labels": ["phase-5", "ios", "android", "backend"],
+        "description": doc(
+            h2("Goal"),
+            p("Render a full-day scrollable timeline on the Today tab showing scheduled tasks "
+              "in past/current/future visual states. Data comes from GET /api/v1/timeline/today "
+              "which aggregates today's tasks sorted by scheduled_start."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend: GET /api/v1/timeline/today — returns tasks scheduled for today, sorted by scheduled_start. Returns TimelineItem list with id, title, scheduled_start, scheduled_end, status.",
+                "iOS: ios/TimeSense/Features/Today/TodayView.swift — scrollable List/ScrollView of TimelineCard rows",
+                "iOS: ios/TimeSense/Features/Today/TodayViewModel.swift — @MainActor ObservableObject, loads /timeline/today on appear",
+                "iOS: ios/TimeSense/Features/Today/TimelineCard.swift — shows title, time, duration, visual state (past=dimmed, current=highlighted, future=normal)",
+                "Android: features/today/TodayScreen.kt — LazyColumn of TimelineCard composables, observes TodayViewModel StateFlow",
+                "Android: features/today/TodayViewModel.kt — loads timeline on init, exposes StateFlow<TodayUiState>",
+                "Android: features/today/TimelineCard.kt — composable matching iOS visual spec",
+                "Visual states: past tasks dimmed (50% opacity), current task has accent border, future normal",
+                "Empty state: 'Nothing scheduled today — use Capture to add tasks' message",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No calendar events integration (Phase 6)",
+                "No drag-and-drop reordering (non-negotiable, not at launch)",
+                "No routine blocks rendering",
+                "No task editing from this screen",
+                "No pull-to-refresh (auto-load on appear is sufficient)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/api/v1/timeline.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/tests/test_timeline.py (new)",
+                "ios/TimeSense/Features/Today/TodayView.swift",
+                "ios/TimeSense/Features/Today/TodayViewModel.swift (new)",
+                "ios/TimeSense/Features/Today/TimelineCard.swift (new)",
+                "android/.../features/today/TodayScreen.kt",
+                "android/.../features/today/TodayViewModel.kt (new)",
+                "android/.../features/today/TimelineCard.kt (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "GET /api/v1/timeline/today returns 200 with task list for authenticated user",
+                "Tasks are sorted by scheduled_start ascending",
+                "iOS Today tab shows timeline list on load",
+                "Past tasks visually dimmed, current task highlighted",
+                "Empty state message shown when no tasks scheduled",
+                "iOS build succeeds: xcodebuild → BUILD SUCCEEDED",
+                "Android build succeeds: ./gradlew assembleDebug → BUILD SUCCESSFUL",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "# Backend tests\n"
+                "cd backend && pytest tests/test_timeline.py -v\n\n"
+                "# iOS build\n"
+                "xcodebuild -target TimeSense -sdk iphonesimulator18.0 CODE_SIGNING_ALLOWED=NO -quiet\n"
+                "# Expect: ** BUILD SUCCEEDED **\n\n"
+                "# Android build\n"
+                "cd android && ./gradlew assembleDebug\n"
+                "# Expect: BUILD SUCCESSFUL"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-030 (Capture wired), TIME-033 (Task model — GET /tasks already exists)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-032: Now Screen — Current Context and Recommendation"),
+        ),
+    },
 ]
 
 
