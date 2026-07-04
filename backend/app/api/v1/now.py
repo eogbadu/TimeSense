@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
+from app.services.usable_time_service import UsableTimeService
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/now", tags=["now"])
@@ -53,9 +54,11 @@ async def get_now(
         if t.due_at and t.due_at.replace(tzinfo=timezone.utc) < now and t.id not in {p.id for p in pending}
     ]
 
+    usable_minutes = UsableTimeService().calculate(today_tasks, anchor=now)
+
     candidates = pending + overdue
     if not candidates:
-        return NowResponse(greeting=_greeting(), usable_minutes=60, best_task=None)
+        return NowResponse(greeting=_greeting(), usable_minutes=usable_minutes, best_task=None)
 
     # Pick highest priority (1=highest), then earliest due_at as tiebreaker
     best = min(
@@ -64,6 +67,6 @@ async def get_now(
     )
     return NowResponse(
         greeting=_greeting(),
-        usable_minutes=60,
+        usable_minutes=usable_minutes,
         best_task=TaskResponse.model_validate(best),
     )
