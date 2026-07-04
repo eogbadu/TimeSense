@@ -1543,6 +1543,62 @@ TICKETS = [
             p("TIME-037: LLM Gateway"),
         ),
     },
+
+    {
+        "summary": "TIME-037: LLM Gateway",
+        "labels": ["phase-5", "backend", "llm", "fastapi"],
+        "description": doc(
+            h2("Goal"),
+            p("Build an LLM provider abstraction (LLMGateway ABC + OpenAI implementation) "
+              "and a CaptureParser service that converts raw user text into a structured "
+              "TaskCreate. After this ticket, the Capture screen can submit text and get back "
+              "a fully parsed task with title, estimated_minutes, due_at, and priority."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "app/integrations/llm_base.py — LLMGateway ABC: complete(messages, model, max_tokens, temperature) → str",
+                "app/integrations/openai_gateway.py — OpenAI implementation using openai Python SDK",
+                "app/services/capture_service.py — CaptureParser.parse(raw_input, user_timezone) → TaskCreate",
+                "System prompt: extract title, estimated_minutes (nullable), due_at (nullable ISO datetime), priority (1–5 int)",
+                "POST /api/v1/capture — accepts {raw_input: str}, returns TaskResponse (creates and saves the task)",
+                "Fallback: if LLM parse fails return Task with title=raw_input, other fields null",
+                "Unit tests: parse basic input, parse with time ('call dentist tomorrow at 2pm'), fallback on LLM error",
+                "OPENAI_API_KEY added to app/core/config.py (optional — gateway no-ops if not set)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No streaming LLM responses in this ticket",
+                "No Anthropic / other provider implementations (just OpenAI default + ABC)",
+                "No voice transcription in this ticket",
+                "No multi-turn conversation",
+                "No calendar event creation from capture",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/capture with raw_input='call dentist tomorrow at 2pm' returns status 201 with a Task",
+                "Task title is parsed from raw input (not just the raw string)",
+                "If OPENAI_API_KEY not set, capture falls back gracefully — task created with raw_input as title",
+                "LLMGateway is an ABC — OpenAI implementation is swappable",
+                "pytest -k capture passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_capture.py -v\n"
+                "# Expect: all pass\n\n"
+                "cd backend && pytest -q\n"
+                "# Full suite still green"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-033 (Task Model — CaptureParser creates a Task), TIME-002 (FastAPI structure)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-030: Capture Screen (iOS and Android connect to POST /capture)"),
+        ),
+    },
 ]
 
 
