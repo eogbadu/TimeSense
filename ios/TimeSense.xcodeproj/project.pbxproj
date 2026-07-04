@@ -21,6 +21,10 @@
 		A1000012 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* EmptyStateView.swift */; };
 		A1000013 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000013 /* APIClient.swift */; };
 		A1000014 /* View+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* View+Extensions.swift */; };
+		A1000015 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015 /* AuthService.swift */; };
+		A1000016 /* AppleSignInCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000016 /* AppleSignInCoordinator.swift */; };
+		A1000017 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017 /* SignInView.swift */; };
+		A1000018 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000018 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +42,10 @@
 		A2000012 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		A2000013 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		A2000014 /* View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Extensions.swift"; sourceTree = "<group>"; };
+		A2000015 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		A2000016 /* AppleSignInCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInCoordinator.swift; sourceTree = "<group>"; };
+		A2000017 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		A2000018 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A3000001 /* TimeSense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeSense.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -95,8 +103,18 @@
 				A5000021 /* Design */,
 				A5000022 /* API */,
 				A5000023 /* Extensions */,
+				A5000024 /* Auth */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		A5000024 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A2000015 /* AuthService.swift */,
+				A2000016 /* AppleSignInCoordinator.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 		A5000021 /* Design */ = {
@@ -116,6 +134,24 @@
 			path = API;
 			sourceTree = "<group>";
 		};
+		A5000024 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A2000015 /* AuthService.swift */,
+				A2000016 /* AppleSignInCoordinator.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		A5000036 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A2000017 /* SignInView.swift */,
+				A2000018 /* OnboardingView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
 		A5000023 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
@@ -127,6 +163,7 @@
 		A5000030 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				A5000036 /* Auth */,
 				A5000031 /* Now */,
 				A5000032 /* Today */,
 				A5000033 /* Capture */,
@@ -134,6 +171,15 @@
 				A5000035 /* Settings */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		A5000036 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A2000017 /* SignInView.swift */,
+				A2000018 /* OnboardingView.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 		A5000031 /* Now */ = {
@@ -263,6 +309,10 @@
 				A1000012 /* EmptyStateView.swift in Sources */,
 				A1000013 /* APIClient.swift in Sources */,
 				A1000014 /* View+Extensions.swift in Sources */,
+				A1000015 /* AuthService.swift in Sources */,
+				A1000016 /* AppleSignInCoordinator.swift in Sources */,
+				A1000017 /* SignInView.swift in Sources */,
+				A1000018 /* OnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

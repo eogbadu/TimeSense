@@ -1249,6 +1249,172 @@ TICKETS = [
             p("TIME-019: Android App Shell and Navigation"),
         ),
     },
+
+    {
+        "summary": "TIME-019: Android App Shell and Navigation",
+        "labels": ["phase-4", "android", "kotlin", "compose", "navigation"],
+        "description": doc(
+            h2("Goal"),
+            p("Create the native Kotlin/Jetpack Compose Android app shell with bottom navigation, "
+              "empty state screens for all five tabs, design token system, and the API client foundation. "
+              "After this ticket the app builds, installs on emulator, and shows polished empty states "
+              "for each tab. No real data yet."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Android project: android/ — package com.timesense.app, minSdk 26, targetSdk 35",
+                "MainActivity.kt — single-activity entry point, edge-to-edge display",
+                "TimeSenseNavigation.kt — NavHost with 5 bottom nav destinations",
+                "BottomNavBar.kt — Material3 NavigationBar with icon + label per tab",
+                "Feature folder per tab: android/app/.../ui/{now,today,capture,insights,settings}/",
+                "Empty state composable per screen: icon, title, subtitle",
+                "DesignTokens.kt — brand color scheme (light + dark), typography, spacing, shapes",
+                "APIClient.kt — OkHttp wrapper, Bearer auth header, typed error sealed class",
+                "AppConfig.kt — reads API base URL from BuildConfig",
+                "AppViewModel.kt — auth state and premium flag",
+                "Gradle files: settings.gradle.kts, app/build.gradle.kts with Compose BOM 2024.x",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No Firebase Auth integration in this ticket",
+                "No real API calls — APIClient compiles but not wired to live data",
+                "No onboarding flow screens",
+                "No subscription or paywall UI",
+                "No push notification registration",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "App builds with ./gradlew assembleDebug without errors",
+                "All 5 bottom nav tabs visible and tappable",
+                "Each screen shows a non-empty placeholder (icon + title + subtitle)",
+                "Design tokens used — no hardcoded color values or sp/dp magic numbers",
+                "No force non-null assertions (!!) in shipping code",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd android && ./gradlew assembleDebug\n"
+                "# Expect: BUILD SUCCESSFUL\n\n"
+                "cd android && ./gradlew test\n"
+                "# Expect: BUILD SUCCESSFUL"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-018 (iOS shell) for design parity reference."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-020: iOS Firebase Auth + Onboarding"),
+        ),
+    },
+
+    {
+        "summary": "TIME-020: iOS Firebase Auth and Onboarding Flow",
+        "labels": ["phase-4", "ios", "swift", "auth", "firebase"],
+        "description": doc(
+            h2("Goal"),
+            p("Implement Firebase Auth on iOS: Google Sign-In, Email/Password sign-in, "
+              "Apple Sign-In coordinator, a polished SignInView, and an OnboardingView "
+              "shown to new users after first authentication. AppState and TimeSenseApp "
+              "are wired to AuthService so auth state drives navigation."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "ios/TimeSense/Core/Auth/AuthService.swift — FirebaseAuth wrapper, @Published currentUser, Google + Apple + Email sign-in",
+                "ios/TimeSense/Core/Auth/AppleSignInCoordinator.swift — ASAuthorizationController delegate",
+                "ios/TimeSense/Features/Auth/SignInView.swift — sign-in screen (Google, Apple, Email/Password)",
+                "ios/TimeSense/Features/Auth/OnboardingView.swift — welcome + get-started for new users",
+                "ios/TimeSense/App/AppState.swift — bind(to: AuthService) drives isAuthenticated",
+                "ios/TimeSense/App/ContentView.swift and TimeSenseApp.swift — auth-gated navigation",
+                "ios/Package.swift — Firebase + GoogleSignIn SPM packages",
+                "Xcode project.pbxproj updated to include all auth source files",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No backend user profile creation in this ticket",
+                "No subscription or paywall UI",
+                "No calendar or notification permission requests",
+                "No Google Sign-In client ID wired — placeholder used; real value in TIME-022",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "App builds: xcodebuild -target TimeSense -sdk iphonesimulator BUILD SUCCEEDED",
+                "SignInView shows Google, Apple, and Email/Password sign-in options",
+                "Unauthenticated users see SignInView; authenticated users see MainTabView",
+                "New users (isNewUser=true) see OnboardingView before MainTabView",
+                "AuthService properly removes auth state listener on deinit",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild -target TimeSense -sdk iphonesimulator18.0 "
+                "CODE_SIGNING_ALLOWED=NO -quiet 2>&1 | tail -3\n"
+                "# Expect: ** BUILD SUCCEEDED **"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-018 (iOS App Shell) — TabView and AppState foundation."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-021: Android Firebase Auth and Onboarding Flow"),
+        ),
+    },
+
+    {
+        "summary": "TIME-021: Android Firebase Auth and Onboarding Flow",
+        "labels": ["phase-4", "android", "kotlin", "auth", "firebase"],
+        "description": doc(
+            h2("Goal"),
+            p("Implement Firebase Auth on Android: Google Sign-In via Credential Manager, "
+              "Email/Password sign-in, a polished SignInScreen composable, and an OnboardingScreen "
+              "shown to new users. AppViewModel is wired to AuthRepository so auth state drives "
+              "navigation in TimeSenseApp composable."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "android/.../core/auth/AuthRepository.kt — FirebaseAuth wrapper, authStateFlow, Google + Email",
+                "android/.../features/auth/AuthViewModel.kt — CredentialManager Google sign-in, email/password",
+                "android/.../features/auth/SignInScreen.kt — sign-in composable (Google OutlinedButton + Email form)",
+                "android/.../features/auth/OnboardingScreen.kt — welcome screen for new users",
+                "android/.../AppViewModel.kt — maps AuthRepository.authStateFlow to AppUiState",
+                "android/.../TimeSenseApp.kt — AnimatedContent showing auth vs main vs onboarding",
+                "android/app/build.gradle.kts — Firebase BOM, auth-ktx, credentials, Google Identity",
+                "android/gradle/libs.versions.toml — all library version entries",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No backend user profile creation in this ticket",
+                "No subscription or paywall UI",
+                "No Google Sign-In client ID wired — placeholder (BuildConfig.GOOGLE_SERVER_CLIENT_ID = '')",
+                "google-services.json is a placeholder; real values added when Firebase project created",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "App builds: ./gradlew assembleDebug BUILD SUCCESSFUL",
+                "SignInScreen shows Google button and email/password form",
+                "Unauthenticated users see SignInScreen; authenticated users see MainNavHost",
+                "New users (isNewUser=true in AppUiState) route to OnboardingScreen",
+                "No Firebase runtime crash on app launch (placeholder google-services.json present)",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd android && ./gradlew assembleDebug\n"
+                "# Expect: BUILD SUCCESSFUL"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-019 (Android App Shell) — bottom nav and AppViewModel foundation."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-022: Backend Onboarding State APIs"),
+        ),
+    },
 ]
 
 

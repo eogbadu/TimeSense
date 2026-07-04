@@ -23,6 +23,7 @@ android {
         debug {
             isDebuggable = true
             buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000\"")
+            buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"\"")  // set in local.properties
         }
         release {
             isMinifyEnabled = true
@@ -31,6 +32,7 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("String", "API_BASE_URL", "\"https://api.timesense.app\"")
+            buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"\"")  // set via CI secret
         }
     }
 
@@ -67,6 +69,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play)
+    implementation(libs.google.identity)
+    implementation(libs.kotlinx.coroutines.play)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
