@@ -32,26 +32,28 @@ Mobile app shells:
 - TIME-037 → TIME-30 (LLM Gateway) — Done
 - TIME-030 → TIME-31 (Capture Screen connect) — Done (PR #23)
 - TIME-031 → TIME-32 (Today Screen timeline) — Done (PR #24)
-- TIME-032 → TIME-33 (Now Screen context+recommendation) — **Done (PR #25, merged 2026-07-04)**
+- TIME-032 → TIME-33 (Now Screen context+recommendation) — Done (PR #25)
+- TIME-034 → TIME-34 (Usable Time Calculator) — Done (PR #26)
+- TIME-035 → TIME-35 (Task Scoring Service) — Done (PR #27)
+- TIME-036 → TIME-36 (Recommendation API V1) — **Done (PR #28, merged 2026-07-04)**
 
 ## Last Completed Work
-TIME-032 (Jira TIME-33): Now Screen — current context + best-task recommendation.
-- Backend: GET /api/v1/now → greeting + 60-min usable-time stub + highest-priority pending task
-- iOS: NowViewModel + NowView with GreetingCard, BestTaskCard, Done/Snooze/Not Now; APIClient.patch() added
-- Android: NowViewModel (StateFlow) + NowScreen with same layout
+TIME-036 (Jira TIME-36): Recommendation API V1
+- `GET /api/v1/recommendations` → {best: {task, why}, alternatives: [Task], usable_minutes}
+- RecommendationService: TaskScorer.rank() + UsableTimeService.calculate() + LLM why
+- `GET /api/v1/now` updated to use TaskScorer instead of min(priority) sort
+- 6 tests, all passing. Full suite: 58 tests across all new modules, all green.
 
-TIME-031 (Jira TIME-32): Today Screen — live timeline.
-- Backend: GET /api/v1/timeline/today?date=YYYY-MM-DD → tasks sorted by scheduled_start
-- iOS: TodayViewModel + TodayView + TimelineCard (past/current/future visual states)
-- Android: TodayViewModel + TodayScreen (LazyColumn) + TimelineCard
+TIME-035 (Jira TIME-35): TaskScorer — priority (0.5) + deadline (0.35) + duration fit (0.15)
+TIME-034 (Jira TIME-34): UsableTimeService — merges scheduled blocks, returns free-window minutes
 
 ## Current Active Task
 None.
 
 ## Next Recommended Task
-TIME-034: Usable Time Calculator (Phase 8 — Recommendation Engine V1)
-- Replace the hardcoded 60-minute stub in GET /api/v1/now with real usable-window calculation
-- `backend/app/services/usable_time.py` + focus window detection
+TIME-038: Feedback Collection — store user reactions (done/snooze/not-now) on recommendations
+OR
+TIME-039: Routine Assumptions Model — default routines (sleep, meals, commute) for usable-time context
 
 ## Important Decisions to Preserve
 - Firebase added via Xcode UI (File > Add Package Dependencies), NOT in pbxproj — `#if canImport` guards ensure CLI builds work
