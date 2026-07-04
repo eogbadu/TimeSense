@@ -5,6 +5,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.calendar import router as calendar_router
 from app.api.v1.consent import router as consent_router
 from app.api.v1.health import router as health_router
+from app.api.v1.invites import router as invites_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.onboarding import router as onboarding_router
 from app.api.v1.referrals import router as referrals_router
@@ -22,3 +23,4 @@ api_router.include_router(subscriptions_router)
 api_router.include_router(calendar_router)
 api_router.include_router(notifications_router)
 api_router.include_router(referrals_router)
+api_router.include_router(invites_router)
