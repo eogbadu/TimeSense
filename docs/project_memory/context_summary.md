@@ -30,19 +30,28 @@ Mobile app shells:
 - TIME-022 → TIME-28 (Backend Onboarding State APIs) — Done
 - TIME-033 → TIME-29 (Task Model + Internal Reminders) — Done
 - TIME-037 → TIME-30 (LLM Gateway) — Done
-- TIME-030 → TIME-31 (Capture Screen connect) — **Done (PR #23, merged 2026-07-04)**
+- TIME-030 → TIME-31 (Capture Screen connect) — Done (PR #23)
+- TIME-031 → TIME-32 (Today Screen timeline) — Done (PR #24)
+- TIME-032 → TIME-33 (Now Screen context+recommendation) — **Done (PR #25, merged 2026-07-04)**
 
 ## Last Completed Work
-TIME-030 (Jira TIME-31): Connected Capture screen to `POST /api/v1/capture` on iOS and Android.
-- iOS: CaptureViewModel, wired CaptureView, `#if canImport` guards on all Firebase auth files so CLI builds pass without SPM
-- Android: CaptureViewModel with StateFlow, rewritten CaptureScreen with AnimatedVisibility banners
-- Infra: gradle.properties (useAndroidX), gradle-wrapper.jar, placeholder launcher icons, local.properties pattern
+TIME-032 (Jira TIME-33): Now Screen — current context + best-task recommendation.
+- Backend: GET /api/v1/now → greeting + 60-min usable-time stub + highest-priority pending task
+- iOS: NowViewModel + NowView with GreetingCard, BestTaskCard, Done/Snooze/Not Now; APIClient.patch() added
+- Android: NowViewModel (StateFlow) + NowScreen with same layout
+
+TIME-031 (Jira TIME-32): Today Screen — live timeline.
+- Backend: GET /api/v1/timeline/today?date=YYYY-MM-DD → tasks sorted by scheduled_start
+- iOS: TodayViewModel + TodayView + TimelineCard (past/current/future visual states)
+- Android: TodayViewModel + TodayScreen (LazyColumn) + TimelineCard
 
 ## Current Active Task
-None — starting next ticket.
+None.
 
 ## Next Recommended Task
-TIME-031: Today Screen — Realistic Timeline (iOS + Android + backend task list endpoint integration)
+TIME-034: Usable Time Calculator (Phase 8 — Recommendation Engine V1)
+- Replace the hardcoded 60-minute stub in GET /api/v1/now with real usable-window calculation
+- `backend/app/services/usable_time.py` + focus window detection
 
 ## Important Decisions to Preserve
 - Firebase added via Xcode UI (File > Add Package Dependencies), NOT in pbxproj — `#if canImport` guards ensure CLI builds work
