@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.consent import ConsentRecord
     from app.models.notification import Notification, ReplanRequest
     from app.models.onboarding import AssistantPersonality, OnboardingState
+    from app.models.referral import ReferralCode
     from app.models.subscription import Subscription
 
 
@@ -55,6 +56,10 @@ class User(UUIDMixin, TimestampMixin, Base):
     )
     replan_requests: Mapped[list[ReplanRequest]] = relationship(
         "ReplanRequest", back_populates="user", cascade="all, delete-orphan"
+    )
+    referral_code: Mapped[ReferralCode | None] = relationship(
+        "ReferralCode", back_populates="owner", foreign_keys="ReferralCode.owner_id",
+        uselist=False, cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
