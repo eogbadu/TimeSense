@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CaptureView: View {
+    @StateObject private var viewModel = CaptureViewModel()
     @State private var captureText: String = ""
     @FocusState private var isInputFocused: Bool
 
@@ -33,15 +34,31 @@ struct CaptureView: View {
                         .cornerRadius(DesignTokens.Radius.lg)
                         .lineLimit(3...6)
                         .focused($isInputFocused)
+                        .disabled(viewModel.uiState == .loading)
 
-                    Button(action: submitCapture) {
-                        Text("Capture")
-                            .primaryButtonStyle()
+                    Button {
+                        Task { await submitCapture() }
+                    } label: {
+                        if viewModel.uiState == .loading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 22)
+                        } else {
+                            Text("Capture")
+                                .primaryButtonStyle()
+                        }
                     }
-                    .disabled(captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .opacity(captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1.0)
+                    .disabled(
+                        captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || viewModel.uiState == .loading
+                    )
+                    .opacity(
+                        captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1.0
+                    )
                 }
                 .padding(.horizontal, DesignTokens.Spacing.md)
+
+                statusView
 
                 Spacer()
             }
@@ -52,8 +69,45 @@ struct CaptureView: View {
         }
     }
 
-    private func submitCapture() {
-        // Connected to capture service in TIME-022+
-        captureText = ""
+    @ViewBuilder
+    private var statusView: some View {
+        switch viewModel.uiState {
+        case .idle, .loading:
+            EmptyView()
+        case .success(let title):
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                Text("Captured: \(title)")
+                    .font(DesignTokens.Typography.callout)
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, DesignTokens.Spacing.md)
+            .transition(.opacity)
+        case .error(let message):
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundColor(DesignTokens.Color.destructive)
+                Text(message)
+                    .font(DesignTokens.Typography.callout)
+                    .foregroundColor(DesignTokens.Color.destructive)
+                    .lineLimit(2)
+            }
+            .padding(.horizontal, DesignTokens.Spacing.md)
+            .transition(.opacity)
+        }
+    }
+
+    private func submitCapture() async {
+        let text = captureText
+        await viewModel.submit(rawInput: text)
+        if case .success = viewModel.uiState {
+            captureText = ""
+            isInputFocused = false
+            // Auto-clear success banner after 3 seconds
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            viewModel.reset()
+        }
     }
 }

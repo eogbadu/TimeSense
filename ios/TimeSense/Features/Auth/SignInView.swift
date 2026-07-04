@@ -71,10 +71,10 @@ struct SignInView: View {
     private func signInWithApple() {
         Task {
             do {
-                if let credential = try await appleCoordinator.signIn() {
-                    await authService.signInWithApple(credential: credential)
+                if let cred = try await appleCoordinator.signIn() {
+                    await authService.signInWithApple(credential: cred)
                 }
-            } catch { /* user cancelled or error handled by coordinator */ }
+            } catch { /* user cancelled */ }
         }
     }
 

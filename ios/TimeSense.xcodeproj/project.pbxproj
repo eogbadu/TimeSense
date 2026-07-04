@@ -16,6 +16,7 @@
 		A1000007 /* NowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000007 /* NowView.swift */; };
 		A1000008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008 /* TodayView.swift */; };
 		A1000009 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009 /* CaptureView.swift */; };
+		A1000030 /* CaptureViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000030 /* CaptureViewModel.swift */; };
 		A1000010 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000010 /* InsightsView.swift */; };
 		A1000011 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011 /* SettingsView.swift */; };
 		A1000012 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* EmptyStateView.swift */; };
@@ -37,6 +38,7 @@
 		A2000007 /* NowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowView.swift; sourceTree = "<group>"; };
 		A2000008 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		A2000009 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
+		A2000030 /* CaptureViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureViewModel.swift; sourceTree = "<group>"; };
 		A2000010 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
 		A2000011 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A2000012 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
@@ -202,6 +204,7 @@
 			isa = PBXGroup;
 			children = (
 				A2000009 /* CaptureView.swift */,
+				A2000030 /* CaptureViewModel.swift */,
 			);
 			path = Capture;
 			sourceTree = "<group>";
@@ -290,6 +293,43 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		B1000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+		B1000002 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B2000001 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B1000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		B2000002 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B1000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		B2000003 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B1000002 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+/* End XCSwiftPackageProductDependency section */
+
 /* Begin PBXSourcesBuildPhase section */
 		A7000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -304,6 +344,7 @@
 				A1000007 /* NowView.swift in Sources */,
 				A1000008 /* TodayView.swift in Sources */,
 				A1000009 /* CaptureView.swift in Sources */,
+				A1000030 /* CaptureViewModel.swift in Sources */,
 				A1000010 /* InsightsView.swift in Sources */,
 				A1000011 /* SettingsView.swift in Sources */,
 				A1000012 /* EmptyStateView.swift in Sources */,

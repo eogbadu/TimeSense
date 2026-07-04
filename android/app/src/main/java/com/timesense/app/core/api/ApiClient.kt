@@ -41,7 +41,7 @@ object ApiClient {
 
     val jsonInstance: Json get() = json
 
-    inline fun <reified T> Request.Builder.jsonBody(body: T): Request.Builder {
+    internal inline fun <reified T> Request.Builder.jsonBody(body: T): Request.Builder {
         val bodyStr = json.encodeToString(kotlinx.serialization.serializer<T>(), body)
         return post(bodyStr.toRequestBody("application/json".toMediaType()))
     }

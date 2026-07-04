@@ -9,6 +9,7 @@ final class AppState: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
 
+    @MainActor
     func bind(to authService: AuthService) {
         authService.$currentUser
             .receive(on: RunLoop.main)

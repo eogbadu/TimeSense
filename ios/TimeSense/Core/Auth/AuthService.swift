@@ -1,3 +1,4 @@
+#if canImport(FirebaseAuth)
 import Foundation
 import FirebaseAuth
 import FirebaseCore
@@ -7,7 +8,7 @@ import GoogleSignIn
 /// All sign-in methods return a `FirebaseUser` whose ID token is immediately handed to `APIClient`.
 @MainActor
 final class AuthService: ObservableObject {
-    @Published private(set) var currentUser: FirebaseUser? = nil
+    @Published private(set) var currentUser: FirebaseAuth.User? = nil
     @Published private(set) var isLoading: Bool = false
     @Published private(set) var error: AuthError? = nil
 
@@ -35,7 +36,6 @@ final class AuthService: ObservableObject {
         isLoading = true
         error = nil
         defer { isLoading = false }
-
         do {
             let config = GIDConfiguration(clientID: clientID)
             GIDSignIn.sharedInstance.configuration = config
@@ -103,9 +103,7 @@ final class AuthService: ObservableObject {
         }
     }
 
-    // MARK: – Token refresh
-
-    private func refreshTokenIfNeeded(user: FirebaseUser?) async {
+    private func refreshTokenIfNeeded(user: FirebaseAuth.User?) async {
         guard let user else {
             APIClient.shared.setAuthToken(nil)
             return
@@ -118,14 +116,11 @@ final class AuthService: ObservableObject {
         }
     }
 
-    /// Call before any authenticated API request to ensure the token is fresh.
     func freshToken() async throws -> String {
         guard let user = Auth.auth().currentUser else { throw AuthError.notAuthenticated }
         return try await user.getIDToken(forcingRefresh: false)
     }
 }
-
-// MARK: – Error
 
 enum AuthError: LocalizedError {
     case missingToken
@@ -146,4 +141,40 @@ enum AuthError: LocalizedError {
     }
 }
 
-typealias FirebaseUser = FirebaseAuth.User
+#else
+
+import Foundation
+import Combine
+
+/// Stub used when Firebase SDK is not linked (e.g. CLI builds without SPM resolution).
+@MainActor
+final class AuthService: ObservableObject {
+    @Published private(set) var currentUser: StubUser? = nil
+    @Published private(set) var isLoading: Bool = false
+    @Published private(set) var error: AuthError? = nil
+
+    init() {}
+    func signInWithGoogle(presenting: AnyObject) async {}
+    func signInWithApple(credential: Any) async {}
+    func signInWithEmail(email: String, password: String) async {}
+    func createAccount(email: String, password: String) async {}
+    func signOut() {}
+    func resetPassword(email: String) async {}
+    func freshToken() async throws -> String { throw AuthError.notAuthenticated }
+}
+
+struct StubUser { let uid: String; let email: String? }
+
+enum AuthError: LocalizedError {
+    case missingToken, notAuthenticated, other(String)
+    static func wrap(_ e: Error) -> AuthError { .other(e.localizedDescription) }
+    var errorDescription: String? {
+        switch self {
+        case .missingToken:    return "Missing token."
+        case .notAuthenticated: return "Not signed in."
+        case .other(let m):   return m
+        }
+    }
+}
+
+#endif
