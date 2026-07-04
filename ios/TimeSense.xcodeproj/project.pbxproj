@@ -15,6 +15,8 @@
 		A1000006 /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006 /* ViewModifiers.swift */; };
 		A1000007 /* NowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000007 /* NowView.swift */; };
 		A1000008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008 /* TodayView.swift */; };
+		A1000031 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000031 /* TodayViewModel.swift */; };
+		A1000032 /* TimelineCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000032 /* TimelineCard.swift */; };
 		A1000009 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009 /* CaptureView.swift */; };
 		A1000030 /* CaptureViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000030 /* CaptureViewModel.swift */; };
 		A1000010 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000010 /* InsightsView.swift */; };
@@ -37,6 +39,8 @@
 		A2000006 /* ViewModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
 		A2000007 /* NowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowView.swift; sourceTree = "<group>"; };
 		A2000008 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		A2000031 /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModel.swift; sourceTree = "<group>"; };
+		A2000032 /* TimelineCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCard.swift; sourceTree = "<group>"; };
 		A2000009 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		A2000030 /* CaptureViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureViewModel.swift; sourceTree = "<group>"; };
 		A2000010 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
@@ -136,15 +140,6 @@
 			path = API;
 			sourceTree = "<group>";
 		};
-		A5000024 /* Auth */ = {
-			isa = PBXGroup;
-			children = (
-				A2000015 /* AuthService.swift */,
-				A2000016 /* AppleSignInCoordinator.swift */,
-			);
-			path = Auth;
-			sourceTree = "<group>";
-		};
 		A5000036 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
@@ -196,6 +191,8 @@
 			isa = PBXGroup;
 			children = (
 				A2000008 /* TodayView.swift */,
+				A2000031 /* TodayViewModel.swift */,
+				A2000032 /* TimelineCard.swift */,
 			);
 			path = Today;
 			sourceTree = "<group>";
@@ -343,6 +340,8 @@
 				A1000006 /* ViewModifiers.swift in Sources */,
 				A1000007 /* NowView.swift in Sources */,
 				A1000008 /* TodayView.swift in Sources */,
+				A1000031 /* TodayViewModel.swift in Sources */,
+				A1000032 /* TimelineCard.swift in Sources */,
 				A1000009 /* CaptureView.swift in Sources */,
 				A1000030 /* CaptureViewModel.swift in Sources */,
 				A1000010 /* InsightsView.swift in Sources */,
