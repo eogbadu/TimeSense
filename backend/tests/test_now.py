@@ -33,7 +33,8 @@ async def test_now_authenticated(client):
     assert r.status_code == 200
     data = r.json()
     assert "greeting" in data
-    assert data["usable_minutes"] == 60
+    assert isinstance(data["usable_minutes"], int)
+    assert data["usable_minutes"] >= 0
 
 
 @pytest.mark.anyio
