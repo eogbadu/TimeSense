@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
+from app.services.task_scorer import TaskScorer
 from app.services.usable_time_service import UsableTimeService
 from app.services.user_service import UserService
 
@@ -60,13 +61,9 @@ async def get_now(
     if not candidates:
         return NowResponse(greeting=_greeting(), usable_minutes=usable_minutes, best_task=None)
 
-    # Pick highest priority (1=highest), then earliest due_at as tiebreaker
-    best = min(
-        candidates,
-        key=lambda t: (t.priority, t.due_at or datetime.max.replace(tzinfo=timezone.utc)),
-    )
+    ranked = TaskScorer().rank(candidates, usable_minutes, now)
     return NowResponse(
         greeting=_greeting(),
         usable_minutes=usable_minutes,
-        best_task=TaskResponse.model_validate(best),
+        best_task=TaskResponse.model_validate(ranked[0]),
     )
