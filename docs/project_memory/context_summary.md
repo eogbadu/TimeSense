@@ -4,7 +4,8 @@
 
 ## Current Build State
 
-Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), and early Phase 5 tasks complete.
+Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
+and Phase 8 (Recommendation Engine V1) complete.
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -14,17 +15,23 @@ Backend API endpoints implemented:
 - `POST/GET/PATCH/DELETE /api/v1/tasks` (soft-delete)
 - `POST /api/v1/capture` (LLM parse → Task)
 - Notifications, replan requests
+- `GET /api/v1/now`, `GET /api/v1/today`
+- `GET /api/v1/recommendations` (best + up to 2 alternatives + LLM "why" + usable_minutes)
+- `POST /api/v1/recommendations/feedback` (done/snooze/not_now — suppresses task from future recommendations)
 
-Database tables: users, profiles, preferences, personalities, onboarding_states, consent_records, subscription_records, notification_preferences, replan_requests, tasks, internal_reminders.
+Database tables: users, profiles, preferences, personalities, onboarding_states, consent_records,
+subscription_records, notification_preferences, replan_requests, tasks, internal_reminders,
+recommendation_feedback.
 
-Backend tests: 21 (tasks: 15, capture: 6) all passing.
+Backend tests: 152, all passing (full `pytest` run in this session).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`.
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping
-- TIME-019 (impl seq) → Jira TIME-25 (Android shell) — Done
+- TIME-038 (impl seq) → Jira TIME-37 (Feedback Collection) — **Done, in review (this session)**
+- TIME-019 → TIME-25 (Android shell) — Done
 - TIME-020 → TIME-26 (iOS Firebase Auth) — Done
 - TIME-021 → TIME-27 (Android Firebase Auth) — Done
 - TIME-022 → TIME-28 (Backend Onboarding State APIs) — Done
@@ -35,25 +42,32 @@ Mobile app shells:
 - TIME-032 → TIME-33 (Now Screen context+recommendation) — Done (PR #25)
 - TIME-034 → TIME-34 (Usable Time Calculator) — Done (PR #26)
 - TIME-035 → TIME-35 (Task Scoring Service) — Done (PR #27)
-- TIME-036 → TIME-36 (Recommendation API V1) — **Done (PR #28, merged 2026-07-04)**
+- TIME-036 → TIME-36 (Recommendation API V1) — Done (PR #28, merged 2026-07-04)
 
 ## Last Completed Work
+TIME-038 (Jira TIME-37): Feedback Collection — **completes Phase 8**
+- `POST /api/v1/recommendations/feedback` — records done/snooze/not_now; done also marks task status=done
+- `RecommendationFeedbackRepository.get_suppressed_task_ids()` — excludes actively-snoozed tasks
+  (snooze_until in future) and recently-dismissed tasks (not_now, 4h cooldown) from `GET /api/v1/recommendations`
+- Fixed pre-existing Alembic multi-head issue (4 divergent heads accumulated from TIME-030/033/036
+  each branching off the same parent without rebasing) — added a merge migration, now single head
+- 16 tests for feedback + suppression, all passing; full suite 152/152
+
 TIME-036 (Jira TIME-36): Recommendation API V1
 - `GET /api/v1/recommendations` → {best: {task, why}, alternatives: [Task], usable_minutes}
 - RecommendationService: TaskScorer.rank() + UsableTimeService.calculate() + LLM why
-- `GET /api/v1/now` updated to use TaskScorer instead of min(priority) sort
-- 6 tests, all passing. Full suite: 58 tests across all new modules, all green.
 
 TIME-035 (Jira TIME-35): TaskScorer — priority (0.5) + deadline (0.35) + duration fit (0.15)
 TIME-034 (Jira TIME-34): UsableTimeService — merges scheduled blocks, returns free-window minutes
 
 ## Current Active Task
-None.
+TIME-038 is code-complete and tested on `feature/TIME-038-feedback-collection`, not yet pushed/PR'd
+(see Warnings — `gh` is not authenticated in this environment).
 
 ## Next Recommended Task
-TIME-038: Feedback Collection — store user reactions (done/snooze/not-now) on recommendations
-OR
 TIME-039: Routine Assumptions Model — default routines (sleep, meals, commute) for usable-time context
+OR
+TIME-040: Meal Tracking (Lightweight)
 
 ## Important Decisions to Preserve
 - Firebase added via Xcode UI (File > Add Package Dependencies), NOT in pbxproj — `#if canImport` guards ensure CLI builds work
@@ -63,12 +77,21 @@ TIME-039: Routine Assumptions Model — default routines (sleep, meals, commute)
 - Bottom tabs: Now, Today, Capture, Insights, Settings
 - Calendar writes require approval; Replans require approval
 - 14-day trial requires payment info; Free Basic Mode after trial expiry
+- `not_now` feedback suppresses a task from recommendations for 4 hours (not permanently) —
+  balances "don't nag" against not vanishing a still-pending task for the rest of the day (TIME-038)
 
 ## Known Problems
 - `python-dotenv` cannot parse multi-line `.env` values → non-blocking (warnings only)
 - Firebase SPM cannot be resolved via CLI — needs Xcode UI
+- No Docker/Postgres available in this session's environment — `alembic upgrade head` was only
+  verified offline (`--sql` mode); needs a real-DB check before deploy
+- `gh` CLI is not authenticated in this environment — PR for TIME-038 could not be opened this session
+- `phase_status.md`'s acceptance-criteria checkboxes for Phases 3–7 are stale relative to this file
+  (see phase_status.md Staleness Warning) — needs a reconciliation pass
 
 ## Warnings for Next Session
 - Read this file + phase_status.md before doing anything.
 - The `.env` file is gitignored and contains real secrets — never commit it.
 - Jira key mapping above is required — implementation seq numbers ≠ Jira ticket numbers.
+- Before starting TIME-039/TIME-040: push `feature/TIME-038-feedback-collection`, open the PR,
+  move TIME-37 to "in review" (checkpoint 2), and after merge move it to "done" (checkpoint 3).
