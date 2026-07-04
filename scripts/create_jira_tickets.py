@@ -1415,6 +1415,65 @@ TICKETS = [
             p("TIME-022: Backend Onboarding State APIs"),
         ),
     },
+
+    {
+        "summary": "TIME-022: Backend Onboarding State APIs",
+        "labels": ["phase-4", "backend", "fastapi", "onboarding"],
+        "description": doc(
+            h2("Goal"),
+            p("Build the backend endpoints that mobile clients call during and after onboarding: "
+              "create/get user profile, persist onboarding state so users can resume mid-flow, "
+              "and save consent records. After this ticket a mobile client can POST credentials, "
+              "create a user row, and store their onboarding step."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "UserProfile model: id, firebase_uid, email, display_name, onboarding_step, completed_onboarding, created_at",
+                "OnboardingState model: user_id, step (enum), metadata (JSON), updated_at",
+                "POST /api/v1/users/profile — create or upsert user profile from Firebase token",
+                "GET  /api/v1/users/profile — return current user's profile",
+                "PATCH /api/v1/users/profile — update display name, onboarding step",
+                "POST /api/v1/users/onboarding — save onboarding step + metadata",
+                "GET  /api/v1/users/onboarding — resume onboarding (returns current step)",
+                "Alembic migration for user_profiles and onboarding_states tables",
+                "Unit tests: upsert idempotency, onboarding state persistence",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No subscription or payment records in this ticket",
+                "No calendar integration setup in this ticket",
+                "No push notification token registration",
+                "No admin user management",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/users/profile is idempotent (same firebase_uid → upsert, not duplicate)",
+                "PATCH /api/v1/users/profile updates only provided fields",
+                "Onboarding step persists across app restarts (GET returns last saved step)",
+                "All endpoints require valid Firebase JWT (401 without token)",
+                "Alembic migration applies cleanly: alembic upgrade head",
+                "pytest -k users passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "# Expect: no errors\n\n"
+                "cd backend && pytest tests/test_users.py -v\n"
+                "# Expect: all tests pass\n\n"
+                "cd backend && pytest\n"
+                "# Full suite still green"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-002 (FastAPI structure), TIME-003 (auth middleware), TIME-004 (DB + Alembic)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-023: Subscription Entitlement Service"),
+        ),
+    },
 ]
 
 
