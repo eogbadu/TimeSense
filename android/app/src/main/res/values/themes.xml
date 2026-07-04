@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TimeSense uses Material3 dynamic theming; this base theme is the fallback -->
+    <style name="Theme.TimeSense" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
