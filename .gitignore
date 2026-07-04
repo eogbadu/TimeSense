@@ -33,6 +33,8 @@ build/
 *.p8
 *.p12
 google-services.json
+# allow placeholder stub (no real credentials)
+!android/app/google-services.json
 GoogleService-Info.plist
 firebase-adminsdk*.json
 service-account*.json

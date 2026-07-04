@@ -134,6 +134,24 @@
 			path = API;
 			sourceTree = "<group>";
 		};
+		A5000024 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A2000015 /* AuthService.swift */,
+				A2000016 /* AppleSignInCoordinator.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		A5000036 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A2000017 /* SignInView.swift */,
+				A2000018 /* OnboardingView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
 		A5000023 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
