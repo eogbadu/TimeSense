@@ -7,21 +7,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import okhttp3.Request
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 
 @Serializable
 data class TimelineTask(
     val id: String,
     val title: String,
     val status: String,
-    val priority: Int = 2,
-    @SerialName("scheduled_start") val scheduledStart: String? = null,
-    @SerialName("scheduled_end")   val scheduledEnd: String?   = null,
-    @SerialName("estimated_minutes") val estimatedMinutes: Int? = null,
+    val priority: Int = 3,
+    val scheduled_start: String? = null,
+    val scheduled_end: String? = null,
+    val estimated_minutes: Int? = null,
 )
 
 enum class TimelineVisualState { PAST, CURRENT, FUTURE, DONE }
@@ -39,9 +40,6 @@ class TodayViewModel : ViewModel() {
     val doneCount: Int
         get() = (_uiState.value as? TodayUiState.Loaded)?.tasks?.count { it.status == "done" } ?: 0
 
-    val totalCount: Int
-        get() = (_uiState.value as? TodayUiState.Loaded)?.tasks?.size ?: 0
-
     init {
         load()
     }
@@ -50,32 +48,39 @@ class TodayViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = TodayUiState.Loading
             try {
-                val today = LocalDate.now().toString()
+                val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
                 val request = Request.Builder()
                     .url("${ApiClient.baseUrl}/api/v1/timeline/today?date=$today")
                     .get()
                     .build()
                 val response = ApiClient.httpClient.newCall(request).execute()
-                if (!response.isSuccessful) {
-                    _uiState.value = TodayUiState.Error("Server error ${response.code}")
-                    return@launch
-                }
                 val body = response.body?.string() ?: "[]"
-                val tasks = Json { ignoreUnknownKeys = true }.decodeFromString<List<TimelineTask>>(body)
-                _uiState.value = TodayUiState.Loaded(tasks)
+                if (response.isSuccessful) {
+                    val tasks = ApiClient.jsonInstance.decodeFromString<List<TimelineTask>>(body)
+                    _uiState.value = TodayUiState.Loaded(tasks)
+                } else {
+                    _uiState.value = TodayUiState.Error("Server error ${response.code}")
+                }
             } catch (e: Exception) {
-                _uiState.value = TodayUiState.Error(e.localizedMessage ?: "Failed to load timeline")
+                _uiState.value = TodayUiState.Error(e.message ?: "Network error")
             }
         }
     }
 
     fun visualState(task: TimelineTask): TimelineVisualState {
         if (task.status == "done") return TimelineVisualState.DONE
-        val now = java.time.Instant.now()
-        val end = task.scheduledEnd?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() }
-        val start = task.scheduledStart?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() }
-        if (end != null && end.isBefore(now)) return TimelineVisualState.PAST
-        if (start != null && !start.isAfter(now) && (end == null || !end.isBefore(now))) return TimelineVisualState.CURRENT
-        return TimelineVisualState.FUTURE
+        val now = LocalDateTime.now()
+        val start = task.scheduled_start?.let {
+            runCatching { OffsetDateTime.parse(it).toLocalDateTime() }.getOrNull()
+        }
+        val end = task.scheduled_end?.let {
+            runCatching { OffsetDateTime.parse(it).toLocalDateTime() }.getOrNull()
+        }
+        return when {
+            end != null && end.isBefore(now) -> TimelineVisualState.PAST
+            start != null && end != null && !start.isAfter(now) && !now.isAfter(end) -> TimelineVisualState.CURRENT
+            start != null && start.isBefore(now) && end == null -> TimelineVisualState.CURRENT
+            else -> TimelineVisualState.FUTURE
+        }
     }
 }
