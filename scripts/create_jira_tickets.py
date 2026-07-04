@@ -1184,7 +1184,69 @@ TICKETS = [
             p("TIME-011 (entitlements), TIME-014 (calendar provider) must be complete."),
             divider(),
             h2("Next Ticket"),
-            p("TIME-016: iOS App Shell and Navigation (Phase 4 kickoff)"),
+            p("TIME-016: Referral Program"),
+        ),
+    },
+
+    # ── PHASE 4 ──────────────────────────────────────────────────────────────
+
+    {
+        "summary": "TIME-018: iOS App Shell and Navigation",
+        "labels": ["phase-4", "ios", "swiftui", "navigation"],
+        "description": doc(
+            h2("Goal"),
+            p("Create the native SwiftUI app shell with bottom tab navigation, empty state screens "
+              "for all five tabs, design token system, and the API client foundation. "
+              "After this ticket the app builds and runs on simulator showing a polished empty state "
+              "for each tab. No real data yet."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Xcode project: ios/TimeSense.xcodeproj — bundle ID com.timesense.app",
+                "TimeSenseApp.swift — @main entry point, environment setup",
+                "RootTabView.swift — TabView with 5 tabs: Now, Today, Capture, Insights, Settings",
+                "Feature folder per tab: ios/TimeSense/Features/{Now,Today,Capture,Insights,Settings}/",
+                "Empty state view per tab with SF Symbol icon, title, and subtitle",
+                "Design tokens: Colors.swift (brand palette), Typography.swift (font styles), Spacing.swift",
+                "APIClient.swift — async/await URLSession wrapper, auth header injection",
+                "Endpoints.swift — typed endpoint enum (health, auth, users, onboarding)",
+                "AppConfig.swift — reads API base URL from Info.plist",
+                "AuthState.swift — @Observable auth state enum",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No Firebase Auth integration in this ticket",
+                "No real API calls — APIClient compiles but is not wired to live data",
+                "No onboarding flow screens",
+                "No subscription or paywall UI",
+                "No push notification registration",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "App builds with xcodebuild without errors",
+                "All 5 tabs visible and tappable in simulator",
+                "Each tab shows a placeholder with SF Symbol icon, title, and subtitle",
+                "Design tokens used everywhere — no hardcoded hex colors or font sizes",
+                "APIClient compiles and injectable via @Environment",
+                "No force-unwraps in shipping code",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build \\\n"
+                "  -project ios/TimeSense.xcodeproj \\\n"
+                "  -scheme TimeSense \\\n"
+                "  -destination 'platform=iOS Simulator,name=iPhone 16' \\\n"
+                "  CODE_SIGNING_ALLOWED=NO | tail -5"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-002 (FastAPI health endpoint) complete."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-019: Android App Shell and Navigation"),
         ),
     },
 ]
