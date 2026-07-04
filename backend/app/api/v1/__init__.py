@@ -10,6 +10,7 @@ from app.api.v1.notifications import router as notifications_router
 from app.api.v1.onboarding import router as onboarding_router
 from app.api.v1.referrals import router as referrals_router
 from app.api.v1.subscriptions import router as subscriptions_router
+from app.api.v1.tasks import router as tasks_router
 from app.api.v1.users import router as users_router
 
 api_router = APIRouter(prefix="/api/v1")
@@ -24,3 +25,4 @@ api_router.include_router(calendar_router)
 api_router.include_router(notifications_router)
 api_router.include_router(referrals_router)
 api_router.include_router(invites_router)
+api_router.include_router(tasks_router)
