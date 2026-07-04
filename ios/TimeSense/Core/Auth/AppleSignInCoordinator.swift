@@ -1,10 +1,10 @@
 import AuthenticationServices
 import CryptoKit
-import FirebaseAuth
 import Foundation
+#if canImport(FirebaseAuth)
+import FirebaseAuth
 
 /// Handles the Apple Sign In dance: nonce generation → ASAuthorizationController → Firebase credential.
-/// Call `signIn()` and await the returned `OAuthCredential?`.
 @MainActor
 final class AppleSignInCoordinator: NSObject {
     private var continuation: CheckedContinuation<OAuthCredential?, Error>?
@@ -27,8 +27,6 @@ final class AppleSignInCoordinator: NSObject {
         }
     }
 
-    // MARK: – Crypto helpers
-
     private func randomNonce(length: Int = 32) -> String {
         var bytes = [UInt8](repeating: 0, count: length)
         _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
@@ -47,8 +45,6 @@ final class AppleSignInCoordinator: NSObject {
     }
 }
 
-// MARK: – ASAuthorizationControllerDelegate
-
 extension AppleSignInCoordinator: ASAuthorizationControllerDelegate {
     nonisolated func authorizationController(
         controller: ASAuthorizationController,
@@ -56,30 +52,30 @@ extension AppleSignInCoordinator: ASAuthorizationControllerDelegate {
     ) {
         guard
             let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
-            let nonce = currentNonce,
             let appleIDToken = appleIDCredential.identityToken,
             let idTokenString = String(data: appleIDToken, encoding: .utf8)
         else {
-            continuation?.resume(returning: nil)
+            Task { @MainActor in self.continuation?.resume(returning: nil) }
             return
         }
-        let credential = OAuthProvider.appleCredential(
-            withIDToken: idTokenString,
-            rawNonce: nonce,
-            fullName: appleIDCredential.fullName
-        )
-        continuation?.resume(returning: credential)
+        Task { @MainActor in
+            let nonce = self.currentNonce ?? ""
+            let credential = OAuthProvider.appleCredential(
+                withIDToken: idTokenString,
+                rawNonce: nonce,
+                fullName: appleIDCredential.fullName
+            )
+            self.continuation?.resume(returning: credential)
+        }
     }
 
     nonisolated func authorizationController(
         controller: ASAuthorizationController,
         didCompleteWithError error: Error
     ) {
-        continuation?.resume(throwing: error)
+        Task { @MainActor in self.continuation?.resume(throwing: error) }
     }
 }
-
-// MARK: – ASAuthorizationControllerPresentationContextProviding
 
 extension AppleSignInCoordinator: ASAuthorizationControllerPresentationContextProviding {
     nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
@@ -89,3 +85,13 @@ extension AppleSignInCoordinator: ASAuthorizationControllerPresentationContextPr
             .first { $0.isKeyWindow } ?? ASPresentationAnchor()
     }
 }
+
+#else
+
+/// Stub coordinator — no-ops when Firebase is not linked.
+@MainActor
+final class AppleSignInCoordinator: NSObject {
+    func signIn() async throws -> Any? { nil }
+}
+
+#endif

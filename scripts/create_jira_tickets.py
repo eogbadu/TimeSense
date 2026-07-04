@@ -1599,6 +1599,60 @@ TICKETS = [
             p("TIME-030: Capture Screen (iOS and Android connect to POST /capture)"),
         ),
     },
+
+    {
+        "summary": "TIME-030: Capture Screen — Connect iOS and Android to POST /capture",
+        "labels": ["phase-5", "ios", "android", "capture"],
+        "description": doc(
+            h2("Goal"),
+            p("Wire the existing Capture UI stubs on iOS and Android to POST /api/v1/capture. "
+              "After this ticket users can type a task in plain text, tap Capture, and see it "
+              "created with LLM-extracted fields. Loading and error states are shown inline."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "iOS: ios/TimeSense/Features/Capture/CaptureView.swift — call APIClient POST /capture, show loading spinner, clear on success",
+                "iOS: ios/TimeSense/Features/Capture/CaptureViewModel.swift — ObservableObject wrapping capture API call, uiState (idle/loading/success/error)",
+                "Android: CaptureScreen.kt — call ApiClient POST /capture via CaptureViewModel, show CircularProgressIndicator, clear on success",
+                "Android: features/capture/CaptureViewModel.kt — ViewModel with StateFlow<CaptureUiState>",
+                "Shared: capture API response is a Task — display success toast/banner with extracted title",
+                "Error handling: show inline error message with retry option",
+                "Empty input: Capture button disabled until text is non-blank",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No voice recording in this ticket",
+                "No offline queue — if network fails show error",
+                "No task list refresh on this screen (Today screen will pick it up)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Typing text and tapping Capture calls POST /api/v1/capture",
+                "Loading spinner visible during request",
+                "On success: input cleared, success message shows extracted task title",
+                "On network error: error message shown, input preserved",
+                "Capture button disabled when input is empty",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "# iOS build\n"
+                "xcodebuild -target TimeSense -sdk iphonesimulator18.0 CODE_SIGNING_ALLOWED=NO -quiet\n"
+                "# Expect: ** BUILD SUCCEEDED **\n\n"
+                "# Android build\n"
+                "cd android && ./gradlew assembleDebug\n"
+                "# Expect: BUILD SUCCESSFUL"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-037 (POST /capture endpoint), TIME-018 (iOS App Shell), TIME-019 (Android App Shell)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-031: Today Screen — Realistic Timeline"),
+        ),
+    },
 ]
 
 

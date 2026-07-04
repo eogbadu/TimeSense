@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(FirebaseCore)
 import FirebaseCore
+#endif
 
 @main
 struct TimeSenseApp: App {
@@ -7,7 +9,9 @@ struct TimeSenseApp: App {
     @StateObject private var authService = AuthService()
 
     init() {
+        #if canImport(FirebaseCore)
         FirebaseApp.configure()
+        #endif
     }
 
     var body: some Scene {
