@@ -89,6 +89,13 @@ class Settings(BaseSettings):
 
     # Monitoring (Sentry-optional; empty DSN => disabled)
     sentry_dsn: str = ""
+
+    # Security hardening
+    # Fernet key for encrypting integration OAuth tokens at rest. If empty, a key is derived
+    # deterministically from secret_key (fine for dev; set a real key in production).
+    token_encryption_key: str = ""
+    rate_limit_capture_per_minute: int = 30
+    rate_limit_account_delete_per_hour: int = 5
     notion_version: str = "2022-06-28"
 
     @property

@@ -7,6 +7,7 @@ from app.api.v1 import api_router
 from app.core.config import settings
 from app.core.errors import add_error_handlers
 from app.core.firebase import init_firebase
+from app.core.middleware import SecurityHeadersMiddleware
 from app.core.monitoring import init_monitoring
 from app.core.redis import close_redis
 
@@ -30,6 +31,7 @@ app = FastAPI(
     openapi_url="/openapi.json" if not settings.is_production else None,
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,

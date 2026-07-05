@@ -8,6 +8,7 @@ from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.crypto import EncryptedString
 from app.models.base import Base, TimestampMixin, UUIDMixin
 
 if TYPE_CHECKING:
@@ -23,8 +24,8 @@ class CalendarIntegration(UUIDMixin, TimestampMixin, Base):
         nullable=False, index=True,
     )
     provider: Mapped[str] = mapped_column(String(20), nullable=False)  # google | apple
-    access_token: Mapped[str] = mapped_column(Text, nullable=False)
-    refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    access_token: Mapped[str] = mapped_column(EncryptedString, nullable=False)
+    refresh_token: Mapped[str | None] = mapped_column(EncryptedString, nullable=True)
     token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     calendar_id: Mapped[str] = mapped_column(String(256), nullable=False, default="primary")
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)

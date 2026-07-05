@@ -1,7 +1,8 @@
 # Known Issues
 
-## Issue: Integration OAuth tokens are stored as plain Text, not encrypted at rest
+## Issue: Integration OAuth tokens are stored as plain Text, not encrypted at rest — RESOLVED 2026-07-05 (TIME-056)
 - Date: 2026-07-05
+- **RESOLVED (2026-07-05, TIME-056):** added `EncryptedString` (Fernet) in `app/core/crypto.py` and applied it to the access_token/refresh_token columns of Calendar/Slack/Teams/Notion integrations — tokens are now ciphertext at rest, decrypted transparently by the ORM. No migration (impl=Text). Key from `settings.token_encryption_key` (derived from secret_key if unset — set a real key in prod). `decrypt_token` tolerates any legacy plaintext.
 - Area: `backend/app/models/calendar.py` (CalendarIntegration.access_token), `backend/app/models/slack.py` (SlackIntegration.access_token)
 - Symptom: OAuth/access tokens for connected integrations (Google Calendar since TIME-015-era, Slack as of TIME-049) are stored in plain `Text` columns. The integration-provider-pattern skill calls for encrypted-at-rest storage ("Store encrypted in integration_tokens table").
 - Root cause: The original calendar integration stored tokens as plain Text; TIME-049's Slack integration matched that existing behavior for consistency rather than introducing a one-off encryption scheme for just Slack.

@@ -17,6 +17,15 @@ def anyio_backend():
     return "asyncio"
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiters():
+    # Shared in-process limiters accumulate state across tests (same auth token) — reset each test.
+    from app.core.rate_limit import _reset_all
+
+    _reset_all()
+    yield
+
+
 @pytest.fixture
 async def db_engine():
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)

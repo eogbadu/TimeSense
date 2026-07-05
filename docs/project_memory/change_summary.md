@@ -1,5 +1,14 @@
 # Change Summary
 
+## 2026-07-05 — TIME-056 (Jira TIME-62) Security Review and Hardening
+
+- Token encryption at rest: EncryptedString (Fernet) on Calendar/Slack/Teams/Notion access/refresh
+  tokens — ciphertext at rest, plaintext via ORM, no migration (impl=Text); tolerates legacy plaintext
+- SecurityHeadersMiddleware (nosniff/DENY/no-referrer/CSP/+HSTS in prod)
+- In-process rate limiting on POST /capture (30/min) + DELETE /privacy/account (5/hr) → 429
+- Audit: Stripe webhook already verifies signatures (documented). 7 new tests; suite 306/306
+- Follow-up: Redis-backed rate limiting for multi-instance
+
 ## 2026-07-05 — TIME-055 (Jira TIME-61) Privacy: Data Export + Account Deletion
 
 - PrivacyService: export_data (portable JSON of all user-owned tables, tokens redacted) +

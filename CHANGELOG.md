@@ -10,6 +10,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Phase 14 — Beta Hardening and Launch Readiness
 
+- [2026-07-05] TIME-056: Security hardening — integration OAuth tokens now encrypted at rest (Fernet EncryptedString on Calendar/Slack/Teams/Notion; no migration), security-headers middleware, and in-process rate limiting on POST /capture + DELETE /privacy/account (429 + Retry-After). Audit confirmed Stripe webhook already verifies signatures
 - [2026-07-05] TIME-055: Privacy — data export + account deletion — GET /api/v1/privacy/export (portable JSON bundle of all the user's data, OAuth tokens redacted) and DELETE /api/v1/privacy/account?confirm=true (erases the user + cascades all their data + deletes the Firebase Auth user); test conftest now enforces SQLite foreign keys so cascade is exercised
 - [2026-07-05] TIME-054: Error monitoring + analytics (backend) — Sentry-optional error monitoring (no-op without a DSN) wired into the error handlers; a privacy-respecting analytics pipeline (analytics_events table + AnalyticsService gated on the `analytics` consent), emits task_captured from /capture, GET /api/v1/admin/analytics event counts. Client analytics deferred
 
