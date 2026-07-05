@@ -1,5 +1,12 @@
 # Change Summary
 
+## 2026-07-05 — TIME-057 (Jira TIME-63) App Store & Play Store Prep
+
+- New docs/launch/: privacy_policy.md, app_store_listing.md (metadata + review notes + App Privacy
+  labels), play_store_listing.md (metadata + Data Safety), store_assets_checklist.md, README.md
+- Docs-only; grounded in the real product (consents, integrations, OpenAI, encrypted tokens,
+  export/delete). Assets + console entry + legal review are the user's step.
+
 ## 2026-07-05 — TIME-056 (Jira TIME-62) Security Review and Hardening
 
 - Token encryption at rest: EncryptedString (Fernet) on Calendar/Slack/Teams/Notion access/refresh
