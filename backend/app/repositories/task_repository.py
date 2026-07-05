@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task
@@ -73,3 +73,32 @@ class TaskRepository:
         task.status = "cancelled"
         await self.db.flush()
         return True
+
+    async def count_created_in_range(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> int:
+        """Tasks (excluding cancelled) created in [start, end) — a proxy for capture volume."""
+        result = await self.db.execute(
+            select(func.count()).select_from(Task).where(
+                Task.user_id == user_id,
+                Task.status != "cancelled",
+                Task.created_at >= start,
+                Task.created_at < end,
+            )
+        )
+        return result.scalar_one()
+
+    async def count_completed_in_range(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> int:
+        """Tasks marked done with updated_at in [start, end) — a proxy for completions, since
+        Task has no explicit completed_at field yet."""
+        result = await self.db.execute(
+            select(func.count()).select_from(Task).where(
+                Task.user_id == user_id,
+                Task.status == "done",
+                Task.updated_at >= start,
+                Task.updated_at < end,
+            )
+        )
+        return result.scalar_one()

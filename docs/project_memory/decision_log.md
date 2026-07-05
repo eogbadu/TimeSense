@@ -152,6 +152,18 @@
   Reason: Android AppWidgets run in the same process as the host app (no separate extension process like iOS's WidgetKit target), so there's no equivalent of the App-Group-sharing problem TIME-044 solved. Each widget's data comes from exactly one ViewModel (NowViewModel owns usable minutes, TodayViewModel owns the next event), so giving each its own state is simpler than inventing a merged blob two ViewModels would need to coordinate around.
   Date: 2026-07-05
 
+- Decision: WeeklyInsight rows are generated once per (user, week_start) and cached forever — a completed week is never silently recomputed
+  Reason: Past weeks' underlying data (tasks, meals, sleep, commute, feedback) doesn't change after the fact, so recomputing would only add cost/latency for an identical result, and would risk producing a different LLM summary for the same historical week if regenerated later. Idempotent generation also makes the weekly Celery job and the on-demand API-triggered generation safely overlap without duplicate rows (enforced by a DB unique constraint on user_id+week_start).
+  Date: 2026-07-05
+
+- Decision: TIME-046 only summarizes fully-completed Monday-Sunday weeks, never "this week so far"
+  Reason: A partial week's numbers (e.g. "1 of 1 tasks done" on a Tuesday) are noisy and could read as judgmental or misleading before the week is over — the product's "no guilt-driven copy" rule (product_brief.md) argues against surfacing incomplete-week statistics as if they were meaningful trends.
+  Date: 2026-07-05
+
+- Decision: No new `Task.completed_at` column — TIME-046 approximates completion timing via `updated_at`
+  Reason: Adding a real completed-at timestamp is a task-model schema change bigger than this ticket's "weekly summary" scope; `updated_at` is close enough for a v1 insight and the limitation is explicitly documented (known_issues.md) rather than silently accepted.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

@@ -1,8 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 10: Notifications, Widgets, Ambient Surfaces — TIME-043/044/045 done. Phase 10 complete;
-Phase 11 next.
+Phase 11: Insights and Learning Summary — TIME-046 done; TIME-047 next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -79,12 +78,20 @@ before being trusted — do not assume unchecked = not built.
       `./gradlew assembleDebug` and `./gradlew test` (6 new unit tests, all passing) using the
       Android-Studio-bundled JBR as JAVA_HOME (no system `java` in this environment).
 
+## Phase 11 Progress
+- [x] TIME-046 (Jira TIME-45): Weekly Insights Generation — weekly_insights table,
+      InsightsService aggregating tasks/meals/sleep/commute/feedback over a completed
+      Monday-Sunday week into an LLM-summarized (fallback-templated) report;
+      GET /api/v1/insights/weekly + /history (Premium-gated); real iOS and Android Insights
+      screens. Weekly Celery job (Monday 5am UTC), untested in this environment (no Redis/Docker).
+- [ ] TIME-047: Learned Assumptions Settings
+
 ## Active Jira Tickets
-- TIME-44 (impl TIME-045, Android Widgets) — Done
-- Next: TIME-046 (Weekly Insights Generation) — Phase 11
+- TIME-45 (impl TIME-046, Weekly Insights Generation) — Done
+- Next: TIME-047 (Learned Assumptions Settings)
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 11: Insights and Learning Summary — Phase 10 is complete
+Phase 12: Admin Dashboard — after Phase 11 completes

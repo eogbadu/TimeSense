@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.commute import CommuteEvent
@@ -58,3 +58,16 @@ class CommuteRepository:
         event.status = status
         await self.db.flush()
         return True
+
+    async def count_confirmed_in_range(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> int:
+        result = await self.db.execute(
+            select(func.count()).select_from(CommuteEvent).where(
+                CommuteEvent.user_id == user_id,
+                CommuteEvent.status == "confirmed",
+                CommuteEvent.detected_start >= start,
+                CommuteEvent.detected_start < end,
+            )
+        )
+        return result.scalar_one()

@@ -1,5 +1,25 @@
 # Change Summary
 
+## 2026-07-05 — TIME-046 (Jira TIME-45) Weekly Insights Generation
+
+**What changed:**
+- `weekly_insights` table + InsightsService aggregating tasks/meals/sleep/commute/feedback data
+  over a completed Monday-Sunday week, with an LLM-generated (or templated-fallback) 2-3 sentence
+  summary
+- `GET /api/v1/insights/weekly` (generates the most recent completed week if not yet generated),
+  `GET /api/v1/insights/history` — both Premium-gated
+- A weekly Celery job (Monday 5am UTC) proactively generates each active user's insight
+- Real iOS and Android Insights screens (summary + stats grid) replacing the static placeholders
+
+**What did not change:**
+- No "current week so far" view — only fully completed weeks
+- No trend charts/graphs across multiple weeks beyond a simple history list
+- No backend change to how meal skips are detected — most_skipped_meal only counts explicitly
+  logged skips, a known simplification
+
+**Next:**
+- TIME-047: Learned Assumptions Settings
+
 ## 2026-07-05 — TIME-045 (Jira TIME-44) Android Widgets
 
 **What changed:**

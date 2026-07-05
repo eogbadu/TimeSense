@@ -1,5 +1,25 @@
 # Known Issues
 
+## Issue: test_recommendations.py's mock LLM provider doesn't actually exercise the LLM-success path
+- Date: 2026-07-05
+- Area: `backend/tests/test_recommendations.py`
+- Symptom: `_MockProvider.complete()` returns `LLMResponse(content="This is your highest priority task right now.", model="mock")` — missing the required `provider` field on the `LLMResponse` dataclass (`app/llm/base.py` defines `provider: str` with no default). Constructing it without `provider` raises `TypeError`, which `RecommendationService._explain()`'s blanket `except Exception:` silently catches, falling through to the templated fallback text instead of the mocked LLM text. Any assertion checking for the mocked content specifically would fail — but a look at the existing test suggests it only checks structural response shape, not exact "why" text, so this has gone unnoticed.
+- Root cause: `LLMResponse`'s `provider` field has no default value, so any code constructing one without it raises at construction time; discovered because `tests/test_insights.py`'s own mock provider made the identical mistake first (fixed there by adding `provider="mock"`).
+- Fix: Not applied — out of scope for TIME-046 (touching an unrelated, currently-passing test file's internals risks destabilizing it without a reason tied to this ticket). `test_recommendations.py`'s mock still "passes" today only because nothing asserts on the exact why-text; it's silently testing the fallback path, not the LLM path.
+- Files changed: None.
+- Verification: N/A.
+- Follow-up needed: Add `provider="mock"` to `test_recommendations.py`'s `_MockProvider.complete()` return value in a small, separate fix, ideally alongside an assertion that the returned "why" text actually equals the mocked content (to make the test fail loudly if this regresses again).
+
+## Issue: WeeklyInsight's tasks_completed/tasks_total are proxies, not exact
+- Date: 2026-07-05
+- Area: `backend/app/services/insights_service.py`, `backend/app/repositories/task_repository.py`
+- Symptom: `count_completed_in_range()` uses `Task.updated_at` as a stand-in for "when this task was completed" (any update touches `updated_at`, not just a done-transition), and `count_created_in_range()` uses `Task.created_at` as a stand-in for "captured this week." Both are reasonable but not exact.
+- Root cause: `Task` has no explicit `completed_at` timestamp field — TIME-046 didn't add one, since introducing a new column plus a migration to backfill/maintain it felt like a bigger schema change than this ticket's scope (a weekly summary, not a task-model overhaul).
+- Fix: Not applied — documented limitation, acceptable for a first version of weekly insights.
+- Files changed: None.
+- Verification: N/A.
+- Follow-up needed: If this proxy proves too noisy in practice (e.g. an edit-only update inflating "completed" counts), add a real `completed_at` column to `Task`, set it exactly once on the done transition, and switch `count_completed_in_range` to use it.
+
 ## Issue: This environment has no system `java`/`JAVA_HOME` — use Android Studio's bundled JBR
 - Date: 2026-07-05
 - Area: `android/` build verification (TIME-045)

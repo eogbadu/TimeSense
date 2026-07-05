@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.meal import MEAL_TYPES, MealEvent
@@ -71,3 +71,20 @@ class MealRepository:
                 window_end += timedelta(days=1)  # wraps past midnight
             status[meal_type] = "skipped" if now >= window_end else "pending"
         return status
+
+    async def count_skipped_by_type_in_range(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> dict[str, int]:
+        """Explicitly-logged skips only (status='skipped' rows) in [start, end) — does not
+        backfill inferred-but-never-logged skips from get_today_status's live computation."""
+        result = await self.db.execute(
+            select(MealEvent.meal_type, func.count())
+            .where(
+                MealEvent.user_id == user_id,
+                MealEvent.status == "skipped",
+                MealEvent.occurred_at >= start,
+                MealEvent.occurred_at < end,
+            )
+            .group_by(MealEvent.meal_type)
+        )
+        return {meal_type: count for meal_type, count in result.all()}
