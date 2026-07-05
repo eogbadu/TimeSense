@@ -58,11 +58,11 @@ subscription_records, replan_requests, notifications, notification_events, tasks
 internal_reminders, recommendation_feedback, routine_assumptions, meal_events, commute_events,
 sleep_wake_events, weekly_insights, calendar_integrations, pending_calendar_actions,
 slack_integrations, slack_action_items, teams_integrations, teams_action_items, notion_integrations,
-notion_import_items. (Correction: there is no separate "notification_preferences" table — the
+notion_import_items, analytics_events. (Correction: there is no separate "notification_preferences" table — the
 notification_mode field lives directly on user_preferences; a prior version of this file listed
 that table incorrectly.)
 
-Backend tests: 283, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
+Backend tests: 292, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
 verifies REAL Firebase ID tokens as of TIME-061 (real service account for project timesense-eb7ec
 in .env; tests still mock verify_id_token and don't run the app lifespan). config.py loads the
 repo-root .env from any CWD (TIME-064); /users/me syncs the DB role from the token claim (TIME-065).
@@ -85,6 +85,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-054 (impl seq) → Jira TIME-60 (Error Monitoring + Analytics, backend) — **Done (this session)** — Phase 14 start
 - TIME-065 (net-new) → Jira TIME-59 (Sync DB role from token claim) — **Done (PR #54 merged 2026-07-05)**
 - TIME-064 (net-new) → Jira TIME-58 (Load .env from repo root) — **Done (PR #53 merged 2026-07-05)**
 - TIME-063 (net-new) → Jira TIME-57 (Fix Alembic migration ordering) — **Done (PR #50 merged 2026-07-05)**

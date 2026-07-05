@@ -3983,6 +3983,92 @@ TICKETS = [
             p("Web Firebase config follow-ups / next feature ticket."),
         ),
     },
+
+    {
+        "summary": "TIME-054: Error Monitoring and Analytics (backend)",
+        "labels": ["phase-14", "backend", "observability"],
+        "description": doc(
+            h2("Goal"),
+            p("Add backend error monitoring (Sentry-optional) and a privacy-respecting analytics "
+              "event pipeline, so production errors are visible and key product events are captured "
+              "— gated on the existing 'analytics' consent. First ticket of Phase 14 (Beta "
+              "Hardening & Launch Readiness). Client-side (iOS/Android) analytics is a follow-up."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "app/core/monitoring.py — init_monitoring() initializes Sentry only when SENTRY_DSN "
+                "is set AND sentry-sdk is importable, else a clean no-op (same graceful pattern as "
+                "Firebase/LLM); capture_exception(exc, context) delegates or no-ops. Wired into the "
+                "lifespan startup and the existing error handlers (add_error_handlers) so unhandled "
+                "500s are captured. send_default_pii=False",
+                "config: sentry_dsn (default ''); add sentry-sdk to requirements (optional import "
+                "so tests run without it)",
+                "AnalyticsEvent model (user_id nullable FK, event_name, properties JSON, created_at)"
+                " + Alembic migration",
+                "AnalyticsService.track(event_name, user_id=None, properties=None): for a "
+                "user-attributed event, record ONLY if that user granted the 'analytics' consent "
+                "(ConsentRepository.get_effective); system events (user_id None) record without a "
+                "consent check. Returns None when skipped",
+                "Emit a representative key event: 'task_captured' from POST /api/v1/capture after the "
+                "task is created",
+                "GET /api/v1/admin/analytics — admin-gated event counts grouped by event_name "
+                "(ties into the admin dashboard)",
+                "Tests: monitoring no-op without DSN + safe capture; analytics records with consent, "
+                "skips without, records system events; capture emits task_captured (consented); "
+                "admin analytics counts + 403 without admin",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No client-side analytics (iOS Analytics.swift / Android analytics/) — deferred to a "
+                "follow-up ticket; this establishes the backend pipeline + event schema first",
+                "No real Sentry project/DSN wired (SENTRY_DSN empty by default → no-op); no "
+                "performance tracing (traces_sample_rate=0)",
+                "No PII in events — properties are product signals, not personal data; "
+                "send_default_pii=False. No raw request bodies captured",
+                "No analytics on every endpoint — one representative emission (task_captured) plus "
+                "the reusable service; broader instrumentation is incremental follow-up",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/core/monitoring.py (new)",
+                "backend/app/core/errors.py (capture 500s), backend/app/main.py (init in lifespan)",
+                "backend/app/core/config.py (sentry_dsn), backend/requirements.txt (sentry-sdk)",
+                "backend/app/models/analytics_event.py (new), migration, app/models/__init__.py",
+                "backend/app/services/analytics_service.py (new), app/repositories/"
+                "analytics_repository.py (new)",
+                "backend/app/api/v1/capture.py (emit event), app/api/v1/admin.py (+ schemas) "
+                "(analytics endpoint)",
+                "backend/tests/test_monitoring_analytics.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "init_monitoring() is a no-op with no DSN (is_enabled() False); capture_exception is "
+                "safe to call when disabled",
+                "AnalyticsService.track records a user event only when the user granted 'analytics' "
+                "consent; skips otherwise; records system (user_id None) events",
+                "POST /api/v1/capture emits a task_captured event for a consented user",
+                "GET /api/v1/admin/analytics returns per-event counts (admin only; 403 otherwise)",
+                "Full backend test suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_monitoring_analytics.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-002 (auth/admin), the existing consent system (analytics consent type), "
+              "TIME-031 (capture endpoint), the admin dashboard (TIME-048)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-055: Privacy Review and Data Export (or client analytics follow-up)."),
+        ),
+    },
 ]
 
 

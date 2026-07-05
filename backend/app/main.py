@@ -7,6 +7,7 @@ from app.api.v1 import api_router
 from app.core.config import settings
 from app.core.errors import add_error_handlers
 from app.core.firebase import init_firebase
+from app.core.monitoring import init_monitoring
 from app.core.redis import close_redis
 
 
@@ -14,6 +15,7 @@ from app.core.redis import close_redis
 async def lifespan(app: FastAPI):
     # Startup
     init_firebase()
+    init_monitoring()
     yield
     # Shutdown
     await close_redis()
