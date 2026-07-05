@@ -164,6 +164,10 @@
   Reason: Adding a real completed-at timestamp is a task-model schema change bigger than this ticket's "weekly summary" scope; `updated_at` is close enough for a v1 insight and the limitation is explicitly documented (known_issues.md) rather than silently accepted.
   Date: 2026-07-05
 
+- Decision: TIME-047's Android time editor reuses one Material3 `TimePicker` with Starts/Ends toggle buttons rather than a two-field time-range picker
+  Reason: Material3 has no built-in time-range picker component, and pulling in a third-party library for a single settings edit flow was more dependency weight than the feature warranted. iOS's two side-by-side `DatePicker(.hourAndMinute)` fields don't have this constraint, so the two platforms' edit UIs are shaped slightly differently — an intentional, scope-appropriate platform difference, not an inconsistency to fix.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

@@ -1,5 +1,21 @@
 # Change Summary
 
+## 2026-07-05 — TIME-047 (Jira TIME-46) Learned Assumptions Settings
+
+**What changed:**
+- New "Learned Assumptions" screen on both iOS and Android, reached from Settings > Preferences
+- Lists the 6 RoutineAssumption types (sleep/breakfast/lunch/dinner/morning+evening hygiene) with
+  friendly labels, formatted time ranges, and an "Edited" indicator when customized
+- Tapping a routine opens an edit flow (time pickers) that calls the existing
+  PATCH /api/v1/routines/{routine_type} and updates the list in place
+
+**What did not change:**
+- No backend changes at all — reuses GET/PATCH /api/v1/routines from TIME-039 as-is
+- No editing of any other learned data (meals, commute, sleep) — only routine blocks
+
+**Next:**
+- TIME-048: Admin Dashboard Foundation (Web) — starts Phase 12
+
 ## 2026-07-05 — TIME-046 (Jira TIME-45) Weekly Insights Generation
 
 **What changed:**

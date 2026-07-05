@@ -1,5 +1,40 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-047 (Jira TIME-46): Learned Assumptions Settings
+
+### Created
+- `ios/TimeSense/Features/Settings/LearnedAssumptionsViewModel.swift` — GET /api/v1/routines,
+  PATCH per routine_type, updates the in-memory list in place on success
+- `ios/TimeSense/Features/Settings/LearnedAssumptionsView.swift` — list of the 6 routine types
+  with friendly labels + formatted time ranges + an "Edited" badge when is_customized; tapping a
+  row opens a sheet with two `DatePicker(.hourAndMinute)` fields (start/end) + Save/Cancel
+- `android/.../features/settings/LearnedAssumptionsViewModel.kt` — same two endpoints, OkHttp
+- `android/.../features/settings/LearnedAssumptionsScreen.kt` — same list shape; editing uses a
+  Material3 `TimePicker` inside an `AlertDialog`, with Starts/Ends toggle buttons since Material3
+  doesn't have a two-field time-range picker built in
+
+### Modified
+- `ios/TimeSense/Features/Settings/SettingsView.swift` — added a "Learned Assumptions"
+  `NavigationLink` row to the Preferences section; extracted `SettingsRowLabel` (icon+title, no
+  chevron) from the existing `SettingsRow` so the real `NavigationLink` doesn't double up its own
+  disclosure indicator with a second manually-drawn one
+- `ios/TimeSense.xcodeproj/project.pbxproj` — registered the two new Swift files (xcodeproj gem)
+- `android/.../features/settings/SettingsScreen.kt` — `SettingsItem` gained an `onClick` param
+  (previously a no-op `.clickable {}` on every row); added the new row wired to it
+- `android/.../navigation/MainNavHost.kt` — registered `"learned_assumptions"` as a new destination
+  in the existing single-NavHost tab structure, with `SettingsScreen` now taking an
+  `onLearnedAssumptionsClick` callback rather than a `NavController` directly
+
+### Design notes
+- Pure UI ticket, no backend changes — GET/PATCH /api/v1/routines (TIME-039) already supported
+  everything needed.
+- Android has no built-in Material3 "time range" picker, so the edit dialog reuses one
+  `TimePicker` with Starts/Ends toggle buttons rather than pulling in a third-party dependency for
+  a two-field picker — a deliberate scope-minimizing choice.
+- Verified with `xcodebuild -target TimeSense -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO` (BUILD
+  SUCCEEDED, zero new warnings) and `./gradlew assembleDebug && ./gradlew test` (BUILD SUCCESSFUL,
+  Android-Studio-bundled JBR as JAVA_HOME per known_issues.md).
+
 ## 2026-07-05 — TIME-046 (Jira TIME-45): Weekly Insights Generation
 
 ### Created
