@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 9: Routines, Meals, Commute, Sleep/Wake — TIME-039–042 done. Phase 9 complete; Phase 10 next.
+Phase 10: Notifications, Widgets, Ambient Surfaces — TIME-043 done; TIME-044/045 next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -61,12 +61,20 @@ before being trusted — do not assume unchecked = not built.
       via the existing NotificationService.propose_replan/ReplanRequest approval flow. iOS HealthKit
       read integration is out of scope (backend contract only, per TIME-041's precedent).
 
+## Phase 10 Progress
+- [x] TIME-043 (Jira TIME-42): Notification Modes and Learning Prompts — notification_events table,
+      NotificationService gained mode-gated maybe_send_morning_checkin/evening_checkout/
+      learning_prompt methods (gentle/balanced/active_coach), a concrete routine-confirmation
+      learning prompt, and a Celery beat schedule (untested — no Redis/Docker in this environment).
+- [ ] TIME-044: iOS Widgets
+- [ ] TIME-045: Android Widgets
+
 ## Active Jira Tickets
-- TIME-41 (impl TIME-042, Sleep/Wake Signal Integration) — Done
-- Next: TIME-043 (Notification Modes and Learning Prompts) — Phase 10
+- TIME-42 (impl TIME-043, Notification Modes and Learning Prompts) — Done
+- Next: TIME-044 (iOS Widgets)
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 10: Notifications, Widgets, Ambient Surfaces — Phase 9 is complete
+Phase 11: Insights and Learning Summary — after Phase 10 completes

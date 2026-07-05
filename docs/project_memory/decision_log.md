@@ -128,6 +128,14 @@
   Reason: The product rule that replans always require explicit approval is already fully implemented; inventing a parallel mechanism for one more trigger source would duplicate the approve/reject/expiry logic for no benefit. The existing /api/v1/notifications/replans/{id}/approve|reject routes handle it identically to any other replan.
   Date: 2026-07-05
 
+- Decision: Notification mode behavior (TIME-043) maps gentle -> evening check-out only, balanced -> morning + evening check-ins, active_coach -> both check-ins plus learning prompts
+  Reason: The product brief already frames "Active Coach" as the persona associated with the early Learning Mode window ("First few weeks: Active Coach / Learning Mode"), so gating learning prompts on active_coach specifically reuses existing product language instead of inventing a fourth, disconnected notification concept.
+  Date: 2026-07-05
+
+- Decision: TIME-043's learning prompt uses a fixed 14-day window (reusing the existing trial length) rather than building the data-driven "learning period ends based on enough data" logic
+  Reason: That data-driven behavior was already logged as a deferred decision (2026-07-03) and depends on signal/data-quality thresholds that don't exist yet in the scorer/recommendation engine. Building a second, ad hoc version of it here would conflict with that future implementation; reusing the trial length is a defensible placeholder that's easy to find and replace later.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

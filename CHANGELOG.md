@@ -8,6 +8,10 @@ Format: `[DATE] TIME-### Short description`
 
 ## Unreleased
 
+### Phase 10 — Notifications, Widgets, Ambient Surfaces
+
+- [2026-07-05] TIME-043: Notification modes and learning prompts — notification_mode (gentle/balanced/active_coach) now drives morning check-in/evening check-out/learning-prompt behavior via NotificationService + a Celery beat schedule
+
 ### Phase 9 — Routines, Meals, Commute, Sleep/Wake
 
 - [2026-07-05] TIME-042: Sleep/wake signal integration — POST /api/v1/sleep/events (health-data-consent gated), GET /api/v1/sleep/today; late wake (>=45min past the assumed sleep-routine wake time) proposes a morning replan via the existing approval flow

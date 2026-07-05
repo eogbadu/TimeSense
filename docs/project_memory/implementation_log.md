@@ -1,5 +1,47 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-043 (Jira TIME-42): Notification Modes and Learning Prompts
+
+### Created
+- `backend/app/models/notification_event.py` — NotificationEvent model (event_type
+  morning_checkin/evening_checkout/learning_prompt, notification_id FK) — audit trail + dedup
+- `backend/migrations/versions/l2m3n4o5p6q7_add_notification_events.py` — notification_events table
+- `backend/app/workers/notification_tasks.py` — three thin Celery tasks (send_morning_checkins,
+  send_evening_checkouts, send_learning_prompts) wrapping the NotificationService methods via
+  asyncio.run() + AsyncSessionLocal; not covered by tests (no Redis/Docker in this environment,
+  same precedent as the pre-existing app.workers.health_task)
+- `backend/tests/test_notification_orchestration.py` — 9 tests, service-layer against db_session
+  (matching test_notifications.py's existing pattern for non-HTTP-triggered flows)
+
+### Modified
+- `backend/app/repositories/notification_repository.py` — added NotificationEventRepository
+  (record/has_sent_today)
+- `backend/app/repositories/user_repository.py` — added list_active_ids() for the worker loop
+- `backend/app/services/notification_service.py` — added maybe_send_morning_checkin(),
+  maybe_send_evening_checkout(), maybe_send_learning_prompt(), maybe_send_routine_learning_prompt()
+- `backend/app/workers/celery_app.py` — registered notification_tasks module + a UTC beat_schedule
+  (8am/10am/9pm) for the three tasks
+- `backend/app/models/__init__.py` — registered NotificationEvent
+
+### Design notes
+- `notification_mode` (gentle|balanced|active_coach) already existed on UserPreferences from an
+  earlier ticket but had no behavior attached to it anywhere — this ticket is purely about giving
+  it real effect, not adding new preference storage/API.
+- Mode mapping: gentle -> evening check-out only (lightest touch); balanced -> both check-ins, no
+  learning prompts; active_coach -> both check-ins + learning prompts. This maps directly onto the
+  product brief's "Active Coach / Learning Mode" framing rather than inventing an unrelated concept.
+- The learning prompt is concrete, not a stub: it checks the user's "sleep" RoutineAssumption
+  (TIME-039) and, if still `is_customized = False` and the account is within a 14-day placeholder
+  Learning Mode window (reusing the existing 14-day trial length rather than a new arbitrary
+  number), asks the user to confirm/adjust the assumed sleep block.
+- The 14-day window is explicitly a placeholder — decision_log.md already has an unimplemented
+  decision that the learning period should end "based on enough data, not fixed days"; this ticket
+  doesn't attempt that, to avoid inventing a second, conflicting partial implementation.
+- Dedup (once per event_type per user per UTC day) follows the same created-at-date-check pattern
+  already used by SleepWakeEvent/CommuteEvent, rather than a new mechanism.
+- Celery beat schedule times (8am/10am/9pm) are UTC, not per-user-local — same known UTC-only
+  simplification as RoutineAssumption/CommuteService/MorningReplanService (known_issues.md).
+
 ## 2026-07-05 — TIME-042 (Jira TIME-41): Sleep/Wake Signal Integration
 
 ### Created

@@ -6,12 +6,35 @@ RULE: Replans must never be applied without explicit user approval.
 """
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification, ReplanRequest
-from app.repositories.notification_repository import NotificationRepository, ReplanRepository
+from app.repositories.notification_repository import (
+    NotificationEventRepository,
+    NotificationRepository,
+    ReplanRepository,
+)
+from app.repositories.routine_repository import RoutineAssumptionRepository
+from app.repositories.user_repository import UserRepository
+
+# Placeholder Learning Mode window: reuses the existing 14-day trial length rather than
+# inventing a new number. Should become data-driven (decision_log.md) in a future ticket.
+LEARNING_PERIOD_DAYS = 14
+
+# gentle: lightest touch (evening check-out only). balanced: both daily check-ins, no
+# learning prompts. active_coach: both check-ins + learning prompts, matching the product
+# brief's "Active Coach / Learning Mode" framing.
+_MODES_WITH_MORNING_CHECKIN = {"balanced", "active_coach"}
+_MODES_WITH_LEARNING_PROMPTS = {"active_coach"}
+
+
+def _format_minute(minute: int) -> str:
+    hour, mins = divmod(minute % (24 * 60), 60)
+    period = "AM" if hour < 12 else "PM"
+    display_hour = hour % 12 or 12
+    return f"{display_hour}:{mins:02d}{period}"
 
 
 class NotificationService:
@@ -19,6 +42,8 @@ class NotificationService:
         self.db = db
         self.notif_repo = NotificationRepository(db)
         self.replan_repo = ReplanRepository(db)
+        self.event_repo = NotificationEventRepository(db)
+        self.user_repo = UserRepository(db)
 
     # ── Notifications ─────────────────────────────────────────────────────────
 
@@ -103,3 +128,84 @@ class NotificationService:
 
     async def list_pending_replans(self, user_id: uuid.UUID) -> list[ReplanRequest]:
         return await self.replan_repo.list_pending(user_id)
+
+    # ── Notification orchestration: check-ins and learning prompts ─────────────
+
+    async def _notification_mode(self, user_id: uuid.UUID) -> str | None:
+        user = await self.user_repo.get_by_id(user_id)
+        if user is None or user.preferences is None:
+            return None
+        return user.preferences.notification_mode
+
+    async def maybe_send_morning_checkin(self, user_id: uuid.UUID) -> Notification | None:
+        mode = await self._notification_mode(user_id)
+        if mode not in _MODES_WITH_MORNING_CHECKIN:
+            return None
+        if await self.event_repo.has_sent_today(user_id, "morning_checkin"):
+            return None
+
+        notif = await self.send_notification(
+            user_id=user_id,
+            type="suggestion",
+            title="Good morning",
+            body="Ready to start your day? Check Now for today's plan.",
+        )
+        await self.event_repo.record(user_id, "morning_checkin", notif.id)
+        return notif
+
+    async def maybe_send_evening_checkout(self, user_id: uuid.UUID) -> Notification | None:
+        # All modes get an evening check-out — it's the lightest-touch nudge.
+        if await self.event_repo.has_sent_today(user_id, "evening_checkout"):
+            return None
+
+        notif = await self.send_notification(
+            user_id=user_id,
+            type="suggestion",
+            title="How did today go?",
+            body="Take a moment to check off anything you finished.",
+        )
+        await self.event_repo.record(user_id, "evening_checkout", notif.id)
+        return notif
+
+    async def maybe_send_learning_prompt(
+        self, user_id: uuid.UUID, prompt_text: str
+    ) -> Notification | None:
+        mode = await self._notification_mode(user_id)
+        if mode not in _MODES_WITH_LEARNING_PROMPTS:
+            return None
+
+        user = await self.user_repo.get_by_id(user_id)
+        if user is None or not user.onboarding_complete:
+            return None
+        if datetime.now(UTC) - _utc(user.created_at) > timedelta(days=LEARNING_PERIOD_DAYS):
+            return None
+        if await self.event_repo.has_sent_today(user_id, "learning_prompt"):
+            return None
+
+        notif = await self.send_notification(
+            user_id=user_id,
+            type="suggestion",
+            title="Quick check",
+            body=prompt_text,
+        )
+        await self.event_repo.record(user_id, "learning_prompt", notif.id)
+        return notif
+
+    async def maybe_send_routine_learning_prompt(
+        self, user_id: uuid.UUID
+    ) -> Notification | None:
+        """Concrete built-in learning prompt: confirm the sleep routine if it's still default."""
+        routine_repo = RoutineAssumptionRepository(self.db)
+        sleep_routine = await routine_repo.get_one(user_id, "sleep")
+        if sleep_routine is None or sleep_routine.is_customized:
+            return None
+
+        prompt_text = (
+            f"Still assuming you sleep {_format_minute(sleep_routine.start_minute)}–"
+            f"{_format_minute(sleep_routine.end_minute)}. Sound right?"
+        )
+        return await self.maybe_send_learning_prompt(user_id, prompt_text)
+
+
+def _utc(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
