@@ -137,3 +137,20 @@ async def test_today_unauthenticated(client):
     """Unauthenticated request rejected."""
     r = await client.get("/api/v1/timeline/today")
     assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_today_includes_untimed_pending_tasks(client, db_session):
+    """A captured (unscheduled, pending) task shows on Today so the user sees their to-do list."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    db_session.add(Task(user_id=user.id, title="Buy milk", status="pending", priority=3))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/timeline/today", headers=_auth_headers())
+    assert r.status_code == 200
+    titles = [t["title"] for t in r.json()]
+    assert "Buy milk" in titles
