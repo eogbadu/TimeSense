@@ -9,11 +9,13 @@
 /* Begin PBXBuildFile section */
 		0FABB452D1E4F020AAF09896 /* UsableTimeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */; };
 		1790B0431C0A702E3C4D3A8F /* BestNextActionWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */; };
+		1867B909FA67B3A39C779266 /* LearnedAssumptionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */; };
 		2581959640C248F708C40237 /* NextEventWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735A76942000F597C1CACE5 /* NextEventWidget.swift */; };
 		27E0CEE0014BB03E51E55021 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */; };
 		52BDFC5568770624F97DA818 /* TimeSenseWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */; };
 		56A356B25C25BEB8CD534EE2 /* InsightsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F22CD5D75BA658BEA67CA349 /* InsightsViewModel.swift */; };
 		6DE9467AEC6AECB4110CB3C0 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DesignTokens.swift */; };
+		6F341198DDE522BD07556E0F /* LearnedAssumptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */; };
 		728E116FA78F04E8313637A4 /* SnapshotProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */; };
 		A1000001 /* TimeSenseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001 /* TimeSenseApp.swift */; };
 		A1000002 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002 /* AppState.swift */; };
@@ -98,7 +100,9 @@
 		A2000032 /* TimelineCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCard.swift; sourceTree = "<group>"; };
 		A2000033 /* NowViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowViewModel.swift; sourceTree = "<group>"; };
 		A3000001 /* TimeSense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeSense.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsViewModel.swift; sourceTree = "<group>"; };
 		D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotProvider.swift; sourceTree = "<group>"; };
+		D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsView.swift; sourceTree = "<group>"; };
 		E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseWidgetBundle.swift; sourceTree = "<group>"; };
 		F22CD5D75BA658BEA67CA349 /* InsightsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InsightsViewModel.swift; sourceTree = "<group>"; };
 		FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimeSenseWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -305,6 +309,8 @@
 			isa = PBXGroup;
 			children = (
 				A2000011 /* SettingsView.swift */,
+				C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */,
+				D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -445,6 +451,8 @@
 				A1000018 /* OnboardingView.swift in Sources */,
 				27E0CEE0014BB03E51E55021 /* WidgetSnapshot.swift in Sources */,
 				56A356B25C25BEB8CD534EE2 /* InsightsViewModel.swift in Sources */,
+				1867B909FA67B3A39C779266 /* LearnedAssumptionsViewModel.swift in Sources */,
+				6F341198DDE522BD07556E0F /* LearnedAssumptionsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

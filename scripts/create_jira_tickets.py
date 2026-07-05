@@ -2798,6 +2798,88 @@ TICKETS = [
             p("TIME-047: Learned Assumptions Settings"),
         ),
     },
+
+    {
+        "summary": "TIME-047: Learned Assumptions Settings",
+        "labels": ["phase-11", "ios", "android"],
+        "description": doc(
+            h2("Goal"),
+            p("Let users see and edit what TimeSense has learned/assumed about their daily "
+              "routine — the sleep/meal/hygiene blocks from TIME-039's RoutineAssumption model — "
+              "from a new Settings screen on both iOS and Android. Pure UI work: reuses the "
+              "existing GET/PATCH /api/v1/routines endpoints as-is, no backend changes."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "iOS: LearnedAssumptionsViewModel.swift (GET /api/v1/routines, PATCH per "
+                "routine_type) + LearnedAssumptionsView.swift — a list of the 6 routine types "
+                "(sleep, breakfast, lunch, dinner, morning_hygiene, evening_hygiene) each showing "
+                "a friendly label, formatted time range (respecting the sleep block's overnight "
+                "wraparound), and an 'Edited' badge when is_customized is true; tapping a row "
+                "opens a sheet with two time pickers (start/end) and Save/Cancel",
+                "Android: LearnedAssumptionsViewModel.kt (same two endpoints) + "
+                "LearnedAssumptionsScreen.kt — same list/edit-dialog shape using Material3's "
+                "TimePicker in an AlertDialog wrapper",
+                "A new 'Learned Assumptions' row added to each platform's Settings screen "
+                "(Preferences section) that navigates to the new screen — iOS via the existing "
+                "per-tab NavigationStack/NavigationLink, Android by adding one more destination "
+                "to the existing single-NavHost tab structure and passing a navigation callback "
+                "into SettingsScreen",
+                "Loading/error/loaded states on both platforms, per the mobile-ux-premium and "
+                "native-android-compose/native-ios-swiftui skills' required states",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No backend changes — GET/PATCH /api/v1/routines already fully supports this "
+                "(built in TIME-039); this ticket is UI-only on both platforms",
+                "No editing of any other 'learned' data (meal skip patterns, commute times, sleep "
+                "signal history) — only the RoutineAssumption blocks, matching the ticket's stated "
+                "scope ('Learned assumptions display, edit flow in Settings')",
+                "No approval/confirmation flow beyond a normal Save button — RoutineAssumption "
+                "edits are a user preference, not a calendar write or a replan, so the product's "
+                "calendar/replan-approval rules don't apply here",
+                "No validation beyond what the existing PATCH endpoint already enforces "
+                "(0-1439 minute-of-day bounds) — no new business rules invented",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Features/Settings/LearnedAssumptionsViewModel.swift (new)",
+                "ios/TimeSense/Features/Settings/LearnedAssumptionsView.swift (new)",
+                "ios/TimeSense/Features/Settings/SettingsView.swift (add navigation row)",
+                "android/.../features/settings/LearnedAssumptionsViewModel.kt (new)",
+                "android/.../features/settings/LearnedAssumptionsScreen.kt (new)",
+                "android/.../features/settings/SettingsScreen.kt (add navigation row)",
+                "android/.../navigation/MainNavHost.kt (register new destination)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Settings shows a 'Learned Assumptions' row on both platforms that opens the new "
+                "screen",
+                "The screen lists all 6 routine types with a human-readable time range",
+                "Editing a routine's start/end time and saving calls PATCH /api/v1/routines/"
+                "{routine_type} and reflects the update in the list without a full-screen reload",
+                "A routine that has been edited shows an indicator that it's no longer the default",
+                "iOS and Android builds succeed",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -target TimeSense "
+                "-sdk iphonesimulator CODE_SIGNING_ALLOWED=NO\n"
+                "cd android && ./gradlew assembleDebug && ./gradlew test"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-039 (RoutineAssumption model + GET/PATCH /api/v1/routines), TIME-018/019 "
+              "(iOS/Android app shells with existing Settings screens)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-048: Admin Dashboard Foundation (Web)"),
+        ),
+    },
 ]
 
 

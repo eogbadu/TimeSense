@@ -15,6 +15,9 @@ struct SettingsView: View {
                     SettingsRow(icon: "bell.fill", title: "Notifications", tint: .red)
                     SettingsRow(icon: "calendar", title: "Calendar", tint: .green)
                     SettingsRow(icon: "paintbrush.fill", title: "Appearance", tint: .purple)
+                    NavigationLink(destination: LearnedAssumptionsView()) {
+                        SettingsRowLabel(icon: "brain.head.profile", title: "Learned Assumptions", tint: .teal)
+                    }
                 }
 
                 Section("Privacy") {
@@ -43,6 +46,24 @@ private struct SettingsRow: View {
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.md) {
+            SettingsRowLabel(icon: icon, title: title, tint: tint)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(DesignTokens.Color.textSecondary)
+        }
+    }
+}
+
+/// Icon + title only, no chevron — used inside a real `NavigationLink`, which draws its own
+/// disclosure indicator (unlike `SettingsRow`'s manually-drawn one on the placeholder rows above).
+private struct SettingsRowLabel: View {
+    let icon: String
+    let title: String
+    let tint: SwiftUI.Color
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: icon)
                 .foregroundColor(.white)
                 .frame(width: 28, height: 28)
@@ -51,10 +72,6 @@ private struct SettingsRow: View {
             Text(title)
                 .font(DesignTokens.Typography.body)
                 .foregroundColor(DesignTokens.Color.textPrimary)
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(DesignTokens.Color.textSecondary)
         }
     }
 }

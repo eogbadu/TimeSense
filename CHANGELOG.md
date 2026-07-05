@@ -10,6 +10,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Phase 11 — Insights and Learning Summary
 
+- [2026-07-05] TIME-047: Learned assumptions settings — real "Learned Assumptions" screen on iOS and Android (Settings > Preferences), view/edit the 6 RoutineAssumption blocks via the existing GET/PATCH /api/v1/routines endpoints, no backend changes
 - [2026-07-05] TIME-046: Weekly insights generation — weekly_insights table + InsightsService aggregating task/meal/sleep/commute/feedback signals over a completed week into an LLM-summarized (fallback-templated) report; GET /api/v1/insights/weekly + /history (Premium-gated); real iOS and Android Insights screens
 
 ### Phase 10 — Notifications, Widgets, Ambient Surfaces

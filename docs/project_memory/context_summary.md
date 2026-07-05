@@ -5,9 +5,9 @@
 ## Current Build State
 
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
-Phase 8 (Recommendation Engine V1), Phase 9 (Routines/Meals/Commute/Sleep-Wake), and Phase 10
-(Notifications, Widgets, Ambient Surfaces) complete. Phase 11 (Insights and Learning Summary) in
-progress — TIME-046 done, TIME-047 (Learned Assumptions Settings) next.
+Phase 8 (Recommendation Engine V1), Phase 9 (Routines/Meals/Commute/Sleep-Wake), Phase 10
+(Notifications, Widgets, Ambient Surfaces), and Phase 11 (Insights and Learning Summary —
+TIME-046/047) complete. Phase 12 (Admin Dashboard, web) next.
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -45,8 +45,10 @@ Backend tests: 215, all passing (see Known Problems re: 2 flaky Stripe-network t
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes. Insights tab (TIME-046) now shows a real weekly summary + stats grid behind the Premium gate.
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`. Plus (TIME-045) two Jetpack Glance AppWidgets (Usable Time, Next Event), each reading its own Preferences state written by NowViewModel/TodayViewModel. Insights tab (TIME-046) mirrors iOS's real content.
+- Both platforms (TIME-047): Settings > Preferences has a "Learned Assumptions" screen to view/edit the 6 RoutineAssumption blocks via the existing GET/PATCH /api/v1/routines endpoints — no backend changes.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-047 (impl seq) → Jira TIME-46 (Learned Assumptions Settings) — **Done (this session)**
 - TIME-046 (impl seq) → Jira TIME-45 (Weekly Insights Generation) — **Done (PR #38 merged 2026-07-05)**
 - TIME-045 (impl seq) → Jira TIME-44 (Android Widgets) — **Done (PR #37 merged 2026-07-05)**
 - TIME-044 (impl seq) → Jira TIME-43 (iOS Widgets) — **Done (PR #36 merged 2026-07-05)**
@@ -60,32 +62,33 @@ Mobile app shells:
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-046 (Jira TIME-45): Weekly Insights Generation
-- `weekly_insights` table + InsightsService aggregating tasks/meals/sleep/commute/feedback over
-  a completed Monday-Sunday week (5 existing tables, no new signal sources) into an LLM-summarized
-  (or templated-fallback) report — same fallback pattern as RecommendationService._explain()
-- `GET /api/v1/insights/weekly` (generates+caches the most recently completed week on first call,
-  idempotent thereafter) and `GET /api/v1/insights/history`, both Premium-gated
-- A weekly Celery task (Monday 5am UTC) proactively generates insights for all active users;
-  untested in this environment (no Redis/Docker), same precedent as notification_tasks.py
-- Real iOS and Android Insights screens (summary card + stats grid) replacing the static
-  placeholders, still behind the existing isPremium gate on both platforms
-- 17 new backend tests; full suite 215/215 (excluding 2 known-flaky Stripe tests). Both mobile
-  builds verified (`xcodebuild -target TimeSense ...` and `./gradlew assembleDebug && ./gradlew
-  test`), zero new warnings
-- Found (didn't fix, out of scope) a latent bug in an existing test's mock LLM provider — see
-  known_issues.md
+TIME-047 (Jira TIME-46): Learned Assumptions Settings
+- New "Learned Assumptions" screen on both iOS and Android (Settings > Preferences), listing the
+  6 RoutineAssumption types with friendly labels, formatted time ranges, and an "Edited" indicator
+  when `is_customized` — tapping a row opens a time-range editor calling the existing
+  PATCH /api/v1/routines/{routine_type}
+- Pure UI ticket, zero backend changes — GET/PATCH /api/v1/routines (TIME-039) already supported
+  everything needed
+- iOS: extracted `SettingsRowLabel` from `SettingsRow` so the new real `NavigationLink` doesn't
+  double up its own disclosure chevron with the old rows' manually-drawn one
+- Android: `SettingsItem` gained a real `onClick` (was a no-op `.clickable {}` before); added
+  `"learned_assumptions"` as a new destination in the existing single-NavHost tab structure; the
+  edit dialog reuses one Material3 `TimePicker` with Starts/Ends toggle buttons (no built-in
+  two-field time-range picker in Material3, and a third-party dependency felt like overkill)
+- Both mobile builds verified (`xcodebuild -target TimeSense ...` BUILD SUCCEEDED,
+  `./gradlew assembleDebug && ./gradlew test` BUILD SUCCESSFUL), zero new warnings
 
-Full history of TIME-034 through TIME-045 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-046 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Phase 11 (Insights and Learning Summary) is in progress. Next up: TIME-047 (Learned Assumptions
-Settings) — letting users view/edit what TimeSense has learned (routine assumptions, etc.), likely
-touching both Settings screens on iOS/Android plus the existing GET/PATCH /api/v1/routines
-endpoints. Also see known_issues.md — the deferred UsableTimeService timezone-awareness pass (to
-actually subtract routine/meal/commute/sleep blocks from usable time, and to make Celery beat/
-notification timing per-user-local instead of UTC-only) is unblocked and still worth scheduling
-soon rather than continuing to defer it across more tickets.
+Phase 11 (Insights and Learning Summary) is now complete. Next up: TIME-048 (Admin Dashboard
+Foundation, Web), starting Phase 12 — the first web-app (`web/app/admin/`) ticket in this run;
+role-protected `/admin` route, user search, invite/waitlist management, subscription/trial view,
+feedback review, integration status, basic metrics. Also see known_issues.md — the deferred
+UsableTimeService timezone-awareness pass (to actually subtract routine/meal/commute/sleep blocks
+from usable time, and to make Celery beat/notification timing per-user-local instead of UTC-only)
+is unblocked and still worth scheduling soon rather than continuing to defer it across more
+tickets.
 
 ## iOS HealthKit Decision Point (deferred from TIME-042, still open)
 TIME-042 only built the backend contract (ingest a wake_time signal, gate on health_data consent,

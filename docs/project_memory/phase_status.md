@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 11: Insights and Learning Summary — TIME-046 done; TIME-047 next.
+Phase 11: Insights and Learning Summary — TIME-046/047 done. Phase 11 complete; Phase 12 next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -84,14 +84,16 @@ before being trusted — do not assume unchecked = not built.
       Monday-Sunday week into an LLM-summarized (fallback-templated) report;
       GET /api/v1/insights/weekly + /history (Premium-gated); real iOS and Android Insights
       screens. Weekly Celery job (Monday 5am UTC), untested in this environment (no Redis/Docker).
-- [ ] TIME-047: Learned Assumptions Settings
+- [x] TIME-047 (Jira TIME-46): Learned Assumptions Settings — real "Learned Assumptions" screen
+      on iOS and Android (Settings > Preferences) to view/edit the 6 RoutineAssumption blocks via
+      the existing GET/PATCH /api/v1/routines endpoints; no backend changes. Both builds verified.
 
 ## Active Jira Tickets
-- TIME-45 (impl TIME-046, Weekly Insights Generation) — Done
-- Next: TIME-047 (Learned Assumptions Settings)
+- TIME-46 (impl TIME-047, Learned Assumptions Settings) — Done
+- Next: TIME-048 (Admin Dashboard Foundation, Web) — Phase 12
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 12: Admin Dashboard — after Phase 11 completes
+Phase 12: Admin Dashboard — Phase 11 is complete

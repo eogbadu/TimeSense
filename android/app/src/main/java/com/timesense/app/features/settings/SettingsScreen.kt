@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.GppGood
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -41,7 +42,7 @@ import com.timesense.app.core.design.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onLearnedAssumptionsClick: () -> Unit = {}) {
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Settings", style = MaterialTheme.typography.headlineMedium) })
@@ -62,6 +63,12 @@ fun SettingsScreen() {
                 SettingsItem(Icons.Filled.Notifications, "Notifications", Color(0xFFE53935))
                 SettingsItem(Icons.Filled.CalendarMonth, "Calendar", Color(0xFF43A047))
                 SettingsItem(Icons.Filled.Palette, "Appearance", Color(0xFF8E24AA))
+                SettingsItem(
+                    Icons.Filled.Psychology,
+                    "Learned Assumptions",
+                    Color(0xFF00897B),
+                    onClick = onLearnedAssumptionsClick
+                )
             }
             SettingsSection("Privacy") {
                 SettingsItem(Icons.Filled.GppGood, "Privacy & Consent", Color(0xFFFB8C00))
@@ -113,11 +120,11 @@ private fun SettingsSection(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SettingsItem(icon: ImageVector, title: String, tint: Color) {
+private fun SettingsItem(icon: ImageVector, title: String, tint: Color, onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { }
+            .clickable(onClick = onClick)
             .padding(horizontal = Spacing.md, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
