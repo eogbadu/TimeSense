@@ -5,9 +5,9 @@
 ## Current Build State
 
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
-Phase 8 (Recommendation Engine V1), and Phase 9 (Routines/Meals/Commute/Sleep-Wake) complete.
-Phase 10 (Notifications, Widgets, Ambient Surfaces) in progress (TIME-043/044 done; TIME-045
-Android widgets next).
+Phase 8 (Recommendation Engine V1), Phase 9 (Routines/Meals/Commute/Sleep-Wake), and Phase 10
+(Notifications, Widgets, Ambient Surfaces — TIME-043/044/045) complete. Phase 11 (Insights and
+Learning Summary) next.
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -42,9 +42,10 @@ Backend tests: 198, all passing (see Known Problems re: 2 flaky Stripe-network t
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes.
-- Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
+- Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`. Plus (TIME-045) two Jetpack Glance AppWidgets (Usable Time, Next Event), each reading its own Preferences state written by NowViewModel/TodayViewModel.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-045 (impl seq) → Jira TIME-44 (Android Widgets) — **Done (this session)**
 - TIME-044 (impl seq) → Jira TIME-43 (iOS Widgets) — **Done (PR #36 merged 2026-07-05)**
 - TIME-043 (impl seq) → Jira TIME-42 (Notification Modes and Learning Prompts) — **Done (PR #35 merged 2026-07-05)**
 - TIME-042 (impl seq) → Jira TIME-41 (Sleep/Wake Signal Integration) — **Done (PR #34 merged 2026-07-05)**
@@ -56,31 +57,31 @@ Mobile app shells:
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-044 (Jira TIME-43): iOS Widgets
-- New `TimeSenseWidgetExtension` WidgetKit target (added via the `xcodeproj` Ruby gem, installed
-  this session — `gem install xcodeproj --user-install` — rather than hand-editing project.pbxproj)
-  with three widgets: Usable Time, Next Up, Do Next
-- `WidgetSnapshot` (Codable) is the only contract between the app and the extension, persisted as
-  JSON in a shared App Group (`group.com.timesense.app`) UserDefaults suite; NowViewModel/
-  TodayViewModel each update their portion after a successful fetch and call
-  `WidgetCenter.shared.reloadAllTimelines()` — the widget extension has no network/auth code at all
-- Both targets verified with `xcodebuild -target TimeSense -sdk iphonesimulator
-  CODE_SIGNING_ALLOWED=NO` and `-target TimeSenseWidgetExtension` (same flags) — **BUILD SUCCEEDED**
-  for both, zero new warnings. Scheme-based `xcodebuild -scheme TimeSense` currently fails in this
-  environment with "Found no destinations" because no Simulator runtimes are installed
-  (`xcrun simctl list runtimes` is empty) — this is an environment gap, not a code issue; see
-  Known Problems
-- No backend changes — this ticket was entirely iOS/WidgetKit, matching its stated scope
+TIME-045 (Jira TIME-44): Android Widgets
+- Two Jetpack Glance AppWidgets: Usable Time and Next Event. Unlike iOS's WidgetKit extension
+  (separate process, needs an App Group), Android AppWidgets run in the same process as the app —
+  each widget reads its own Glance-managed Preferences state, written directly by the one
+  ViewModel that owns that data (NowViewModel for usable minutes, TodayViewModel for next event);
+  no shared cross-widget blob needed
+- NowViewModel/TodayViewModel converted from `ViewModel` to `AndroidViewModel` to get an
+  Application Context for Glance's update APIs
+- Extracted a pure `nextUpcomingEvent(tasks, now)` function from TodayViewModel + 6 new JVM unit
+  tests (no Robolectric/instrumentation needed)
+- 2-widget scope (not iOS's 3) — matches `tickets/implementation_sequence.md` exactly; no
+  best-next-action widget on Android in this ticket
+- Verified with `./gradlew assembleDebug` (BUILD SUCCESSFUL) and `./gradlew test` (6/6 new tests
+  pass, both debug+release variants) using the Android-Studio-bundled JBR as JAVA_HOME — this
+  environment has no system `java`/`JAVA_HOME` set; see Known Problems
+- No backend changes — entirely Android/Glance, matching stated scope
 
-Full history of TIME-034 through TIME-043 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-044 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Phase 10 (Notifications, Widgets, Ambient Surfaces) is in progress. Next up: TIME-045 (Android
-Widgets) — analogous AppWidget work for Android, no backend changes expected. Also see
-known_issues.md — the deferred UsableTimeService timezone-awareness pass (to actually subtract
-routine/meal/commute/sleep blocks from usable time, and to make Celery beat/notification timing
-per-user-local instead of UTC-only) is unblocked and still worth scheduling soon rather than
-continuing to defer it across more tickets.
+Phase 10 (Notifications, Widgets, Ambient Surfaces) is now complete. Next up: TIME-046 (Weekly
+Insights Generation), starting Phase 11. Also see known_issues.md — the deferred UsableTimeService
+timezone-awareness pass (to actually subtract routine/meal/commute/sleep blocks from usable time,
+and to make Celery beat/notification timing per-user-local instead of UTC-only) is unblocked and
+still worth scheduling soon rather than continuing to defer it across more tickets.
 
 ## iOS HealthKit Decision Point (deferred from TIME-042, still open)
 TIME-042 only built the backend contract (ingest a wake_time signal, gate on health_data consent,

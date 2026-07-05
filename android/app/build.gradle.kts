@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.androidx.credentials.play)
     implementation(libs.google.identity)
     implementation(libs.kotlinx.coroutines.play)
+    implementation(libs.androidx.glance.appwidget)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

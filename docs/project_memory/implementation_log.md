@@ -1,5 +1,58 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-045 (Jira TIME-44): Android Widgets
+
+### Created
+- `android/app/src/main/java/com/timesense/app/widgets/UsableTimeWidget.kt` +
+  `UsableTimeWidgetReceiver.kt` — Glance AppWidget rendering usable minutes remaining today, with
+  an "Open TimeSense" empty state before the first sync
+- `android/app/src/main/java/com/timesense/app/widgets/NextEventWidget.kt` +
+  `NextEventWidgetReceiver.kt` — Glance AppWidget rendering the next upcoming non-done event, or
+  "Nothing scheduled"
+- `android/app/src/main/java/com/timesense/app/widgets/WidgetColors.kt` — mirrors the literal
+  day/night color values from `ui/theme/Theme.kt` (kept private there) so widgets get real
+  day/night parity with the rest of the app without a Glance Material3 dependency
+- `android/app/src/main/res/xml/usable_time_widget_info.xml`,
+  `android/app/src/main/res/xml/next_event_widget_info.xml` — AppWidgetProviderInfo resources,
+  `updatePeriodMillis="0"` (app-triggered refresh only, no periodic polling)
+- `android/app/src/main/res/layout/glance_default_loading_layout.xml` — placeholder Glance
+  requires for `initialLayout`/`previewLayout`, replaced at runtime by the actual Glance content
+- `android/app/src/test/java/com/timesense/app/features/today/NextEventSelectionTest.kt` — 6 JVM
+  unit tests for the new pure `nextUpcomingEvent()` selection function
+
+### Modified
+- `android/gradle/libs.versions.toml`, `android/app/build.gradle.kts` — added
+  `androidx.glance:glance-appwidget:1.1.1` (latest stable; 1.2.0+ are alpha/beta/rc)
+- `android/app/src/main/AndroidManifest.xml` — registered both widget receivers
+- `android/app/src/main/java/com/timesense/app/features/now/NowViewModel.kt` — converted
+  `ViewModel` → `AndroidViewModel` (needed an Application Context to call Glance's update APIs);
+  calls `UsableTimeWidget.updateUsableMinutes()` after a successful `/now` fetch
+- `android/app/src/main/java/com/timesense/app/features/today/TodayViewModel.kt` — same
+  `AndroidViewModel` conversion; extracted the next-event selection into a standalone top-level
+  `nextUpcomingEvent(tasks, now)` function (kept free of Android types so it's a plain JVM test,
+  no Robolectric/instrumentation needed) and calls `NextEventWidget.updateNextEvent()`/
+  `.clearNextEvent()` after a successful `/timeline/today` fetch
+
+### Design notes
+- Unlike iOS's WidgetKit extension (a separate process needing a shared App Group), Android
+  AppWidgets run in the same app process — so each widget just reads its own Glance-managed
+  Preferences state, written directly by the one ViewModel that owns that data. No shared
+  cross-widget blob or App-Group-equivalent was needed, simpler than TIME-044's iOS design.
+- Ticket scope intentionally matches `tickets/implementation_sequence.md` exactly: two widgets
+  (usable-time, next-event), not iOS's three — no best-next-action widget on Android in this
+  ticket, per the ticket's Non-Goals; a third widget can follow later for platform parity if wanted.
+- `androidx.glance.color.ColorProvider(day, night)` (not `androidx.glance.unit.ColorProvider`,
+  which only takes a single `Color` or `@ColorRes`) is the two-arg day/night constructor;
+  `GlanceModifier.background(...)` needs the `androidx.glance.background` extension, not
+  `androidx.glance.appwidget.background` — both were found by iterating on real compiler errors
+  from `./gradlew assembleDebug`, not guessed correctly on the first pass.
+- Environment note: this sandbox has no `java` on PATH and no `JAVA_HOME` set, but
+  `/Applications/Android Studio.app/Contents/jbr` (JetBrains Runtime, JDK 21) is installed and
+  works as `JAVA_HOME` for Gradle. Both `./gradlew assembleDebug` and `./gradlew test` succeeded
+  with `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` set. All 6 new
+  unit tests pass; only pre-existing, unrelated warnings (deprecated `Divider` in
+  `TimelineCard.kt`, JDK 21 deprecating source/target 8) appear in the build output.
+
 ## 2026-07-05 — TIME-044 (Jira TIME-43): iOS Widgets
 
 ### Created

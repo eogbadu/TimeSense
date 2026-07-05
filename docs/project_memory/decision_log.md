@@ -144,6 +144,14 @@
   Reason: A new native target touches build phases, an embed/copy-files phase, a target dependency, and per-configuration build settings across two targets — order-sensitive, easy-to-typo pbxproj surgery that's much safer done through a library that understands the file format than via text edits, and this environment has no way to drive the Xcode GUI's "New Target" wizard. The one-off wiring script was deleted after running it once; the resulting `project.pbxproj` is the artifact that matters going forward.
   Date: 2026-07-05
 
+- Decision: TIME-045's Android widgets use Jetpack Glance (androidx.glance:glance-appwidget) rather than legacy RemoteViews/AppWidgetProvider with XML layouts
+  Reason: Glance is Jetpack's Compose-for-widgets library, keeping widget UI code in Kotlin/Compose per the project's "Kotlin and Jetpack Compose exclusively" rule (CLAUDE.md/AGENTS.md), rather than introducing a second, XML-layout-based UI paradigm just for widgets.
+  Date: 2026-07-05
+
+- Decision: TIME-045's two widgets each read their own independent Glance Preferences state (no shared cross-widget snapshot, unlike TIME-044's iOS WidgetSnapshot)
+  Reason: Android AppWidgets run in the same process as the host app (no separate extension process like iOS's WidgetKit target), so there's no equivalent of the App-Group-sharing problem TIME-044 solved. Each widget's data comes from exactly one ViewModel (NowViewModel owns usable minutes, TodayViewModel owns the next event), so giving each its own state is simpler than inventing a merged blob two ViewModels would need to coordinate around.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

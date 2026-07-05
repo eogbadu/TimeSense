@@ -1,8 +1,10 @@
 package com.timesense.app.features.today
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.timesense.app.core.api.ApiClient
+import com.timesense.app.widgets.NextEventWidget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,7 +35,26 @@ sealed interface TodayUiState {
     data class Error(val message: String) : TodayUiState
 }
 
-class TodayViewModel : ViewModel() {
+/** Pure, unit-testable selection of the widget's "next event": the earliest non-done task
+ *  that hasn't ended yet. Kept free of Android/ViewModel dependencies so it can run as a plain
+ *  JVM unit test. */
+fun nextUpcomingEvent(tasks: List<TimelineTask>, now: LocalDateTime): TimelineTask? {
+    return tasks
+        .asSequence()
+        .filter { it.status != "done" }
+        .mapNotNull { task ->
+            val start = task.scheduled_start?.let(::parseLocalDateTime) ?: return@mapNotNull null
+            val end = task.scheduled_end?.let(::parseLocalDateTime) ?: start
+            if (end.isBefore(now)) null else task to start
+        }
+        .minByOrNull { it.second }
+        ?.first
+}
+
+private fun parseLocalDateTime(iso: String): LocalDateTime? =
+    runCatching { OffsetDateTime.parse(iso).toLocalDateTime() }.getOrNull()
+
+class TodayViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow<TodayUiState>(TodayUiState.Loading)
     val uiState: StateFlow<TodayUiState> = _uiState.asStateFlow()
 
@@ -58,6 +79,7 @@ class TodayViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     val tasks = ApiClient.jsonInstance.decodeFromString<List<TimelineTask>>(body)
                     _uiState.value = TodayUiState.Loaded(tasks)
+                    updateWidget(tasks)
                 } else {
                     _uiState.value = TodayUiState.Error("Server error ${response.code}")
                 }
@@ -67,15 +89,27 @@ class TodayViewModel : ViewModel() {
         }
     }
 
+    private suspend fun updateWidget(tasks: List<TimelineTask>) {
+        val next = nextUpcomingEvent(tasks, LocalDateTime.now())
+        val context = getApplication<Application>()
+        if (next != null) {
+            val startMillis = next.scheduled_start
+                ?.let { runCatching { OffsetDateTime.parse(it).toInstant().toEpochMilli() }.getOrNull() }
+            if (startMillis != null) {
+                NextEventWidget.updateNextEvent(context, next.title, startMillis)
+            } else {
+                NextEventWidget.clearNextEvent(context)
+            }
+        } else {
+            NextEventWidget.clearNextEvent(context)
+        }
+    }
+
     fun visualState(task: TimelineTask): TimelineVisualState {
         if (task.status == "done") return TimelineVisualState.DONE
         val now = LocalDateTime.now()
-        val start = task.scheduled_start?.let {
-            runCatching { OffsetDateTime.parse(it).toLocalDateTime() }.getOrNull()
-        }
-        val end = task.scheduled_end?.let {
-            runCatching { OffsetDateTime.parse(it).toLocalDateTime() }.getOrNull()
-        }
+        val start = task.scheduled_start?.let(::parseLocalDateTime)
+        val end = task.scheduled_end?.let(::parseLocalDateTime)
         return when {
             end != null && end.isBefore(now) -> TimelineVisualState.PAST
             start != null && end != null && !start.isAfter(now) && !now.isAfter(end) -> TimelineVisualState.CURRENT

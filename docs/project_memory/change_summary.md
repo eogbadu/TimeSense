@@ -1,5 +1,24 @@
 # Change Summary
 
+## 2026-07-05 — TIME-045 (Jira TIME-44) Android Widgets
+
+**What changed:**
+- Two Jetpack Glance home-screen widgets: Usable Time and Next Event, each reading its own
+  Glance-managed Preferences state written directly by NowViewModel/TodayViewModel after a
+  successful fetch (no shared cross-widget state needed — simpler than iOS since Android
+  AppWidgets run in the same process as the app)
+- NowViewModel/TodayViewModel converted to AndroidViewModel to get an Application Context
+- Extracted a pure `nextUpcomingEvent()` function from TodayViewModel + 6 new JVM unit tests
+
+**What did not change:**
+- No best-next-action widget (Android ticket scope is 2 widgets, not iOS's 3)
+- No periodic background refresh — app-triggered only, same policy as iOS
+- No backend changes
+
+**Next:**
+- TIME-046: Weekly Insights Generation (Phase 11)
+- Consider a third Android widget for full parity with iOS's best-next-action widget, if wanted
+
 ## 2026-07-05 — TIME-044 (Jira TIME-43) iOS Widgets
 
 **What changed:**

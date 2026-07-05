@@ -2582,6 +2582,103 @@ TICKETS = [
             p("TIME-045: Android Widgets"),
         ),
     },
+
+    {
+        "summary": "TIME-045: Android Widgets",
+        "labels": ["phase-10", "android"],
+        "description": doc(
+            h2("Goal"),
+            p("Add two Jetpack Glance home-screen widgets — Usable Time and Next Event — mirroring "
+              "TIME-044's iOS widgets. Unlike iOS's WidgetKit extension, Android AppWidgets run in "
+              "the same app process, so each widget reads its own dedicated Glance-managed "
+              "Preferences state that the relevant existing ViewModel writes after a successful "
+              "fetch — no shared cross-widget blob or App-Group-equivalent is needed."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Add androidx.glance:glance-appwidget dependency (Jetpack Compose-for-widgets — "
+                "keeps this native to Kotlin/Compose rather than legacy RemoteViews/XML layouts, "
+                "per the project's Kotlin+Compose-exclusively rule)",
+                "UsableTimeWidget (GlanceAppWidget) + UsableTimeWidgetReceiver "
+                "(GlanceAppWidgetReceiver) — renders usable minutes remaining today, with an "
+                "'Open TimeSense' empty state before the first sync, matching iOS's copy",
+                "NextEventWidget (GlanceAppWidget) + NextEventWidgetReceiver — renders the next "
+                "non-done, not-yet-ended scheduled event's title + time, or 'Nothing scheduled'",
+                "AppWidgetProviderInfo XML resources for both (home-screen category, no periodic "
+                "auto-refresh via updatePeriodMillis — refreshed only when the app itself calls "
+                "update, same app-triggered-only policy as TIME-044's iOS widgets)",
+                "NowViewModel (converted to AndroidViewModel to get an Application Context) calls "
+                "UsableTimeWidget.updateUsableMinutes() + .updateAll() after a successful /now fetch",
+                "TodayViewModel (also converted to AndroidViewModel) derives the next upcoming "
+                "event via a pure, unit-testable function and calls NextEventWidget.updateNextEvent()"
+                "/.clearNextEvent() + .updateAll() after a successful /timeline/today fetch",
+                "Unit test for the next-event-selection pure function (JVM test, no Android/"
+                "instrumentation dependency) covering: an upcoming event is picked, a past/done "
+                "event is excluded, the earliest of several upcoming events wins, empty list "
+                "returns null",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No best-next-action widget — this ticket's scope (per "
+                "tickets/implementation_sequence.md) is usable-time + next-event only, unlike "
+                "iOS's three widgets; a third widget can follow later if wanted for parity",
+                "No periodic background refresh (WorkManager-driven polling) — the widget only "
+                "updates when the app's own NowViewModel/TodayViewModel successfully fetch, same "
+                "as iOS; a push/background-refresh pipeline is separate, later work",
+                "No widget configuration activity, no resizing-aware multiple layouts — a single "
+                "small-size layout for each widget",
+                "No changes to backend endpoints — reuses the existing GET /api/v1/now and "
+                "GET /api/v1/timeline/today",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "android/gradle/libs.versions.toml (add glance version/library entry)",
+                "android/app/build.gradle.kts (add glance-appwidget dependency)",
+                "android/app/src/main/java/com/timesense/app/widgets/UsableTimeWidget.kt (new)",
+                "android/app/src/main/java/com/timesense/app/widgets/UsableTimeWidgetReceiver.kt (new)",
+                "android/app/src/main/java/com/timesense/app/widgets/NextEventWidget.kt (new)",
+                "android/app/src/main/java/com/timesense/app/widgets/NextEventWidgetReceiver.kt (new)",
+                "android/app/src/main/res/xml/usable_time_widget_info.xml (new)",
+                "android/app/src/main/res/xml/next_event_widget_info.xml (new)",
+                "android/app/src/main/res/layout/glance_default_loading_layout.xml (new)",
+                "android/app/src/main/AndroidManifest.xml (register both widget receivers)",
+                "android/app/src/main/java/com/timesense/app/features/now/NowViewModel.kt "
+                "(AndroidViewModel + widget update call)",
+                "android/app/src/main/java/com/timesense/app/features/today/TodayViewModel.kt "
+                "(AndroidViewModel + next-event derivation + widget update call)",
+                "android/app/src/test/java/com/timesense/app/features/today/"
+                "NextEventSelectionTest.kt (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "./gradlew assembleDebug succeeds",
+                "./gradlew test succeeds, including the new next-event-selection unit test",
+                "After NowViewModel's /now call succeeds, UsableTimeWidget's Glance state reflects "
+                "the latest usable_minutes",
+                "After TodayViewModel's /timeline/today call succeeds, NextEventWidget's Glance "
+                "state reflects the next upcoming event, or is cleared when none exists",
+                "Both widgets render a meaningful empty state rather than a blank view when their "
+                "state is unset",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd android && ./gradlew assembleDebug\n"
+                "cd android && ./gradlew test"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-019 (Android App Shell and Navigation), the existing GET /api/v1/now and "
+              "GET /api/v1/timeline/today endpoints (no backend changes needed for this ticket), "
+              "TIME-044 (iOS Widgets, same product surface on the other platform)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-046: Weekly Insights Generation"),
+        ),
+    },
 ]
 
 
