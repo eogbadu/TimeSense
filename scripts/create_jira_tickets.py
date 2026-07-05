@@ -3859,6 +3859,130 @@ TICKETS = [
             p("Web Firebase config (web/.env.local)."),
         ),
     },
+
+    {
+        "summary": "TIME-064: Load .env from repo root regardless of working directory",
+        "labels": ["backend", "config"],
+        "description": doc(
+            h2("Goal"),
+            p("Make the backend load the repo-root .env no matter what directory it's launched from. "
+              "config.py uses env_file='.env' (relative to CWD), so the documented "
+              "`cd backend && uvicorn app.main:app` looks for backend/.env, which doesn't exist — "
+              "the real .env is at the repo root. That silently loaded NO env (falling back to "
+              "defaults), which broke real Firebase auth at runtime (empty project id → "
+              "'A project ID is required'). Discovered while running the full stack locally."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "config.py: resolve env_file to an absolute repo-root .env path computed from "
+                "__file__ (Path(__file__).resolve().parents[3] / '.env'), so it's found from any CWD",
+                "Keep a CWD-relative '.env' in the env_file tuple as an override for anyone who "
+                "keeps a local backend/.env",
+                "Remove the temporary backend/.env symlink workaround added during local bring-up",
+                "Verify the backend loads real settings (firebase_project_id, service account) when "
+                "started from backend/, and the full test suite still passes",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No change to how Docker injects env (it sets env vars directly; a missing absolute "
+                "env_file path in the container is simply ignored, and os.environ still wins)",
+                "No secrets committed — .env stays gitignored",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/core/config.py (env_file path resolution)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "From backend/, `python -c 'from app.core.config import settings; "
+                "print(settings.firebase_project_id)'` prints the real project id (timesense-eb7ec) "
+                "with no symlink present",
+                "Backend boots and verifies real Firebase tokens when run via `cd backend && uvicorn`",
+                "Full test suite still passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && python -c \"from app.core.config import settings; "
+                "print(settings.firebase_project_id)\"\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-061 (real Firebase backend verification, which this makes actually load at "
+              "runtime)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-065: Sync DB user role from the Firebase token claim."),
+        ),
+    },
+
+    {
+        "summary": "TIME-065: Sync DB user role from the Firebase token claim",
+        "labels": ["backend", "auth"],
+        "description": doc(
+            h2("Goal"),
+            p("Make the Firebase custom-claim role the single source of truth for authorization. "
+              "Today the backend admin endpoints gate on the token claim (require_admin) while "
+              "GET /users/me returns the DB user.role, and the web dashboard gates on that — so "
+              "they're set independently and granting admin took two steps (set claim AND update "
+              "the DB row). Sync the DB role from the token claim so one action (the claim) is "
+              "enough and /users/me reflects it."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "get_or_create_user gains an optional role param; when provided and it differs from "
+                "the stored role, update + persist it (the token claim is authoritative — a cache "
+                "refresh, including downgrades if the claim is removed)",
+                "GET /users/me passes current_user.role into get_or_create_user so the DB role "
+                "mirrors the claim on every call the web makes",
+                "Tests: a user whose token claim is admin gets role=admin back from /users/me even "
+                "if the DB row was created as 'user'; a plain user stays 'user'; removing the claim "
+                "downgrades",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No change to require_admin (still reads the token claim — now the DB just mirrors "
+                "it)",
+                "No admin-management UI/endpoint for granting roles (claims are still set out-of-"
+                "band via the Admin SDK); this only removes the DB/claim divergence",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/user_service.py (get_or_create_user role sync)",
+                "backend/app/repositories/user_repository.py (if role update helper needed)",
+                "backend/app/api/v1/users.py (pass token role into get_or_create_user in /me)",
+                "backend/tests/test_users.py or test_auth.py (role-sync tests)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "GET /users/me returns role matching the token claim (admin claim → role=admin), "
+                "even for a freshly-created DB row",
+                "A user with no admin claim returns role=user",
+                "Removing the claim and calling /users/me downgrades the DB role to user",
+                "require_admin behavior unchanged; full suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_users.py -q\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-061 (real token verification), the existing require_admin / get_current_user "
+              "and users/me endpoint."),
+            divider(),
+            h2("Next Ticket"),
+            p("Web Firebase config follow-ups / next feature ticket."),
+        ),
+    },
 ]
 
 

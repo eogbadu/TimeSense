@@ -1,5 +1,30 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-064 (Jira TIME-58): Load .env from repo root regardless of CWD
+
+### Bug
+Running the documented `cd backend && uvicorn app.main:app` loaded NO env: config.py used
+`env_file=".env"` (relative to CWD), so it looked for `backend/.env`, but the real `.env` is at the
+repo root. It silently fell back to defaults — the default `DATABASE_URL` happens to match local
+Postgres (so the DB worked), but `firebase_project_id`/`firebase_service_account_json` were empty,
+so real token verification failed at runtime with "A project ID is required to access the auth
+service." Found while bringing the full stack up locally for the user.
+
+### Fix
+- config.py: `env_file=(str(_ROOT_ENV), ".env")` where `_ROOT_ENV = Path(__file__).resolve().
+  parents[3] / ".env"` — resolves the repo-root .env by absolute path (found from any CWD), with a
+  CWD-relative `.env` kept as an optional local override. Missing files are ignored by pydantic; in
+  Docker, injected env vars still take precedence.
+- Removed the temporary `backend/.env` symlink used during bring-up — the fix stands on its own.
+
+### Verification
+- From `backend/` with no symlink: `settings.firebase_project_id == "timesense-eb7ec"`, service
+  account present. Backend restarted via `cd backend && uvicorn` → health 200, `get_firebase_app().
+  project_id == "timesense-eb7ec"`, and real token verification works (the user's admin dashboard
+  loads end-to-end).
+- Full suite 281/281 (excl. 2 flaky) — loading the real .env doesn't affect tests (conftest
+  overrides the DB via SQLite + dependency injection and mocks verify_id_token).
+
 ## 2026-07-05 — TIME-063 (Jira TIME-57): Fix Alembic migration ordering (tasks before recommendation_feedback)
 
 ### Bug
