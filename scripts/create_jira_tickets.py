@@ -4972,6 +4972,68 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-077: Now shows alternatives + richer LLM 'Why this?'",
+        "labels": ["ios", "backend", "recommendations"],
+        "description": doc(
+            h2("Goal"),
+            p("The 'Why this?' just said 'best move right now'. Show two alternative options on Now "
+              "and make the reason a real explanation of why the best beats them — weighing the "
+              "other options, time of day, likely energy, free time before the next commitment, and "
+              "deadlines (LLM, with a deterministic fallback)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "RecommendationService: enrich the explain prompt to include the alternatives, "
+                "time-of-day + energy heuristic (from the user's timezone), free time, and "
+                "deadlines; public explain_choice(); richer deterministic fallback. Pass "
+                "user_timezone through recommend()",
+                "/now: return alternatives (runner-up ranked[1:3]) and use "
+                "RecommendationService.explain_choice for the reason; pass the user's timezone",
+                "/recommendations: pass user timezone to recommend()",
+                "iOS: NowContext decodes alternatives; Now shows an 'Or consider' list of compact "
+                "AlternativeRow cards (tap the circle to complete); the hero 'Why this?' shows the "
+                "richer reason",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No explicit energy tracking — time-of-day is used as the energy proxy",
+                "Reason is generated on each Now load (eager); lazy-on-tap fetch is a possible "
+                "follow-up if latency matters",
+                "No reordering/pinning of alternatives beyond the scorer ranking",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/recommendation_service.py, app/api/v1/now.py, "
+                "app/api/v1/recommendations.py",
+                "ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "/now returns up to 2 alternatives + a reason that references time of day / free "
+                "time / deadlines vs the alternatives",
+                "Now shows the best hero + an 'Or consider' list; 'Why this?' shows the richer text",
+                "LLM used when available, deterministic fallback otherwise; iOS build + suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_now.py tests/test_recommendations.py -v\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-075 ('Why this?'), the RecommendationService + TaskScorer, /recommendations."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 

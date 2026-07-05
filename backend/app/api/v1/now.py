@@ -8,9 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import CurrentUser
+from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
+from app.services.recommendation_service import RecommendationService
 from app.services.task_scorer import TaskScorer
 from app.services.usable_time_service import UsableTimeService
 from app.services.user_service import UserService
@@ -23,33 +25,7 @@ class NowResponse(BaseModel):
     usable_minutes: int
     best_task: TaskResponse | None
     reason: str | None = None
-
-
-def _build_reason(task, usable_minutes: int, now: datetime) -> str:
-    """A calm, human explanation of why this task is recommended — deterministic, no LLM."""
-    parts: list[str] = []
-    if task.due_at is not None:
-        due = task.due_at if task.due_at.tzinfo else task.due_at.replace(tzinfo=timezone.utc)
-        if due < now:
-            parts.append("it's overdue")
-        elif due.date() == now.date():
-            parts.append("it's due today")
-        elif (due.date() - now.date()).days <= 6:
-            parts.append(f"it's due {due.strftime('%A')}")
-    if task.priority and task.priority <= 2:
-        parts.append("it's high priority")
-    if task.estimated_minutes and usable_minutes and task.estimated_minutes <= usable_minutes:
-        parts.append(f"it fits your {usable_minutes} free minutes")
-
-    if not parts:
-        return "It's your best next step right now."
-    if len(parts) == 1:
-        body = parts[0]
-    elif len(parts) == 2:
-        body = f"{parts[0]} and {parts[1]}"
-    else:
-        body = ", ".join(parts[:-1]) + f", and {parts[-1]}"
-    return "Recommended because " + body + "."
+    alternatives: list[TaskResponse] = []
 
 
 def _greeting() -> str:
@@ -65,6 +41,7 @@ def _greeting() -> str:
 async def get_now(
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
+    gateway: LLMGateway = Depends(get_llm_gateway),
 ) -> NowResponse:
     user_svc = UserService(db)
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
@@ -101,9 +78,20 @@ async def get_now(
         return NowResponse(greeting=_greeting(), usable_minutes=usable_minutes, best_task=None)
 
     ranked = TaskScorer().rank(candidates, usable_minutes, now)
+    best = ranked[0]
+    alternatives = ranked[1:3]
+
+    # Richer "Why this?" — the LLM weighs the alternatives, time of day, likely energy, free time,
+    # and deadlines; falls back to a deterministic explanation when the LLM is unavailable.
+    user_tz = user.profile.timezone if user.profile else "UTC"
+    reason = await RecommendationService(gateway).explain_choice(
+        best, alternatives, usable_minutes, now, user_tz
+    )
+
     return NowResponse(
         greeting=_greeting(),
         usable_minutes=usable_minutes,
-        best_task=TaskResponse.model_validate(ranked[0]),
-        reason=_build_reason(ranked[0], usable_minutes, now),
+        best_task=TaskResponse.model_validate(best),
+        reason=reason,
+        alternatives=[TaskResponse.model_validate(t) for t in alternatives],
     )

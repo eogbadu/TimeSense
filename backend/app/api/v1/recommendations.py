@@ -52,11 +52,13 @@ async def get_recommendations(
     suppressed_ids = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
     all_pending = [t for t in all_pending if t.id not in suppressed_ids]
 
+    user_tz = user.profile.timezone if user.profile else "UTC"
     svc = RecommendationService(gateway)
     best_task, alternatives, usable_minutes, why = await svc.recommend(
         tasks=all_pending,
         scheduled_tasks=today_tasks,
         now=now,
+        user_timezone=user_tz,
     )
 
     meal_status = await MealRepository(db).get_today_status(user.id, now)
