@@ -38,7 +38,17 @@
 - Fix: Not applied — deliberately deferred (see TIME-039 ticket Non-Goals). Was correct to store the model/API now since meal/commute/sleep tickets (TIME-040–042) need it to exist, but the actual usable-time integration should happen once all Phase 9 signals exist, in one pass, alongside adding proper timezone handling to `UsableTimeService`.
 - Files changed: None yet.
 - Verification: N/A.
-- Follow-up needed: Add a `user_timezone: str` param to `UsableTimeService.calculate()`, convert routine/meal/commute blocks to UTC via `zoneinfo`, and subtract them from the usable window — planned for a ticket after TIME-042 (Sleep/Wake Signal Integration) completes Phase 9's data model, per the recommendation-engine skill's "Empty calendar time ≠ available time" principle.
+- Follow-up needed: Add a `user_timezone: str` param to `UsableTimeService.calculate()`, convert routine/meal/commute/sleep blocks to UTC via `zoneinfo`, and subtract them from the usable window. TIME-042 (Sleep/Wake Signal Integration) is now done, so all of Phase 9's signals exist — this integration is unblocked and should be scheduled as its own ticket before or alongside Phase 10, per the recommendation-engine skill's "Empty calendar time ≠ available time" principle.
+
+## Issue: SleepWakeEvent wake-time comparison is UTC-only, same as RoutineAssumption/CommuteService
+- Date: 2026-07-05
+- Area: `backend/app/services/morning_replan.py`
+- Symptom: `MorningReplanService` treats a `wake_time`'s UTC hour/minute as if it were the user's local minute-of-day when comparing against the "sleep" RoutineAssumption's `end_minute`. A user outside UTC will get late-wake detection offset by their UTC difference.
+- Root cause: No per-user timezone field or conversion exists yet anywhere in the codebase (see the RoutineAssumption issue above) — TIME-042 deliberately followed the same established simplification rather than solving timezone handling a fourth time in isolation.
+- Fix: Not applied — deferred to the same unified timezone-awareness ticket as the RoutineAssumption issue above.
+- Files changed: None yet.
+- Verification: N/A.
+- Follow-up needed: Resolved by the same `UsableTimeService` timezone pass referenced above; no separate fix needed once that lands.
 
 ## Issue: Devcontainer firewall script breaks Docker Desktop for Mac embedded DNS
 - Date: 2026-07-04

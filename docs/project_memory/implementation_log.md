@@ -1,5 +1,42 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-042 (Jira TIME-41): Sleep/Wake Signal Integration
+
+### Created
+- `backend/app/models/sleep_wake.py` — SleepWakeEvent model (wake_time, sleep_start, source
+  healthkit/manual, replan_request_id FK)
+- `backend/migrations/versions/k1l2m3n4o5p6_add_sleep_wake_events.py` — sleep_wake_events table
+- `backend/app/repositories/sleep_wake_repository.py` — create/get_latest_today/has_replan_on_date/
+  set_replan_request
+- `backend/app/schemas/sleep_wake.py` — SleepWakeEventIn, SleepWakeEventResponse
+- `backend/app/services/morning_replan.py` — MorningReplanService.record_wake_event() gates on
+  health_data consent, compares wake_time minute-of-day against the user's "sleep" RoutineAssumption
+  end_minute (TIME-039), and calls the existing NotificationService.propose_replan() when the wake
+  is >= 45 minutes late, linking the resulting ReplanRequest back onto the event to dedupe same-day
+- `backend/app/api/v1/sleep.py` — POST /sleep/events, GET /sleep/today
+- `backend/tests/test_sleep_wake.py` — 8 tests
+
+### Modified
+- `backend/app/api/v1/__init__.py`, `backend/app/models/__init__.py` — registered sleep router/model
+
+### Design notes
+- No new replan mechanism: reuses `NotificationService.propose_replan`/`ReplanRequest` (TIME-015)
+  exactly as-is, including the existing `/api/v1/notifications/replans/{id}/approve|reject` routes —
+  a sleep-triggered replan looks identical to any other replan to the approval flow.
+- Consent-gated on the existing `health_data` consent type (already defined in
+  `ConsentRepository.VALID_CONSENT_TYPES`, unused until now) — same 403-without-consent pattern as
+  TIME-041's `location_tracking` gate.
+- Wake-time-vs-assumption comparison uses the same UTC-minute-of-day simplification already used by
+  RoutineAssumption/UsableTimeService/CommuteService (see known_issues.md) rather than inventing a
+  fourth partial timezone approach.
+- iOS HealthKit read integration is explicitly out of scope for this ticket (backend contract only),
+  same backend/mobile split TIME-041 used for its location-permission piece — flagged as its own
+  decision point per context_summary.md's note on this being the first backend/mobile-split ticket.
+- Found the Jira ticket key (TIME-41) already existed with a stale "In Review" status before any
+  code for this ticket existed in this session — likely an abandoned artifact from an earlier
+  attempt. Overwrote its description via `create_jira_tickets.py` and moved it back to
+  "In Progress" before starting; no code from that prior attempt was present in the repo.
+
 ## 2026-07-05 — TIME-041 (Jira TIME-40): Commute Detection
 
 ### Created

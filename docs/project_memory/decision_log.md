@@ -120,6 +120,14 @@
   Reason: A recurring daily block doesn't need a date component, and integers avoid DB-driver Time-type quirks across SQLite (tests) and Postgres. The usable-time integration is deferred until UsableTimeService gains real timezone awareness (currently UTC-midnight-only) — doing it once for routines+meals+commute together after TIME-040–042 avoids three partial, soon-to-be-redone integrations.
   Date: 2026-07-05
 
+- Decision: A late wake (TIME-042) is detected by comparing SleepWakeEvent.wake_time against the user's existing "sleep" RoutineAssumption end_minute (TIME-039), not a separate assumed-wake-time field
+  Reason: RoutineAssumption already models the user's assumed sleep window per the Phase 9 data model; adding a second, disconnected "expected wake time" concept would let the two drift out of sync. A user editing their sleep routine (PATCH /api/v1/routines/sleep) automatically updates what counts as a late wake.
+  Date: 2026-07-05
+
+- Decision: A sleep-triggered morning replan reuses NotificationService.propose_replan/ReplanRequest verbatim, with no sleep-specific replan type or approval endpoint
+  Reason: The product rule that replans always require explicit approval is already fully implemented; inventing a parallel mechanism for one more trigger source would duplicate the approve/reject/expiry logic for no benefit. The existing /api/v1/notifications/replans/{id}/approve|reject routes handle it identically to any other replan.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

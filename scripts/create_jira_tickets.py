@@ -2280,6 +2280,97 @@ TICKETS = [
             p("TIME-042: Sleep/Wake Signal Integration"),
         ),
     },
+
+    {
+        "summary": "TIME-042: Sleep/Wake Signal Integration",
+        "labels": ["phase-9", "backend", "privacy"],
+        "description": doc(
+            h2("Goal"),
+            p("Capture a sleep/wake signal (initially submitted by the mobile app, e.g. from "
+              "HealthKit sleep analysis) and, when the user wakes meaningfully later than their "
+              "assumed sleep-routine wake time, propose a morning replan for their approval. "
+              "Reuses the existing RoutineAssumption 'sleep' block (TIME-039) as the expected-wake "
+              "baseline and the existing ReplanRequest/Notification approval flow (TIME-015) — no "
+              "new replan mechanism, no auto-applied changes."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "SleepWakeEvent model: user_id, wake_time (UTC datetime), sleep_start "
+                "(nullable UTC datetime), source (healthkit|manual), replan_request_id "
+                "(nullable FK to replan_requests, mirrors CommuteEvent's notification_id link)",
+                "Alembic migration for sleep_wake_events table",
+                "MorningReplanService.record_wake_event(user_id, wake_time, sleep_start, source) — "
+                "gates on effective health_data consent (existing consent_records/ConsentRepository), "
+                "raising if not granted; stores the event; compares wake_time's minute-of-day "
+                "against the user's 'sleep' RoutineAssumption end_minute (same UTC-only "
+                "simplification already used by RoutineAssumption/CommuteService/UsableTimeService, "
+                "see known_issues.md) using a late-wake threshold (45 minutes)",
+                "On a qualifying late wake with no replan already proposed for that day, calls "
+                "NotificationService.propose_replan (existing approval-required flow) and links the "
+                "resulting ReplanRequest back onto the SleepWakeEvent",
+                "POST /api/v1/sleep/events (ingest one wake signal, returns the event plus whether "
+                "a replan was suggested), GET /api/v1/sleep/today",
+                "No new approve/reject endpoints — a suggested replan is approved/rejected through "
+                "the existing POST /api/v1/notifications/replans/{id}/approve|reject routes",
+                "Tests: 10+ covering consent gate (403 without health_data consent), late wake "
+                "creates a pending ReplanRequest + notification, on-time wake does not, a second "
+                "wake event the same day does not create a second replan, cross-user isolation",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No iOS HealthKit read integration, entitlements, or permission-prompt UI "
+                "(ios/.../HealthService.swift) — this ticket is the backend contract only, same "
+                "backend/mobile split TIME-041 used for its location-permission piece; HealthKit "
+                "wiring needs device testing this environment can't do and is its own decision point",
+                "No real user-timezone-aware minute comparison — same UTC-only simplification "
+                "already used by RoutineAssumption/UsableTimeService/CommuteService; full timezone "
+                "integration is planned as one unified pass after Phase 9's signals all exist",
+                "No automatic replan execution — matches the product rule that replans always "
+                "require explicit user approval (decision_log.md)",
+                "No sleep quality/duration scoring or Insights surfacing — only a wake-time-vs-"
+                "assumption comparison for morning replan triggering",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/models/sleep_wake.py (new)",
+                "backend/migrations/versions/*_add_sleep_wake_events.py (new)",
+                "backend/app/repositories/sleep_wake_repository.py (new)",
+                "backend/app/schemas/sleep_wake.py (new)",
+                "backend/app/services/morning_replan.py (new)",
+                "backend/app/api/v1/sleep.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/app/models/__init__.py (register model)",
+                "backend/tests/test_sleep_wake.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/sleep/events without health_data consent granted returns 403",
+                "A wake event >= 45 minutes past the user's sleep-routine assumed wake time creates "
+                "a pending ReplanRequest and a replan_request notification",
+                "A wake event within the threshold does not trigger a replan suggestion",
+                "A second wake event on the same day does not create a second pending replan",
+                "One user cannot see or trigger a replan tied to another user's sleep events",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_sleep_wake.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-039 (RoutineAssumption sleep block), TIME-010 (consent_records / "
+              "ConsentRepository), TIME-015 (Notification/ReplanRequest approval pattern)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-043: Notification Modes and Learning Prompts"),
+        ),
+    },
 ]
 
 

@@ -5,7 +5,8 @@
 ## Current Build State
 
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
-and Phase 8 (Recommendation Engine V1) complete. Phase 9 in progress (TIME-039–041 done).
+Phase 8 (Recommendation Engine V1), and Phase 9 (Routines/Meals/Commute/Sleep-Wake) complete.
+Phase 10 (Notifications, Widgets, Ambient Surfaces) next.
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -22,18 +23,21 @@ Backend API endpoints implemented:
 - `POST /api/v1/meals`, `GET /api/v1/meals/today` (skip inference via routine windows)
 - `POST /api/v1/commute/detect` (location-consent gated), `GET /api/v1/commute/pending`,
   `POST /api/v1/commute/{id}/confirm`/`.../reject`
+- `POST /api/v1/sleep/events` (health-data-consent gated, late wake proposes a morning replan),
+  `GET /api/v1/sleep/today`
 
 Database tables: users, profiles, preferences, personalities, onboarding_states, consent_records,
 subscription_records, notification_preferences, replan_requests, tasks, internal_reminders,
-recommendation_feedback, routine_assumptions, meal_events, commute_events.
+recommendation_feedback, routine_assumptions, meal_events, commute_events, sleep_wake_events.
 
-Backend tests: 181, all passing (see Known Problems re: 2 flaky Stripe-network tests).
+Backend tests: 189, all passing (see Known Problems re: 2 flaky Stripe-network tests).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`.
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-042 (impl seq) → Jira TIME-41 (Sleep/Wake Signal Integration) — **Done (this session)**
 - TIME-041 (impl seq) → Jira TIME-40 (Commute Detection) — **Done (PR #32 merged 2026-07-05)**
 - TIME-040 (impl seq) → Jira TIME-39 (Meal Tracking) — Done (PR #31, 2026-07-05)
 - TIME-039 (impl seq) → Jira TIME-38 (Routine Assumptions Model) — Done (PR #30, 2026-07-05)
@@ -42,20 +46,34 @@ Mobile app shells:
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-041 (Jira TIME-40): Commute Detection
-- `commute_events` table; `POST /api/v1/commute/detect` (403 without location_tracking consent),
-  haversine displacement + elapsed-time heuristic, `GET /pending`, `confirm`/`reject`
-- Reuses existing consent_records + Notification/approval infra, no new mechanisms invented
-- No raw lat/lng persisted, no calendar-event-location correlation (not modeled yet)
-- 11 new tests; full suite 181/181 (excluding 2 known-flaky Stripe tests)
+TIME-042 (Jira TIME-41): Sleep/Wake Signal Integration
+- `sleep_wake_events` table; `POST /api/v1/sleep/events` (403 without health_data consent),
+  `GET /api/v1/sleep/today`
+- MorningReplanService compares wake_time vs the "sleep" RoutineAssumption's assumed wake minute
+  (TIME-039); >=45min late proposes a morning replan via the existing
+  NotificationService.propose_replan/ReplanRequest approval flow (TIME-015) — no new replan
+  mechanism, no auto-applied changes, same-day dedupe via replan_request_id on the event
+- Scoped as backend-only per the plan noted below: no iOS HealthKit read integration in this ticket
+  (same backend/mobile split TIME-041 used) — that remains its own decision point
+- 8 new tests; full suite 189/189 (excluding 2 known-flaky Stripe tests)
 
-Full history of TIME-034 through TIME-040 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-041 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-TIME-042: Sleep/Wake Signal Integration — next in the autonomous build sequence (user directed
-continuous autonomous build through the remaining ticket backlog, merging each PR without waiting
-for review). Note: TIME-042 explicitly includes an iOS HealthKit piece — first backend/mobile-split
-ticket in this run; scope the backend half first and treat the iOS half as its own decision point.
+Phase 9 (Routines, Meals, Commute, Sleep/Wake) is complete. Next up: TIME-043 (Notification Modes
+and Learning Prompts), starting Phase 10. Also see known_issues.md — the deferred
+UsableTimeService timezone-awareness pass (to actually subtract routine/meal/commute/sleep blocks
+from usable time) is now unblocked since all Phase 9 signals exist; worth scheduling before or
+alongside Phase 10 rather than continuing to defer it.
+
+## iOS HealthKit Decision Point (deferred from TIME-042)
+TIME-042 only built the backend contract (ingest a wake_time signal, gate on health_data consent,
+trigger a morning replan suggestion). The actual iOS-side HealthKit read integration
+(`ios/.../HealthService.swift`, `HKHealthStore` authorization request, Info.plist usage-description
+strings, calling `POST /api/v1/sleep/events` after reading sleep analysis samples) was not built —
+it needs real device/Xcode testing this environment can't do, and touches Apple's health-data
+entitlement request flow, which is worth a deliberate decision (own ticket vs. folding into an iOS
+tranche) rather than bundling into the backend ticket. Flag to the user before scoping that work.
 
 ## Important Decisions to Preserve
 - Firebase added via Xcode UI (File > Add Package Dependencies), NOT in pbxproj — `#if canImport` guards ensure CLI builds work
