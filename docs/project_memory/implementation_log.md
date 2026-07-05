@@ -1,5 +1,18 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-072 (Jira TIME-70): Rule-based date fallback for capture
+
+Root cause of "the best task on Now doesn't update when I add tasks": the LLM parse was failing
+(OpenAI 429 / quota exhausted — the user's key is valid but out of credits), and the fallback just
+stored the raw text with NO due date. With every task at due_at=None + priority 3, the scorer ties
+them all so the best never changes. Added app/services/capture_date_parser.py (parse_datetime):
+extracts today/tonight/tomorrow, weekday names (next occurrence), "Month Dayth", and "at 5pm"/
+"9:30am" → a UTC due_at (default 5pm local for date-only) + a cleaned, capitalized title with the
+scheduling phrase stripped. CaptureService now uses it on LLM failure. New captures get dates → the
+scorer prioritizes due-today over undated/tomorrow. (Existing undated tasks are not backfilled; the
+LLM remains primary when available.) 8 parser tests + updated 2 capture assertions (titles now
+cleaned); suite 316/316 excl. 2 flaky.
+
 ## 2026-07-05 — TIME-071 (Jira TIME-69): Today shows untimed pending tasks
 
 Reported while using the app: "why is it only showing 1 task?" — Now intentionally shows only the

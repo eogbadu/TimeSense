@@ -4677,6 +4677,68 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-072: Rule-based date fallback for capture (works without the LLM)",
+        "labels": ["backend", "capture"],
+        "description": doc(
+            h2("Goal"),
+            p("Captured tasks weren't getting due dates — the LLM parse was failing (OpenAI 429 / "
+              "quota) and the fallback just stored the raw text with no date. With no dates, every "
+              "task ties at priority 3 and Now's 'best task' never changes when you add tasks. Add "
+              "a rule-based date/time extractor so captures still get a due date (and a cleaner "
+              "title) when the LLM is unavailable, making prioritization work."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "app/services/capture_date_parser.py: parse_datetime(raw, tz) extracting today/"
+                "tonight/tomorrow, weekday names (next occurrence), 'Month Dayth', and 'at 5pm' / "
+                "'9:30am' — returns a UTC due_at (default 5pm local when only a date is given) + a "
+                "lightly cleaned, capitalized title with the scheduling phrase stripped",
+                "CaptureService: on LLM failure, use the rule-based fallback (due_at + cleaned "
+                "title) instead of the bare raw title",
+                "Tests for the parser + updated capture fallback assertions (title now cleaned/"
+                "capitalized)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Not a full NL date library — covers the common phrasings; the LLM remains the "
+                "primary parser when available (and gives smarter titles/estimates)",
+                "No backfill of existing undated tasks (only new captures get dates); no scorer "
+                "change (it already prioritizes by due date)",
+                "Doesn't fix the user's OpenAI quota — that's account billing; this makes the app "
+                "degrade gracefully without it",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/capture_date_parser.py (new)",
+                "backend/app/services/capture_service.py (use fallback)",
+                "backend/tests/test_capture_date_parser.py (new), tests/test_capture.py (assertions)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "'Buy new pants today' → due_at = today (5pm local), title 'Buy new pants'",
+                "'... today at 5pm' → due_at today 5pm; 'tomorrow' / weekday / 'July 5th' handled",
+                "No date phrase → due_at None, title still cleaned/capitalized",
+                "Capture works end-to-end even while OpenAI returns 429; full suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_capture_date_parser.py tests/test_capture.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-031 (capture), TIME-071 (Today list), the TaskScorer deadline weighting."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-073: 'Why this?' explanation on Now."),
+        ),
+    },
 ]
 
 
