@@ -5140,6 +5140,65 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-080: Local-time-aware Now (correct greeting + wind-down moment)",
+        "labels": ["ios", "backend", "recommendations"],
+        "description": doc(
+            h2("Goal"),
+            p("Make Now grounded in the user's LOCAL time (always known) rather than assumed energy. "
+              "Fix the greeting (was UTC-based) and add a time-aware 'moment' that gently suggests "
+              "winding down when it's late locally and nothing is urgent — so the assistant isn't "
+              "pushing a task at 11pm."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Bug: _greeting used UTC hour → wrong for the user's timezone. Now derived from the "
+                "user's profile timezone (adds a 'You're up late' band before 5am)",
+                "New NowResponse.moment (str|None): deterministic, local-time-aware. When local hour "
+                "≥ 21 or < 5 AND no urgent task (overdue / due ≤ 3h / priority 1), returns a gentle "
+                "wind-down nudge; else null. No LLM (instant, reliable)",
+                "iOS: NowContext decodes moment; NowView shows a calm MomentCard (moon icon) above "
+                "the best task when present — the top task is still offered",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Recommendations still come only from the user's tasks — the moment is a framing "
+                "nudge, not a new 'rest' task",
+                "No energy tracking (local time is the reliable signal per user guidance)",
+                "Only a wind-down moment for v1; other time-of-day moments (e.g. morning kickoff) "
+                "can follow",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/api/v1/now.py, backend/tests/test_now.py",
+                "ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Greeting matches the user's local time (not UTC)",
+                "Late local time + nothing urgent → a wind-down moment shown above the best task; "
+                "urgent task present → no moment",
+                "iOS build + backend suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_now.py -v\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-079 (why justifies pick), user profile timezone, TaskScorer."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 
