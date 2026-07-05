@@ -112,7 +112,7 @@ async def test_capture_fallback_on_llm_error(client):
     # fallback: raw_input becomes the title, task is still created
     assert r.status_code == 201
     data = r.json()
-    assert data["title"] == "buy groceries"
+    assert data["title"] == "Buy groceries"
     assert data["source"] == "capture"
 
 
@@ -140,7 +140,7 @@ async def test_capture_fallback_on_invalid_json(client):
             json={"raw_input": "pick up prescription"},
         )
     assert r.status_code == 201
-    assert r.json()["title"] == "pick up prescription"
+    assert r.json()["title"] == "Pick up prescription"
 
 
 @pytest.mark.anyio

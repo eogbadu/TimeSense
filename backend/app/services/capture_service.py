@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from app.llm.base import LLMRequest
 from app.llm.gateway import LLMGateway
 from app.schemas.task import TaskCreate
+from app.services.capture_date_parser import parse_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +69,13 @@ class CaptureService:
                 raw_input=raw_input,
             )
         except Exception as exc:
-            logger.warning("Capture parse failed, falling back to raw title: %s", exc)
+            logger.warning("Capture parse failed, using rule-based fallback: %s", exc)
+            # Rule-based fallback so tasks still get a due date/time (and a lightly cleaned title)
+            # when the LLM is unavailable (e.g. OpenAI quota/rate limits).
+            due_at, title = parse_datetime(raw_input, user_timezone=user_timezone)
             return TaskCreate(
-                title=raw_input[:500],
+                title=title[:500],
+                due_at=due_at,
                 source="capture",
                 raw_input=raw_input,
             )

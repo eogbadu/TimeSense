@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-05] TIME-072: Capture extracts dates without the LLM — when OpenAI is unavailable (e.g. 429/quota), a rule-based parser pulls today/tomorrow/weekday/"Month Dayth"/"at 5pm" from the text so tasks still get a due date (and a cleaner title), and Now's best-task prioritization works
 - [2026-07-05] TIME-071: Today tab now shows untimed pending tasks (your captured to-dos), not just scheduled blocks — so you can see your full list (Now still shows the single best next action by design)
 - [2026-07-05] TIME-070: iOS recovers from 401s — a launch race showed "session expired" on a valid session with no way back to sign-in; APIClient now refreshes the token and retries on 401, and a persistent 401 signs out to the sign-in screen
 - [2026-07-05] TIME-069: Add backend/run_dev.py dual-stack dev launcher — the iOS Simulator connects to IPv6 localhost (::1) but `uvicorn app.main:app` binds IPv4 only; run_dev.py serves both ::1 and 127.0.0.1. Documented in CLAUDE.md
