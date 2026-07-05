@@ -41,6 +41,21 @@ struct NowView: View {
                         onSnooze: { Task { await viewModel.snooze(taskId: task.id) } },
                         onNotNow: { Task { await viewModel.notNow(taskId: task.id) } }
                     )
+
+                    let alts = ctx.alternatives ?? []
+                    if !alts.isEmpty {
+                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                            Text("Or consider")
+                                .sectionHeaderStyle()
+                                .padding(.horizontal, DesignTokens.Spacing.xs)
+                            ForEach(alts) { alt in
+                                AlternativeRow(task: alt) {
+                                    Task { await viewModel.markDone(taskId: alt.id) }
+                                }
+                            }
+                        }
+                        .padding(.top, DesignTokens.Spacing.sm)
+                    }
                 } else {
                     EmptyStateView(
                         icon: "sparkles",
@@ -149,6 +164,39 @@ private struct WhyThis: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Compact runner-up task shown under the hero ("Or consider"); tap the circle to mark it done.
+private struct AlternativeRow: View {
+    let task: NowTask
+    let onDone: () -> Void
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            Button(action: onDone) {
+                Image(systemName: "circle")
+                    .font(.title3)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+            }
+            .buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(task.title)
+                    .font(DesignTokens.Typography.callout)
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                    .lineLimit(1)
+                if let mins = task.estimatedMinutes {
+                    Text("\(mins) min")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                }
+            }
+            Spacer(minLength: 0)
+            PriorityBadge(priority: task.priority)
+        }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, DesignTokens.Spacing.md)
+        .cardStyle()
     }
 }
 

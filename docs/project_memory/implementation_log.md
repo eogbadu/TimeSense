@@ -1,5 +1,20 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-077 (Jira TIME-75): Now alternatives + richer LLM 'Why this?'
+
+The 'Why this?' just said "best move right now". Now shows the best hero PLUS two alternatives, and
+the reason is a real explanation of why the best beats them. RecommendationService.explain_choice
+(now public) builds an enriched LLM prompt: the alternatives, a time-of-day + energy heuristic
+(morning=fresh, afternoon dip, evening=winding down — from the user's timezone), free time before
+the next commitment, and deadlines; with a richer deterministic fallback for when the LLM is down.
+/now returns alternatives (ranked[1:3]) and uses explain_choice for the reason (added the LLM gateway
+dep + user timezone from profile); /recommendations also passes timezone. iOS: NowContext decodes
+alternatives; Now renders an "Or consider" list of compact AlternativeRow cards (tap circle to
+complete). Verified live: LLM produced "Going to Home Depot now is a productive way to use your
+energy while wrapping up the day..." — the user's OpenAI credits are active again. Note: the reason
+is generated eagerly per Now load (~1-2s LLM latency); lazy-on-tap is a possible follow-up. Backend
+313 passing; iOS BUILD SUCCEEDED.
+
 ## 2026-07-05 — TIME-076 (Jira TIME-74): Make Settings rows functional (+ Sign Out, Delete)
 
 Most Settings rows were dead placeholders (chevron, no action) and there was no Sign Out. Added
