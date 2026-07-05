@@ -29,7 +29,8 @@ The **repository is the source of truth**, not chat history. Read project memory
 
 ```bash
 # Backend
-cd backend && uvicorn app.main:app --reload
+cd backend && uvicorn app.main:app --reload    # IPv4-only; fine for web/curl, NOT the iOS Simulator
+cd backend && python run_dev.py                # dual-stack (::1 + 127.0.0.1) — use for iOS Simulator dev
 cd backend && alembic upgrade head
 cd backend && pytest
 

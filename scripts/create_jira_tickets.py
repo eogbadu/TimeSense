@@ -4498,6 +4498,64 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-069: Dual-stack dev server launcher (fix iOS Simulator localhost)",
+        "labels": ["backend", "devx", "docs"],
+        "description": doc(
+            h2("Goal"),
+            p("The documented `uvicorn app.main:app` binds IPv4 (127.0.0.1) only, but macOS resolves "
+              "`localhost` to IPv6 `::1` first — so the iOS Simulator (which calls localhost:8000) "
+              "fails to connect (nw_endpoint_flow_failed [::1.8000]). Add a committed dev launcher "
+              "that binds a DUAL-STACK socket so both `::1` and `127.0.0.1` work, and document it."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "backend/run_dev.py — creates an AF_INET6 socket with IPV6_V6ONLY=0 (accepts IPv4-"
+                "mapped too), binds ::, and serves app.main:app on it via uvicorn.Server. PORT env "
+                "override; clear docstring explaining the IPv4/IPv6 localhost issue",
+                "Document it: note in CLAUDE.md's Commands (use `python run_dev.py` for Simulator "
+                "dev, or `uvicorn --host ::`) and a one-liner in the backend area",
+                "Verify both loopbacks return 200 (curl [::1]:8000 and 127.0.0.1:8000)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No hot-reload in run_dev.py (uvicorn reload + a pre-bound socket don't compose "
+                "cleanly; use plain `uvicorn --reload` for IPv4-only reload workflows)",
+                "No change to the Dockerfile / production serving (containers bind 0.0.0.0 and sit "
+                "behind a proxy; this is a local-dev convenience only)",
+                "No app-side change (the app correctly uses localhost; the server just needs to "
+                "listen on both families)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/run_dev.py (new)",
+                "CLAUDE.md (Commands note)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "`cd backend && python run_dev.py` serves the app on both ::1:8000 and 127.0.0.1:8000 "
+                "(both return 200)",
+                "CLAUDE.md documents the Simulator-friendly dev command",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && python run_dev.py &\n"
+                "curl -s -o /dev/null -w '%{http_code}' http://[::1]:8000/api/v1/health\n"
+                "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/v1/health"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("The iOS Simulator dev loop (TIME-062/066/067/068), the FastAPI app entrypoint."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 
