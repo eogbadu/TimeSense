@@ -1,12 +1,21 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# The .env lives at the repo root, but the backend is usually launched from backend/
+# (`cd backend && uvicorn app.main:app`), so a CWD-relative ".env" wouldn't be found there.
+# Resolve the repo-root .env by absolute path (this file is backend/app/core/config.py, so the
+# repo root is parents[3]). A trailing CWD-relative ".env" is kept so a local backend/.env can
+# still override during development. Missing files are ignored by pydantic; in Docker, env vars
+# are injected directly and take precedence over both.
+_ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(str(_ROOT_ENV), ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
