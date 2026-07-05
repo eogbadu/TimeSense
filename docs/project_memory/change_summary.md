@@ -1,5 +1,15 @@
 # Change Summary
 
+## 2026-07-05 — TIME-064 / TIME-065 (Jira TIME-58 / TIME-59) Local-run + auth cleanups
+
+- **TIME-064:** config.py resolves the root `.env` by absolute path so `cd backend && uvicorn` loads
+  real settings (was silently loading none → real Firebase auth broke at runtime). Removed the temp
+  backend/.env symlink.
+- **TIME-065:** `/users/me` now syncs the DB `user.role` from the Firebase token claim (the single
+  source of truth), so granting admin is one step. require_admin unchanged. Suite 283/283.
+
+Both surfaced while bringing the full stack up locally for the user's admin dashboard.
+
 ## 2026-07-05 — TIME-063 (Jira TIME-57) Fix Alembic migration ordering
 
 **What changed:** recommendation_feedback (g7h8i9j0k1l2, FK→tasks) now depends on the tasks

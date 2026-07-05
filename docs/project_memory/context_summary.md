@@ -62,9 +62,16 @@ notion_import_items. (Correction: there is no separate "notification_preferences
 notification_mode field lives directly on user_preferences; a prior version of this file listed
 that table incorrectly.)
 
-Backend tests: 281, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
+Backend tests: 283, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
 verifies REAL Firebase ID tokens as of TIME-061 (real service account for project timesense-eb7ec
-in .env; tests still mock verify_id_token and don't run the app lifespan).
+in .env; tests still mock verify_id_token and don't run the app lifespan). config.py loads the
+repo-root .env from any CWD (TIME-064); /users/me syncs the DB role from the token claim (TIME-065).
+
+**Full local stack verified working end-to-end this session:** web (localhost:3000, `cd web && npm
+run dev`) → real Firebase email/password sign-in → backend (localhost:8000, `cd backend && uvicorn
+app.main:app`, Homebrew Postgres 14 on :5432 with a `timesense` role+db created by hand) → admin
+dashboard with live data. The web signs in with Email/Password (not Google — must be enabled in the
+console). Admin = Firebase custom claim `role: admin` (now auto-mirrored to the DB via TIME-065).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes. Insights tab (TIME-046) now shows a real weekly summary + stats grid behind the Premium gate.
@@ -78,6 +85,9 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-065 (net-new) → Jira TIME-59 (Sync DB role from token claim) — **Done (PR #54 merged 2026-07-05)**
+- TIME-064 (net-new) → Jira TIME-58 (Load .env from repo root) — **Done (PR #53 merged 2026-07-05)**
+- TIME-063 (net-new) → Jira TIME-57 (Fix Alembic migration ordering) — **Done (PR #50 merged 2026-07-05)**
 - TIME-062 (net-new) → Jira TIME-56 (Client Firebase Config iOS+Android) — **Done (PR #49 merged 2026-07-05)**
 - TIME-053 (impl seq) → Jira TIME-55 (Google Assistant Integration) — **Done (PR #48 merged 2026-07-05)**
 - TIME-061 (net-new) → Jira TIME-54 (Backend Real Firebase Token Verification) — **Done (PR #47 merged 2026-07-05)**

@@ -149,8 +149,12 @@ before being trusted — do not assume unchecked = not built.
       (web/.env.local) still pending the user's apiKey/appId.
 
 ## Active Jira Tickets
+- TIME-59 (impl TIME-065, Sync DB role from token claim) — Done
+- TIME-58 (impl TIME-064, Load .env from repo root) — Done
+- TIME-57 (impl TIME-063, Fix Alembic migration ordering) — Done
 - TIME-56 (impl TIME-062, Client Firebase Config iOS+Android) — Done
-- Next: web Firebase config (web/.env.local, needs user's apiKey/appId), or the next Phase 13 item
+- Full local stack (web+backend+Postgres+real Firebase, admin dashboard) verified working this session
+- Next: the next Phase 13 feature ticket, or on-device iOS/Android runs (register a device UDID)
 
 ## Blockers
 - None
