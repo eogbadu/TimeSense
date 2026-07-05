@@ -127,3 +127,25 @@ async def test_now_surfaces_unscheduled_captured_task(client, db_session):
     best = r.json()["best_task"]
     assert best is not None
     assert best["title"] == "Buy milk"
+
+
+@pytest.mark.anyio
+async def test_now_excludes_not_now_task(client, db_session):
+    """A 'not now' feedback suppresses the task so a different best task surfaces."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+    from app.models.recommendation_feedback import RecommendationFeedback
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    dismissed = Task(user_id=user.id, title="Dismissed", status="pending", priority=1)
+    keep = Task(user_id=user.id, title="Keep", status="pending", priority=2)
+    db_session.add_all([dismissed, keep])
+    await db_session.flush()
+    db_session.add(RecommendationFeedback(user_id=user.id, task_id=dismissed.id, signal="not_now"))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    assert r.status_code == 200
+    best = r.json()["best_task"]
+    assert best is not None and best["title"] == "Keep"

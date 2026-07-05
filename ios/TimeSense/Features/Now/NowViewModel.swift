@@ -79,7 +79,37 @@ final class NowViewModel: ObservableObject {
             await load()
         }
     }
+
+    /// Snooze the current best task for a few hours; it drops out of Now until then.
+    func snooze(taskId: String, hours: Int = 3) async {
+        let until = ISO8601DateFormatter().string(from: Date().addingTimeInterval(Double(hours) * 3600))
+        await sendFeedback(taskId: taskId, signal: "snooze", snoozeUntil: until)
+    }
+
+    /// Dismiss the current best task ("not now"); a different best task surfaces.
+    func notNow(taskId: String) async {
+        await sendFeedback(taskId: taskId, signal: "not_now", snoozeUntil: nil)
+    }
+
+    private func sendFeedback(taskId: String, signal: String, snoozeUntil: String?) async {
+        guard case .loaded = uiState else { return }
+        struct FeedbackBody: Encodable {
+            let task_id: String
+            let signal: String
+            let snooze_until: String?
+        }
+        do {
+            let _: FeedbackResponse = try await APIClient.shared.post(
+                "/api/v1/recommendations/feedback",
+                body: FeedbackBody(task_id: taskId, signal: signal, snooze_until: snoozeUntil)
+            )
+        } catch {
+            // ignore; reload reflects the true state
+        }
+        await load()
+    }
 }
 
-// Minimal decodable for the PATCH response
+// Minimal decodables for the mutation responses
 private struct TaskPatchResponse: Decodable { let id: String }
+private struct FeedbackResponse: Decodable { let id: String }

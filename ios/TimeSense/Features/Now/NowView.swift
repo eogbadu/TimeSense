@@ -34,9 +34,12 @@ struct NowView: View {
                 GreetingHeader(greeting: ctx.greeting, usableMinutes: ctx.usableMinutes)
                     .padding(.top, DesignTokens.Spacing.sm)
                 if let task = ctx.bestTask {
-                    BestTaskCard(task: task, onDone: {
-                        Task { await viewModel.markDone(taskId: task.id) }
-                    })
+                    BestTaskCard(
+                        task: task,
+                        onDone: { Task { await viewModel.markDone(taskId: task.id) } },
+                        onSnooze: { Task { await viewModel.snooze(taskId: task.id) } },
+                        onNotNow: { Task { await viewModel.notNow(taskId: task.id) } }
+                    )
                 } else {
                     EmptyStateView(
                         icon: "sparkles",
@@ -79,6 +82,8 @@ private struct GreetingHeader: View {
 private struct BestTaskCard: View {
     let task: NowTask
     let onDone: () -> Void
+    let onSnooze: () -> Void
+    let onNotNow: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
@@ -99,7 +104,7 @@ private struct BestTaskCard: View {
                 Spacer(minLength: 0)
                 PriorityBadge(priority: task.priority)
             }
-            QuickActionRow(onDone: onDone)
+            QuickActionRow(onDone: onDone, onSnooze: onSnooze, onNotNow: onNotNow)
         }
         .padding(DesignTokens.Spacing.lg)
         .cardStyle()
@@ -108,35 +113,46 @@ private struct BestTaskCard: View {
 
 private struct QuickActionRow: View {
     let onDone: () -> Void
+    let onSnooze: () -> Void
+    let onNotNow: () -> Void
 
     var body: some View {
+        // Full-width primary Done + two compact secondary actions; labels never wrap.
         HStack(spacing: DesignTokens.Spacing.sm) {
             Button(action: onDone) {
                 Label("Done", systemImage: "checkmark.circle.fill")
-                    .font(DesignTokens.Typography.footnote.weight(.semibold))
+                    .font(DesignTokens.Typography.subheadline.weight(.semibold))
+                    .lineLimit(1)
                     .foregroundColor(.white)
-                    .padding(.horizontal, DesignTokens.Spacing.md)
-                    .padding(.vertical, DesignTokens.Spacing.xs)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DesignTokens.Spacing.sm)
                     .background(DesignTokens.Color.accent)
-                    .cornerRadius(DesignTokens.Radius.pill)
+                    .clipShape(Capsule())
             }
-            Button(action: {}) {
-                Label("Snooze", systemImage: "clock.arrow.2.circlepath")
-                    .font(DesignTokens.Typography.footnote.weight(.semibold))
-                    .foregroundColor(DesignTokens.Color.textPrimary)
-                    .padding(.horizontal, DesignTokens.Spacing.md)
-                    .padding(.vertical, DesignTokens.Spacing.xs)
-                    .background(DesignTokens.Color.surface)
-                    .cornerRadius(DesignTokens.Radius.pill)
-                    .overlay(RoundedRectangle(cornerRadius: DesignTokens.Radius.pill).stroke(DesignTokens.Color.textSecondary.opacity(0.3), lineWidth: 1))
-            }
-            Button(action: {}) {
-                Label("Not now", systemImage: "xmark.circle")
-                    .font(DesignTokens.Typography.footnote.weight(.semibold))
-                    .foregroundColor(DesignTokens.Color.textSecondary)
-                    .padding(.horizontal, DesignTokens.Spacing.md)
-                    .padding(.vertical, DesignTokens.Spacing.xs)
-            }
+            SecondaryAction(title: "Snooze", systemImage: "clock.arrow.2.circlepath", action: onSnooze)
+            SecondaryAction(title: "Not now", systemImage: "xmark", action: onNotNow)
+        }
+    }
+}
+
+private struct SecondaryAction: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .labelStyle(.titleAndIcon)
+                .font(DesignTokens.Typography.footnote.weight(.medium))
+                .lineLimit(1)
+                .fixedSize()
+                .foregroundColor(DesignTokens.Color.textSecondary)
+                .padding(.horizontal, DesignTokens.Spacing.sm)
+                .padding(.vertical, DesignTokens.Spacing.sm)
+                .background(
+                    Capsule().stroke(DesignTokens.Color.textSecondary.opacity(0.25), lineWidth: 1)
+                )
         }
     }
 }

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import CurrentUser
+from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.task_scorer import TaskScorer
@@ -64,7 +65,10 @@ async def get_now(
 
     usable_minutes = UsableTimeService().calculate(today_tasks, anchor=now)
 
-    candidates = pending + overdue + unscheduled
+    # Respect recommendation feedback: hide tasks the user snoozed (still active) or dismissed with
+    # "not now" (within cooldown), so those actions actually change the best task.
+    suppressed = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
+    candidates = [t for t in (pending + overdue + unscheduled) if t.id not in suppressed]
     if not candidates:
         return NowResponse(greeting=_greeting(), usable_minutes=usable_minutes, best_task=None)
 

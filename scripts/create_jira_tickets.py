@@ -4801,6 +4801,62 @@ TICKETS = [
             p("TIME-074: 'Why this?' reasoning on the Now hero card."),
         ),
     },
+
+    {
+        "summary": "TIME-074: Fix Now quick actions — wire Snooze/Not-now + stop label wrapping",
+        "labels": ["ios", "backend", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("On Now, the 'Not now' (and Snooze) buttons did nothing — empty actions — and the "
+              "'Snooze' label wrapped to two lines. Wire them to recommendation feedback so they "
+              "actually change the best task, filter suppressed tasks out of /now, and fix the "
+              "action-row layout."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "iOS NowViewModel: add snooze(taskId) and notNow(taskId) → POST /recommendations/"
+                "feedback ({task_id, signal: snooze|not_now, snooze_until}); reload after",
+                "iOS QuickActionRow: wire onSnooze/onNotNow; full-width primary Done + two compact "
+                "secondary pills with lineLimit(1)+fixedSize so labels never wrap",
+                "Backend /now: exclude tasks from get_suppressed_task_ids (active snooze / not_now "
+                "cooldown) so the actions actually surface a different best task",
+                "Backend test: a not_now feedback suppresses that task from /now",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No snooze-duration picker (fixed ~3h default); no undo UI",
+                "No change to Today/Insights actions",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift",
+                "backend/app/api/v1/now.py, backend/tests/test_now.py",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Not now / Snooze change the best task (suppressed task no longer surfaces)",
+                "Action labels fit on one line",
+                "iOS build succeeds; backend suite passes (incl. new suppression test)",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_now.py -v\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-073 (Now hero redesign), the recommendations feedback endpoint + "
+              "get_suppressed_task_ids."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-075: 'Why this?' reasoning on the Now hero card."),
+        ),
+    },
 ]
 
 

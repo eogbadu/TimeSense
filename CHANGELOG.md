@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-05] TIME-074: Now quick actions fixed — Snooze/Not-now now work (record feedback; /now hides snoozed/dismissed tasks so a new best task appears) and the action labels no longer wrap
 - [2026-07-05] TIME-073: Premium visual redesign (calm/minimal, Apple-like) — white cards on a soft-gray canvas, deep indigo accent, SF Pro typography, soft shadows, redesigned Now hero. Elevates every screen via the shared design tokens
 - [2026-07-05] TIME-072: Capture extracts dates without the LLM — when OpenAI is unavailable (e.g. 429/quota), a rule-based parser pulls today/tomorrow/weekday/"Month Dayth"/"at 5pm" from the text so tasks still get a due date (and a cleaner title), and Now's best-task prioritization works
 - [2026-07-05] TIME-071: Today tab now shows untimed pending tasks (your captured to-dos), not just scheduled blocks — so you can see your full list (Now still shows the single best next action by design)
