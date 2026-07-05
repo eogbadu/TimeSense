@@ -1,5 +1,41 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-041 (Jira TIME-40): Commute Detection
+
+### Created
+- `backend/app/models/commute.py` — CommuteEvent model (direction, detected_start/end,
+  estimated_minutes, status pending/confirmed/rejected, notification_id FK)
+- `backend/migrations/versions/j0k1l2m3n4o5_add_commute_events.py` — commute_events table
+- `backend/app/repositories/commute_repository.py` — create/get/list_pending/set_status
+- `backend/app/schemas/commute.py` — LocationPingIn, CommuteDetectRequest, CommuteEventResponse
+- `backend/app/services/commute_service.py` — haversine-based detect_from_pings() heuristic
+  (>500m displacement, 5–120 min elapsed, direction from first ping's UTC hour); propose_commute()
+  gates on location_tracking consent (existing ConsentRepository) and creates an approval_needed
+  Notification alongside the pending CommuteEvent, mirroring NotificationService.propose_replan
+- `backend/app/api/v1/commutes.py` — POST /commute/detect, GET /commute/pending,
+  POST /commute/{id}/confirm, POST /commute/{id}/reject
+- `backend/tests/test_commutes.py` — 11 tests
+
+### Modified
+- `backend/app/api/v1/__init__.py`, `backend/app/models/__init__.py` — registered commutes router/model
+
+### Design notes
+- Reused existing infrastructure instead of inventing new mechanisms: `consent_records`
+  (`location_tracking` type already existed in `ConsentRepository`'s valid types) for the
+  permission gate, and the `Notification`/approval pattern from `ReplanRequest` for the
+  confirmation prompt.
+- Raw lat/lng points are never persisted — only the derived CommuteEvent window is stored.
+- Direction inference (`hour < 14 UTC → to_work`) is a deliberate simplification consistent with
+  UsableTimeService/RoutineAssumption's existing UTC-only approach — not a new gap.
+- No calendar-event-location correlation: no `CalendarEvent` table with location data exists in
+  this codebase yet, so "calendar patterns" from the ticket's goal is deferred to a future ticket.
+
+### Verification
+- `pytest tests/test_commutes.py -v` — 11 passed
+- Full suite: `pytest` — 181 passed, 2 known-flaky Stripe-network failures in test_referrals.py
+  (see known_issues.md — reproduces identically on `main`, unrelated to this change)
+- `alembic heads` — single head; `alembic upgrade head --sql` — compiles cleanly offline
+
 ## 2026-07-05 — TIME-040 (Jira TIME-39): Meal Tracking (Lightweight)
 
 ### Created

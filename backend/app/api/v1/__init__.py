@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.admin import router as admin_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.calendar import router as calendar_router
+from app.api.v1.commutes import router as commutes_router
 from app.api.v1.consent import router as consent_router
 from app.api.v1.health import router as health_router
 from app.api.v1.invites import router as invites_router
@@ -28,6 +29,7 @@ api_router.include_router(consent_router)
 api_router.include_router(admin_router)
 api_router.include_router(subscriptions_router)
 api_router.include_router(calendar_router)
+api_router.include_router(commutes_router)
 api_router.include_router(notifications_router)
 api_router.include_router(referrals_router)
 api_router.include_router(invites_router)
