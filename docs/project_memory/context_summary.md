@@ -72,7 +72,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-052 (impl seq) → Jira TIME-51 (Siri Shortcuts / App Intents) — **Done (this session)**
+- TIME-052 (impl seq) → Jira TIME-51 (Siri Shortcuts / App Intents) — **Done (PR #44 merged 2026-07-05)**
 - TIME-051 (impl seq) → Jira TIME-50 (Notion Integration) — **Done (PR #43 merged 2026-07-05)**
 - TIME-050 (impl seq) → Jira TIME-49 (Microsoft Teams Integration) — **Done (PR #42 merged 2026-07-05)**
 - TIME-049 (impl seq) → Jira TIME-48 (Slack Integration) — **Done (PR #41 merged 2026-07-05)**
