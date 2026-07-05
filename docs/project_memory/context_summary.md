@@ -89,7 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-077 (net-new) → Jira TIME-75 (Now alternatives + richer LLM 'Why this?') — **Done (this session)**
+- TIME-077 (net-new) → Jira TIME-75 (Now alternatives + richer LLM 'Why this?') — **Done (PR #70 merged 2026-07-05)**
 - TIME-076 (net-new) → Jira TIME-74 (Make Settings rows functional) — **Done (PR #69 merged 2026-07-05)**
 - TIME-075 (net-new) → Jira TIME-73 ('Why this?' reasoning on Now) — **Done (PR #68 merged 2026-07-05)**
 - TIME-074 (net-new) → Jira TIME-72 (Fix Now quick actions) — **Done (PR #67 merged 2026-07-05)**
