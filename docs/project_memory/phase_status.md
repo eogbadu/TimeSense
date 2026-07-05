@@ -1,7 +1,8 @@
 # Phase Status
 
 ## Current Phase
-Phase 10: Notifications, Widgets, Ambient Surfaces — TIME-043/044 done; TIME-045 next.
+Phase 10: Notifications, Widgets, Ambient Surfaces — TIME-043/044/045 done. Phase 10 complete;
+Phase 11 next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -71,14 +72,19 @@ before being trusted — do not assume unchecked = not built.
       in the extension). Both targets verified with `xcodebuild -target ... -sdk iphonesimulator`
       (no Simulator runtimes installed in this environment, so scheme-based builds don't resolve a
       destination — see known_issues.md). Real device build still needs a real Apple Developer Team.
-- [ ] TIME-045: Android Widgets
+- [x] TIME-045 (Jira TIME-44): Android Widgets — Usable Time + Next Event Glance AppWidgets, each
+      reading its own ViewModel-written Preferences state (no shared cross-widget state needed,
+      simpler than iOS since Android AppWidgets share the app's process). No best-next-action
+      widget (2-widget scope per implementation_sequence.md, not iOS's 3). Verified with
+      `./gradlew assembleDebug` and `./gradlew test` (6 new unit tests, all passing) using the
+      Android-Studio-bundled JBR as JAVA_HOME (no system `java` in this environment).
 
 ## Active Jira Tickets
-- TIME-43 (impl TIME-044, iOS Widgets) — Done
-- Next: TIME-045 (Android Widgets)
+- TIME-44 (impl TIME-045, Android Widgets) — Done
+- Next: TIME-046 (Weekly Insights Generation) — Phase 11
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 11: Insights and Learning Summary — after Phase 10 completes
+Phase 11: Insights and Learning Summary — Phase 10 is complete

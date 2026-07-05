@@ -1,8 +1,10 @@
 package com.timesense.app.features.now
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.timesense.app.core.api.ApiClient
+import com.timesense.app.widgets.UsableTimeWidget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +36,7 @@ sealed interface NowUiState {
     data class Error(val message: String) : NowUiState
 }
 
-class NowViewModel : ViewModel() {
+class NowViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow<NowUiState>(NowUiState.Loading)
     val uiState: StateFlow<NowUiState> = _uiState.asStateFlow()
 
@@ -55,6 +57,7 @@ class NowViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     val ctx = ApiClient.jsonInstance.decodeFromString<NowContext>(body)
                     _uiState.value = NowUiState.Loaded(ctx)
+                    UsableTimeWidget.updateUsableMinutes(getApplication(), ctx.usable_minutes)
                 } else {
                     _uiState.value = NowUiState.Error("Server error ${response.code}")
                 }

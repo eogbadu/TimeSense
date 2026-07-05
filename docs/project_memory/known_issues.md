@@ -1,5 +1,25 @@
 # Known Issues
 
+## Issue: This environment has no system `java`/`JAVA_HOME` — use Android Studio's bundled JBR
+- Date: 2026-07-05
+- Area: `android/` build verification (TIME-045)
+- Symptom: `./gradlew assembleDebug` fails immediately with `The operation couldn't be completed. Unable to locate a Java Runtime.` — `which java` and `$JAVA_HOME` are both empty.
+- Root cause: No standalone JDK is installed system-wide in this sandbox. Android Studio is installed, however, and bundles its own JetBrains Runtime (JBR) at `/Applications/Android Studio.app/Contents/jbr`.
+- Fix: Not needed — set `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` before running any `./gradlew` command in this environment (e.g. `export JAVA_HOME=... && ./gradlew assembleDebug`). This JBR is JDK 21 and works cleanly for both `assembleDebug` and `test`.
+- Files changed: None (environment-only; not something to fix in the repo).
+- Verification: `./gradlew assembleDebug` and `./gradlew test` both succeed with that `JAVA_HOME` set.
+- Follow-up needed: None — just remember to set `JAVA_HOME` this way for any future Android work in this same environment. A different environment/container may have a system JDK and not need this.
+
+## Issue: Android widgets (TIME-045) have no periodic auto-refresh, same as iOS (TIME-044)
+- Date: 2026-07-05
+- Area: `android/app/src/main/res/xml/usable_time_widget_info.xml`, `next_event_widget_info.xml`
+- Symptom: Both widgets' `updatePeriodMillis="0"` — they only update when the app itself calls `UsableTimeWidget.updateUsableMinutes()`/`NextEventWidget.updateNextEvent()` after a successful fetch. If the app isn't opened, the widget's displayed data goes stale.
+- Root cause: Deliberate scope decision, not a bug — matches TIME-044's iOS widgets, which have the identical limitation (see `decision_log.md`). A background-refresh pipeline (WorkManager periodic work, or push-triggered) is out of scope for both platform tickets.
+- Fix: Not applied — intentional, documented in both tickets' Non-Goals.
+- Files changed: None.
+- Verification: N/A.
+- Follow-up needed: If staleness becomes a real usability problem, add a WorkManager periodic job (Android) / BGTaskScheduler or push-triggered refresh (iOS) as a dedicated later ticket for both platforms together.
+
 ## Issue: This environment's Xcode has no iOS Simulator runtimes installed
 - Date: 2026-07-05
 - Area: `ios/` build verification (TIME-044)
