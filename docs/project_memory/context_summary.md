@@ -89,7 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-055 (impl seq) → Jira TIME-61 (Privacy: Data Export + Account Deletion) — **Done (this session)**
+- TIME-055 (impl seq) → Jira TIME-61 (Privacy: Data Export + Account Deletion) — **Done (PR #56 merged 2026-07-05)**
 - TIME-054 (impl seq) → Jira TIME-60 (Error Monitoring + Analytics, backend) — **Done (PR #55 merged 2026-07-05)** — Phase 14 start
 - TIME-065 (net-new) → Jira TIME-59 (Sync DB role from token claim) — **Done (PR #54 merged 2026-07-05)**
 - TIME-064 (net-new) → Jira TIME-58 (Load .env from repo root) — **Done (PR #53 merged 2026-07-05)**
