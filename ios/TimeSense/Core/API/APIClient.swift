@@ -1,5 +1,11 @@
 import Foundation
 
+extension Notification.Name {
+    /// Posted when a request stays 401 even after a token refresh — the session is invalid and the
+    /// app should sign out (routing back to the sign-in screen).
+    static let apiUnauthorized = Notification.Name("APIUnauthorized")
+}
+
 /// Base API client. All network calls go through here — never import URLSession elsewhere.
 final class APIClient {
     static let shared = APIClient()
@@ -7,6 +13,7 @@ final class APIClient {
     private let baseURL: URL
     private let session: URLSession
     private var authToken: String?
+    private var tokenProvider: (() async -> String?)?
 
     private init() {
         let base = ProcessInfo.processInfo.environment["API_BASE_URL"] ?? "http://localhost:8000"
@@ -18,6 +25,13 @@ final class APIClient {
 
     func setAuthToken(_ token: String?) {
         authToken = token
+    }
+
+    /// Supplies a fresh ID token on demand (e.g. force-refresh via Firebase). Used to recover from a
+    /// 401 caused by a missing/stale token (including the launch race where the first request fires
+    /// before the token is set) by refreshing and retrying once.
+    func setTokenProvider(_ provider: (() async -> String?)?) {
+        tokenProvider = provider
     }
 
     func get<T: Decodable>(_ path: String) async throws -> T {
@@ -37,6 +51,28 @@ final class APIClient {
     }
 
     private func request<B: Encodable, T: Decodable>(
+        method: String, path: String, body: B?
+    ) async throws -> T {
+        do {
+            return try await perform(method: method, path: path, body: body)
+        } catch APIError.unauthorized {
+            // Refresh the token once and retry (handles the launch race + expired tokens).
+            if let provider = tokenProvider, let fresh = await provider() {
+                authToken = fresh
+                do {
+                    return try await perform(method: method, path: path, body: body)
+                } catch APIError.unauthorized {
+                    // Still unauthorized after a fresh token → the session is genuinely invalid.
+                    NotificationCenter.default.post(name: .apiUnauthorized, object: nil)
+                    throw APIError.unauthorized
+                }
+            }
+            NotificationCenter.default.post(name: .apiUnauthorized, object: nil)
+            throw APIError.unauthorized
+        }
+    }
+
+    private func perform<B: Encodable, T: Decodable>(
         method: String, path: String, body: B?
     ) async throws -> T {
         // NB: URL.appending(path:) percent-encodes the whole string as a single path component,

@@ -1,5 +1,23 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-070 (Jira TIME-68): iOS recover from 401 (refresh + sign-out-to-sign-in)
+
+Reported: on launch the app showed "Session expired. Please sign in again." as a dead-end (no
+sign-in screen); switching tabs then worked. Root cause: `AppState.isAuthenticated` flips true the
+moment Firebase restores the user, so the tabs render and fire API calls BEFORE AuthService's async
+`getIDToken` sets the token on APIClient — the first request 401s; later tab loads work because the
+token has arrived by then. And a 401 was surfaced as an in-view error, never routing to sign-in.
+
+Fix:
+- APIClient: added a `tokenProvider` closure; on a 401 it refreshes the token once and retries the
+  request (fixes the launch race + hourly Firebase token expiry). If still 401, posts
+  `.apiUnauthorized` and throws.
+- AuthService: sets the tokenProvider (`getIDToken(forcingRefresh: true)`) and observes
+  `.apiUnauthorized` → `signOut()` → currentUser=nil → ContentView shows SignInView, so a genuinely
+  invalid session lands the user on the sign-in screen instead of a dead-end.
+
+iOS BUILD SUCCEEDED. (No backend change.)
+
 ## 2026-07-05 — TIME-069 (Jira TIME-67): Dual-stack dev server launcher
 
 Found while the user ran the app on the Simulator: it failed with `nw_endpoint_flow_failed
