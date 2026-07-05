@@ -3201,6 +3201,117 @@ TICKETS = [
             p("TIME-051: Notion Integration"),
         ),
     },
+
+    {
+        "summary": "TIME-051: Notion Integration",
+        "labels": ["phase-13", "backend", "integration"],
+        "description": doc(
+            h2("Goal"),
+            p("Lightweight task/context extraction from Notion: read the pages of a Notion database "
+              "the user connects, present each as a candidate task (title + optional due date "
+              "pulled from the page's structured properties), and let the user import selected ones "
+              "as Tasks. Deliberately gets its OWN abstraction — a TaskSourceProvider, distinct from "
+              "the chat-oriented MessageSourceProvider (Slack/Teams) — because Notion is a source of "
+              "already-structured task-like items, not a noisy message stream, so no LLM "
+              "'is-this-an-action-item?' detection gate is needed; structured property extraction "
+              "does the work. The user still explicitly imports (approval gate) — nothing is "
+              "auto-created."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "TaskSourceProvider ABC (backend/app/integrations/task_source_base.py) + SourceTask "
+                "dataclass (external_id, title, notes, due) — a read-only external-task source, "
+                "parallel to but separate from MessageSourceProvider",
+                "NotionTaskSource(TaskSourceProvider) (backend/app/integrations/notion_source.py) "
+                "querying the Notion API POST /v1/databases/{id}/query; extracts each page's title "
+                "from its title-type property and a due date from the first date-type property "
+                "(structured extraction, no LLM)",
+                "NotionIntegration model (user_id, access_token, workspace_id, is_active) + "
+                "NotionImportItem model (user_id, database_id, page_id, title, notes, due_at, "
+                "status pending|imported|dismissed, created_task_id FK)",
+                "Alembic migration for notion_integrations + notion_import_items",
+                "NotionRepository (integration + import-item repos), schemas, NotionService "
+                "(connect/disconnect/scan_database/list_pending/import_item/dismiss) + "
+                "NotionNotConnected — the framing is import/dismiss (not detect/confirm) to reflect "
+                "the different abstraction",
+                "POST /api/v1/notion/connect (Premium), DELETE /api/v1/notion/disconnect, "
+                "POST /api/v1/notion/scan (Premium — reads a database, creates pending import items "
+                "only, never Tasks), GET /api/v1/notion/pending, "
+                "POST /api/v1/notion/items/{id}/import (approval gate → Task, source=notion, due_at "
+                "carried over), POST /api/v1/notion/items/{id}/dismiss",
+                "notion_client_id/secret/version settings in config.py",
+                "Add 'notion' to the TaskSource literal",
+                "Tests: 12+ — structured extraction (title + due from Notion property shapes), scan "
+                "creates pending items not tasks, import creates a Task source=notion carrying "
+                "due_at, dismiss, dedup on page_id, Premium gate (403), cross-user isolation",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No LLM action-item detection — Notion database rows are already discrete task-like "
+                "items; the value is structured title/due extraction + user-chosen import, not "
+                "sifting chat noise. This is the core reason Notion gets its own abstraction rather "
+                "than reusing MessageSourceProvider/ActionItemDetectionService",
+                "No real Notion OAuth app — NOTION_CLIENT_ID/SECRET are empty placeholders in .env; "
+                "the mobile client does OAuth and POSTs the token to /notion/connect, same pattern "
+                "as Slack/Teams/calendar — no server-side OAuth callback here",
+                "No writing back to Notion (creating/updating Notion pages) — read-only; the only "
+                "approval gate needed is the Task-import one",
+                "No arbitrary property mapping / custom-schema config — extract the title property "
+                "and the first date property only; richer per-database field mapping is future work",
+                "No syncing Notion page edits back into already-imported Tasks — import is a "
+                "one-time copy; no ongoing sync",
+                "No token encryption beyond how the other integrations store tokens (plain Text) — "
+                "same cross-integration deferral (known_issues.md)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/integrations/task_source_base.py (new)",
+                "backend/app/integrations/notion_source.py (new)",
+                "backend/app/models/notion.py (new)",
+                "backend/migrations/versions/*_add_notion_integration.py (new)",
+                "backend/app/repositories/notion_repository.py (new)",
+                "backend/app/schemas/notion.py (new)",
+                "backend/app/services/notion_service.py (new)",
+                "backend/app/api/v1/notion.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/app/models/__init__.py (register models)",
+                "backend/app/core/config.py (notion settings)",
+                "backend/app/schemas/task.py (add 'notion' to TaskSource)",
+                "backend/tests/test_notion.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "NotionTaskSource extracts a page's title from its title-type property and a due "
+                "date from its first date-type property, for representative Notion API page shapes",
+                "POST /api/v1/notion/scan without Premium returns 403",
+                "scan creates pending NotionImportItem rows and zero Tasks",
+                "POST /api/v1/notion/items/{id}/import creates a Task (source=notion) carrying the "
+                "extracted due_at and links created_task_id; a second import is rejected",
+                "dismiss sets status=dismissed and creates no Task",
+                "scanning the same database twice does not duplicate an item for the same page_id",
+                "One user cannot see or import/dismiss another user's Notion items",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_notion.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-006/033 (Task model), TIME-003 (Premium gate), the integration-provider-pattern "
+              "established by the calendar/Slack/Teams integrations (this adds a sibling "
+              "TaskSourceProvider abstraction)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-052: Siri Shortcuts / App Intents"),
+        ),
+    },
 ]
 
 

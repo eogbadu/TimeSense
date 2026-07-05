@@ -74,6 +74,11 @@ class Settings(BaseSettings):
     todoist_client_id: str = ""
     todoist_client_secret: str = ""
 
+    # Notion
+    notion_client_id: str = ""
+    notion_client_secret: str = ""
+    notion_version: str = "2022-06-28"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

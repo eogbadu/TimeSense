@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 13: Integrations Expansion — TIME-049/050 done; TIME-051 (Notion) next.
+Phase 13: Integrations Expansion — TIME-049/050/051 done; TIME-052 (Siri Shortcuts / App Intents) next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -108,13 +108,18 @@ before being trusted — do not assume unchecked = not built.
       scan→pending→confirm approval gate as Slack (Task source=teams). Extracted the LLM detection
       into a shared source-neutral ActionItemDetectionService (Slack keeps a compat alias). 12 new
       tests; Slack's 14 still green.
+- [x] TIME-051 (Jira TIME-50): Notion Integration — NEW TaskSourceProvider abstraction (distinct
+      from MessageSourceProvider, per user direction); NotionTaskSource reads a Notion database's
+      pages, extracting title + due from structured properties (no LLM detection);
+      notion_integrations/notion_import_items tables; approval gate framed as import/dismiss
+      (scan → pending; import → Task source=notion, due carried over). 15 new tests.
 
 ## Active Jira Tickets
-- TIME-49 (impl TIME-050, Microsoft Teams Integration) — Done
-- Next: TIME-051 (Notion Integration)
+- TIME-50 (impl TIME-051, Notion Integration) — Done
+- Next: TIME-052 (Siri Shortcuts / App Intents)
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 13 continues with TIME-050 (Teams), TIME-051 (Notion), etc.
+Phase 13 continues with TIME-052 (Siri Shortcuts / App Intents), etc.

@@ -192,6 +192,10 @@
   Reason: Rule of three — Slack was the first message source, Teams is the second, so one duplication is acceptable; a premature unification would mean a churny migration of the just-merged Slack tables for speculative future reuse. The genuinely shared piece (a single copy of the action-item-detection prompt/logic) was worth extracting immediately since two divergent copies of an LLM prompt is a real maintenance hazard. The repo's own precedent (commute/meal/sleep are similarly parallel per-feature tables) supports parallel-until-proven. Unify on the third message-source integration if the shape holds.
   Date: 2026-07-05
 
+- Decision: TIME-051 gave Notion its own TaskSourceProvider abstraction rather than bending it into the MessageSourceProvider/ActionItemDetectionService used by Slack/Teams (chosen by the user when asked)
+  Reason: Notion is fundamentally a different kind of source: a database row is already a discrete, structured task, whereas Slack/Teams are noisy chat streams where an LLM must decide "is this even an action item?". Modeling Notion as a task source (structured title/due extraction, no LLM, import/dismiss framing) is honest to what it is; forcing it through the message-source pipeline would mean either running a pointless LLM detection pass over already-structured tasks or awkwardly stubbing detection. The two abstractions (MessageSourceProvider for chat, TaskSourceProvider for structured task systems) also line up with the integration-provider-pattern skill's own split between "communication integrations" and "task/reminder integrations" (Todoist/Things/Apple Reminders will slot under TaskSourceProvider next).
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

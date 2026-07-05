@@ -1,5 +1,25 @@
 # Change Summary
 
+## 2026-07-05 — TIME-051 (Jira TIME-50) Notion Integration
+
+**What changed:**
+- New TaskSourceProvider abstraction (distinct from MessageSourceProvider) — for structured
+  external task sources; NotionTaskSource reads a Notion database's pages, extracting title + due
+  from structured properties (no LLM)
+- notion_integrations + notion_import_items tables; NotionService (connect/disconnect/scan/import/
+  dismiss) with the same approval gate (scan → pending; import → Task, source=notion, due carried)
+- POST /api/v1/notion/connect, /disconnect, /scan (Premium-gated), /pending,
+  /items/{id}/import, /items/{id}/dismiss
+- notion settings in config.py; "notion" added to TaskSource
+
+**What did not change:**
+- No LLM detection — Notion rows are already structured tasks (the reason for its own abstraction)
+- No auto-import — import is the explicit approval gate
+- No real Notion OAuth app / callback; no write-back to Notion; no ongoing sync; token plain Text
+
+**Next:**
+- TIME-052: Siri Shortcuts / App Intents
+
 ## 2026-07-05 — TIME-050 (Jira TIME-49) Microsoft Teams Integration
 
 **What changed:**
