@@ -1,5 +1,21 @@
 # Change Summary
 
+## 2026-07-05 — TIME-040 (Jira TIME-39) Meal Tracking (Lightweight)
+
+**What changed:**
+- `meal_events` table: logs breakfast/lunch/dinner as eaten/skipped/eating_while_working
+- `POST /api/v1/meals` — log a meal event; `GET /api/v1/meals/today` — today's status per meal,
+  inferring "skipped" once that meal's TIME-039 routine window passes with nothing logged
+- `GET /api/v1/recommendations` gained `skipped_meals: list[str]` — context only, no scoring changes
+
+**What did not change:**
+- No calories/macros/nutrition tracking (explicit product rule)
+- TaskScorer ranking/weights unchanged — meal status is exposed, not scored
+- No mobile UI for logging meals
+
+**Next:**
+- TIME-041: Commute Detection
+
 ## 2026-07-05 — TIME-039 (Jira TIME-38) Routine Assumptions Model
 
 **What changed:**

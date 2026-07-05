@@ -2107,6 +2107,91 @@ TICKETS = [
             p("TIME-040: Meal Tracking (Lightweight)"),
         ),
     },
+
+    {
+        "summary": "TIME-040: Meal Tracking (Lightweight)",
+        "labels": ["phase-9", "backend"],
+        "description": doc(
+            h2("Goal"),
+            p("Track whether the user ate, skipped, or worked through breakfast/lunch/dinner — "
+              "timing and status only, per the product rule that meal tracking stays lightweight "
+              "(no calories, macros, or nutrition). Surface skipped meals to the recommendation "
+              "response so the assistant has that context, without changing scoring math."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "MealEvent model: id, user_id, meal_type (breakfast|lunch|dinner), "
+                "status (eaten|skipped|eating_while_working), occurred_at",
+                "Alembic migration for meal_events table",
+                "MealRepository: log(user_id, meal_type, status, occurred_at) — create an event; "
+                "get_today_status(user_id, now) -> dict[meal_type, status] — returns the latest "
+                "logged status for each meal today, or infers 'skipped' once that meal's "
+                "RoutineAssumption window (TIME-039) has passed with nothing logged, or 'pending' "
+                "if the window hasn't ended yet",
+                "POST /api/v1/meals — log a meal event",
+                "GET /api/v1/meals/today — today's status for breakfast/lunch/dinner",
+                "GET /api/v1/recommendations gains a `skipped_meals: list[str]` field (meal_types "
+                "currently inferred or logged as skipped today)",
+                "Tests: 10+ covering logging, idempotent status lookup, skip inference once a "
+                "routine window passes, pending before the window ends, explicit log overriding "
+                "inference, cross-user isolation, invalid meal_type/status, recommendations "
+                "surfacing skipped_meals",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No calories, macros, or nutrition tracking (explicit product rule)",
+                "No changes to TaskScorer weights or ranking based on meal status — skipped_meals "
+                "is exposed as context only, not scored",
+                "No synthetic 'eat lunch' task suggestions",
+                "No mobile UI for logging meals — API only",
+                "Skip inference reuses each meal's UTC minute-of-day RoutineAssumption window "
+                "directly (same UTC-only simplification UsableTimeService already uses) — not "
+                "blocked on the timezone-awareness follow-up tracked in known_issues.md",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/models/meal.py (new)",
+                "backend/migrations/versions/*_add_meal_events.py (new)",
+                "backend/app/repositories/meal_repository.py (new)",
+                "backend/app/schemas/meal.py (new)",
+                "backend/app/api/v1/meals.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/app/models/__init__.py (register model)",
+                "backend/app/api/v1/recommendations.py (add skipped_meals field)",
+                "backend/tests/test_meals.py (new)",
+                "backend/tests/test_recommendations.py (skipped_meals coverage)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/meals logs an event and returns it",
+                "GET /api/v1/meals/today returns 'pending' for a meal whose window hasn't ended "
+                "and nothing has been logged",
+                "GET /api/v1/meals/today returns 'skipped' once that meal's window has passed with "
+                "no log",
+                "An explicit log (eaten/skipped/eating_while_working) always wins over inference",
+                "GET /api/v1/recommendations includes skipped_meals reflecting the same status",
+                "One user's meal events are not visible to another user",
+                "Invalid meal_type or status returns 422",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_meals.py tests/test_recommendations.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-039 (Routine Assumption windows for skip inference), TIME-036 (Recommendation API)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-041: Commute Detection"),
+        ),
+    },
 ]
 
 

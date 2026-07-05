@@ -50,6 +50,33 @@ async def test_recommendations_authenticated(client):
     assert "best" in data
     assert "alternatives" in data
     assert "usable_minutes" in data
+    assert "skipped_meals" in data
+
+
+@pytest.mark.anyio
+async def test_recommendations_skipped_meals_reflects_explicit_log(client):
+    with _mock_verify():
+        await client.post(
+            "/api/v1/meals",
+            headers=_auth_headers(),
+            json={"meal_type": "lunch", "status": "skipped"},
+        )
+        r = await client.get("/api/v1/recommendations", headers=_auth_headers())
+    assert r.status_code == 200
+    assert "lunch" in r.json()["skipped_meals"]
+
+
+@pytest.mark.anyio
+async def test_recommendations_skipped_meals_excludes_eaten(client):
+    with _mock_verify():
+        await client.post(
+            "/api/v1/meals",
+            headers=_auth_headers(),
+            json={"meal_type": "lunch", "status": "eaten"},
+        )
+        r = await client.get("/api/v1/recommendations", headers=_auth_headers())
+    assert r.status_code == 200
+    assert "lunch" not in r.json()["skipped_meals"]
 
 
 @pytest.mark.anyio
