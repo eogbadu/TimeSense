@@ -6,8 +6,8 @@
 
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
 Phase 8 (Recommendation Engine V1), Phase 9 (Routines/Meals/Commute/Sleep-Wake), and Phase 10
-(Notifications, Widgets, Ambient Surfaces — TIME-043/044/045) complete. Phase 11 (Insights and
-Learning Summary) next.
+(Notifications, Widgets, Ambient Surfaces) complete. Phase 11 (Insights and Learning Summary) in
+progress — TIME-046 done, TIME-047 (Learned Assumptions Settings) next.
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -26,6 +26,8 @@ Backend API endpoints implemented:
   `POST /api/v1/commute/{id}/confirm`/`.../reject`
 - `POST /api/v1/sleep/events` (health-data-consent gated, late wake proposes a morning replan),
   `GET /api/v1/sleep/today`
+- `GET /api/v1/insights/weekly` (Premium-gated, generates+caches the most recently completed
+  week's aggregate + LLM summary), `GET /api/v1/insights/history?limit=8`
 - No new endpoints for TIME-043 — `notification_mode` (gentle/balanced/active_coach) already had
   read/write via `PATCH /api/v1/users/me/preferences`; TIME-043 only added the behavior that acts
   on it (NotificationService.maybe_send_morning_checkin/evening_checkout/learning_prompt), driven
@@ -34,17 +36,18 @@ Backend API endpoints implemented:
 Database tables: users, profiles, preferences, personalities, onboarding_states, consent_records,
 subscription_records, replan_requests, notifications, notification_events, tasks,
 internal_reminders, recommendation_feedback, routine_assumptions, meal_events, commute_events,
-sleep_wake_events. (Correction: there is no separate "notification_preferences" table — the
-notification_mode field lives directly on user_preferences; a prior version of this file listed
-that table incorrectly.)
+sleep_wake_events, weekly_insights. (Correction: there is no separate "notification_preferences"
+table — the notification_mode field lives directly on user_preferences; a prior version of this
+file listed that table incorrectly.)
 
-Backend tests: 198, all passing (see Known Problems re: 2 flaky Stripe-network tests).
+Backend tests: 215, all passing (see Known Problems re: 2 flaky Stripe-network tests).
 
 Mobile app shells:
-- iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes.
-- Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`. Plus (TIME-045) two Jetpack Glance AppWidgets (Usable Time, Next Event), each reading its own Preferences state written by NowViewModel/TodayViewModel.
+- iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes. Insights tab (TIME-046) now shows a real weekly summary + stats grid behind the Premium gate.
+- Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`. Plus (TIME-045) two Jetpack Glance AppWidgets (Usable Time, Next Event), each reading its own Preferences state written by NowViewModel/TodayViewModel. Insights tab (TIME-046) mirrors iOS's real content.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-046 (impl seq) → Jira TIME-45 (Weekly Insights Generation) — **Done (this session)**
 - TIME-045 (impl seq) → Jira TIME-44 (Android Widgets) — **Done (PR #37 merged 2026-07-05)**
 - TIME-044 (impl seq) → Jira TIME-43 (iOS Widgets) — **Done (PR #36 merged 2026-07-05)**
 - TIME-043 (impl seq) → Jira TIME-42 (Notification Modes and Learning Prompts) — **Done (PR #35 merged 2026-07-05)**
@@ -57,31 +60,32 @@ Mobile app shells:
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-045 (Jira TIME-44): Android Widgets
-- Two Jetpack Glance AppWidgets: Usable Time and Next Event. Unlike iOS's WidgetKit extension
-  (separate process, needs an App Group), Android AppWidgets run in the same process as the app —
-  each widget reads its own Glance-managed Preferences state, written directly by the one
-  ViewModel that owns that data (NowViewModel for usable minutes, TodayViewModel for next event);
-  no shared cross-widget blob needed
-- NowViewModel/TodayViewModel converted from `ViewModel` to `AndroidViewModel` to get an
-  Application Context for Glance's update APIs
-- Extracted a pure `nextUpcomingEvent(tasks, now)` function from TodayViewModel + 6 new JVM unit
-  tests (no Robolectric/instrumentation needed)
-- 2-widget scope (not iOS's 3) — matches `tickets/implementation_sequence.md` exactly; no
-  best-next-action widget on Android in this ticket
-- Verified with `./gradlew assembleDebug` (BUILD SUCCESSFUL) and `./gradlew test` (6/6 new tests
-  pass, both debug+release variants) using the Android-Studio-bundled JBR as JAVA_HOME — this
-  environment has no system `java`/`JAVA_HOME` set; see Known Problems
-- No backend changes — entirely Android/Glance, matching stated scope
+TIME-046 (Jira TIME-45): Weekly Insights Generation
+- `weekly_insights` table + InsightsService aggregating tasks/meals/sleep/commute/feedback over
+  a completed Monday-Sunday week (5 existing tables, no new signal sources) into an LLM-summarized
+  (or templated-fallback) report — same fallback pattern as RecommendationService._explain()
+- `GET /api/v1/insights/weekly` (generates+caches the most recently completed week on first call,
+  idempotent thereafter) and `GET /api/v1/insights/history`, both Premium-gated
+- A weekly Celery task (Monday 5am UTC) proactively generates insights for all active users;
+  untested in this environment (no Redis/Docker), same precedent as notification_tasks.py
+- Real iOS and Android Insights screens (summary card + stats grid) replacing the static
+  placeholders, still behind the existing isPremium gate on both platforms
+- 17 new backend tests; full suite 215/215 (excluding 2 known-flaky Stripe tests). Both mobile
+  builds verified (`xcodebuild -target TimeSense ...` and `./gradlew assembleDebug && ./gradlew
+  test`), zero new warnings
+- Found (didn't fix, out of scope) a latent bug in an existing test's mock LLM provider — see
+  known_issues.md
 
-Full history of TIME-034 through TIME-044 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-045 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Phase 10 (Notifications, Widgets, Ambient Surfaces) is now complete. Next up: TIME-046 (Weekly
-Insights Generation), starting Phase 11. Also see known_issues.md — the deferred UsableTimeService
-timezone-awareness pass (to actually subtract routine/meal/commute/sleep blocks from usable time,
-and to make Celery beat/notification timing per-user-local instead of UTC-only) is unblocked and
-still worth scheduling soon rather than continuing to defer it across more tickets.
+Phase 11 (Insights and Learning Summary) is in progress. Next up: TIME-047 (Learned Assumptions
+Settings) — letting users view/edit what TimeSense has learned (routine assumptions, etc.), likely
+touching both Settings screens on iOS/Android plus the existing GET/PATCH /api/v1/routines
+endpoints. Also see known_issues.md — the deferred UsableTimeService timezone-awareness pass (to
+actually subtract routine/meal/commute/sleep blocks from usable time, and to make Celery beat/
+notification timing per-user-local instead of UTC-only) is unblocked and still worth scheduling
+soon rather than continuing to defer it across more tickets.
 
 ## iOS HealthKit Decision Point (deferred from TIME-042, still open)
 TIME-042 only built the backend contract (ingest a wake_time signal, gate on health_data consent,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.recommendation_feedback import RecommendationFeedback
@@ -55,3 +55,18 @@ class RecommendationFeedbackRepository:
                     suppressed.add(task_id)
 
         return suppressed
+
+    async def count_signals_in_range(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> dict[str, int]:
+        """Count of each feedback signal recorded in [start, end)."""
+        result = await self.db.execute(
+            select(RecommendationFeedback.signal, func.count())
+            .where(
+                RecommendationFeedback.user_id == user_id,
+                RecommendationFeedback.created_at >= start,
+                RecommendationFeedback.created_at < end,
+            )
+            .group_by(RecommendationFeedback.signal)
+        )
+        return {signal: count for signal, count in result.all()}

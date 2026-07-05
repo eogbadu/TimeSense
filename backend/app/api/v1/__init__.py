@@ -6,6 +6,7 @@ from app.api.v1.calendar import router as calendar_router
 from app.api.v1.commutes import router as commutes_router
 from app.api.v1.consent import router as consent_router
 from app.api.v1.health import router as health_router
+from app.api.v1.insights import router as insights_router
 from app.api.v1.invites import router as invites_router
 from app.api.v1.meals import router as meals_router
 from app.api.v1.notifications import router as notifications_router
@@ -41,4 +42,5 @@ api_router.include_router(recommendations_router)
 api_router.include_router(routines_router)
 api_router.include_router(meals_router)
 api_router.include_router(sleep_router)
+api_router.include_router(insights_router)
 api_router.include_router(capture_router)

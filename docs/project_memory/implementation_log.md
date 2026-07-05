@@ -1,5 +1,59 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-046 (Jira TIME-45): Weekly Insights Generation
+
+### Created
+- `backend/app/models/insight.py` — WeeklyInsight model (unique on user_id+week_start)
+- `backend/migrations/versions/m3n4o5p6q7r8_add_weekly_insights.py` — weekly_insights table
+- `backend/app/repositories/insight_repository.py` — get_by_week/create/list_recent
+- `backend/app/schemas/insight.py` — WeeklyInsightResponse
+- `backend/app/services/insights_service.py` — InsightsService.get_or_generate_for_week()
+  aggregates from 5 existing tables (Task, RecommendationFeedback, MealEvent, SleepWakeEvent,
+  CommuteEvent) over a Monday-Sunday range, then calls LLMGateway for a 2-3 sentence summary
+  with a templated fallback — identical pattern to RecommendationService._explain(). Idempotent:
+  once a week is generated it's returned as-is, never silently recomputed.
+- `backend/app/api/v1/insights.py` — GET /insights/weekly (generates the most recently completed
+  week on first call), GET /insights/history?limit=8 — both Premium-gated via the existing
+  PremiumUser dependency
+- `backend/app/workers/insights_tasks.py` — one Celery task generating the just-completed week
+  for every active user, scheduled Monday 5am UTC; untested in this environment (no Redis/Docker),
+  same precedent as notification_tasks.py
+- `backend/tests/test_insights.py` — 17 tests (aggregation math at the service layer, API-layer
+  premium gate/wiring/isolation)
+- `ios/TimeSense/Features/Insights/InsightsViewModel.swift` — fetches GET /insights/weekly
+- `android/.../features/insights/InsightsViewModel.kt` — same, OkHttp/kotlinx.serialization
+
+### Modified
+- `backend/app/repositories/task_repository.py` — count_created_in_range/count_completed_in_range
+- `backend/app/repositories/recommendation_feedback_repository.py` — count_signals_in_range
+- `backend/app/repositories/meal_repository.py` — count_skipped_by_type_in_range
+- `backend/app/repositories/sleep_wake_repository.py` — count_late_wakes_in_range
+- `backend/app/repositories/commute_repository.py` — count_confirmed_in_range
+- `backend/app/api/v1/__init__.py`, `backend/app/models/__init__.py` — registered router/model
+- `backend/app/workers/celery_app.py` — registered insights_tasks + Monday 5am beat schedule
+- `ios/TimeSense/Features/Insights/InsightsView.swift` — real content (summary card + stats grid)
+  replacing the static placeholder, still gated behind the existing isPremium check; registered the
+  new ViewModel file into project.pbxproj via the xcodeproj gem (same tooling as TIME-044)
+- `android/.../features/insights/InsightsScreen.kt` — real content, same states/gate
+
+### Design notes
+- `most_skipped_meal` only reflects meals explicitly logged with status=skipped — it does not
+  backfill inferred-but-never-logged skips from MealRepository.get_today_status's live, read-time-
+  only computation. Tie-breaks pick the alphabetically-first meal type on equal counts (deterministic
+  for tests): `min(items, key=lambda kv: (-count, meal_type))`.
+- `tasks_completed`/`tasks_total` use Task.updated_at/created_at as proxies for completion/capture,
+  since Task has no explicit completed_at field yet — approximate, documented as such.
+- Only fully-completed Monday-Sunday weeks are summarized (no noisy "this week so far" view).
+- Verified with `xcodebuild -target TimeSense -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO` (BUILD
+  SUCCEEDED, zero new warnings) and `./gradlew assembleDebug && ./gradlew test` (BUILD SUCCESSFUL,
+  using the Android-Studio-bundled JBR as JAVA_HOME per known_issues.md).
+- Found (but did not fix, out of scope) a latent bug in `tests/test_recommendations.py`'s
+  `_MockProvider`: it constructs `LLMResponse(content=..., model="mock")` without the required
+  `provider` field, which raises inside the try/except and silently falls through to the fallback
+  "why" text rather than actually exercising the mocked LLM path. My own test_insights.py mock hit
+  the identical mistake first and I caught it there — flagging test_recommendations.py's version in
+  known_issues.md since it means that test isn't verifying what it appears to verify.
+
 ## 2026-07-05 — TIME-045 (Jira TIME-44): Android Widgets
 
 ### Created

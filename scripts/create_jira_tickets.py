@@ -2679,6 +2679,125 @@ TICKETS = [
             p("TIME-046: Weekly Insights Generation"),
         ),
     },
+
+    {
+        "summary": "TIME-046: Weekly Insights Generation",
+        "labels": ["phase-11", "backend", "ios", "android"],
+        "description": doc(
+            h2("Goal"),
+            p("Generate a calm, retrospective weekly summary of the user's most recently "
+              "completed week (task completion, meal/sleep/commute signals, recommendation "
+              "feedback) and surface it on the Insights tab (Premium-gated) on both iOS and "
+              "Android. Reuses the existing LLMGateway explanation pattern (LLM writes the "
+              "prose, a template fallback covers LLM failures) rather than inventing a new "
+              "generation mechanism."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "WeeklyInsight model: user_id, week_start/week_end (the Monday-Sunday range), "
+                "tasks_completed, tasks_total, completion_rate, most_skipped_meal, "
+                "late_wake_count, commute_confirmed_count, feedback_done_count, "
+                "feedback_not_now_count, summary_text; unique on (user_id, week_start)",
+                "InsightsService.generate_for_week(user_id, week_start) aggregates from existing "
+                "tables only — Task (completed/total via created_at/updated_at in range), "
+                "RecommendationFeedback (done/not_now counts in range), MealEvent (skipped counts "
+                "by meal_type in range), SleepWakeEvent (count with replan_request_id set in "
+                "range), CommuteEvent (confirmed count in range) — then calls LLMGateway for a "
+                "2-3 sentence summary, falling back to a templated sentence on LLM failure, "
+                "identical fallback pattern to RecommendationService._explain()",
+                "GET /api/v1/insights/weekly (Premium-gated via the existing PremiumUser "
+                "dependency) — returns the most recently completed week's insight, generating it "
+                "on first request if the weekly Celery job hasn't run yet for that week",
+                "GET /api/v1/insights/history?limit=8 (also Premium-gated) — past generated weeks",
+                "backend/app/workers/insights_tasks.py — one Celery task generating the "
+                "just-completed week's insight for every active user, scheduled Monday 5am UTC; "
+                "untested in this environment (no Redis/Docker), same precedent as "
+                "notification_tasks.py",
+                "iOS: InsightsViewModel.swift + real InsightsView.swift content (loading/loaded/"
+                "error states) replacing the current static empty-state placeholder, gated behind "
+                "the existing isPremium check",
+                "Android: InsightsViewModel.kt (new) + real InsightsScreen.kt content, same states, "
+                "same premium gate",
+                "Tests: 12+ backend tests covering the aggregation math (completion rate, most-"
+                "skipped-meal tie-breaking, late-wake/commute counts, date-range boundaries), "
+                "premium gate (403), LLM fallback, cross-user isolation, and idempotent "
+                "generation (calling generate_for_week twice for the same week doesn't duplicate)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "most_skipped_meal only reflects meals explicitly logged with status=skipped "
+                "(via POST /api/v1/meals) during the week — it does not retroactively backfill "
+                "inferred-but-never-logged skips from days the user never opened the app, since "
+                "that inference (MealRepository.get_today_status) is live/read-time-only, not "
+                "persisted historically. This is a known, documented limitation, not a bug to fix",
+                "tasks_completed/tasks_total use updated_at/created_at as proxies (Task has no "
+                "explicit completed_at field yet) — approximate, not exact, and documented as such",
+                "No 'current week so far' view — only fully completed Monday-Sunday weeks are "
+                "summarized, avoiding noisy/incomplete mid-week numbers",
+                "No trend charts, graphs, or comparisons across multiple weeks beyond the simple "
+                "history list — that's a richer Insights v2 concern",
+                "TIME-047 (Learned Assumptions Settings) is separate follow-up work, not folded "
+                "into this ticket despite both touching Settings/Insights-adjacent surfaces",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/models/insight.py (new)",
+                "backend/migrations/versions/*_add_weekly_insights.py (new)",
+                "backend/app/repositories/insight_repository.py (new)",
+                "backend/app/repositories/task_repository.py (add range-count methods)",
+                "backend/app/repositories/recommendation_feedback_repository.py (add range-count)",
+                "backend/app/repositories/meal_repository.py (add skipped-count-by-type-in-range)",
+                "backend/app/repositories/sleep_wake_repository.py (add late-wake-count-in-range)",
+                "backend/app/repositories/commute_repository.py (add confirmed-count-in-range)",
+                "backend/app/schemas/insight.py (new)",
+                "backend/app/services/insights_service.py (new)",
+                "backend/app/api/v1/insights.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/app/models/__init__.py (register model)",
+                "backend/app/workers/insights_tasks.py (new)",
+                "backend/app/workers/celery_app.py (register task module + beat schedule)",
+                "backend/tests/test_insights.py (new)",
+                "ios/TimeSense/Features/Insights/InsightsViewModel.swift (new)",
+                "ios/TimeSense/Features/Insights/InsightsView.swift (real content)",
+                "android/app/src/main/java/com/timesense/app/features/insights/InsightsViewModel.kt (new)",
+                "android/app/src/main/java/com/timesense/app/features/insights/InsightsScreen.kt (real content)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "GET /api/v1/insights/weekly without Premium returns 403",
+                "GET /api/v1/insights/weekly generates and returns the most recently completed "
+                "week's insight on first call, and returns the same cached row on a second call",
+                "Aggregation numbers (tasks_completed/total, most_skipped_meal, late_wake_count, "
+                "commute_confirmed_count, feedback counts) match hand-computed expectations for a "
+                "seeded set of tasks/events across a week boundary",
+                "GET /api/v1/insights/history returns generated weeks ordered most-recent-first",
+                "One user cannot see another user's insights",
+                "iOS and Android builds succeed with the new Insights screen wired to the endpoint",
+                "All backend tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_insights.py -v\n"
+                "cd backend && pytest -q\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -target TimeSense "
+                "-sdk iphonesimulator CODE_SIGNING_ALLOWED=NO\n"
+                "cd android && ./gradlew assembleDebug && ./gradlew test"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-037 (LLM Gateway), TIME-038 (RecommendationFeedback), TIME-039/040/041/042 "
+              "(routine/meal/commute/sleep event tables this ticket aggregates), TIME-018/019 "
+              "(iOS/Android app shells with an existing Insights tab placeholder)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-047: Learned Assumptions Settings"),
+        ),
+    },
 ]
 
 

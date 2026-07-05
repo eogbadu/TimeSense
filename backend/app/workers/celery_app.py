@@ -10,6 +10,7 @@ celery_app = Celery(
     include=[
         "app.workers.health_task",
         "app.workers.notification_tasks",
+        "app.workers.insights_tasks",
     ],
 )
 
@@ -35,6 +36,10 @@ celery_app.conf.update(
         "send-evening-checkouts": {
             "task": "timesense.send_evening_checkouts",
             "schedule": crontab(hour=21, minute=0),
+        },
+        "generate-weekly-insights": {
+            "task": "timesense.generate_weekly_insights",
+            "schedule": crontab(day_of_week=1, hour=5, minute=0),
         },
     },
 )

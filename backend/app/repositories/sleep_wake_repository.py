@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sleep_wake import SleepWakeEvent
@@ -52,6 +52,20 @@ class SleepWakeRepository:
         )
         events = result.scalars().all()
         return any(_utc(e.wake_time).date() == day for e in events)
+
+    async def count_late_wakes_in_range(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> int:
+        """Wake events that triggered a morning replan (replan_request_id set) in [start, end)."""
+        result = await self.db.execute(
+            select(func.count()).select_from(SleepWakeEvent).where(
+                SleepWakeEvent.user_id == user_id,
+                SleepWakeEvent.replan_request_id.is_not(None),
+                SleepWakeEvent.wake_time >= start,
+                SleepWakeEvent.wake_time < end,
+            )
+        )
+        return result.scalar_one()
 
     async def get_latest_today(self, user_id: uuid.UUID) -> SleepWakeEvent | None:
         today = datetime.now(timezone.utc).date()
