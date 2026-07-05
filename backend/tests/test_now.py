@@ -186,3 +186,41 @@ async def test_now_why_unknown_task_404(client, db_session):
     with _mock_verify(MOCK_USER):
         w = await client.get(f"/api/v1/now/why?task_id={_uuid.uuid4()}", headers={"Authorization": "Bearer t"})
     assert w.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_now_greeting_uses_local_time(client, db_session):
+    """Greeting reflects the user's timezone, not UTC."""
+    from app.services.user_service import UserService
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    # set a timezone far from UTC so the greeting can differ
+    await UserService(db_session).update_profile(user.id, timezone="Pacific/Kiritimati")  # UTC+14
+    await db_session.flush()
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    assert r.status_code == 200
+    assert r.json()["greeting"] in {"You're up late", "Good morning", "Good afternoon", "Good evening"}
+
+
+@pytest.mark.anyio
+async def test_now_winddown_moment_when_late_and_not_urgent(client, db_session):
+    """Late local time + no urgent task → a wind-down 'moment'."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+    from app.api.v1 import now as now_mod
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    db_session.add(Task(user_id=user.id, title="Tidy garage", status="pending", priority=3))
+    await db_session.flush()
+
+    # Force "late" local time deterministically.
+    import datetime as _dt
+    real_local_now = now_mod._local_now
+    now_mod._local_now = lambda now, tz: real_local_now(now, tz).replace(hour=23, minute=0)
+    try:
+        with _mock_verify(MOCK_USER):
+            r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    finally:
+        now_mod._local_now = real_local_now
+    assert r.status_code == 200
+    assert r.json()["moment"] and "wind down" in r.json()["moment"]

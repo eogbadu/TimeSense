@@ -33,6 +33,11 @@ struct NowView: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
                 GreetingHeader(greeting: ctx.greeting, usableMinutes: ctx.usableMinutes)
                     .padding(.top, DesignTokens.Spacing.sm)
+
+                if let moment = ctx.moment, !moment.isEmpty {
+                    MomentCard(text: moment)
+                }
+
                 if let task = ctx.bestTask {
                     BestTaskCard(
                         task: task,
@@ -92,6 +97,26 @@ private struct GreetingHeader: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// A calm, local-time-aware nudge (e.g. a gentle wind-down when it's late and nothing is urgent).
+private struct MomentCard: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+            Image(systemName: "moon.stars.fill")
+                .font(.title3)
+                .foregroundColor(DesignTokens.Color.accent)
+            Text(text)
+                .font(DesignTokens.Typography.callout)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(DesignTokens.Spacing.lg)
+        .cardStyle()
     }
 }
 

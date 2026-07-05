@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-080 (Jira TIME-78): Local-time-aware Now (greeting + wind-down moment)
+
+Per user guidance ("local time you always have; energy you don't"), grounded Now in local time.
+Fixed a real bug: _greeting used UTC hour → wrong for the user's timezone; now derived from the
+profile timezone (adds a "You're up late" band < 5am). Added NowResponse.moment (deterministic,
+no LLM): when local hour >= 21 or < 5 AND no urgent task (overdue / due <= 3h / priority 1), returns
+a gentle wind-down nudge; else null. iOS decodes moment and shows a calm MomentCard (moon icon)
+above the best task; the top task is still offered. Recommendations still come only from the user's
+tasks — the moment is framing, not a new "rest" task. Backend 316 passing (2 new tests); iOS BUILD
+SUCCEEDED.
+
 ## 2026-07-05 — TIME-079 (Jira TIME-77): 'Why this?' must justify the pick
 
 User report: the reason contradicted the recommendation — for "Go to Home Depot today" the why said

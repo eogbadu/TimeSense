@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -27,15 +28,51 @@ class NowResponse(BaseModel):
     best_task: TaskResponse | None
     reason: str | None = None
     alternatives: list[TaskResponse] = []
+    # A local-time-aware nudge (e.g. a gentle wind-down when it's late and nothing is urgent).
+    moment: str | None = None
 
 
-def _greeting() -> str:
-    hour = datetime.now(timezone.utc).hour
+def _local_now(now: datetime, user_timezone: str) -> datetime:
+    try:
+        return now.astimezone(ZoneInfo(user_timezone))
+    except Exception:
+        return now
+
+
+def _greeting(local_now: datetime) -> str:
+    hour = local_now.hour
+    if hour < 5:
+        return "You're up late"
     if hour < 12:
         return "Good morning"
     if hour < 17:
         return "Good afternoon"
     return "Good evening"
+
+
+def _is_urgent(task, now: datetime) -> bool:
+    """Something that shouldn't wait — so we don't suggest winding down over it."""
+    if task.due_at is not None:
+        due = task.due_at if task.due_at.tzinfo else task.due_at.replace(tzinfo=timezone.utc)
+        if due < now or (due - now) <= timedelta(hours=3):
+            return True
+    return task.priority == 1
+
+
+def _moment(local_now: datetime, ranked, now: datetime) -> str | None:
+    """A local-time-aware nudge. Right now: gently suggest winding down when it's late and nothing
+    is urgent, so Now isn't always pushing a task at you at 11pm. Deterministic (no LLM) so it's
+    instant and reliable — local time is something we always know, unlike energy."""
+    hour = local_now.hour
+    late = hour >= 21 or hour < 5
+    if not late:
+        return None
+    if any(_is_urgent(t, now) for t in ranked):
+        return None
+    return (
+        "It's getting late and nothing urgent is left on your plate — "
+        "a good moment to wind down and rest. Tomorrow-you will thank you."
+    )
 
 
 async def _ranked_candidates(db: AsyncSession, user, now: datetime):
@@ -76,15 +113,21 @@ async def get_now(
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
 
     now = datetime.now(timezone.utc)
+    user_tz = user.profile.timezone if user.profile else "UTC"
+    local_now = _local_now(now, user_tz)
+
     ranked, usable_minutes = await _ranked_candidates(db, user, now)
     if not ranked:
-        return NowResponse(greeting=_greeting(), usable_minutes=usable_minutes, best_task=None)
+        return NowResponse(
+            greeting=_greeting(local_now), usable_minutes=usable_minutes, best_task=None
+        )
 
     return NowResponse(
-        greeting=_greeting(),
+        greeting=_greeting(local_now),
         usable_minutes=usable_minutes,
         best_task=TaskResponse.model_validate(ranked[0]),
         alternatives=[TaskResponse.model_validate(t) for t in ranked[1:3]],
+        moment=_moment(local_now, ranked, now),
     )
 
 

@@ -7,6 +7,7 @@ struct NowContext: Decodable {
     let bestTask: NowTask?
     let reason: String?
     let alternatives: [NowTask]?
+    let moment: String?
 
     enum CodingKeys: String, CodingKey {
         case greeting
@@ -14,6 +15,7 @@ struct NowContext: Decodable {
         case bestTask = "best_task"
         case reason
         case alternatives
+        case moment
     }
 }
 
