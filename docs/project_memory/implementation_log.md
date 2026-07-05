@@ -1,5 +1,18 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-079 (Jira TIME-77): 'Why this?' must justify the pick
+
+User report: the reason contradicted the recommendation — for "Go to Home Depot today" the why said
+"consider resting now… plan your trip when more energized", arguing against the recommended task.
+Cause: the energy hint fed to the LLM said "evening — better to wrap up than start heavy work",
+nudging it to discourage the task. Fixed: _EXPLAIN_SYSTEM now states the task is ALREADY chosen and
+fixed and the model must only justify it, explicitly forbidding suggestions to rest/wait/do later/
+pick another task; reframed _part_of_day energy hints to descriptive framing (evening: "energy is
+winding down, so finishing a manageable task feels satisfying"). Verified live: why now justifies
+the pick ("manageable errand… fits your 72-minute window… sense of accomplishment"). Confirmed to
+the user that recommendations come ONLY from their task list (rest is not a task). Backend-only; 314
+passing.
+
 ## 2026-07-05 — TIME-078 (Jira TIME-76): Lazy-load 'Why this?' on tap
 
 TIME-077 generated the LLM reason on every /now load (~1-2s + a cost each load, though "Why this?"

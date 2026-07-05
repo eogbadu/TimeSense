@@ -5091,6 +5091,55 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-079: 'Why this?' must justify the pick (not argue for resting)",
+        "labels": ["backend", "recommendations", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("The 'Why this?' contradicted the recommendation — for a Home Depot task it said "
+              "'consider resting now… plan your trip when more energized', i.e. it argued against "
+              "doing the recommended task. Constrain the LLM to justify the fixed pick and reframe "
+              "the energy hints so they never suggest resting/waiting/a different task."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "recommendation_service _EXPLAIN_SYSTEM: state the task is ALREADY chosen and fixed; "
+                "the model's only job is to justify why it's a good use of this moment; explicitly "
+                "forbid suggesting rest, waiting, doing it later, or a different task",
+                "Reframe _part_of_day energy hints to be descriptive framing (e.g. evening: "
+                "'energy is winding down, so finishing a manageable task feels satisfying') instead "
+                "of prescriptive avoidance ('better to wrap up than start heavy work')",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Not adding non-task suggestions like 'take a break' — recommendations still come "
+                "only from the user's tasks; an energy-aware break/rest suggestion would be a "
+                "separate product feature",
+                "No scorer change; no iOS change (backend prompt only)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend/app/services/recommendation_service.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "The reason justifies doing the recommended task now and never suggests resting / "
+                "waiting / a different task",
+                "Time-of-day/energy still inform the framing; full suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest -q"),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-077/078 (Now why + lazy load)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 
