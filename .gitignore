@@ -33,8 +33,9 @@ build/
 *.p8
 *.p12
 google-services.json
-# allow placeholder stub (no real credentials)
-!android/app/google-services.json
+# NOTE: android/app/google-services.json is intentionally gitignored (was previously committed via
+# an exception, but the repo is public — the real Android Firebase config should not be tracked).
+# Each dev/CI supplies their own from the Firebase console, same as iOS's GoogleService-Info.plist.
 GoogleService-Info.plist
 firebase-adminsdk*.json
 service-account*.json
