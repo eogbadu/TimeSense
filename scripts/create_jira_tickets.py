@@ -2371,6 +2371,113 @@ TICKETS = [
             p("TIME-043: Notification Modes and Learning Prompts"),
         ),
     },
+
+    {
+        "summary": "TIME-043: Notification Modes and Learning Prompts",
+        "labels": ["phase-10", "backend"],
+        "description": doc(
+            h2("Goal"),
+            p("Give the existing notification_mode preference (gentle|balanced|active_coach, "
+              "already stored on UserPreferences but not yet acted on anywhere) real behavior: "
+              "a daily morning check-in, an evening check-out, and — for active_coach users still "
+              "in their early Learning Mode window — a learning prompt confirming a still-default "
+              "routine assumption. Each is a distinct, mode-gated, once-per-day notification, "
+              "reusing the existing Notification model/send_notification path with no new "
+              "delivery mechanism."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "NotificationEvent model: user_id, event_type "
+                "(morning_checkin|evening_checkout|learning_prompt), notification_id "
+                "(nullable FK to notifications) — an audit trail that also drives once-per-day "
+                "dedup, same pattern as SleepWakeEvent/CommuteEvent's own event tables",
+                "Alembic migration for notification_events table",
+                "NotificationService gains three gated methods: maybe_send_morning_checkin(), "
+                "maybe_send_evening_checkout(), maybe_send_routine_learning_prompt() — each checks "
+                "the user's notification_mode and NotificationEvent dedup before calling the "
+                "existing send_notification()",
+                "Mode behavior: gentle -> evening check-out only; balanced -> morning check-in + "
+                "evening check-out; active_coach -> both check-ins + learning prompts. This maps "
+                "directly onto the product brief's 'Active Coach / Learning Mode' framing rather "
+                "than inventing an unrelated fourth concept",
+                "Learning prompt is concrete, not a no-op stub: maybe_send_routine_learning_prompt() "
+                "checks the user's 'sleep' RoutineAssumption (TIME-039) — if it's still is_customized "
+                "= False and the account is within a 14-day learning window (reusing the existing "
+                "14-day trial length as a pragmatic placeholder, not a new arbitrary number), it asks "
+                "the user to confirm or adjust the assumed sleep block",
+                "UserRepository.list_active_ids() — lightweight id-only query for the worker loop",
+                "backend/app/workers/notification_tasks.py — three thin Celery tasks "
+                "(send_morning_checkins, send_evening_checkouts, send_learning_prompts) that iterate "
+                "active users and call the corresponding NotificationService method per user, plus a "
+                "celery beat schedule wiring them to morning/evening/mid-morning times",
+                "Tests: 12+ covering each mode's on/off behavior for each check-in type, once-per-day "
+                "dedup, learning prompt firing only when the routine is still default and within the "
+                "learning window, and cross-user isolation — all at the service layer against "
+                "db_session, matching this repo's existing pattern for non-HTTP-triggered flows "
+                "(see test_notifications.py)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No new user-facing preference API — notification_mode read/write already exists "
+                "(PATCH /api/v1/users/me/preferences, from an earlier ticket); this ticket only adds "
+                "behavior that acts on it",
+                "No real Celery beat/worker execution test — no Redis/Docker available in this "
+                "environment (see known_issues.md); tasks are thin wrappers around the tested "
+                "service methods, following the same untested-Celery-shim precedent as the existing "
+                "app/workers/health_task.py",
+                "No data-driven Learning Mode end date — deliberately reuses the 14-day trial length "
+                "as a placeholder window rather than building the 'ends based on enough data, not "
+                "fixed days' logic from decision_log.md; that remains its own future ticket",
+                "No push notification delivery (APNs/FCM) — same as all existing Notification rows, "
+                "delivery is a separate integration-provider concern (see integration-provider-pattern "
+                "skill) and out of scope here",
+                "No additional learning prompts beyond the routine-confirmation one — meal/commute/ "
+                "sleep-specific learning prompts are a natural follow-up once this mechanism exists",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/models/notification_event.py (new)",
+                "backend/migrations/versions/*_add_notification_events.py (new)",
+                "backend/app/repositories/notification_repository.py (add NotificationEventRepository)",
+                "backend/app/repositories/user_repository.py (add list_active_ids())",
+                "backend/app/services/notification_service.py (add the three gated methods)",
+                "backend/app/workers/notification_tasks.py (new)",
+                "backend/app/workers/celery_app.py (register new task module + beat schedule)",
+                "backend/app/models/__init__.py (register model)",
+                "backend/tests/test_notification_orchestration.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "gentle mode: maybe_send_morning_checkin() sends nothing; "
+                "maybe_send_evening_checkout() still sends",
+                "balanced mode: both check-ins send; maybe_send_routine_learning_prompt() sends nothing",
+                "active_coach mode: both check-ins send; learning prompt sends only when the sleep "
+                "routine is still uncustomized and the account is within the learning window",
+                "Calling the same maybe_send_* method twice in one day only creates one Notification "
+                "and one NotificationEvent the second time returns None",
+                "One user's notification mode/state never affects another user's check-ins",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_notification_orchestration.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-015 (Notification model / NotificationService), TIME-039 (RoutineAssumption "
+              "sleep block), the earlier onboarding/preferences ticket that added "
+              "UserPreferences.notification_mode."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-044: iOS Widgets"),
+        ),
+    },
 ]
 
 

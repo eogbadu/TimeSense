@@ -104,3 +104,8 @@ class UserRepository:
             .limit(limit)
         )
         return list(result.scalars().all())
+
+    async def list_active_ids(self) -> list[uuid.UUID]:
+        """Lightweight id-only query for batch/worker loops (e.g. daily notification tasks)."""
+        result = await self.db.execute(select(User.id).where(User.is_active.is_(True)))
+        return list(result.scalars().all())

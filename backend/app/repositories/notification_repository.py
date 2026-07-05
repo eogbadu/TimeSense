@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification, ReplanRequest
+from app.models.notification_event import NotificationEvent
 
 REPLAN_TTL_HOURS = 12
 
@@ -129,3 +130,36 @@ class ReplanRepository:
             req.applied_at = applied_at
         await self.db.flush()
         return req
+
+
+class NotificationEventRepository:
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
+
+    async def record(
+        self,
+        user_id: uuid.UUID,
+        event_type: str,
+        notification_id: uuid.UUID | None = None,
+    ) -> NotificationEvent:
+        event = NotificationEvent(
+            user_id=user_id, event_type=event_type, notification_id=notification_id
+        )
+        self.db.add(event)
+        await self.db.flush()
+        return event
+
+    async def has_sent_today(self, user_id: uuid.UUID, event_type: str) -> bool:
+        today = datetime.now(UTC).date()
+        result = await self.db.execute(
+            select(NotificationEvent).where(
+                NotificationEvent.user_id == user_id,
+                NotificationEvent.event_type == event_type,
+            )
+        )
+        events = result.scalars().all()
+        return any(_utc(e.created_at).date() == today for e in events)
+
+
+def _utc(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)

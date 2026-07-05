@@ -1,5 +1,28 @@
 # Change Summary
 
+## 2026-07-05 — TIME-043 (Jira TIME-42) Notification Modes and Learning Prompts
+
+**What changed:**
+- `notification_events` table: audit trail + once-per-day dedup for morning_checkin/
+  evening_checkout/learning_prompt
+- `NotificationService` gained three mode-gated methods: gentle -> evening check-out only;
+  balanced -> morning + evening check-ins; active_coach -> both check-ins + a learning prompt
+  that asks the user to confirm their still-default "sleep" RoutineAssumption (TIME-039), gated
+  on a 14-day placeholder Learning Mode window
+- `backend/app/workers/notification_tasks.py` — three Celery tasks + a UTC beat schedule
+  (8am/10am/9pm) driving the above per active user
+
+**What did not change:**
+- No new preference storage/API — `notification_mode` already existed on UserPreferences
+- No real Celery beat/worker execution test (no Redis/Docker in this environment)
+- No data-driven Learning Mode end date — still a fixed 14-day placeholder
+- No push notification delivery (APNs/FCM) — still just Notification rows
+
+**Next:**
+- TIME-044: iOS Widgets
+- Consider the deferred UsableTimeService timezone-awareness ticket (now unblocked since all
+  Phase 9 signals exist) before going too much further, since it also affects Celery beat times
+
 ## 2026-07-05 — TIME-042 (Jira TIME-41) Sleep/Wake Signal Integration
 
 **What changed:**

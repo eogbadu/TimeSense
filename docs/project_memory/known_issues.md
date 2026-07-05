@@ -50,6 +50,16 @@
 - Verification: N/A.
 - Follow-up needed: Resolved by the same `UsableTimeService` timezone pass referenced above; no separate fix needed once that lands.
 
+## Issue: Notification orchestration (TIME-043) Celery beat schedule and Learning Mode window are both placeholders
+- Date: 2026-07-05
+- Area: `backend/app/workers/celery_app.py`, `backend/app/services/notification_service.py`
+- Symptom: (1) The morning/learning/evening beat times (8am/10am/9pm) are UTC, not per-user-local — same known simplification as everywhere else timezone-sensitive in this codebase. (2) The Learning Mode window gating `maybe_send_learning_prompt()` is a fixed 14 days (reusing the trial length) rather than the data-driven "ends based on enough data" behavior already logged as a deferred decision.
+- Root cause: No per-user timezone handling exists yet (see the RoutineAssumption/SleepWakeEvent issues above); a data-driven Learning Mode end date depends on scorer/recommendation signal-quality thresholds that don't exist yet either.
+- Fix: Not applied — (1) will be resolved by the same `UsableTimeService` timezone pass referenced above extending to Celery beat scheduling; (2) is intentionally out of scope for TIME-043 per its Non-Goals, to avoid a second, conflicting partial implementation of the deferred data-driven learning-period decision.
+- Files changed: None yet.
+- Verification: N/A.
+- Follow-up needed: Once per-user timezone support exists, beat scheduling should either move to per-user local-time task dispatch or the tasks should filter by "is it currently 8am/9pm in this user's timezone" rather than firing globally at a fixed UTC hour. The Learning Mode window should be replaced once the data-driven end-of-learning-period logic is built.
+
 ## Issue: Devcontainer firewall script breaks Docker Desktop for Mac embedded DNS
 - Date: 2026-07-04
 - Area: `.devcontainer/` (yolo-mode sandbox for `claude --dangerously-skip-permissions`)

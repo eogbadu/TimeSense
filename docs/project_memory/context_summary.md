@@ -6,7 +6,8 @@
 
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
 Phase 8 (Recommendation Engine V1), and Phase 9 (Routines/Meals/Commute/Sleep-Wake) complete.
-Phase 10 (Notifications, Widgets, Ambient Surfaces) next.
+Phase 10 (Notifications, Widgets, Ambient Surfaces) in progress (TIME-043 done; TIME-044/045
+are iOS/Android widget tickets next).
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -25,18 +26,26 @@ Backend API endpoints implemented:
   `POST /api/v1/commute/{id}/confirm`/`.../reject`
 - `POST /api/v1/sleep/events` (health-data-consent gated, late wake proposes a morning replan),
   `GET /api/v1/sleep/today`
+- No new endpoints for TIME-043 — `notification_mode` (gentle/balanced/active_coach) already had
+  read/write via `PATCH /api/v1/users/me/preferences`; TIME-043 only added the behavior that acts
+  on it (NotificationService.maybe_send_morning_checkin/evening_checkout/learning_prompt), driven
+  by a Celery beat schedule rather than a user-facing route
 
 Database tables: users, profiles, preferences, personalities, onboarding_states, consent_records,
-subscription_records, notification_preferences, replan_requests, tasks, internal_reminders,
-recommendation_feedback, routine_assumptions, meal_events, commute_events, sleep_wake_events.
+subscription_records, replan_requests, notifications, notification_events, tasks,
+internal_reminders, recommendation_feedback, routine_assumptions, meal_events, commute_events,
+sleep_wake_events. (Correction: there is no separate "notification_preferences" table — the
+notification_mode field lives directly on user_preferences; a prior version of this file listed
+that table incorrectly.)
 
-Backend tests: 189, all passing (see Known Problems re: 2 flaky Stripe-network tests).
+Backend tests: 198, all passing (see Known Problems re: 2 flaky Stripe-network tests).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`.
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-043 (impl seq) → Jira TIME-42 (Notification Modes and Learning Prompts) — **Done (this session)**
 - TIME-042 (impl seq) → Jira TIME-41 (Sleep/Wake Signal Integration) — **Done (PR #34 merged 2026-07-05)**
 - TIME-041 (impl seq) → Jira TIME-40 (Commute Detection) — **Done (PR #32 merged 2026-07-05)**
 - TIME-040 (impl seq) → Jira TIME-39 (Meal Tracking) — Done (PR #31, 2026-07-05)
@@ -46,25 +55,31 @@ Mobile app shells:
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-042 (Jira TIME-41): Sleep/Wake Signal Integration
-- `sleep_wake_events` table; `POST /api/v1/sleep/events` (403 without health_data consent),
-  `GET /api/v1/sleep/today`
-- MorningReplanService compares wake_time vs the "sleep" RoutineAssumption's assumed wake minute
-  (TIME-039); >=45min late proposes a morning replan via the existing
-  NotificationService.propose_replan/ReplanRequest approval flow (TIME-015) — no new replan
-  mechanism, no auto-applied changes, same-day dedupe via replan_request_id on the event
-- Scoped as backend-only per the plan noted below: no iOS HealthKit read integration in this ticket
-  (same backend/mobile split TIME-041 used) — that remains its own decision point
-- 8 new tests; full suite 189/189 (excluding 2 known-flaky Stripe tests)
+TIME-043 (Jira TIME-42): Notification Modes and Learning Prompts
+- `notification_events` table (audit trail + once-per-day dedup); NotificationService gained
+  `maybe_send_morning_checkin`/`maybe_send_evening_checkout`/`maybe_send_learning_prompt`/
+  `maybe_send_routine_learning_prompt`, gated on the pre-existing `UserPreferences.notification_mode`
+  (gentle/balanced/active_coach — that field already existed, this ticket only added behavior)
+- Mode mapping: gentle -> evening check-out only; balanced -> both check-ins; active_coach -> both
+  check-ins + a concrete learning prompt confirming the still-default "sleep" RoutineAssumption
+  (TIME-039), gated on a 14-day placeholder Learning Mode window (reuses the existing trial length,
+  not a new number — the real data-driven learning-period-end is still deferred per decision_log.md)
+- `backend/app/workers/notification_tasks.py` — 3 Celery tasks + a UTC beat schedule
+  (8am/10am/9pm); untested in this environment (no Redis/Docker), same precedent as health_task.py
+- 9 new tests (service-layer against db_session, matching test_notifications.py's pattern); full
+  suite 198/198 (excluding 2 known-flaky Stripe tests)
+- Corrected a stale claim in this file: there is no separate "notification_preferences" table —
+  notification_mode lives on user_preferences
 
-Full history of TIME-034 through TIME-041 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-042 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Phase 9 (Routines, Meals, Commute, Sleep/Wake) is complete. Next up: TIME-043 (Notification Modes
-and Learning Prompts), starting Phase 10. Also see known_issues.md — the deferred
-UsableTimeService timezone-awareness pass (to actually subtract routine/meal/commute/sleep blocks
-from usable time) is now unblocked since all Phase 9 signals exist; worth scheduling before or
-alongside Phase 10 rather than continuing to defer it.
+Phase 10 (Notifications, Widgets, Ambient Surfaces) is in progress. Next up: TIME-044 (iOS
+Widgets), which is entirely native iOS/WidgetKit work — no backend changes expected. Also see
+known_issues.md — the deferred UsableTimeService timezone-awareness pass (to actually subtract
+routine/meal/commute/sleep blocks from usable time, and to make Celery beat/notification timing
+per-user-local instead of UTC-only) is unblocked and still worth scheduling soon rather than
+continuing to defer it across more tickets.
 
 ## iOS HealthKit Decision Point (deferred from TIME-042)
 TIME-042 only built the backend contract (ingest a wake_time signal, gate on health_data consent,
