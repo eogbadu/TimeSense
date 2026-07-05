@@ -4237,6 +4237,81 @@ TICKETS = [
             p("TIME-057: App Store and Play Store Prep."),
         ),
     },
+
+    {
+        "summary": "TIME-057: App Store and Play Store Prep",
+        "labels": ["phase-14", "launch", "docs"],
+        "description": doc(
+            h2("Goal"),
+            p("Produce the store-submission prep for both stores: a real privacy policy, App Store + "
+              "Play Store listing metadata, the App Privacy / Data Safety label answers (grounded in "
+              "what the app actually collects), App Store review notes, and a required-assets "
+              "checklist. Documentation deliverable — the actual screenshots/binaries/console entry "
+              "are the user's step."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "docs/launch/privacy_policy.md — a complete privacy policy reflecting real practices: "
+                "Firebase auth; data collected (tasks/meals/sleep/commute/routines); consent types "
+                "(audio_storage, audio_training, location_tracking, health_data, calendar_details, "
+                "analytics); integrations (Google Calendar/Slack/Teams/Notion, tokens encrypted at "
+                "rest); LLM/OpenAI processing of capture text; Stripe/StoreKit/Play billing; raw "
+                "audio explicit opt-in; data export + deletion (TIME-055); retention; children; "
+                "contact",
+                "docs/launch/app_store_listing.md — iOS name/subtitle/promo text/description/keywords/"
+                "what's-new + App Store review notes (demo account, how to reach premium, integration "
+                "test steps) + App Privacy 'nutrition label' answers per data type",
+                "docs/launch/play_store_listing.md — Android title/short+full description/category + "
+                "Play Data Safety form answers (collected/shared/encrypted-in-transit-and-at-rest/"
+                "deletion) + content rating notes",
+                "docs/launch/store_assets_checklist.md — the assets the USER must produce: icon "
+                "sizes, screenshot dimensions + counts per device class, feature graphic, preview "
+                "video (optional), plus submission prerequisites",
+                "docs/launch/README.md — index + submission runbook",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No actual screenshots / app icons / feature graphics / preview videos — those are "
+                "design assets the user produces (the checklist specifies exact sizes/counts)",
+                "No App Store Connect / Play Console data entry, no binary upload/submission — this "
+                "is the copy + answers the user pastes in",
+                "No legal review — the privacy policy is a thorough, accurate draft grounded in the "
+                "codebase; the user should have it reviewed before publishing",
+                "No code changes",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "docs/launch/privacy_policy.md, app_store_listing.md, play_store_listing.md, "
+                "store_assets_checklist.md, README.md (all new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Privacy policy covers every consent type, integration, the LLM/OpenAI processing, "
+                "billing, raw-audio opt-in, and the export/deletion rights — consistent with the "
+                "code",
+                "Both store listings have complete metadata within store character limits",
+                "App Privacy + Play Data Safety answers are filled per data type and match the "
+                "privacy policy",
+                "Assets checklist lists exact required sizes/counts",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "# docs-only; no tests. Review the 5 files under docs/launch/ for completeness and\n"
+                "# consistency with the codebase's actual data practices."
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("The full product (all features + data practices), TIME-055 (export/deletion rights in "
+              "the policy), TIME-056 (encryption-at-rest claim), the product brief (pricing/tagline)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 

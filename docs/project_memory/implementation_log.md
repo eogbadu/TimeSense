@@ -1,5 +1,27 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-057 (Jira TIME-63): App Store and Play Store Prep
+
+Documentation deliverable (no code). Created `docs/launch/`:
+- `privacy_policy.md` — complete, publishable privacy policy grounded in the real implementation:
+  Firebase auth; all 6 consent types (audio_storage/audio_training/location_tracking/health_data/
+  calendar_details/analytics); integrations (Calendar/Slack/Teams/Notion, tokens encrypted at rest
+  per TIME-056); LLM/OpenAI processing of captured text; Stripe/StoreKit/Play billing; raw-audio
+  opt-in; data export + deletion rights (TIME-055); retention; children; contact. Bracketed
+  company/legal details for the user; flagged for legal review.
+- `app_store_listing.md` — iOS name/subtitle/promo/description/keywords/what's-new (within Apple
+  limits) + App Review notes (demo account, permissions, subscription) + App Privacy nutrition-label
+  answers per data type.
+- `play_store_listing.md` — Android title/short+full description/category + Play Data Safety form
+  answers + content-rating notes.
+- `store_assets_checklist.md` — exact icon/screenshot sizes + counts per device class, feature
+  graphic, and submission prerequisites the USER must produce.
+- `README.md` — index + submission runbook.
+
+Non-goals (the user's steps): actual screenshots/icons/feature-graphics, console data entry + binary
+upload, legal review. Verified by review for completeness + consistency with the codebase's data
+practices; no tests (docs-only).
+
 ## 2026-07-05 — TIME-056 (Jira TIME-62): Security Review and Hardening
 
 ### Audit (already secure — documented, unchanged)
