@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NowView: View {
+    @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = NowViewModel()
 
     var body: some View {
@@ -20,6 +21,11 @@ struct NowView: View {
             .navigationBarTitleDisplayMode(.large)
         }
         .task { await viewModel.load() }
+        // Tab views stay mounted, so reload whenever the user returns to the Now tab (e.g. after
+        // capturing a task) — .task alone doesn't re-run on tab switches.
+        .onChange(of: appState.selectedTab) { _, tab in
+            if tab == .now { Task { await viewModel.load() } }
+        }
     }
 
     private func loadedBody(ctx: NowContext) -> some View {
@@ -42,6 +48,7 @@ struct NowView: View {
             .padding(.top, DesignTokens.Spacing.sm)
             .padding(.bottom, DesignTokens.Spacing.xl)
         }
+        .refreshable { await viewModel.load() }
     }
 }
 

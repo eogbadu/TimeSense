@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TodayView: View {
+    @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = TodayViewModel()
 
     var body: some View {
@@ -33,6 +34,9 @@ struct TodayView: View {
             .navigationBarTitleDisplayMode(.large)
         }
         .task { await viewModel.load() }
+        .onChange(of: appState.selectedTab) { _, tab in
+            if tab == .today { Task { await viewModel.load() } }
+        }
     }
 
     private func loadedBody(tasks: [TimelineTask]) -> some View {
@@ -50,6 +54,7 @@ struct TodayView: View {
             }
             .padding(.top, DesignTokens.Spacing.sm)
         }
+        .refreshable { await viewModel.load() }
     }
 }
 

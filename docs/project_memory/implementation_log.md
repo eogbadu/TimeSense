@@ -1,5 +1,14 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-068 (Jira TIME-66): Refresh Now/Today on tab return (+ pull-to-refresh)
+
+Follow-up to TIME-067: even though the backend now surfaces captured tasks, the Now/Today screens
+didn't update after a capture. They load once via SwiftUI `.task { }`, but TabView keeps tab views
+mounted so `.task` doesn't re-run on tab switch. Fix: NowView + TodayView now
+`.onChange(of: appState.selectedTab)` reload when their tab becomes active (appState.selectedTab
+drives the TabView selection), plus `.refreshable` pull-to-refresh on both. Initial `.task` kept for
+first appearance. iOS BUILD SUCCEEDED. (No backend change.)
+
 ## 2026-07-05 — TIME-067 (Jira TIME-65): Fix day-view task visibility (Today 404 + Now ignores captured tasks)
 
 Two bugs found while using the running app:
