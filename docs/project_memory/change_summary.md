@@ -1,5 +1,25 @@
 # Change Summary
 
+## 2026-07-05 — TIME-052 (Jira TIME-51) Siri Shortcuts / App Intents
+
+**What changed:**
+- 5 App Intents (WhatToDoNext, LogLunch, StartFocus, MarkDone, ReplanDay) + an AppShortcutsProvider
+  exposing them to Siri and the Shortcuts app, under ios/TimeSense/Intents/
+- Intents reuse APIClient + existing /now, /meals, /tasks endpoints; ReplanDay opens the app
+  (replans require approval)
+- The iOS Simulator gap is resolved (user installed a runtime): verified with a real scheme build +
+  Simulator install/launch + App Intents metadata extraction
+
+**What did not change:**
+- No new backend endpoints; no new networking layer
+- No Siri voice E2E (device-only) and no backend round-trip E2E (real Firebase still placeholder) —
+  build + Simulator run + intent registration are the verified bar
+
+**Next:**
+- TIME-053: Google Assistant Integration
+- Then a dedicated HealthKit ticket (deferred from TIME-042) — now buildable/Simulator-verifiable,
+  but on-device runs still need a real Apple Developer account for the HealthKit entitlement
+
 ## 2026-07-05 — TIME-051 (Jira TIME-50) Notion Integration
 
 **What changed:**

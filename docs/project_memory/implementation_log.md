@@ -1,5 +1,42 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-052 (Jira TIME-51): Siri Shortcuts / App Intents
+
+### Created
+- `ios/TimeSense/Intents/TimeSenseAppIntents.swift` — 5 AppIntents:
+  - WhatToDoNext (GET /api/v1/now → spoken best task + usable minutes)
+  - LogLunch (POST /api/v1/meals lunch/eaten)
+  - StartFocus (GET /now → "Focus on {best task}")
+  - MarkDone (GET /now → PATCH /api/v1/tasks/{bestTaskId} status=done)
+  - ReplanDay (openAppWhenRun=true — replans require in-app approval, never headless)
+- `ios/TimeSense/Intents/TimeSenseShortcuts.swift` — AppShortcutsProvider exposing each intent
+  with natural, \(.applicationName)-prefixed Siri phrases + SF Symbols
+
+### Modified
+- `ios/TimeSense.xcodeproj/project.pbxproj` — registered the Intents group (via the xcodeproj gem)
+- `scripts/create_jira_tickets.py` — added the TIME-052 ticket definition
+
+### Design notes
+- Intents call the app's single network path (APIClient.shared), reuse the existing
+  NowContext/NowTask decodables, and define minimal inline request/response types — no new
+  networking layer. Read/simple-write intents run headless; ReplanDay opens the app because the
+  product rule "replans require approval" means it must be reviewed in-app, not auto-applied.
+- Unauthenticated intent runs surface a friendly "open TimeSense and sign in" dialog rather than a
+  raw error (via a shared friendlyMessage() mapping APIError.unauthorized).
+- **Environment unblocked:** the user installed an iOS Simulator runtime (iOS 18.0), resolving the
+  long-standing "no Simulator runtimes" gap (known_issues.md, now marked RESOLVED). This ticket is
+  therefore verified to a higher bar than any prior iOS ticket:
+  - `xcodebuild -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'
+    CODE_SIGNING_ALLOWED=NO` → BUILD SUCCEEDED, zero new warnings
+  - Booted iPhone 16 sim, `simctl install` + `launch` → app runs to its sign-in screen without
+    crashing (screenshot captured); confirms it's at the auth gate (expected — real Firebase still
+    a placeholder, so headless intent→backend round-trips can't be exercised end-to-end yet)
+  - All 5 intents present in the built `TimeSense.app/Metadata.appintents/extract.actionsdata`
+    bundle — concrete proof the App Intents extracted/registered (earlier builds logged "Extracted
+    no relevant App Intents symbols")
+- Real *Siri voice* invocation is a real-device follow-up (Siri isn't in the Simulator); the
+  Shortcuts-app registration path is what the Simulator verifies.
+
 ## 2026-07-05 — TIME-051 (Jira TIME-50): Notion Integration
 
 ### Created
