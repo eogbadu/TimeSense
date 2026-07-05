@@ -47,7 +47,7 @@ before being trusted — do not assume unchecked = not built.
 - [x] All tests pass (152 total in full suite)
 
 ## Active Jira Tickets
-- Done: TIME-37 (impl TIME-038, Feedback Collection) — in review, PR not yet opened (gh not authenticated in this environment)
+- TIME-37 (impl TIME-038, Feedback Collection) — In Review, PR #29 open on feature/TIME-038-feedback-collection
 - Next: TIME-039 (Routine Assumptions Model) or TIME-040 (Meal Tracking)
 
 ## Blockers

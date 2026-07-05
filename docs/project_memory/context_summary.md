@@ -30,7 +30,7 @@ Mobile app shells:
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping
-- TIME-038 (impl seq) → Jira TIME-37 (Feedback Collection) — **Done, in review (this session)**
+- TIME-038 (impl seq) → Jira TIME-37 (Feedback Collection) — **In Review (PR #29, this session)**
 - TIME-019 → TIME-25 (Android shell) — Done
 - TIME-020 → TIME-26 (iOS Firebase Auth) — Done
 - TIME-021 → TIME-27 (Android Firebase Auth) — Done
@@ -61,8 +61,8 @@ TIME-035 (Jira TIME-35): TaskScorer — priority (0.5) + deadline (0.35) + durat
 TIME-034 (Jira TIME-34): UsableTimeService — merges scheduled blocks, returns free-window minutes
 
 ## Current Active Task
-TIME-038 is code-complete and tested on `feature/TIME-038-feedback-collection`, not yet pushed/PR'd
-(see Warnings — `gh` is not authenticated in this environment).
+None. TIME-038 is code-complete, tested, pushed, and PR #29 is open (TIME-37 → In Review).
+Move TIME-37 to "Done" once PR #29 is merged (checkpoint 3).
 
 ## Next Recommended Task
 TIME-039: Routine Assumptions Model — default routines (sleep, meals, commute) for usable-time context
@@ -85,7 +85,6 @@ TIME-040: Meal Tracking (Lightweight)
 - Firebase SPM cannot be resolved via CLI — needs Xcode UI
 - No Docker/Postgres available in this session's environment — `alembic upgrade head` was only
   verified offline (`--sql` mode); needs a real-DB check before deploy
-- `gh` CLI is not authenticated in this environment — PR for TIME-038 could not be opened this session
 - `phase_status.md`'s acceptance-criteria checkboxes for Phases 3–7 are stale relative to this file
   (see phase_status.md Staleness Warning) — needs a reconciliation pass
 
@@ -93,5 +92,8 @@ TIME-040: Meal Tracking (Lightweight)
 - Read this file + phase_status.md before doing anything.
 - The `.env` file is gitignored and contains real secrets — never commit it.
 - Jira key mapping above is required — implementation seq numbers ≠ Jira ticket numbers.
-- Before starting TIME-039/TIME-040: push `feature/TIME-038-feedback-collection`, open the PR,
-  move TIME-37 to "in review" (checkpoint 2), and after merge move it to "done" (checkpoint 3).
+- PR #29 (TIME-038) is open on `feature/TIME-038-feedback-collection` — once merged, run
+  `python scripts/move_ticket.py TIME-37 done` (checkpoint 3) before starting TIME-039/TIME-040.
+- `.claude/settings.local.json` and `.devcontainer/` are untracked leftovers from a prior session
+  (the devcontainer firewall fix documented in known_issues.md was never committed) — not part of
+  TIME-038, left alone; flag to the user if they want that committed separately.
