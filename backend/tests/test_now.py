@@ -109,3 +109,21 @@ async def test_now_done_task_excluded(client):
 async def test_now_unauthenticated(client):
     r = await client.get("/api/v1/now")
     assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_now_surfaces_unscheduled_captured_task(client, db_session):
+    """A just-captured task (pending, no scheduled_start, no due_at) must appear as best_task."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    db_session.add(Task(user_id=user.id, title="Buy milk", status="pending", priority=3))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers=_auth_headers())
+    assert r.status_code == 200
+    best = r.json()["best_task"]
+    assert best is not None
+    assert best["title"] == "Buy milk"

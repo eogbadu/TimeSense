@@ -1,5 +1,28 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-067 (Jira TIME-65): Fix day-view task visibility (Today 404 + Now ignores captured tasks)
+
+Two bugs found while using the running app:
+
+### Today tab "Couldn't load today — 404" (iOS)
+APIClient built the request URL with `URL.appending(path:)`, which percent-encodes the WHOLE string
+as a single path component — so any `?query` (Today sends `/timeline/today?date=YYYY-MM-DD`) turned
+into `%3Fdate=...`, producing a non-existent path → 404. This broke EVERY query-param endpoint
+(insights history, admin search, etc.), not just Today. Fix: build the URL as
+`baseURL.absoluteString + path` so the query survives. (The date was already ISO `yyyy-MM-dd`, so no
+format issue.)
+
+### Captured task never appears on Now (backend)
+GET /now's candidate set was only scheduled-today + overdue tasks. A freshly captured task has no
+scheduled_start and no due_at, so it was neither → never surfaced. Fix: also include unscheduled
+pending tasks as "do it whenever" candidates.
+
+### Verification
+- Backend: new test_now test (unscheduled captured task → best_task); full suite 307/307 (302 via
+  --ignore + 5 referral subset), excl. 2 flaky.
+- iOS: BUILD SUCCEEDED. (Full signed-in E2E needs the user's login; the URL fix is a one-line
+  construction change verified by build + reasoning.)
+
 ## 2026-07-05 — TIME-066 (Jira TIME-64): Fix iOS missing color assets (invisible UI)
 
 ### Bug (found while the user tried to sign in on the Simulator)

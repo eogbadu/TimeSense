@@ -47,17 +47,24 @@ async def get_now(
     today_tasks = await repo.list_by_user(user_id=user.id, for_date=today, limit=200)
     pending = [t for t in today_tasks if t.status in ("pending", "in_progress")]
 
-    # Also include overdue tasks (past due_at, still pending)
     all_pending = await repo.list_by_user(user_id=user.id, status="pending", limit=200)
     now = datetime.now(timezone.utc)
+    already = {p.id for p in pending}
+
+    # Overdue: past due_at, still pending.
     overdue = [
         t for t in all_pending
-        if t.due_at and t.due_at.replace(tzinfo=timezone.utc) < now and t.id not in {p.id for p in pending}
+        if t.due_at and t.due_at.replace(tzinfo=timezone.utc) < now and t.id not in already
     ]
+    already |= {t.id for t in overdue}
+
+    # Unscheduled pending tasks (e.g. just captured — no scheduled_start, no due date) are valid
+    # "do it whenever" candidates; otherwise a freshly captured task would never surface in Now.
+    unscheduled = [t for t in all_pending if t.scheduled_start is None and t.id not in already]
 
     usable_minutes = UsableTimeService().calculate(today_tasks, anchor=now)
 
-    candidates = pending + overdue
+    candidates = pending + overdue + unscheduled
     if not candidates:
         return NowResponse(greeting=_greeting(), usable_minutes=usable_minutes, best_task=None)
 
