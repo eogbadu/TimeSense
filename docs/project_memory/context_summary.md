@@ -7,8 +7,8 @@
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
 Phase 8 (Recommendation Engine V1), Phase 9 (Routines/Meals/Commute/Sleep-Wake), Phase 10
 (Notifications, Widgets, Ambient Surfaces), Phase 11 (Insights and Learning Summary), and Phase 12
-(Admin Dashboard — TIME-048, first ticket to touch `web/`) complete. Phase 13 (Integrations
-Expansion) next.
+(Admin Dashboard) complete. Phase 13 (Integrations Expansion) in progress — TIME-049 (Slack) done,
+TIME-050 (Teams) next.
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -32,6 +32,10 @@ Backend API endpoints implemented:
 - `GET /api/v1/admin/users?search=` (extended with search + real total), `GET /api/v1/admin/`
   `subscriptions`/`feedback`/`integrations`/`metrics`/`waitlist` (all new, admin-gated) — built for
   TIME-048's web admin dashboard alongside the already-existing `GET/POST /api/v1/invites/codes`
+- `POST /api/v1/slack/connect` (Premium), `DELETE /api/v1/slack/disconnect`, `POST /api/v1/slack/`
+  `scan` (Premium — reads messages, LLM-detects action items, creates *pending* suggestions only),
+  `GET /api/v1/slack/pending`, `POST /api/v1/slack/actions/{id}/confirm` (approval gate — creates a
+  Task, source=slack), `.../reject` (TIME-049)
 - No new endpoints for TIME-043 — `notification_mode` (gentle/balanced/active_coach) already had
   read/write via `PATCH /api/v1/users/me/preferences`; TIME-043 only added the behavior that acts
   on it (NotificationService.maybe_send_morning_checkin/evening_checkout/learning_prompt), driven
@@ -40,11 +44,12 @@ Backend API endpoints implemented:
 Database tables: users, profiles, preferences, personalities, onboarding_states, consent_records,
 subscription_records, replan_requests, notifications, notification_events, tasks,
 internal_reminders, recommendation_feedback, routine_assumptions, meal_events, commute_events,
-sleep_wake_events, weekly_insights. (Correction: there is no separate "notification_preferences"
+sleep_wake_events, weekly_insights, calendar_integrations, pending_calendar_actions,
+slack_integrations, slack_action_items. (Correction: there is no separate "notification_preferences"
 table — the notification_mode field lives directly on user_preferences; a prior version of this
 file listed that table incorrectly.)
 
-Backend tests: 226, all passing (see Known Problems re: 2 flaky Stripe-network tests).
+Backend tests: 240, all passing (see Known Problems re: 2 flaky Stripe-network tests).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes. Insights tab (TIME-046) now shows a real weekly summary + stats grid behind the Premium gate.
@@ -57,6 +62,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-049 (impl seq) → Jira TIME-48 (Slack Integration) — **Done (this session)**
 - TIME-048 (impl seq) → Jira TIME-47 (Admin Dashboard Foundation, Web) — **Done (PR #40 merged 2026-07-05)**
 - TIME-047 (impl seq) → Jira TIME-46 (Learned Assumptions Settings) — **Done (PR #39 merged 2026-07-05)**
 - TIME-046 (impl seq) → Jira TIME-45 (Weekly Insights Generation) — **Done (PR #38 merged 2026-07-05)**
@@ -72,39 +78,34 @@ both clean.
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-048 (Jira TIME-47): Admin Dashboard Foundation (Web)
-- Bootstrapped `web/` from scratch (no scaffold existed — first ticket in this run to touch the
-  web platform): Next.js 16 + TypeScript + Tailwind 4 + Firebase Auth
-- Role-protected `/admin` dashboard: Overview (metrics + integration status), Users (search +
-  pagination), Invites (codes + waitlist), Subscriptions, Feedback — all consuming real backend
-  data, no mocked/dead-end pages
-- Confirmed with the user before proceeding: the ticket sequence implied the backend already had
-  everything, but only user-listing and invite-code management existed as admin endpoints. Added
-  GET /api/v1/admin/subscriptions/feedback/integrations/metrics/waitlist (all new, admin-gated) so
-  the dashboard has real data everywhere rather than dead ends
-- Also fixed GET /api/v1/admin/users: added a `search` param and a real `total` count (was
-  hardcoded to `len(users)`, always equal to the page size)
-- 11 new backend tests (17 total in test_admin.py); full suite 226/226 (excluding 2 known-flaky
-  Stripe tests)
-- `getAuth()` (Firebase) validates its API key eagerly and throws even during `next build`'s
-  static prerendering when the key is empty — fixed by making auth construction lazy
-  (`getFirebaseAuth()`), only touched at actual runtime use, guarded by `isFirebaseConfigured`
-- This Next.js/React version's ESLint enforces `react-hooks/set-state-in-effect`, which flags any
-  synchronous setState in an effect not immediately followed by async work in the same branch —
-  fixed by deriving loading state from data (`data === null && error === null`) instead of a
-  separate boolean, which also surfaced and fixed a latent bug (error message never cleared on a
-  later successful fetch)
-- `npm run build` and `npm run lint` both clean
+TIME-049 (Jira TIME-48): Slack Integration
+- `MessageSourceProvider` abstraction (read-only chat source, for Slack now + Teams later) +
+  `SlackMessageSource` reading Slack's conversations.history API
+- `slack_integrations` (token storage) + `slack_action_items` (approval queue) tables; SlackService
+  with connect/disconnect/scan/confirm/reject
+- The approval gate is the whole point: `scan_channel()` reads messages, LLM-detects action items,
+  and creates *pending* SlackActionItem rows — NEVER Tasks. `confirm()` is the single path that
+  creates a Task (source="slack", links created_task_id). Mirrors the calendar request→approve
+  pattern exactly, satisfying "never auto-create from external signals without approval"
+- `SlackDetectionService` split out for isolated LLM unit testing; degrades to "not an action item"
+  on any LLM failure (same fallback discipline as CaptureService)
+- No real Slack app (empty placeholder creds) — mobile client posts the OAuth token to
+  /slack/connect like /calendar/connect; no server-side OAuth callback / Events API in this ticket
+- Followed the repo's flat integration-file convention (message_source_base.py / slack_source.py),
+  not the skill's idealized `slack/` subdir
+- 14 new tests; full suite 240/240 (excluding 2 known-flaky Stripe tests). Single alembic head,
+  both tables compile offline
 
-Full history of TIME-034 through TIME-047 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-048 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Phase 12 (Admin Dashboard) is now complete. Next up: TIME-049 (Slack Integration), starting Phase
-13 (Integrations Expansion) — Slack OAuth, message read, action-item detection, user approval
-before task creation. Also see known_issues.md — the deferred UsableTimeService timezone-awareness
-pass (to actually subtract routine/meal/commute/sleep blocks from usable time, and to make Celery
-beat/notification timing per-user-local instead of UTC-only) is unblocked and still worth
-scheduling soon rather than continuing to defer it across more tickets.
+Phase 13 (Integrations Expansion) is in progress. Next up: TIME-050 (Microsoft Teams Integration) —
+should reuse the `MessageSourceProvider` abstraction TIME-049 just added, adding a `TeamsMessageSource`
++ the same detect/confirm approval flow (likely a shared or parallel action-item queue). Also see
+known_issues.md — the deferred UsableTimeService timezone-awareness pass (to actually subtract
+routine/meal/commute/sleep blocks from usable time, and to make Celery beat/notification timing
+per-user-local instead of UTC-only) is unblocked and still worth scheduling soon rather than
+continuing to defer it across more tickets.
 
 ## iOS HealthKit Decision Point (deferred from TIME-042, still open)
 TIME-042 only built the backend contract (ingest a wake_time signal, gate on health_data consent,

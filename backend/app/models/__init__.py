@@ -11,6 +11,7 @@ from app.models.onboarding import AssistantPersonality, OnboardingState  # noqa:
 from app.models.recommendation_feedback import RecommendationFeedback  # noqa: F401
 from app.models.referral import ReferralCode, ReferralConversion  # noqa: F401
 from app.models.routine import RoutineAssumption  # noqa: F401
+from app.models.slack import SlackActionItem, SlackIntegration  # noqa: F401
 from app.models.sleep_wake import SleepWakeEvent  # noqa: F401
 from app.models.subscription import Subscription  # noqa: F401
 from app.models.task import InternalReminder, Task  # noqa: F401

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 TaskStatus = Literal["pending", "in_progress", "done", "cancelled"]
-TaskSource = Literal["capture", "calendar", "manual"]
+TaskSource = Literal["capture", "calendar", "manual", "slack"]
 
 
 class TaskCreate(BaseModel):

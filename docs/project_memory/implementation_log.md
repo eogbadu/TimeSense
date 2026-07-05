@@ -1,5 +1,47 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-049 (Jira TIME-48): Slack Integration
+
+### Created
+- `backend/app/integrations/message_source_base.py` — MessageSourceProvider ABC + SourceMessage
+  dataclass (a read-only chat/comms source abstraction, for Slack now + Teams later)
+- `backend/app/integrations/slack_source.py` — SlackMessageSource calling Slack's
+  conversations.history Web API (handles Slack's `{"ok": false}` 200-response quirk)
+- `backend/app/models/slack.py` — SlackIntegration (token storage, same shape as
+  CalendarIntegration) + SlackActionItem (approval queue, mirrors PendingCalendarAction)
+- `backend/migrations/versions/n4o5p6q7r8s9_add_slack_integration.py` — both tables
+- `backend/app/repositories/slack_repository.py` — SlackIntegrationRepository +
+  SlackActionItemRepository (incl. exists_for_message for scan-dedup)
+- `backend/app/schemas/slack.py`, `backend/app/services/slack_service.py`,
+  `backend/app/api/v1/slack.py`
+- `backend/tests/test_slack.py` — 14 tests (LLM detection unit tests + scan/confirm/reject API
+  tests + premium gate + isolation)
+
+### Modified
+- `backend/app/api/v1/__init__.py`, `backend/app/models/__init__.py` — registered router/models
+- `backend/app/schemas/task.py` — added "slack" to the TaskSource literal
+
+### Design notes
+- The approval gate is the whole point: `scan_channel()` reads messages, runs LLM detection, and
+  creates *pending* SlackActionItem rows — NEVER Tasks. `confirm()` is the single path that turns a
+  detected item into a Task (source="slack", links created_task_id back onto the item). This mirrors
+  the calendar request→approve pattern exactly, satisfying the product's "never auto-create from
+  external signals without approval" rule.
+- `SlackDetectionService` is split out from `SlackService` so the LLM detection logic is unit-
+  testable in isolation. It reuses LLMGateway and degrades gracefully (is_action_item=False) on any
+  LLM error — identical fallback discipline to CaptureService.
+- Followed the repo's actual flat-file integration convention (calendar_base.py / google_calendar.py)
+  rather than the integration-provider-pattern skill's idealized `slack/` subdirectory layout —
+  repo is source of truth.
+- No real Slack app: SLACK_CLIENT_ID/SECRET/SIGNING_SECRET are empty placeholders in .env (already
+  present from an earlier scaffold). The mobile client does OAuth and POSTs the token to
+  /slack/connect, exactly like /calendar/connect — no server-side OAuth callback, no Events API /
+  signature verification in this ticket (slack_signing_secret stays unused).
+- Token stored as plain Text, matching how CalendarIntegration already stores tokens — a cross-
+  integration encryption-at-rest pass is separate future work (known_issues.md).
+- 14 new tests; full suite 235/235 (excluding 2 known-flaky Stripe tests). `alembic heads` single
+  head; offline `--sql` compiles both tables cleanly.
+
 ## 2026-07-05 — TIME-048 (Jira TIME-47): Admin Dashboard Foundation (Web)
 
 ### Created — web/ (bootstrapped from scratch; first ticket to touch this platform)

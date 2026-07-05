@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 12: Admin Dashboard — TIME-048 done. Phase 12 complete; Phase 13 next.
+Phase 13: Integrations Expansion — TIME-049 done; TIME-050 (Teams) next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -97,12 +97,20 @@ before being trusted — do not assume unchecked = not built.
       codes actually had admin endpoints before this ticket. 11 new backend tests (17 total in
       test_admin.py). `npm run build`/`npm run lint` clean.
 
+## Phase 13 Progress
+- [x] TIME-049 (Jira TIME-48): Slack Integration — MessageSourceProvider abstraction +
+      SlackMessageSource; slack_integrations/slack_action_items tables; LLM action-item detection;
+      scan creates *pending* suggestions (never Tasks) and confirm is the approval gate that
+      creates a Task (source=slack). Premium-gated scan. No real Slack app (token posted to
+      /connect like calendar). 14 new tests.
+- [ ] TIME-050: Microsoft Teams Integration (reuses the same MessageSourceProvider abstraction)
+
 ## Active Jira Tickets
-- TIME-47 (impl TIME-048, Admin Dashboard Foundation) — Done
-- Next: TIME-049 (Slack Integration) — Phase 13
+- TIME-48 (impl TIME-049, Slack Integration) — Done
+- Next: TIME-050 (Microsoft Teams Integration)
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 13: Integrations Expansion — Phase 12 is complete
+Phase 13 continues with TIME-050 (Teams), TIME-051 (Notion), etc.

@@ -1,5 +1,26 @@
 # Change Summary
 
+## 2026-07-05 — TIME-049 (Jira TIME-48) Slack Integration
+
+**What changed:**
+- MessageSourceProvider abstraction + SlackMessageSource (reads Slack via conversations.history)
+- slack_integrations + slack_action_items tables; SlackService with connect/disconnect/scan/
+  confirm/reject
+- POST /api/v1/slack/connect, DELETE /disconnect, POST /scan (Premium-gated), GET /pending,
+  POST /actions/{id}/confirm, POST /actions/{id}/reject
+- LLM-based action-item detection (SlackDetectionService) with graceful non-action fallback
+- "slack" added to the TaskSource literal
+
+**What did not change:**
+- No auto-created tasks — scan only creates pending suggestions; confirm is the approval gate
+- No real Slack OAuth flow / Events API / signature verification — token posted to /connect like
+  the calendar flow; no server-side OAuth callback
+- No token encryption beyond how CalendarIntegration already stores tokens (plain Text)
+- No background auto-scan
+
+**Next:**
+- TIME-050: Microsoft Teams Integration (same MessageSourceProvider abstraction)
+
 ## 2026-07-05 — TIME-048 (Jira TIME-47) Admin Dashboard Foundation (Web)
 
 **What changed:**
