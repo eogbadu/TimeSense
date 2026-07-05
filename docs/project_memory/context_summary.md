@@ -30,7 +30,7 @@ Mobile app shells:
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping
-- TIME-038 (impl seq) → Jira TIME-37 (Feedback Collection) — **In Review (PR #29, this session)**
+- TIME-038 (impl seq) → Jira TIME-37 (Feedback Collection) — **Done (PR #29 merged 2026-07-05)**
 - TIME-019 → TIME-25 (Android shell) — Done
 - TIME-020 → TIME-26 (iOS Firebase Auth) — Done
 - TIME-021 → TIME-27 (Android Firebase Auth) — Done
@@ -61,8 +61,8 @@ TIME-035 (Jira TIME-35): TaskScorer — priority (0.5) + deadline (0.35) + durat
 TIME-034 (Jira TIME-34): UsableTimeService — merges scheduled blocks, returns free-window minutes
 
 ## Current Active Task
-None. TIME-038 is code-complete, tested, pushed, and PR #29 is open (TIME-37 → In Review).
-Move TIME-37 to "Done" once PR #29 is merged (checkpoint 3).
+TIME-039: Routine Assumptions Model — starting now (user directed continuous autonomous build
+through the remaining ticket backlog, merging each PR without waiting for review).
 
 ## Next Recommended Task
 TIME-039: Routine Assumptions Model — default routines (sleep, meals, commute) for usable-time context
@@ -92,8 +92,8 @@ TIME-040: Meal Tracking (Lightweight)
 - Read this file + phase_status.md before doing anything.
 - The `.env` file is gitignored and contains real secrets — never commit it.
 - Jira key mapping above is required — implementation seq numbers ≠ Jira ticket numbers.
-- PR #29 (TIME-038) is open on `feature/TIME-038-feedback-collection` — once merged, run
-  `python scripts/move_ticket.py TIME-37 done` (checkpoint 3) before starting TIME-039/TIME-040.
+- User has authorized merging PRs without waiting for review during this autonomous run
+  (2026-07-04) — do not assume this stands for future sessions unless re-confirmed.
 - `.claude/settings.local.json` and `.devcontainer/` are untracked leftovers from a prior session
   (the devcontainer firewall fix documented in known_issues.md was never committed) — not part of
   TIME-038, left alone; flag to the user if they want that committed separately.
