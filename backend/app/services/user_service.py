@@ -8,12 +8,22 @@ class UserService:
     def __init__(self, db: AsyncSession) -> None:
         self.repo = UserRepository(db)
 
-    async def get_or_create_user(self, firebase_uid: str, email: str) -> tuple[User, bool]:
-        """Return (user, created). Called on every authenticated request that needs a DB user."""
+    async def get_or_create_user(
+        self, firebase_uid: str, email: str, role: str | None = None
+    ) -> tuple[User, bool]:
+        """Return (user, created). Called on every authenticated request that needs a DB user.
+
+        The Firebase custom-claim role is the source of truth for authorization; when a caller
+        passes the token's ``role``, mirror it into the DB so ``/users/me`` (and the web dashboard
+        gate that reads it) stays in sync with the claim — including downgrades if the claim is
+        removed. Persisted by the request's session commit (get_db commits on success).
+        """
         user = await self.repo.get_by_firebase_uid(firebase_uid)
         if user is not None:
+            if role is not None and user.role != role:
+                user.role = role
             return user, False
-        await self.repo.create(firebase_uid=firebase_uid, email=email)
+        await self.repo.create(firebase_uid=firebase_uid, email=email, role=role or "user")
         # Re-fetch with selectinload so relationships are available outside the session greenlet.
         user = await self.repo.get_by_firebase_uid(firebase_uid)
         return user, True  # type: ignore[return-value]

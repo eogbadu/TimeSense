@@ -87,3 +87,33 @@ async def test_update_preferences_invalid_mode_rejected(client):
 async def test_unauthenticated_request_rejected(client):
     response = await client.get("/api/v1/users/me")
     assert response.status_code == 401
+
+
+# ── Role sync from Firebase token claim (TIME-065) ────────────────────────────
+
+_ADMIN_USER = TokenUser(uid="uid-admin-1", email="admin@example.com", role="admin", email_verified=True)
+
+
+@pytest.mark.anyio
+async def test_get_me_reflects_admin_token_claim(client):
+    """A fresh user whose token claim is admin comes back as role=admin from /users/me."""
+    with _mock_verify(_ADMIN_USER):
+        r = await client.get("/api/v1/users/me", headers=_auth_headers())
+    assert r.status_code == 200
+    assert r.json()["role"] == "admin"
+
+
+@pytest.mark.anyio
+async def test_get_me_syncs_role_downgrade_when_claim_removed(client):
+    """DB role mirrors the claim: granting then removing the admin claim downgrades the DB role."""
+    user = TokenUser(uid="uid-sync-1", email="sync@example.com", role="admin", email_verified=True)
+    with _mock_verify(user):
+        r1 = await client.get("/api/v1/users/me", headers=_auth_headers())
+    assert r1.json()["role"] == "admin"
+
+    # Same user, claim removed (defaults to "user")
+    downgraded = TokenUser(uid="uid-sync-1", email="sync@example.com", role="user", email_verified=True)
+    with _mock_verify(downgraded):
+        r2 = await client.get("/api/v1/users/me", headers=_auth_headers())
+    assert r2.json()["id"] == r1.json()["id"]
+    assert r2.json()["role"] == "user"
