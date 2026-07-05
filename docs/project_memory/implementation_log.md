@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-069 (Jira TIME-67): Dual-stack dev server launcher
+
+Found while the user ran the app on the Simulator: it failed with `nw_endpoint_flow_failed
+[::1.8000]`. Root cause — the documented `uvicorn app.main:app` binds IPv4 (127.0.0.1) only, but
+macOS resolves `localhost` to IPv6 `::1` first, so the Simulator (calling localhost:8000) couldn't
+connect. Added `backend/run_dev.py` which binds an AF_INET6 socket with IPV6_V6ONLY=0 (dual-stack)
+and serves app.main:app on it, so both ::1 and 127.0.0.1 respond. Documented in CLAUDE.md's Commands
+(use `python run_dev.py` for Simulator dev; plain `uvicorn --reload` stays IPv4-only for reload
+loops). Verified both loopbacks return 200. Not committed to production serving (containers bind
+0.0.0.0 behind a proxy) — local-dev convenience only.
+
 ## 2026-07-05 — TIME-068 (Jira TIME-66): Refresh Now/Today on tab return (+ pull-to-refresh)
 
 Follow-up to TIME-067: even though the backend now surfaces captured tasks, the Now/Today screens
