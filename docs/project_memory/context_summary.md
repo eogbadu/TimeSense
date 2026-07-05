@@ -31,7 +31,7 @@ Mobile app shells:
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping
-- TIME-039 (impl seq) → Jira TIME-38 (Routine Assumptions Model) — **Done (this session)**
+- TIME-039 (impl seq) → Jira TIME-38 (Routine Assumptions Model) — **Done (PR #30 merged 2026-07-05)**
 - TIME-038 (impl seq) → Jira TIME-37 (Feedback Collection) — **Done (PR #29 merged 2026-07-05)**
 - TIME-019 → TIME-25 (Android shell) — Done
 - TIME-020 → TIME-26 (iOS Firebase Auth) — Done
