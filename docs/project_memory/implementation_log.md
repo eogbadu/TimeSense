@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-071 (Jira TIME-69): Today shows untimed pending tasks
+
+Reported while using the app: "why is it only showing 1 task?" — Now intentionally shows only the
+single best next action, and Today showed only scheduled blocks, so captured (untimed) tasks had no
+visible home even with 14 saved. GET /api/v1/timeline/today now, when viewing today, appends the
+user's untimed pending tasks (scheduled_start is None) to the scheduled-today set (untimed sort
+last) — so Today is the user's full to-do list. Non-today dates unchanged. (The related "best task
+is tomorrow's" complaint was because old tasks lacked extracted due dates — captured while the
+OpenAI key was invalid; new captures with the now-valid key extract due_at so day-prioritization
+works via the existing scorer. No scorer change.) New test; suite 308/308 excl. 2 flaky.
+
 ## 2026-07-05 — TIME-070 (Jira TIME-68): iOS recover from 401 (refresh + sign-out-to-sign-in)
 
 Reported: on launch the app showed "Session expired. Please sign in again." as a dead-end (no

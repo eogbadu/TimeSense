@@ -4620,6 +4620,63 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-071: Today shows untimed pending tasks (your full to-do list)",
+        "labels": ["backend", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Captured tasks have no scheduled time, so the Today tab (which showed only scheduled "
+              "blocks) looked empty even with many tasks — the user had no place to see their list "
+              "(Now intentionally shows just the single best next action). Make GET /timeline/today "
+              "also include untimed pending tasks when viewing today, so the user sees their full "
+              "to-do list."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "GET /api/v1/timeline/today: when for_date == today, append the user's untimed "
+                "pending tasks (scheduled_start is None) to the scheduled-today set; keep the "
+                "scheduled_start-ascending sort (untimed sort last). For a specific non-today date, "
+                "behaviour is unchanged (scheduled-for-that-date only)",
+                "Test: an unscheduled pending (captured) task appears in /timeline/today",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No new 'all tasks' screen — Today becomes the list home; a dedicated task-list view "
+                "is possible follow-up",
+                "No change to Now (still the single best next action by design)",
+                "No change to task scoring — better day-prioritization comes from the LLM extracting "
+                "due dates on capture (now that the OpenAI key is valid), not from a scorer tweak",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/api/v1/timeline.py",
+                "backend/tests/test_timeline.py",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "A captured (unscheduled, pending) task appears in GET /api/v1/timeline/today",
+                "Scheduled tasks still appear and sort by time; untimed sort last",
+                "Non-today dates unchanged; full suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_timeline.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-030/031 (Today/Capture), TIME-067 (same treatment for Now), a valid OpenAI key "
+              "for due-date extraction on new captures."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 
