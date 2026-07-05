@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 9: Routines, Meals, Commute, Sleep/Wake (TIME-039 next)
+Phase 9: Routines, Meals, Commute, Sleep/Wake (TIME-039 done, TIME-040 next)
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -46,12 +46,19 @@ before being trusted — do not assume unchecked = not built.
 - [x] Snoozed/not_now tasks excluded from recommendations until snooze_until passes / cooldown expires
 - [x] All tests pass (152 total in full suite)
 
+## Phase 9 Progress
+- [x] TIME-039 (Jira TIME-38): Routine Assumptions Model — routine_assumptions table, GET/PATCH
+      /api/v1/routines, default seeding. NOT yet integrated into UsableTimeService (see known_issues.md).
+- [ ] TIME-040: Meal Tracking (Lightweight)
+- [ ] TIME-041: Commute Detection
+- [ ] TIME-042: Sleep/Wake Signal Integration
+
 ## Active Jira Tickets
-- TIME-37 (impl TIME-038, Feedback Collection) — In Review, PR #29 open on feature/TIME-038-feedback-collection
-- Next: TIME-039 (Routine Assumptions Model) or TIME-040 (Meal Tracking)
+- TIME-38 (impl TIME-039, Routine Assumptions Model) — Done
+- Next: TIME-040 (Meal Tracking)
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 9: Routines, Meals, Commute, Sleep/Wake — after Phase 8 (now complete)
+Phase 10: Notifications, Widgets, Ambient Surfaces — after Phase 9 completes

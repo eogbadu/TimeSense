@@ -1,5 +1,34 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-039 (Jira TIME-38): Routine Assumptions Model
+
+### Created
+- `backend/app/models/routine.py` — RoutineAssumption model, ROUTINE_TYPES, DEFAULT_ROUTINES (sleep/breakfast/lunch/dinner/morning_hygiene/evening_hygiene, minutes-since-local-midnight)
+- `backend/migrations/versions/h8i9j0k1l2m3_add_routine_assumptions.py` — routine_assumptions table
+- `backend/app/repositories/routine_repository.py` — get_or_seed_defaults(), update_one()
+- `backend/app/schemas/routine.py` — RoutineAssumptionResponse, RoutineAssumptionUpdate
+- `backend/app/api/v1/routines.py` — GET /routines (seeds defaults), PATCH /routines/{routine_type}
+- `backend/tests/test_routines.py` — 9 tests
+
+### Modified
+- `backend/app/api/v1/__init__.py` — registered routines_router
+- `backend/app/models/__init__.py` — registered RoutineAssumption
+
+### Design notes
+- Deliberately does NOT wire routine blocks into `UsableTimeService` yet — see known_issues.md
+  "RoutineAssumption data (TIME-039) is not yet subtracted from usable time". `UsableTimeService`
+  has no timezone awareness today; doing that properly once for routines+meals+commute together
+  (after TIME-040–042) avoids three partial integrations.
+- `end_minute < start_minute` signals a block that wraps past midnight (sleep 23:00→07:00).
+- Editing a routine sets `is_customized=True` so future auto-detection tickets (commute/sleep) know
+  not to silently overwrite a user's explicit choice.
+
+### Verification
+- `pytest tests/test_routines.py -v` — 9 passed
+- Full suite: `pytest` — 161 passed
+- `alembic heads` — single head; `alembic upgrade head --sql` — compiles cleanly offline (no live
+  Postgres available in this environment)
+
 ## 2026-07-04 — TIME-038 (Jira TIME-37): Feedback Collection
 
 ### Created

@@ -1,11 +1,11 @@
 # Context Summary
 
-**Last updated:** 2026-07-04
+**Last updated:** 2026-07-05
 
 ## Current Build State
 
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
-and Phase 8 (Recommendation Engine V1) complete.
+and Phase 8 (Recommendation Engine V1) complete. Phase 9 in progress (TIME-039 done).
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -18,18 +18,20 @@ Backend API endpoints implemented:
 - `GET /api/v1/now`, `GET /api/v1/today`
 - `GET /api/v1/recommendations` (best + up to 2 alternatives + LLM "why" + usable_minutes)
 - `POST /api/v1/recommendations/feedback` (done/snooze/not_now — suppresses task from future recommendations)
+- `GET /api/v1/routines`, `PATCH /api/v1/routines/{routine_type}` (sleep/meal/hygiene blocks, default-seeded)
 
 Database tables: users, profiles, preferences, personalities, onboarding_states, consent_records,
 subscription_records, notification_preferences, replan_requests, tasks, internal_reminders,
-recommendation_feedback.
+recommendation_feedback, routine_assumptions.
 
-Backend tests: 152, all passing (full `pytest` run in this session).
+Backend tests: 161, all passing (full `pytest` run in this session).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`.
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping
+- TIME-039 (impl seq) → Jira TIME-38 (Routine Assumptions Model) — **Done (this session)**
 - TIME-038 (impl seq) → Jira TIME-37 (Feedback Collection) — **Done (PR #29 merged 2026-07-05)**
 - TIME-019 → TIME-25 (Android shell) — Done
 - TIME-020 → TIME-26 (iOS Firebase Auth) — Done
@@ -45,6 +47,12 @@ Mobile app shells:
 - TIME-036 → TIME-36 (Recommendation API V1) — Done (PR #28, merged 2026-07-04)
 
 ## Last Completed Work
+TIME-039 (Jira TIME-38): Routine Assumptions Model
+- `routine_assumptions` table: sleep/breakfast/lunch/dinner/morning_hygiene/evening_hygiene blocks per user
+- `GET /api/v1/routines` seeds 6 defaults on first call; `PATCH /api/v1/routines/{routine_type}` edits one
+- NOT yet subtracted from `UsableTimeService` — deliberately deferred, see known_issues.md
+- 9 new tests; full suite 161/161
+
 TIME-038 (Jira TIME-37): Feedback Collection — **completes Phase 8**
 - `POST /api/v1/recommendations/feedback` — records done/snooze/not_now; done also marks task status=done
 - `RecommendationFeedbackRepository.get_suppressed_task_ids()` — excludes actively-snoozed tasks
@@ -61,12 +69,11 @@ TIME-035 (Jira TIME-35): TaskScorer — priority (0.5) + deadline (0.35) + durat
 TIME-034 (Jira TIME-34): UsableTimeService — merges scheduled blocks, returns free-window minutes
 
 ## Current Active Task
-TIME-039: Routine Assumptions Model — starting now (user directed continuous autonomous build
-through the remaining ticket backlog, merging each PR without waiting for review).
+TIME-040: Meal Tracking (Lightweight) — next in the autonomous build sequence (user directed
+continuous autonomous build through the remaining ticket backlog, merging each PR without
+waiting for review).
 
 ## Next Recommended Task
-TIME-039: Routine Assumptions Model — default routines (sleep, meals, commute) for usable-time context
-OR
 TIME-040: Meal Tracking (Lightweight)
 
 ## Important Decisions to Preserve
@@ -87,6 +94,8 @@ TIME-040: Meal Tracking (Lightweight)
   verified offline (`--sql` mode); needs a real-DB check before deploy
 - `phase_status.md`'s acceptance-criteria checkboxes for Phases 3–7 are stale relative to this file
   (see phase_status.md Staleness Warning) — needs a reconciliation pass
+- `UsableTimeService` is UTC-only and doesn't yet subtract routine blocks (TIME-039) — see
+  known_issues.md "RoutineAssumption data is not yet subtracted from usable time"
 
 ## Warnings for Next Session
 - Read this file + phase_status.md before doing anything.
