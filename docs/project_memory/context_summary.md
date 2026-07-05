@@ -89,7 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-073 (net-new) → Jira TIME-71 (Premium visual redesign, calm/minimal) — **Done (this session)**
+- TIME-073 (net-new) → Jira TIME-71 (Premium visual redesign, calm/minimal) — **Done (PR #66 merged 2026-07-05)**
 - TIME-072 (net-new) → Jira TIME-70 (Rule-based date fallback for capture) — **Done (PR #65 merged 2026-07-05)**
 - TIME-071 (impl seq-ish) → Jira TIME-69 (Today shows untimed pending tasks) — **Done (PR #64 merged 2026-07-05)**
 - TIME-070 (net-new) → Jira TIME-68 (iOS recover from 401 / session-expiry) — **Done (PR #63 merged 2026-07-05)**
