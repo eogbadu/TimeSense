@@ -3312,6 +3312,86 @@ TICKETS = [
             p("TIME-052: Siri Shortcuts / App Intents"),
         ),
     },
+
+    {
+        "summary": "TIME-052: Siri Shortcuts / App Intents",
+        "labels": ["phase-13", "ios"],
+        "description": doc(
+            h2("Goal"),
+            p("Expose core TimeSense actions to Siri and the Shortcuts app via the App Intents "
+              "framework (iOS 16+), so users can run them by voice or as Shortcuts. Read-only and "
+              "simple-write actions run headless; anything needing UI or approval (replan) opens "
+              "the app, preserving the product's approval rules."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Five AppIntents under ios/TimeSense/Intents/: WhatToDoNext (GET /api/v1/now → "
+                "spoken best task + usable minutes), LogLunch (POST /api/v1/meals lunch/eaten), "
+                "MarkDone (GET /now → PATCH /api/v1/tasks/{bestTaskId} status=done), StartFocus "
+                "(GET /now → 'Focus on {task}'), ReplanDay (opens the app — replans require "
+                "approval, so it can't run headless)",
+                "AppShortcutsProvider exposing each intent with natural Siri phrases "
+                "(\\(.applicationName)-prefixed), so they appear in Shortcuts and are Siri-invokable",
+                "Intents call the existing APIClient.shared (the one network path); reuse the "
+                "existing NowContext/NowTask decodables; define minimal inline request/response "
+                "types where needed. No new networking layer",
+                "ReplanDay uses openAppWhenRun so the replan is reviewed/approved in-app, never "
+                "auto-applied",
+                "Wire the new Intents group into the Xcode project via the xcodeproj gem (same "
+                "tooling as the widget/insights tickets); build against the now-available iOS "
+                "Simulator and boot it to confirm the shortcuts register",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No Siri *voice* end-to-end verification — Siri isn't in the Simulator; voice "
+                "invocation is a real-device follow-up. Shortcuts-app registration IS verifiable in "
+                "the Simulator and is the acceptance bar here",
+                "No true backend round-trip verification — real Firebase Auth isn't configured "
+                "(standing placeholder gap across iOS/Android/web), so a headless intent's API call "
+                "would 401. Intents are written to attach the token via APIClient and surface an "
+                "auth error gracefully; the build + Shortcuts registration are what's verified",
+                "No new backend endpoints — reuses /now, /meals, /tasks/{id}. No 'focus session' or "
+                "'auto-replan' backend concept is invented (StartFocus just surfaces the best task; "
+                "ReplanDay opens the app)",
+                "No Google Assistant (that's TIME-053), no widgets/interactive-widget intents "
+                "(TIME-044/045 already shipped read-only widgets)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Intents/TimeSenseAppIntents.swift (the 5 intents) (new)",
+                "ios/TimeSense/Intents/TimeSenseShortcuts.swift (AppShortcutsProvider) (new)",
+                "ios/TimeSense.xcodeproj/project.pbxproj (register the Intents group)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "xcodebuild -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' "
+                "succeeds",
+                "The five App Intents compile and are exposed via an AppShortcutsProvider with Siri "
+                "phrases",
+                "Read/write intents call the existing APIClient; ReplanDay opens the app rather "
+                "than applying a replan headlessly",
+                "Booting a Simulator and installing the app shows the shortcuts available (manual "
+                "verification note in the PR)",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-018 (iOS App Shell), TIME-030/031/032 (Now/Capture screens + the /now, /meals, "
+              "/tasks endpoints these intents reuse). Requires an iOS Simulator runtime (now "
+              "installed)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-053: Google Assistant Integration"),
+        ),
+    },
 ]
 
 

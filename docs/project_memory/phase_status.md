@@ -1,7 +1,9 @@
 # Phase Status
 
 ## Current Phase
-Phase 13: Integrations Expansion — TIME-049/050/051 done; TIME-052 (Siri Shortcuts / App Intents) next.
+Phase 13: Integrations Expansion — TIME-049/050/051/052 done; TIME-053 (Google Assistant) next.
+Also queued: a dedicated HealthKit ticket (deferred from TIME-042), now that the iOS Simulator is
+available (on-device runs still need a real Apple Developer account for the HealthKit entitlement).
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -113,13 +115,19 @@ before being trusted — do not assume unchecked = not built.
       pages, extracting title + due from structured properties (no LLM detection);
       notion_integrations/notion_import_items tables; approval gate framed as import/dismiss
       (scan → pending; import → Task source=notion, due carried over). 15 new tests.
+- [x] TIME-052 (Jira TIME-51): Siri Shortcuts / App Intents — 5 App Intents (what-to-do-next, log
+      lunch, start focus, mark done, replan day) + AppShortcutsProvider. Verified with a real
+      Simulator build + install/launch (runtime now available) and App Intents metadata extraction.
+      ReplanDay opens the app (approval rule). No Siri-voice / backend E2E yet (device + real
+      Firebase).
 
 ## Active Jira Tickets
-- TIME-50 (impl TIME-051, Notion Integration) — Done
-- Next: TIME-052 (Siri Shortcuts / App Intents)
+- TIME-51 (impl TIME-052, Siri Shortcuts / App Intents) — Done
+- Next: TIME-053 (Google Assistant Integration), plus a queued HealthKit ticket
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 13 continues with TIME-052 (Siri Shortcuts / App Intents), etc.
+Phase 13 continues with TIME-053 (Google Assistant), a HealthKit ticket (deferred from TIME-042),
+etc.
