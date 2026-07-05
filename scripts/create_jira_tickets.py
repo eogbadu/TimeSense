@@ -4556,6 +4556,70 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-070: iOS — recover from 401 (refresh token; sign out to sign-in on invalid session)",
+        "labels": ["ios", "bug", "auth"],
+        "description": doc(
+            h2("Goal"),
+            p("On launch the app showed 'Session expired. Please sign in again.' as a dead-end error "
+              "with no way back to the sign-in screen; switching tabs then worked. Fix the underlying "
+              "401 handling so the app recovers automatically and, when it can't, routes to sign-in."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Root cause: AppState.isAuthenticated flips true the moment Firebase restores the "
+                "user, so tabs render and fire API calls BEFORE AuthService's async getIDToken sets "
+                "the token on APIClient — the first request 401s ('session expired'); later tab "
+                "loads work because the token has arrived. And a 401 was surfaced as an in-view "
+                "error, never routing back to sign-in.",
+                "APIClient: add a tokenProvider closure and, on a 401, refresh the token once and "
+                "retry the request (fixes the launch race + expired tokens). If it's STILL 401, post "
+                "a .apiUnauthorized notification and throw.",
+                "AuthService: set the tokenProvider (Firebase getIDToken(forcingRefresh:true)); "
+                "observe .apiUnauthorized and signOut() so currentUser → nil → ContentView shows "
+                "SignInView (the user can sign in again).",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No proactive token-refresh timer — refresh-on-401 covers hourly Firebase token "
+                "expiry",
+                "No change to gating isAuthenticated on the token being ready (retry-on-401 is "
+                "simpler and also covers expiry); could revisit if races persist",
+                "No backend change",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Core/API/APIClient.swift (tokenProvider + refresh-and-retry + "
+                ".apiUnauthorized)",
+                "ios/TimeSense/Core/Auth/AuthService.swift (provide token; sign out on persistent 401)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "A first request that 401s (token not yet set) refreshes + retries and succeeds — no "
+                "'session expired' on a valid session",
+                "A genuinely invalid session (401 after refresh) signs out and shows the sign-in "
+                "screen",
+                "iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-062 (real Firebase in the app), TIME-066/067/068 (usable UI + data), the auth "
+              "flow (AuthService/AppState/ContentView)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 

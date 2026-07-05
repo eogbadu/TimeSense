@@ -14,18 +14,36 @@ final class AuthService: ObservableObject {
 
     private var authStateListenerHandle: AuthStateDidChangeListenerHandle?
 
+    private var unauthorizedObserver: NSObjectProtocol?
+
     init() {
+        // Let APIClient force-refresh a token to recover from a 401 (launch race / expired token).
+        APIClient.shared.setTokenProvider {
+            try? await Auth.auth().currentUser?.getIDToken(forcingRefresh: true)
+        }
+
         authStateListenerHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             Task { @MainActor in
                 self?.currentUser = user
                 await self?.refreshTokenIfNeeded(user: user)
             }
         }
+
+        // A 401 that survives a token refresh means the session is genuinely invalid → sign out so
+        // the sign-in screen appears and the user can recover (instead of a dead-end error).
+        unauthorizedObserver = NotificationCenter.default.addObserver(
+            forName: .apiUnauthorized, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.signOut() }
+        }
     }
 
     deinit {
         if let handle = authStateListenerHandle {
             Auth.auth().removeStateDidChangeListener(handle)
+        }
+        if let observer = unauthorizedObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 
