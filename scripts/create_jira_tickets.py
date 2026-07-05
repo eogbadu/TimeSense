@@ -4147,6 +4147,96 @@ TICKETS = [
             p("TIME-056: Security Review and Hardening."),
         ),
     },
+
+    {
+        "summary": "TIME-056: Security Review and Hardening",
+        "labels": ["phase-14", "backend", "security"],
+        "description": doc(
+            h2("Goal"),
+            p("Security review of auth, token storage, admin access, rate limiting, and webhook "
+              "security, and implement the top hardening findings: (1) encrypt integration OAuth "
+              "tokens at rest, (2) response security headers, (3) rate limiting on abuse-prone "
+              "endpoints. Audits confirm existing controls stay documented."),
+            divider(),
+            h2("Audit findings (already secure — documented, no change)"),
+            bullet_list([
+                "Auth: get_current_user verifies real Firebase ID tokens (check_revoked=True); "
+                "require_admin gates on the token claim; /users/me mirrors it to the DB (TIME-065)",
+                "Stripe webhook: already verifies the signature (stripe.Webhook.construct_event), "
+                "400 on bad signature, 503 when unconfigured — no change needed",
+                "Admin: all /admin routes require the AdminUser dependency (403 otherwise)",
+                "Privacy deletion requires confirm=true; export redacts tokens (TIME-055)",
+            ]),
+            divider(),
+            h2("Scope (new hardening)"),
+            bullet_list([
+                "app/core/crypto.py — Fernet-based encrypt_token/decrypt_token + an EncryptedString "
+                "SQLAlchemy TypeDecorator (impl=Text, so NO migration). Key from settings "
+                "token_encryption_key, or derived deterministically from secret_key when unset "
+                "(works in dev, overridable in prod). decrypt tolerates legacy plaintext (returns "
+                "as-is on InvalidToken) for forward-safety",
+                "Apply EncryptedString to the access_token/refresh_token columns of "
+                "CalendarIntegration, SlackIntegration, TeamsIntegration, NotionIntegration — "
+                "transparent encrypt-on-write / decrypt-on-read; closes the logged 'tokens stored "
+                "as plain Text' known issue",
+                "SecurityHeadersMiddleware — X-Content-Type-Options: nosniff, X-Frame-Options: DENY, "
+                "Referrer-Policy: no-referrer, X-XSS-Protection off, and HSTS in production",
+                "A lightweight in-process RateLimiter dependency (fixed-window per client+route); "
+                "applied to abuse-prone endpoints (POST /capture, DELETE /privacy/account). Returns "
+                "429 with Retry-After when exceeded. Noted: single-instance in-memory (Redis for "
+                "multi-instance is a follow-up)",
+                "config: token_encryption_key (default ''), rate-limit knobs",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No distributed (Redis) rate limiting — in-process fixed-window is enough for the "
+                "current single-instance deploy; Redis-backed is a follow-up",
+                "No re-encryption migration of existing tokens (none stored yet; EncryptedString "
+                "tolerates any legacy plaintext by returning it as-is)",
+                "No changes to the Stripe/Apple/Google webhook handlers beyond documenting that "
+                "Stripe already verifies signatures",
+                "No secret rotation tooling / KMS integration — the key comes from settings",
+                "No new auth mechanism; require_admin/token verification unchanged",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/core/crypto.py (new), app/core/config.py (token_encryption_key + rate "
+                "knobs)",
+                "backend/app/core/middleware.py (new — security headers), app/main.py (add "
+                "middleware)",
+                "backend/app/core/rate_limit.py (new — RateLimiter dependency)",
+                "backend/app/models/calendar.py, slack.py, teams.py, notion.py (EncryptedString)",
+                "backend/app/api/v1/capture.py, privacy.py (apply rate limiter)",
+                "backend/tests/test_security.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "encrypt_token/decrypt_token round-trips; ciphertext != plaintext; decrypt tolerates "
+                "plaintext",
+                "An integration token written via the service is stored as ciphertext at rest (raw "
+                "column select) but reads back as plaintext through the ORM",
+                "Every response carries the security headers",
+                "Exceeding the rate limit on a limited endpoint returns 429",
+                "Full backend test suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_security.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-015-era calendar + TIME-049/050/051 integrations (token columns), TIME-002 "
+              "(auth), the cryptography lib (already present via python-jose[cryptography])."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-057: App Store and Play Store Prep."),
+        ),
+    },
 ]
 
 

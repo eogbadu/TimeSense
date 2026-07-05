@@ -6,6 +6,7 @@ from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.crypto import EncryptedString
 from app.models.base import Base, TimestampMixin, UUIDMixin
 
 
@@ -20,7 +21,7 @@ class TeamsIntegration(UUIDMixin, TimestampMixin, Base):
         nullable=False,
         index=True,
     )
-    access_token: Mapped[str] = mapped_column(Text, nullable=False)
+    access_token: Mapped[str] = mapped_column(EncryptedString, nullable=False)
     tenant_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
 

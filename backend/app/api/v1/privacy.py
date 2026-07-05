@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import account_delete_rate_limit
 from app.core.security import CurrentUser
 from app.services.privacy_service import PrivacyService
 from app.services.user_service import UserService
@@ -28,7 +29,12 @@ async def export_my_data(
     return await PrivacyService(db).export_data(user_id)
 
 
-@router.delete("/account", status_code=status.HTTP_204_NO_CONTENT, summary="Delete my account and all data")
+@router.delete(
+    "/account",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete my account and all data",
+    dependencies=[Depends(account_delete_rate_limit)],
+)
 async def delete_my_account(
     current_user: CurrentUser,
     confirm: bool = False,

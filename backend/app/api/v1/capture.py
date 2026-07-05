@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import capture_rate_limit
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.schemas.task import TaskResponse
@@ -19,7 +20,12 @@ class CaptureRequest(BaseModel):
     user_timezone: str = Field(default="UTC", max_length=64)
 
 
-@router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=TaskResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(capture_rate_limit)],
+)
 async def capture(
     body: CaptureRequest,
     current_user: CurrentUser,

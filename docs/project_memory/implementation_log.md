@@ -1,5 +1,38 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-056 (Jira TIME-62): Security Review and Hardening
+
+### Audit (already secure — documented, unchanged)
+- Auth: verify_id_token(check_revoked=True); require_admin on the token claim; /users/me mirrors it.
+- Stripe webhook already verifies signatures (construct_event → 400 on bad sig, 503 unconfigured).
+- Admin routes all require AdminUser (403 otherwise); privacy delete needs confirm; export redacts tokens.
+
+### New hardening
+- **Token encryption at rest** — `app/core/crypto.py`: Fernet `encrypt_token`/`decrypt_token` + an
+  `EncryptedString` TypeDecorator (impl=Text → NO migration). Key from settings.token_encryption_key
+  or derived from secret_key when unset. `decrypt_token` tolerates legacy plaintext (returns as-is on
+  InvalidToken). Applied to access_token/refresh_token on Calendar/Slack/Teams/Notion integrations —
+  ciphertext at rest, plaintext through the ORM. Closes the logged 'tokens stored as plain Text' issue.
+- **Security headers** — `SecurityHeadersMiddleware`: X-Content-Type-Options nosniff, X-Frame-Options
+  DENY, Referrer-Policy no-referrer, X-XSS-Protection 0, CSP default-src 'none', + HSTS in production.
+- **Rate limiting** — `app/core/rate_limit.py`: in-process fixed-window RateLimiter keyed by
+  (name, auth-token-or-IP); plain async-function dependencies (`capture_rate_limit`,
+  `account_delete_rate_limit`) applied to POST /capture (30/min) and DELETE /privacy/account (5/hr);
+  429 + Retry-After when exceeded. Single-instance/in-memory (Redis is a follow-up).
+- config: token_encryption_key + rate-limit knobs.
+
+### Gotchas
+- FastAPI does NOT inject `Request` into a class-instance `__call__` dependency (it treats `request`
+  as a required field → 422); exposed the limiters as plain async functions instead.
+- Shared in-process limiters accumulate state across tests (same auth token) → added an autouse
+  conftest fixture (`_reset_all()`) to reset between tests.
+
+### Verification
+- 7 new tests (test_security.py): crypto round-trip + legacy-plaintext tolerance; token ciphertext
+  at rest (raw column) vs plaintext via ORM; security headers present; rate limiter blocks at limit +
+  is per-caller. Suite 306/306 (excl. 2 flaky). Live backend confirmed emitting the headers. No
+  migration (EncryptedString renders as TEXT).
+
 ## 2026-07-05 — TIME-055 (Jira TIME-61): Privacy Review and Data Export
 
 Self-service GDPR/CCPA-style data portability + erasure (Phase 14).
