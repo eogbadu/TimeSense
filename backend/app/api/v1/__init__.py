@@ -13,6 +13,7 @@ from app.api.v1.meals import router as meals_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.notion import router as notion_router
 from app.api.v1.onboarding import router as onboarding_router
+from app.api.v1.privacy import router as privacy_router
 from app.api.v1.referrals import router as referrals_router
 from app.api.v1.capture import router as capture_router
 from app.api.v1.subscriptions import router as subscriptions_router
@@ -31,6 +32,7 @@ api_router.include_router(health_router)
 api_router.include_router(auth_router)
 api_router.include_router(users_router)
 api_router.include_router(onboarding_router)
+api_router.include_router(privacy_router)
 api_router.include_router(consent_router)
 api_router.include_router(admin_router)
 api_router.include_router(assistant_router)

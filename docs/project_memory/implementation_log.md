@@ -1,5 +1,40 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-055 (Jira TIME-61): Privacy Review and Data Export
+
+Self-service GDPR/CCPA-style data portability + erasure (Phase 14).
+
+### Export
+- `PrivacyService.export_data(user_id)` — a `_USER_DATA` registry of (label, model, user-column)
+  drives a generic serializer that gathers the user's rows across every user-owned table (incl. the
+  differently-named FK columns: InviteCode.created_by_id, ReferralCode.owner_id,
+  ReferralConversion.referred_user_id) into a JSON bundle. OAuth `access_token`/`refresh_token` are
+  redacted; UUIDs/datetimes are JSON-safe.
+- `GET /api/v1/privacy/export` (authed) → the bundle.
+
+### Deletion
+- `PrivacyService.delete_account(user_id)` — deletes the User row so DB-level ON DELETE CASCADE
+  erases all user_id-owned rows (self-maintaining — future tables auto-covered), explicitly purges
+  analytics_events (their FK is SET NULL, which would only anonymize), and deletes the Firebase Auth
+  user best-effort (graceful when Firebase is unconfigured, e.g. tests).
+- `DELETE /api/v1/privacy/account?confirm=true` (authed) → 204; requires confirm=true (irreversible).
+
+### Test infra
+- Enabled SQLite FK enforcement in `tests/conftest.py` (`PRAGMA foreign_keys=ON` via a connect
+  listener) so ON DELETE CASCADE is exercised like Postgres. Verified the whole suite still passes
+  with it on (287 pre-existing + 7 new).
+
+### Verification
+- 7 new tests (test_privacy.py): export includes data + redacts tokens; delete erases + cascades;
+  requires confirm (400 otherwise); only affects own data; both require auth. Suite 299/299 (excl. 2
+  flaky).
+- Real-Postgres round-trip: created a user+task, exported (task present, token redacted), deleted →
+  user row gone + tasks cascaded to 0.
+
+### Deferred (Non-Goal)
+- Per-consent-type revocation cleanup (e.g. revoking health_data auto-purging sleep data) — a
+  separate follow-up noted since the consent ticket. This ticket is full-account export + deletion.
+
 ## 2026-07-05 — TIME-054 (Jira TIME-60): Error Monitoring and Analytics (backend) — starts Phase 14
 
 Phase 13 (Integrations Expansion, TIME-049–053) is complete; this is the first Phase 14 (Beta

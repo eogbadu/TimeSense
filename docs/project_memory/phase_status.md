@@ -149,6 +149,7 @@ before being trusted — do not assume unchecked = not built.
       (web/.env.local) still pending the user's apiKey/appId.
 
 ## Active Jira Tickets
+- TIME-61 (impl TIME-055, Privacy: Data Export + Account Deletion) — Done
 - TIME-60 (impl TIME-054, Error Monitoring + Analytics backend) — Done; Phase 14 begun
 - TIME-59 (impl TIME-065, Sync DB role from token claim) — Done
 - TIME-58 (impl TIME-064, Load .env from repo root) — Done

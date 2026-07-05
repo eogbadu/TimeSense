@@ -4069,6 +4069,84 @@ TICKETS = [
             p("TIME-055: Privacy Review and Data Export (or client analytics follow-up)."),
         ),
     },
+
+    {
+        "summary": "TIME-055: Privacy Review and Data Export",
+        "labels": ["phase-14", "backend", "privacy"],
+        "description": doc(
+            h2("Goal"),
+            p("Self-service privacy: let an authenticated user export all of their data as a "
+              "portable JSON bundle and permanently delete their account and all associated data. "
+              "GDPR/CCPA-style data portability + erasure. Backend endpoints under "
+              "backend/app/api/v1/privacy.py."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "PrivacyService.export_data(user_id) — gathers the user's rows across every "
+                "user-owned table into a JSON bundle (user + profile/preferences/onboarding, tasks, "
+                "meals, sleep, commute, routines, consent, subscriptions, notifications, "
+                "recommendation feedback, insights, all integrations, analytics, referrals). OAuth "
+                "tokens (access_token/refresh_token) are redacted",
+                "PrivacyService.delete_account(user_id) — deletes the user row (DB-level ON DELETE "
+                "CASCADE erases all user_id-owned rows — self-maintaining), explicitly purges "
+                "analytics_events (SET NULL would only anonymize), and deletes the Firebase Auth "
+                "user best-effort",
+                "GET /api/v1/privacy/export (authed) → the JSON bundle",
+                "DELETE /api/v1/privacy/account?confirm=true (authed) → 204; requires confirm=true "
+                "so a stray call can't wipe data; irreversible",
+                "Enable SQLite foreign-key enforcement in the test conftest (PRAGMA foreign_keys=ON) "
+                "so cascade deletion is exercised like Postgres — verified the full suite still "
+                "passes with it on",
+                "Tests: export includes data + redacts tokens; delete erases user + cascades; "
+                "requires confirm; only affects own data; both require auth",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No per-consent-type revocation cleanup (e.g. revoking health_data auto-purging "
+                "sleep data) — noted in the consent ticket; a separate follow-up. This ticket does "
+                "full-account export + deletion",
+                "No admin-initiated deletion/export of other users — self-service only (the "
+                "authenticated user's own data)",
+                "No async/emailed export job — synchronous JSON response (fine at current data "
+                "volumes)",
+                "No soft-delete/grace-period/undo — deletion is immediate and irreversible (guarded "
+                "by confirm=true)",
+                "No new tables/migrations — operates over existing schema",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/privacy_service.py (new)",
+                "backend/app/api/v1/privacy.py (new), app/api/v1/__init__.py (register)",
+                "backend/tests/conftest.py (SQLite FK enforcement)",
+                "backend/tests/test_privacy.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "GET /api/v1/privacy/export returns the user's data with OAuth tokens redacted",
+                "DELETE /api/v1/privacy/account?confirm=true erases the user and cascades to all "
+                "owned rows; without confirm returns 400 and deletes nothing",
+                "Deletion affects only the caller's data, not other users'",
+                "Both endpoints require authentication (401 otherwise)",
+                "Full backend test suite passes with FK enforcement enabled",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_privacy.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-002 (auth), the full data model (all user-owned tables), TIME-061 (real Firebase "
+              "so the Auth user can be deleted). Starts alongside TIME-054 in Phase 14."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-056: Security Review and Hardening."),
+        ),
+    },
 ]
 
 
