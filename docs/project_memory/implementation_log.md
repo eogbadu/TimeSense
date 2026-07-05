@@ -1,5 +1,53 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-044 (Jira TIME-43): iOS Widgets
+
+### Created
+- New `TimeSenseWidgetExtension` target (WidgetKit app-extension, iOS 17.0, embedded in the
+  TimeSense host app) — added programmatically via the `xcodeproj` Ruby gem (installed this
+  session with `gem install xcodeproj --user-install`) rather than hand-editing project.pbxproj,
+  since a new native target touches build phases, embed/copy-files phases, and a target
+  dependency that are error-prone to write by hand
+- `ios/TimeSense/Core/Widgets/WidgetSnapshot.swift` — Codable snapshot (usableMinutes, bestTask,
+  nextEvent, updatedAt), persisted as JSON in a shared App Group UserDefaults suite
+  (`group.com.timesense.app`); compiled into both the app and extension targets
+- `ios/TimeSenseWidget/TimeSenseWidgetBundle.swift`, `SnapshotProvider.swift`,
+  `UsableTimeWidget.swift`, `NextEventWidget.swift`, `BestNextActionWidget.swift` — the extension's
+  own sources; all three widgets share one `TimelineProvider` that only reads the snapshot
+- `ios/TimeSenseWidget/Info.plist` — physical plist (GENERATE_INFOPLIST_FILE=NO), matching Apple's
+  own widget-extension template keys (CFBundleIdentifier/Executable/Name via build-setting
+  substitution, NSExtension/NSExtensionPointIdentifier = com.apple.widgetkit-extension)
+- `ios/TimeSense/TimeSense.entitlements`, `ios/TimeSenseWidget/TimeSenseWidget.entitlements` — App
+  Group entitlement, wired via CODE_SIGN_ENTITLEMENTS on both targets
+
+### Modified
+- `ios/TimeSense/Features/Now/NowViewModel.swift` — after a successful `/now` fetch, updates
+  usableMinutes/bestTask on the shared snapshot (preserving nextEvent) and calls
+  `WidgetCenter.shared.reloadAllTimelines()`
+- `ios/TimeSense/Features/Today/TodayViewModel.swift` — after a successful `/timeline/today`
+  fetch, derives the next non-done, not-yet-ended event and updates nextEvent on the shared
+  snapshot (preserving usableMinutes/bestTask), then reloads timelines
+- `ios/TimeSense.xcodeproj/project.pbxproj` — new target, entitlements wiring, embed phase
+
+### Design notes
+- The widget extension has zero network/auth code — it only ever reads the App-Group-shared
+  snapshot the host app writes after its own authenticated fetches. This avoids duplicating
+  Firebase's in-memory-only ID token (APIClient.swift never persists it to Keychain) into a
+  second process, which would have required a new Keychain-sharing mechanism.
+- Widgets use DesignTokens.Typography/Spacing (pure value constants, safe to share) but not
+  DesignTokens.Color, since those are named-asset-catalog colors and no Assets.xcassets exists
+  in this project yet for even the host app — widgets use system semantic colors instead.
+- Timeline refresh policy re-requests at the earlier of 30 minutes or the next event's start time,
+  using the last-known snapshot in between — no push-triggered instant refresh in this ticket.
+- Environment note: this sandbox's Xcode install has no Simulator runtimes downloaded
+  (`xcrun simctl list runtimes` is empty), so scheme-based `xcodebuild build -scheme TimeSense`
+  fails with "Found no destinations" regardless of this ticket's changes. Verified instead with
+  `xcodebuild build -target TimeSense -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO` (and the same
+  for `-target TimeSenseWidgetExtension`), which compiles/links without needing a destination.
+  Both targets build cleanly with zero new warnings (one pre-existing, unrelated warning in
+  CaptureViewModel.swift). A real device/App Store build still needs a real Apple Developer Team
+  (open_questions.md) for the App Group entitlement to take effect.
+
 ## 2026-07-05 — TIME-043 (Jira TIME-42): Notification Modes and Learning Prompts
 
 ### Created

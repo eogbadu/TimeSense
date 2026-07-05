@@ -6,8 +6,8 @@
 
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
 Phase 8 (Recommendation Engine V1), and Phase 9 (Routines/Meals/Commute/Sleep-Wake) complete.
-Phase 10 (Notifications, Widgets, Ambient Surfaces) in progress (TIME-043 done; TIME-044/045
-are iOS/Android widget tickets next).
+Phase 10 (Notifications, Widgets, Ambient Surfaces) in progress (TIME-043/044 done; TIME-045
+Android widgets next).
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -41,10 +41,11 @@ that table incorrectly.)
 Backend tests: 198, all passing (see Known Problems re: 2 flaky Stripe-network tests).
 
 Mobile app shells:
-- iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`.
+- iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes.
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-044 (impl seq) → Jira TIME-43 (iOS Widgets) — **Done (this session)**
 - TIME-043 (impl seq) → Jira TIME-42 (Notification Modes and Learning Prompts) — **Done (PR #35 merged 2026-07-05)**
 - TIME-042 (impl seq) → Jira TIME-41 (Sleep/Wake Signal Integration) — **Done (PR #34 merged 2026-07-05)**
 - TIME-041 (impl seq) → Jira TIME-40 (Commute Detection) — **Done (PR #32 merged 2026-07-05)**
@@ -55,40 +56,41 @@ Mobile app shells:
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-043 (Jira TIME-42): Notification Modes and Learning Prompts
-- `notification_events` table (audit trail + once-per-day dedup); NotificationService gained
-  `maybe_send_morning_checkin`/`maybe_send_evening_checkout`/`maybe_send_learning_prompt`/
-  `maybe_send_routine_learning_prompt`, gated on the pre-existing `UserPreferences.notification_mode`
-  (gentle/balanced/active_coach — that field already existed, this ticket only added behavior)
-- Mode mapping: gentle -> evening check-out only; balanced -> both check-ins; active_coach -> both
-  check-ins + a concrete learning prompt confirming the still-default "sleep" RoutineAssumption
-  (TIME-039), gated on a 14-day placeholder Learning Mode window (reuses the existing trial length,
-  not a new number — the real data-driven learning-period-end is still deferred per decision_log.md)
-- `backend/app/workers/notification_tasks.py` — 3 Celery tasks + a UTC beat schedule
-  (8am/10am/9pm); untested in this environment (no Redis/Docker), same precedent as health_task.py
-- 9 new tests (service-layer against db_session, matching test_notifications.py's pattern); full
-  suite 198/198 (excluding 2 known-flaky Stripe tests)
-- Corrected a stale claim in this file: there is no separate "notification_preferences" table —
-  notification_mode lives on user_preferences
+TIME-044 (Jira TIME-43): iOS Widgets
+- New `TimeSenseWidgetExtension` WidgetKit target (added via the `xcodeproj` Ruby gem, installed
+  this session — `gem install xcodeproj --user-install` — rather than hand-editing project.pbxproj)
+  with three widgets: Usable Time, Next Up, Do Next
+- `WidgetSnapshot` (Codable) is the only contract between the app and the extension, persisted as
+  JSON in a shared App Group (`group.com.timesense.app`) UserDefaults suite; NowViewModel/
+  TodayViewModel each update their portion after a successful fetch and call
+  `WidgetCenter.shared.reloadAllTimelines()` — the widget extension has no network/auth code at all
+- Both targets verified with `xcodebuild -target TimeSense -sdk iphonesimulator
+  CODE_SIGNING_ALLOWED=NO` and `-target TimeSenseWidgetExtension` (same flags) — **BUILD SUCCEEDED**
+  for both, zero new warnings. Scheme-based `xcodebuild -scheme TimeSense` currently fails in this
+  environment with "Found no destinations" because no Simulator runtimes are installed
+  (`xcrun simctl list runtimes` is empty) — this is an environment gap, not a code issue; see
+  Known Problems
+- No backend changes — this ticket was entirely iOS/WidgetKit, matching its stated scope
 
-Full history of TIME-034 through TIME-042 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-043 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Phase 10 (Notifications, Widgets, Ambient Surfaces) is in progress. Next up: TIME-044 (iOS
-Widgets), which is entirely native iOS/WidgetKit work — no backend changes expected. Also see
+Phase 10 (Notifications, Widgets, Ambient Surfaces) is in progress. Next up: TIME-045 (Android
+Widgets) — analogous AppWidget work for Android, no backend changes expected. Also see
 known_issues.md — the deferred UsableTimeService timezone-awareness pass (to actually subtract
 routine/meal/commute/sleep blocks from usable time, and to make Celery beat/notification timing
 per-user-local instead of UTC-only) is unblocked and still worth scheduling soon rather than
 continuing to defer it across more tickets.
 
-## iOS HealthKit Decision Point (deferred from TIME-042)
+## iOS HealthKit Decision Point (deferred from TIME-042, still open)
 TIME-042 only built the backend contract (ingest a wake_time signal, gate on health_data consent,
 trigger a morning replan suggestion). The actual iOS-side HealthKit read integration
 (`ios/.../HealthService.swift`, `HKHealthStore` authorization request, Info.plist usage-description
-strings, calling `POST /api/v1/sleep/events` after reading sleep analysis samples) was not built —
-it needs real device/Xcode testing this environment can't do, and touches Apple's health-data
-entitlement request flow, which is worth a deliberate decision (own ticket vs. folding into an iOS
-tranche) rather than bundling into the backend ticket. Flag to the user before scoping that work.
+strings, calling `POST /api/v1/sleep/events` after reading sleep analysis samples) was not built in
+TIME-044 either — it needs a real device with HealthKit entitlements/authorization UI, which is a
+different kind of iOS work than TIME-044's WidgetKit target (no HealthKit involved there). Still
+worth a deliberate decision (own ticket vs. folding into a later iOS tranche) — flag to the user
+before scoping that work.
 
 ## Important Decisions to Preserve
 - Firebase added via Xcode UI (File > Add Package Dependencies), NOT in pbxproj — `#if canImport` guards ensure CLI builds work

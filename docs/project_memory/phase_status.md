@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 10: Notifications, Widgets, Ambient Surfaces — TIME-043 done; TIME-044/045 next.
+Phase 10: Notifications, Widgets, Ambient Surfaces — TIME-043/044 done; TIME-045 next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -66,12 +66,16 @@ before being trusted — do not assume unchecked = not built.
       NotificationService gained mode-gated maybe_send_morning_checkin/evening_checkout/
       learning_prompt methods (gentle/balanced/active_coach), a concrete routine-confirmation
       learning prompt, and a Celery beat schedule (untested — no Redis/Docker in this environment).
-- [ ] TIME-044: iOS Widgets
+- [x] TIME-044 (Jira TIME-43): iOS Widgets — TimeSenseWidgetExtension (WidgetKit) with Usable Time/
+      Next Up/Do Next widgets, backed by an App-Group-shared snapshot (no independent network/auth
+      in the extension). Both targets verified with `xcodebuild -target ... -sdk iphonesimulator`
+      (no Simulator runtimes installed in this environment, so scheme-based builds don't resolve a
+      destination — see known_issues.md). Real device build still needs a real Apple Developer Team.
 - [ ] TIME-045: Android Widgets
 
 ## Active Jira Tickets
-- TIME-42 (impl TIME-043, Notification Modes and Learning Prompts) — Done
-- Next: TIME-044 (iOS Widgets)
+- TIME-43 (impl TIME-044, iOS Widgets) — Done
+- Next: TIME-045 (Android Widgets)
 
 ## Blockers
 - None

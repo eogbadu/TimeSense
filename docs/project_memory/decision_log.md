@@ -136,6 +136,14 @@
   Reason: That data-driven behavior was already logged as a deferred decision (2026-07-03) and depends on signal/data-quality thresholds that don't exist yet in the scorer/recommendation engine. Building a second, ad hoc version of it here would conflict with that future implementation; reusing the trial length is a defensible placeholder that's easy to find and replace later.
   Date: 2026-07-05
 
+- Decision: TIME-044's iOS widgets read a shared App-Group snapshot the host app writes; the widget extension has no network or auth code of its own
+  Reason: `APIClient.swift` only ever holds the Firebase ID token in memory (never persisted to Keychain), refreshed via Firebase's auth-state listener while the app process is alive. A widget extension is a separate process with no access to that in-memory token, so giving it independent network calls would require inventing a second, Keychain-shared token-refresh path. Writing a small Codable snapshot to a shared UserDefaults suite after the app's own authenticated fetches — and calling `WidgetCenter.shared.reloadAllTimelines()` — is the standard WidgetKit pattern and avoids that duplication entirely.
+  Date: 2026-07-05
+
+- Decision: The new `TimeSenseWidgetExtension` target was added by scripting the `xcodeproj` Ruby gem (`gem install xcodeproj --user-install`) rather than hand-editing `project.pbxproj` or relying on the Xcode GUI
+  Reason: A new native target touches build phases, an embed/copy-files phase, a target dependency, and per-configuration build settings across two targets — order-sensitive, easy-to-typo pbxproj surgery that's much safer done through a library that understands the file format than via text edits, and this environment has no way to drive the Xcode GUI's "New Target" wizard. The one-off wiring script was deleted after running it once; the resulting `project.pbxproj` is the artifact that matters going forward.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration
