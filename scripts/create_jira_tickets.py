@@ -3099,6 +3099,108 @@ TICKETS = [
             p("TIME-050: Microsoft Teams Integration"),
         ),
     },
+
+    {
+        "summary": "TIME-050: Microsoft Teams Integration",
+        "labels": ["phase-13", "backend", "integration"],
+        "description": doc(
+            h2("Goal"),
+            p("Lightweight action-item detection from Microsoft Teams, mirroring the Slack "
+              "integration (TIME-049): read recent Teams chat messages via Microsoft Graph, "
+              "LLM-detect which are genuine action items, and surface each as a pending suggestion "
+              "the user must explicitly approve before it becomes a Task. Reuses the "
+              "MessageSourceProvider abstraction and — as the second message source — extracts the "
+              "LLM action-item detection into a shared, source-neutral service so both Slack and "
+              "Teams share one copy (rule of three: generalize the detection now, keep the "
+              "per-source models/service parallel until a third source justifies unifying them)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Extract SlackDetectionService's LLM logic into a shared source-neutral "
+                "ActionItemDetectionService (app/services/action_item_detection.py); Slack keeps a "
+                "backward-compatible SlackDetectionService alias so test_slack.py stays green",
+                "TeamsMessageSource(MessageSourceProvider) (app/integrations/teams_source.py) "
+                "reading Microsoft Graph /chats/{id}/messages; strips the HTML body to plain text",
+                "TeamsIntegration model (user_id, access_token, tenant_id, is_active) + "
+                "TeamsActionItem model (user_id, conversation_id, message_id, source_text, "
+                "detected_title/priority/estimated_minutes, status, created_task_id) — parallel to "
+                "the Slack tables, following the repo's per-feature-table precedent",
+                "Alembic migration for teams_integrations + teams_action_items",
+                "TeamsRepository (integration + action-item repos), schemas, TeamsService "
+                "(connect/disconnect/scan/confirm/reject using the shared detection service), and "
+                "TeamsNotConnected exception — mirroring SlackService exactly",
+                "POST /api/v1/teams/connect (Premium), DELETE /api/v1/teams/disconnect, "
+                "POST /api/v1/teams/scan (Premium — reads + detects, creates pending items only), "
+                "GET /api/v1/teams/pending, POST /api/v1/teams/actions/{id}/confirm (approval gate "
+                "→ Task, source=teams), POST /api/v1/teams/actions/{id}/reject",
+                "Add 'teams' to the TaskSource literal",
+                "Tests: 12+ mirroring test_slack.py (detection reuse, scan creates pending not "
+                "tasks, confirm creates a Task source=teams, reject, Premium gate, isolation)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No real Microsoft OAuth flow / Azure AD app — MICROSOFT_CLIENT_ID/SECRET are empty "
+                "placeholders in .env (present since the Phase-6 Outlook calendar scaffold). The "
+                "mobile client does OAuth and POSTs the Graph token to /teams/connect, same as "
+                "/slack/connect and /calendar/connect — no server-side OAuth callback here",
+                "No Teams change-notifications / webhooks (Graph subscriptions) — scanning is "
+                "user/app-initiated via POST /teams/scan, not push",
+                "No writing back to Teams — read-only, so the only approval gate needed is the "
+                "existing task-creation one",
+                "No unification of the Slack + Teams tables into a single source-tagged "
+                "message-source schema — deferred until/unless a third source (Notion messages, "
+                "etc.) makes the duplication clearly worth a refactor migration (rule of three)",
+                "No token encryption beyond how CalendarIntegration/SlackIntegration already store "
+                "tokens (plain Text) — same cross-integration deferral noted in known_issues.md",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/action_item_detection.py (new, shared)",
+                "backend/app/services/slack_service.py (use shared detection; keep alias)",
+                "backend/app/integrations/teams_source.py (new)",
+                "backend/app/models/teams.py (new)",
+                "backend/migrations/versions/*_add_teams_integration.py (new)",
+                "backend/app/repositories/teams_repository.py (new)",
+                "backend/app/schemas/teams.py (new)",
+                "backend/app/services/teams_service.py (new)",
+                "backend/app/api/v1/teams.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/app/models/__init__.py (register models)",
+                "backend/app/schemas/task.py (add 'teams' to TaskSource)",
+                "backend/tests/test_teams.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/teams/scan without Premium returns 403",
+                "scan creates pending TeamsActionItem rows only for LLM-flagged action items, and "
+                "creates zero Tasks",
+                "POST /api/v1/teams/actions/{id}/confirm creates a Task (source=teams) and links "
+                "created_task_id; a second confirm is rejected",
+                "reject sets status=rejected and creates no Task",
+                "LLM failure during scan degrades to detecting nothing",
+                "One user cannot see or confirm/reject another user's Teams action items",
+                "Slack tests still pass after the shared-detection extraction",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_teams.py tests/test_slack.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-049 (Slack integration + MessageSourceProvider abstraction this reuses), "
+              "TIME-037 (LLM Gateway), TIME-006/033 (Task model), TIME-003 (Premium gate)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-051: Notion Integration"),
+        ),
+    },
 ]
 
 

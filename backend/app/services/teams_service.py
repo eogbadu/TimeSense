@@ -1,9 +1,9 @@
 """
-Slack integration service.
+Microsoft Teams integration service. Mirrors SlackService.
 
-RULE: Detected action items NEVER become Tasks automatically. scan_channel() only creates
-      pending SlackActionItem rows; confirm() is the single approval-gated path that creates a
-      Task — mirroring the calendar-write approval pattern (request → approve).
+RULE: Detected action items NEVER become Tasks automatically. scan_conversation() only creates
+      pending TeamsActionItem rows; confirm() is the single approval-gated path that creates a
+      Task — same approval gate as the Slack and calendar-write flows.
 """
 from __future__ import annotations
 
@@ -12,63 +12,58 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.message_source_base import MessageSourceProvider
-from app.integrations.slack_source import SlackMessageSource
+from app.integrations.teams_source import TeamsMessageSource
 from app.llm.gateway import LLMGateway
-from app.models.slack import SlackActionItem, SlackIntegration
-from app.repositories.slack_repository import (
-    SlackActionItemRepository,
-    SlackIntegrationRepository,
-)
+from app.models.teams import TeamsActionItem, TeamsIntegration
 from app.repositories.task_repository import TaskRepository
-from app.services.action_item_detection import ActionItemDetectionService, Detection
-
-# Backward-compatible aliases: detection logic moved to the shared, source-neutral module in
-# TIME-050. Kept re-exported here so existing imports (tests, callers) keep working.
-SlackDetectionService = ActionItemDetectionService
-__all__ = ["SlackService", "SlackNotConnected", "SlackDetectionService", "Detection"]
+from app.repositories.teams_repository import (
+    TeamsActionItemRepository,
+    TeamsIntegrationRepository,
+)
+from app.services.action_item_detection import ActionItemDetectionService
 
 _PROVIDERS: dict[str, MessageSourceProvider] = {
-    "slack": SlackMessageSource(),
+    "teams": TeamsMessageSource(),
 }
 
 
-class SlackNotConnected(Exception):
-    """Raised when scanning is attempted without an active Slack integration."""
+class TeamsNotConnected(Exception):
+    """Raised when scanning is attempted without an active Teams integration."""
 
 
-class SlackService:
+class TeamsService:
     def __init__(self, db: AsyncSession, gateway: LLMGateway) -> None:
         self.db = db
-        self.integration_repo = SlackIntegrationRepository(db)
-        self.item_repo = SlackActionItemRepository(db)
+        self.integration_repo = TeamsIntegrationRepository(db)
+        self.item_repo = TeamsActionItemRepository(db)
         self.task_repo = TaskRepository(db)
-        self.detector = SlackDetectionService(gateway)
+        self.detector = ActionItemDetectionService(gateway)
 
     # ── Token management ──────────────────────────────────────────────────────
 
     async def connect(
-        self, user_id: uuid.UUID, access_token: str, team_id: str | None = None
-    ) -> SlackIntegration:
-        return await self.integration_repo.upsert(user_id, access_token, team_id)
+        self, user_id: uuid.UUID, access_token: str, tenant_id: str | None = None
+    ) -> TeamsIntegration:
+        return await self.integration_repo.upsert(user_id, access_token, tenant_id)
 
     async def disconnect(self, user_id: uuid.UUID) -> bool:
         return await self.integration_repo.deactivate(user_id)
 
     # ── Scan (detect only — never creates Tasks) ──────────────────────────────
 
-    async def scan_channel(
-        self, user_id: uuid.UUID, channel: str, limit: int = 50
-    ) -> tuple[int, list[SlackActionItem]]:
+    async def scan_conversation(
+        self, user_id: uuid.UUID, conversation_id: str, limit: int = 50
+    ) -> tuple[int, list[TeamsActionItem]]:
         integration = await self.integration_repo.get_active(user_id)
         if integration is None:
-            raise SlackNotConnected("Slack is not connected.")
+            raise TeamsNotConnected("Teams is not connected.")
 
-        provider = _PROVIDERS["slack"]
+        provider = _PROVIDERS["teams"]
         messages = await provider.list_recent_messages(
-            access_token=integration.access_token, channel=channel, limit=limit
+            access_token=integration.access_token, channel=conversation_id, limit=limit
         )
 
-        detected: list[SlackActionItem] = []
+        detected: list[TeamsActionItem] = []
         for message in messages:
             if await self.item_repo.exists_for_message(user_id, message.message_id):
                 continue
@@ -77,8 +72,8 @@ class SlackService:
                 continue
             item = await self.item_repo.create(
                 user_id=user_id,
-                channel=message.channel,
-                message_ts=message.message_id,
+                conversation_id=message.channel,
+                message_id=message.message_id,
                 source_text=message.text,
                 detected_title=result.title,
                 detected_priority=result.priority,
@@ -89,11 +84,11 @@ class SlackService:
 
     # ── Approval gate ─────────────────────────────────────────────────────────
 
-    async def list_pending(self, user_id: uuid.UUID) -> list[SlackActionItem]:
+    async def list_pending(self, user_id: uuid.UUID) -> list[TeamsActionItem]:
         return await self.item_repo.list_pending(user_id)
 
-    async def confirm(self, user_id: uuid.UUID, item_id: uuid.UUID) -> SlackActionItem:
-        """Create a real Task from a pending item. The only path that turns Slack into a Task.
+    async def confirm(self, user_id: uuid.UUID, item_id: uuid.UUID) -> TeamsActionItem:
+        """Create a real Task from a pending item. The only path that turns Teams into a Task.
         Raises ValueError if not found or already handled."""
         item = await self.item_repo.get(item_id, user_id)
         if item is None:
@@ -106,7 +101,7 @@ class SlackService:
             title=item.detected_title,
             priority=item.detected_priority,
             estimated_minutes=item.detected_estimated_minutes,
-            source="slack",
+            source="teams",
             raw_input=item.source_text,
         )
         item.status = "confirmed"

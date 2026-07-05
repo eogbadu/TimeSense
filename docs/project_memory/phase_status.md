@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 13: Integrations Expansion — TIME-049 done; TIME-050 (Teams) next.
+Phase 13: Integrations Expansion — TIME-049/050 done; TIME-051 (Notion) next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -103,11 +103,15 @@ before being trusted — do not assume unchecked = not built.
       scan creates *pending* suggestions (never Tasks) and confirm is the approval gate that
       creates a Task (source=slack). Premium-gated scan. No real Slack app (token posted to
       /connect like calendar). 14 new tests.
-- [ ] TIME-050: Microsoft Teams Integration (reuses the same MessageSourceProvider abstraction)
+- [x] TIME-050 (Jira TIME-49): Microsoft Teams Integration — TeamsMessageSource (MS Graph) reusing
+      the MessageSourceProvider abstraction; teams_integrations/teams_action_items tables; same
+      scan→pending→confirm approval gate as Slack (Task source=teams). Extracted the LLM detection
+      into a shared source-neutral ActionItemDetectionService (Slack keeps a compat alias). 12 new
+      tests; Slack's 14 still green.
 
 ## Active Jira Tickets
-- TIME-48 (impl TIME-049, Slack Integration) — Done
-- Next: TIME-050 (Microsoft Teams Integration)
+- TIME-49 (impl TIME-050, Microsoft Teams Integration) — Done
+- Next: TIME-051 (Notion Integration)
 
 ## Blockers
 - None

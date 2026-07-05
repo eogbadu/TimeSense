@@ -188,6 +188,10 @@
   Reason: TIME-050 (Teams) is the very next ticket and is the same shape — read messages, detect action items, approve into tasks. Building the read-only-chat-source ABC now (mirroring the existing CalendarProvider ABC) means Teams is a new provider class + registry entry, not a re-architecture. Matches the integration-provider-pattern skill's "core logic calls the interface, never a provider directly."
   Date: 2026-07-05
 
+- Decision: TIME-050 shared only the LLM detection (extracted ActionItemDetectionService) between Slack and Teams; the models/repos/service/schemas/API stay parallel per-source, NOT unified into one source-tagged message-source schema
+  Reason: Rule of three — Slack was the first message source, Teams is the second, so one duplication is acceptable; a premature unification would mean a churny migration of the just-merged Slack tables for speculative future reuse. The genuinely shared piece (a single copy of the action-item-detection prompt/logic) was worth extracting immediately since two divergent copies of an LLM prompt is a real maintenance hazard. The repo's own precedent (commute/meal/sleep are similarly parallel per-feature tables) supports parallel-until-proven. Unify on the third message-source integration if the shape holds.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration
