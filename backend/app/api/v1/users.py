@@ -24,7 +24,9 @@ async def get_me(
     current_user: CurrentUser,
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
-    user, _ = await service.get_or_create_user(current_user.uid, current_user.email or "")
+    user, _ = await service.get_or_create_user(
+        current_user.uid, current_user.email or "", role=current_user.role
+    )
     return UserResponse.model_validate(user)
 
 

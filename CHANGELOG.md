@@ -10,6 +10,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-05] TIME-065: Sync DB user role from the Firebase token claim — `/users/me` now mirrors the claim into the DB `role`, so granting admin is one step (set the claim) instead of also updating the DB row; the claim is the single source of truth
 - [2026-07-05] TIME-064: Load `.env` from the repo root regardless of working directory — `cd backend && uvicorn` previously loaded no env (looked for backend/.env), silently disabling real Firebase auth at runtime; config.py now resolves the root .env by absolute path
 - [2026-07-05] TIME-063: Fix Alembic migration ordering — recommendation_feedback (FK→tasks) and tasks were parallel sibling branches, so a fresh `alembic upgrade head` could run feedback before tasks and fail; repointed feedback to depend on the tasks migration. A fresh Postgres now migrates end-to-end (tests missed it because they build schema via create_all)
 

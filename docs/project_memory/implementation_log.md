@@ -1,5 +1,28 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-065 (Jira TIME-59): Sync DB user role from the Firebase token claim
+
+### Why
+Authorization had two independent role sources: backend admin endpoints gate on the Firebase custom
+claim (require_admin → token role), but GET /users/me returns the DB user.role and the web dashboard
+gates on that. Granting admin took two steps (set the claim AND update the DB row) — surfaced when
+setting up the first admin.
+
+### Change
+- `UserService.get_or_create_user` gains an optional `role` param: on an existing user, if the
+  passed role differs from the stored one, update it (persisted by the request's session commit —
+  get_db commits on success); on create, pass it through to `repo.create` (which already accepted
+  `role`). The claim is the source of truth — a cache refresh, including downgrades if the claim is
+  removed.
+- `GET /users/me` passes `current_user.role` (the token claim) into get_or_create_user, so the DB
+  role mirrors the claim on the call the web makes.
+- require_admin unchanged (still reads the token claim; the DB now just mirrors it).
+
+### Tests / Verification
+- 2 new tests in test_users.py: a fresh user with an admin claim returns role=admin from /users/me;
+  granting then removing the claim downgrades the DB role. Full suite 283/283 (excl. 2 flaky).
+- Now granting admin is one step (set the Firebase claim); the DB syncs on next /users/me.
+
 ## 2026-07-05 — TIME-064 (Jira TIME-58): Load .env from repo root regardless of CWD
 
 ### Bug
