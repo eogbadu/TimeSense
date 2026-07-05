@@ -1,5 +1,25 @@
 # Change Summary
 
+## 2026-07-05 — TIME-050 (Jira TIME-49) Microsoft Teams Integration
+
+**What changed:**
+- TeamsMessageSource (Microsoft Graph /chats/{id}/messages) reusing the MessageSourceProvider ABC
+- teams_integrations + teams_action_items tables; TeamsService (connect/disconnect/scan/confirm/
+  reject) mirroring SlackService, with the same approval gate (scan → pending; confirm → Task)
+- POST /api/v1/teams/connect, /disconnect, /scan (Premium-gated), /pending, /actions/{id}/confirm,
+  /actions/{id}/reject
+- Extracted the LLM action-item detection into a shared source-neutral ActionItemDetectionService
+  (Slack keeps a SlackDetectionService alias for compat)
+- "teams" added to the TaskSource literal
+
+**What did not change:**
+- No auto-created tasks — scan only creates pending suggestions; confirm is the approval gate
+- No real Azure AD app / OAuth callback / Graph change-notifications — token posted to /connect
+- No unified Slack+Teams schema (deferred to a 3rd source), no token encryption (plain Text)
+
+**Next:**
+- TIME-051: Notion Integration
+
 ## 2026-07-05 — TIME-049 (Jira TIME-48) Slack Integration
 
 **What changed:**

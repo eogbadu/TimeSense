@@ -7,8 +7,8 @@
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
 Phase 8 (Recommendation Engine V1), Phase 9 (Routines/Meals/Commute/Sleep-Wake), Phase 10
 (Notifications, Widgets, Ambient Surfaces), Phase 11 (Insights and Learning Summary), and Phase 12
-(Admin Dashboard) complete. Phase 13 (Integrations Expansion) in progress — TIME-049 (Slack) done,
-TIME-050 (Teams) next.
+(Admin Dashboard) complete. Phase 13 (Integrations Expansion) in progress — TIME-049 (Slack) and
+TIME-050 (Teams) done, TIME-051 (Notion) next.
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -36,6 +36,9 @@ Backend API endpoints implemented:
   `scan` (Premium — reads messages, LLM-detects action items, creates *pending* suggestions only),
   `GET /api/v1/slack/pending`, `POST /api/v1/slack/actions/{id}/confirm` (approval gate — creates a
   Task, source=slack), `.../reject` (TIME-049)
+- `POST /api/v1/teams/*` — same shape as slack (connect/disconnect/scan/pending/confirm/reject),
+  reads MS Teams via Microsoft Graph, Task source=teams (TIME-050). Slack + Teams share one
+  source-neutral `ActionItemDetectionService`
 - No new endpoints for TIME-043 — `notification_mode` (gentle/balanced/active_coach) already had
   read/write via `PATCH /api/v1/users/me/preferences`; TIME-043 only added the behavior that acts
   on it (NotificationService.maybe_send_morning_checkin/evening_checkout/learning_prompt), driven
@@ -45,11 +48,11 @@ Database tables: users, profiles, preferences, personalities, onboarding_states,
 subscription_records, replan_requests, notifications, notification_events, tasks,
 internal_reminders, recommendation_feedback, routine_assumptions, meal_events, commute_events,
 sleep_wake_events, weekly_insights, calendar_integrations, pending_calendar_actions,
-slack_integrations, slack_action_items. (Correction: there is no separate "notification_preferences"
-table — the notification_mode field lives directly on user_preferences; a prior version of this
-file listed that table incorrectly.)
+slack_integrations, slack_action_items, teams_integrations, teams_action_items. (Correction: there
+is no separate "notification_preferences" table — the notification_mode field lives directly on
+user_preferences; a prior version of this file listed that table incorrectly.)
 
-Backend tests: 240, all passing (see Known Problems re: 2 flaky Stripe-network tests).
+Backend tests: 252, all passing (see Known Problems re: 2 flaky Stripe-network tests).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes. Insights tab (TIME-046) now shows a real weekly summary + stats grid behind the Premium gate.
@@ -62,6 +65,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-050 (impl seq) → Jira TIME-49 (Microsoft Teams Integration) — **Done (this session)**
 - TIME-049 (impl seq) → Jira TIME-48 (Slack Integration) — **Done (PR #41 merged 2026-07-05)**
 - TIME-048 (impl seq) → Jira TIME-47 (Admin Dashboard Foundation, Web) — **Done (PR #40 merged 2026-07-05)**
 - TIME-047 (impl seq) → Jira TIME-46 (Learned Assumptions Settings) — **Done (PR #39 merged 2026-07-05)**
@@ -78,34 +82,34 @@ both clean.
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-049 (Jira TIME-48): Slack Integration
-- `MessageSourceProvider` abstraction (read-only chat source, for Slack now + Teams later) +
-  `SlackMessageSource` reading Slack's conversations.history API
-- `slack_integrations` (token storage) + `slack_action_items` (approval queue) tables; SlackService
-  with connect/disconnect/scan/confirm/reject
-- The approval gate is the whole point: `scan_channel()` reads messages, LLM-detects action items,
-  and creates *pending* SlackActionItem rows — NEVER Tasks. `confirm()` is the single path that
-  creates a Task (source="slack", links created_task_id). Mirrors the calendar request→approve
-  pattern exactly, satisfying "never auto-create from external signals without approval"
-- `SlackDetectionService` split out for isolated LLM unit testing; degrades to "not an action item"
-  on any LLM failure (same fallback discipline as CaptureService)
-- No real Slack app (empty placeholder creds) — mobile client posts the OAuth token to
-  /slack/connect like /calendar/connect; no server-side OAuth callback / Events API in this ticket
-- Followed the repo's flat integration-file convention (message_source_base.py / slack_source.py),
-  not the skill's idealized `slack/` subdir
-- 14 new tests; full suite 240/240 (excluding 2 known-flaky Stripe tests). Single alembic head,
-  both tables compile offline
+TIME-050 (Jira TIME-49): Microsoft Teams Integration
+- `TeamsMessageSource(MessageSourceProvider)` reading MS Graph /chats/{id}/messages (HTML body
+  stripped to plain text); reuses the abstraction TIME-049 built
+- `teams_integrations` + `teams_action_items` tables; `TeamsService`
+  (connect/disconnect/scan_conversation/confirm/reject) mirroring SlackService, same approval gate
+  (scan → *pending* items only; confirm → Task, source="teams")
+- Extracted the LLM action-item detection into a shared source-neutral `ActionItemDetectionService`
+  (`app/services/action_item_detection.py`); `slack_service.py` now imports it and keeps
+  `SlackDetectionService` as a backward-compat alias so the merged test_slack.py stays green
+- Kept per-source parallel models/service (rule of three) rather than unifying Slack+Teams into one
+  source-tagged schema — deferred to a 3rd source to avoid churning just-merged Slack tables
+- No real Azure AD app (empty MICROSOFT_CLIENT_ID/SECRET) — token posted to /teams/connect like
+  /slack/connect; no server-side OAuth callback / Graph change-notifications
+- 12 new Teams tests; Slack's 14 still green; full suite 252/252 (excluding 2 known-flaky Stripe
+  tests). Single alembic head, both tables compile offline
 
-Full history of TIME-034 through TIME-048 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-049 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Phase 13 (Integrations Expansion) is in progress. Next up: TIME-050 (Microsoft Teams Integration) —
-should reuse the `MessageSourceProvider` abstraction TIME-049 just added, adding a `TeamsMessageSource`
-+ the same detect/confirm approval flow (likely a shared or parallel action-item queue). Also see
-known_issues.md — the deferred UsableTimeService timezone-awareness pass (to actually subtract
-routine/meal/commute/sleep blocks from usable time, and to make Celery beat/notification timing
-per-user-local instead of UTC-only) is unblocked and still worth scheduling soon rather than
-continuing to defer it across more tickets.
+Phase 13 (Integrations Expansion) is in progress. Next up: TIME-051 (Notion Integration) — Goal is
+"lightweight task/context extraction from Notion." Note: Notion is a docs/pages source, not a chat
+message stream, so the `MessageSourceProvider` abstraction may not fit as cleanly as it did for
+Slack/Teams — decide whether Notion reuses ActionItemDetectionService over page/database content or
+warrants a different shape. If a 3rd message-source-like integration does emerge, that's the trigger
+to unify the Slack+Teams parallel tables into one source-tagged schema (see decision_log.md). Also
+see known_issues.md — the deferred UsableTimeService timezone-awareness pass (subtract routine/meal/
+commute/sleep from usable time + per-user-local Celery timing) is unblocked and still worth
+scheduling soon rather than continuing to defer it across more tickets.
 
 ## iOS HealthKit Decision Point (deferred from TIME-042, still open)
 TIME-042 only built the backend contract (ingest a wake_time signal, gate on health_data consent,

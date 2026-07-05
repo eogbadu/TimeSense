@@ -1,5 +1,46 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-050 (Jira TIME-49): Microsoft Teams Integration
+
+### Created
+- `backend/app/services/action_item_detection.py` — shared, source-neutral
+  ActionItemDetectionService (extracted from SlackDetectionService); one copy of the LLM
+  action-item-detection prompt now serves both Slack and Teams
+- `backend/app/integrations/teams_source.py` — TeamsMessageSource(MessageSourceProvider) reading
+  Microsoft Graph /chats/{id}/messages, stripping the HTML message body to plain text
+- `backend/app/models/teams.py` — TeamsIntegration (token) + TeamsActionItem (approval queue),
+  parallel to the Slack models
+- `backend/migrations/versions/o5p6q7r8s9t0_add_teams_integration.py` — both tables
+- `backend/app/repositories/teams_repository.py`, `schemas/teams.py`, `services/teams_service.py`
+  (connect/disconnect/scan_conversation/confirm/reject + TeamsNotConnected), `api/v1/teams.py`
+- `backend/tests/test_teams.py` — 12 tests mirroring test_slack.py
+
+### Modified
+- `backend/app/services/slack_service.py` — now imports the shared ActionItemDetectionService;
+  keeps `SlackDetectionService` as a backward-compatible alias + re-exports Detection, so the
+  merged test_slack.py imports stay green (verified: 14/14 still pass)
+- `backend/app/api/v1/__init__.py`, `backend/app/models/__init__.py` — registered router/models
+- `backend/app/schemas/task.py` — added "teams" to the TaskSource literal
+
+### Design notes
+- Teams is the same shape as Slack, so per the rule of three I generalized the one genuinely
+  shared piece (LLM detection) into ActionItemDetectionService and kept the per-source
+  models/repos/service/schemas/api parallel — matching the repo's own per-feature-table precedent
+  (commute/meal/sleep are similarly parallel). Unifying the Slack+Teams tables into one
+  source-tagged message-source schema is deliberately deferred to a third source (decision_log.md +
+  the ticket's Non-Goals) to avoid a churny migration of just-merged Slack tables.
+- Same approval gate as Slack: scan_conversation() creates *pending* TeamsActionItem rows only;
+  confirm() is the single path that creates a Task (source="teams", links created_task_id).
+- Reuses the MessageSourceProvider ABC built in TIME-049 — TeamsMessageSource is a new provider,
+  not a re-architecture.
+- No real Azure AD app: MICROSOFT_CLIENT_ID/SECRET are empty placeholders (present since the
+  Phase-6 Outlook scaffold). Mobile client POSTs the Graph token to /teams/connect like
+  /slack/connect — no server-side OAuth callback / Graph change-notifications in this ticket.
+- Token stored as plain Text, matching Slack/Calendar — cross-integration encryption still the
+  same deferred item (known_issues.md).
+- 12 new tests (Teams) + Slack's 14 still green; full suite 247/247 (excluding 2 known-flaky Stripe
+  tests). Single alembic head; both new tables compile offline.
+
 ## 2026-07-05 — TIME-049 (Jira TIME-48): Slack Integration
 
 ### Created
