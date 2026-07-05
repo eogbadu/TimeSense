@@ -1,5 +1,15 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-078 (Jira TIME-76): Lazy-load 'Why this?' on tap
+
+TIME-077 generated the LLM reason on every /now load (~1-2s + a cost each load, though "Why this?"
+is collapsed by default). Made /now fast again: extracted _ranked_candidates(); /now returns best +
+alternatives + usable_minutes with NO LLM call (reason stays null). New GET /now/why?task_id=
+recomputes the ranking, finds the task + its alternatives, and returns explain_choice (404 if not
+currently recommended). iOS: WhyThis self-loads on first expand — calls fetchWhy(taskId) → GET
+/now/why, shows a "Thinking…" spinner, caches the result; collapse/re-expand doesn't refetch.
+Backend 314 passing (2 new /now/why tests); iOS BUILD SUCCEEDED.
+
 ## 2026-07-05 — TIME-077 (Jira TIME-75): Now alternatives + richer LLM 'Why this?'
 
 The 'Why this?' just said "best move right now". Now shows the best hero PLUS two alternatives, and

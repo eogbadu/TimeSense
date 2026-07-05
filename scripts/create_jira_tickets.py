@@ -5034,6 +5034,63 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-078: Lazy-load 'Why this?' on tap (keep Now instant)",
+        "labels": ["ios", "backend", "performance"],
+        "description": doc(
+            h2("Goal"),
+            p("TIME-077 generated the LLM reason on every /now load (~1-2s latency + a cost per "
+              "load, even though 'Why this?' is collapsed by default). Make /now fast again (no LLM) "
+              "and fetch the explanation lazily only when the user taps 'Why this?'."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend: extract shared _ranked_candidates(); /now returns best + alternatives + "
+                "usable_minutes with NO LLM call (reason stays null); new GET /now/why?task_id= "
+                "recomputes the ranking, finds the task + its alternatives, and returns the "
+                "explain_choice reason (404 if the task isn't currently recommended)",
+                "iOS: WhyThis self-loads — on first expand it calls the loader (GET /now/why), shows "
+                "a 'Thinking…' spinner, caches the result; BestTaskCard passes a loadWhy closure; "
+                "NowViewModel.fetchWhy(taskId)",
+                "Tests: /now has null reason + /now/why returns a reason; unknown task → 404",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No caching of the reason server-side (recomputed per tap; cheap enough and always "
+                "current)",
+                "No prefetch — the call happens on tap only",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/api/v1/now.py, backend/tests/test_now.py",
+                "ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "/now makes no LLM call (fast); reason is null",
+                "Tapping 'Why this?' fetches + shows the reason with a brief 'Thinking…' state; "
+                "collapsing/re-expanding doesn't refetch",
+                "iOS build + backend suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_now.py -v\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-077 (alternatives + LLM why), RecommendationService.explain_choice."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 

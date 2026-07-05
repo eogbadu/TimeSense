@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-05] TIME-078: 'Why this?' now loads lazily on tap (new GET /now/why) so the Now screen stays instant — the LLM explanation is only fetched when you ask for it
 - [2026-07-05] TIME-077: Now shows two alternative options and a real 'Why this?' — the LLM explains why the best task beats the alternatives given the time of day, likely energy, free time, and deadlines (deterministic fallback when the LLM is unavailable)
 - [2026-07-05] TIME-076: Settings rows now work — Profile, Subscription, Notifications, Appearance (light/dark), Privacy, Calendar, About are real screens; added Sign Out and a working Delete My Data (erases account + signs out)
 - [2026-07-05] TIME-075: Now hero card has a 'Why this?' explanation (hidden by default, expands on tap) — e.g. "Recommended because it's due today and it fits your 240 free minutes."
