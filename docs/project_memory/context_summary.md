@@ -66,7 +66,7 @@ notion_import_items, analytics_events. (Correction: there is no separate "notifi
 notification_mode field lives directly on user_preferences; a prior version of this file listed
 that table incorrectly.)
 
-Backend tests: 318, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
+Backend tests: 314, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
 verifies REAL Firebase ID tokens as of TIME-061 (real service account for project timesense-eb7ec
 in .env; tests still mock verify_id_token and don't run the app lifespan). config.py loads the
 repo-root .env from any CWD (TIME-064); /users/me syncs the DB role from the token claim (TIME-065).
@@ -89,6 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-078 (net-new) → Jira TIME-76 (Lazy-load 'Why this?' on tap) — **Done (this session)**
 - TIME-077 (net-new) → Jira TIME-75 (Now alternatives + richer LLM 'Why this?') — **Done (PR #70 merged 2026-07-05)**
 - TIME-076 (net-new) → Jira TIME-74 (Make Settings rows functional) — **Done (PR #69 merged 2026-07-05)**
 - TIME-075 (net-new) → Jira TIME-73 ('Why this?' reasoning on Now) — **Done (PR #68 merged 2026-07-05)**

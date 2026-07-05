@@ -84,6 +84,13 @@ final class NowViewModel: ObservableObject {
         }
     }
 
+    /// Lazily fetch the "Why this?" explanation for a task (only when the user taps to expand).
+    func fetchWhy(taskId: String) async -> String? {
+        struct WhyResp: Decodable { let reason: String }
+        let resp: WhyResp? = try? await APIClient.shared.get("/api/v1/now/why?task_id=\(taskId)")
+        return resp?.reason
+    }
+
     /// Snooze the current best task for a few hours; it drops out of Now until then.
     func snooze(taskId: String, hours: Int = 3) async {
         let until = ISO8601DateFormatter().string(from: Date().addingTimeInterval(Double(hours) * 3600))

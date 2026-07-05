@@ -152,8 +152,8 @@ async def test_now_excludes_not_now_task(client, db_session):
 
 
 @pytest.mark.anyio
-async def test_now_includes_reason(client, db_session):
-    """/now returns a human 'why' for the recommended task."""
+async def test_now_why_returns_reason_lazily(client, db_session):
+    """/now stays fast (no reason); /now/why lazily returns a human 'why' for the task."""
     from app.services.user_service import UserService
     from app.models.task import Task
     from datetime import datetime, timezone
@@ -165,6 +165,24 @@ async def test_now_includes_reason(client, db_session):
 
     with _mock_verify(MOCK_USER):
         r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
-    assert r.status_code == 200
-    reason = r.json()["reason"]
-    assert reason and ("due today" in reason or "high priority" in reason or "overdue" in reason)
+        assert r.status_code == 200
+        best = r.json()["best_task"]
+        assert best is not None
+        assert r.json()["reason"] is None  # not computed eagerly anymore
+
+        w = await client.get(f"/api/v1/now/why?task_id={best['id']}", headers={"Authorization": "Bearer t"})
+    assert w.status_code == 200
+    reason = w.json()["reason"]
+    assert reason and len(reason) > 0
+
+
+@pytest.mark.anyio
+async def test_now_why_unknown_task_404(client, db_session):
+    """/now/why for a task that isn't currently recommended → 404."""
+    import uuid as _uuid
+    from app.services.user_service import UserService
+
+    await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    with _mock_verify(MOCK_USER):
+        w = await client.get(f"/api/v1/now/why?task_id={_uuid.uuid4()}", headers={"Authorization": "Bearer t"})
+    assert w.status_code == 404

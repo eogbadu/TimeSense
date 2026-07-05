@@ -36,7 +36,7 @@ struct NowView: View {
                 if let task = ctx.bestTask {
                     BestTaskCard(
                         task: task,
-                        reason: ctx.reason,
+                        loadWhy: { await viewModel.fetchWhy(taskId: task.id) },
                         onDone: { Task { await viewModel.markDone(taskId: task.id) } },
                         onSnooze: { Task { await viewModel.snooze(taskId: task.id) } },
                         onNotNow: { Task { await viewModel.notNow(taskId: task.id) } }
@@ -97,12 +97,10 @@ private struct GreetingHeader: View {
 
 private struct BestTaskCard: View {
     let task: NowTask
-    let reason: String?
+    let loadWhy: () async -> String?
     let onDone: () -> Void
     let onSnooze: () -> Void
     let onNotNow: () -> Void
-
-    @State private var showWhy = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
@@ -124,9 +122,7 @@ private struct BestTaskCard: View {
                 PriorityBadge(priority: task.priority)
             }
 
-            if let reason, !reason.isEmpty {
-                WhyThis(reason: reason, isExpanded: $showWhy)
-            }
+            WhyThis(load: loadWhy)
 
             QuickActionRow(onDone: onDone, onSnooze: onSnooze, onNotNow: onNotNow)
         }
@@ -135,16 +131,18 @@ private struct BestTaskCard: View {
     }
 }
 
-/// "Why this?" — hidden by default, reveals the recommendation reason on tap (per premium-UX spec).
+/// "Why this?" — hidden by default; fetches the recommendation reason lazily on first tap so the
+/// Now screen stays instant and we only spend an LLM call when the user actually asks.
 private struct WhyThis: View {
-    let reason: String
-    @Binding var isExpanded: Bool
+    let load: () async -> String?
+
+    @State private var isExpanded = false
+    @State private var reason: String?
+    @State private var loading = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-            Button {
-                withAnimation(DesignTokens.Animation.fast) { isExpanded.toggle() }
-            } label: {
+            Button(action: toggle) {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: "sparkles")
                     Text("Why this?")
@@ -156,14 +154,38 @@ private struct WhyThis: View {
                 .foregroundColor(DesignTokens.Color.accent)
             }
             if isExpanded {
-                Text(reason)
-                    .font(DesignTokens.Typography.subheadline)
-                    .foregroundColor(DesignTokens.Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                Group {
+                    if loading {
+                        HStack(spacing: DesignTokens.Spacing.xs) {
+                            ProgressView().controlSize(.small)
+                            Text("Thinking…")
+                                .font(DesignTokens.Typography.subheadline)
+                                .foregroundColor(DesignTokens.Color.textSecondary)
+                        }
+                    } else if let reason {
+                        Text(reason)
+                            .font(DesignTokens.Typography.subheadline)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func toggle() {
+        withAnimation(DesignTokens.Animation.fast) { isExpanded.toggle() }
+        guard isExpanded, reason == nil, !loading else { return }
+        loading = true
+        Task {
+            let result = await load()
+            await MainActor.run {
+                reason = result ?? "It's your best next step right now."
+                loading = false
+            }
+        }
     }
 }
 
