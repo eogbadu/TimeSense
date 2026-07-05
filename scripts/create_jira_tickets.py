@@ -3392,6 +3392,171 @@ TICKETS = [
             p("TIME-053: Google Assistant Integration"),
         ),
     },
+
+    {
+        "summary": "TIME-059: iOS Real Apple Signing Configuration",
+        "labels": ["ios", "signing"],
+        "description": doc(
+            h2("Goal"),
+            p("Point the iOS project at the real Apple Developer account now that it's available "
+              "(Team WB5NV894N5, registered App ID com.aetheranalytics.timesense). Set the "
+              "development team and align every bundle identifier + App Group from the placeholder "
+              "com.timesense.app to the registered com.aetheranalytics.timesense, so the app and "
+              "its widget extension can code-sign and provision against the real account — the "
+              "prerequisite for on-device runs and for entitlements like HealthKit (TIME-060)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Set DEVELOPMENT_TEAM = WB5NV894N5 on the TimeSense app + TimeSenseWidgetExtension "
+                "targets (CODE_SIGN_STYLE stays Automatic)",
+                "Rename PRODUCT_BUNDLE_IDENTIFIER: app com.timesense.app → com.aetheranalytics."
+                "timesense; widget com.timesense.app.TimeSenseWidget → com.aetheranalytics."
+                "timesense.TimeSenseWidget (both Debug + Release configs)",
+                "Rename the shared App Group group.com.timesense.app → group.com.aetheranalytics."
+                "timesense in both entitlements files (TimeSense.entitlements, "
+                "TimeSenseWidget.entitlements) AND the WidgetSnapshot.appGroupID Swift constant — "
+                "all three must match or the widget can't read the app's snapshot",
+                "Verify: Simulator build still succeeds; attempt a signed 'Any iOS Device' build "
+                "using the App Store Connect API key (from .env) with -allowProvisioningUpdates to "
+                "confirm the real account provisions the app + widget (best-effort — see Non-Goals)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No changes to the Android applicationId (com.timesense.app) — that's a separate "
+                "Google Play registration, untouched by this iOS-only ticket",
+                "No on-device install/run — there's no physical device attached to this "
+                "environment; that's the user's step once the project is configured",
+                "No guarantee the headless signed-device build fully succeeds — it depends on a "
+                "signing certificate being creatable/available in this Mac's keychain, which is "
+                "environment state, not project config. If it can't sign here, the project is still "
+                "correctly configured for the user to sign from their own Xcode; document the "
+                "outcome either way",
+                "No Firebase / GoogleService-Info.plist changes (still placeholder); no App Store "
+                "Connect upload / TestFlight",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense.xcodeproj/project.pbxproj (DEVELOPMENT_TEAM + 4 bundle-id lines)",
+                "ios/TimeSense/TimeSense.entitlements (App Group)",
+                "ios/TimeSenseWidget/TimeSenseWidget.entitlements (App Group)",
+                "ios/TimeSense/Core/Widgets/WidgetSnapshot.swift (appGroupID constant)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Both targets' PRODUCT_BUNDLE_IDENTIFIER use com.aetheranalytics.timesense[.Widget]",
+                "DEVELOPMENT_TEAM = WB5NV894N5 on both targets",
+                "The App Group string is identical (group.com.aetheranalytics.timesense) across "
+                "both entitlements files and WidgetSnapshot.appGroupID",
+                "Simulator build succeeds (xcodebuild -scheme TimeSense -destination 'platform=iOS "
+                "Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO)",
+                "Signed-device-build attempt is run and its outcome documented in the PR",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO\n"
+                "# signed device build (best-effort, App Store Connect API key):\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'generic/platform=iOS' -allowProvisioningUpdates "
+                "-authenticationKeyID <id> -authenticationKeyIssuerID <issuer> "
+                "-authenticationKeyPath <p8>"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-018 (iOS shell), TIME-044 (widget + App Group), a real Apple Developer account "
+              "(now provided in .env: APPLE_TEAM_ID, APPLE_BUNDLE_ID, App Store Connect API key)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-060: iOS HealthKit Sleep/Wake Read Integration"),
+        ),
+    },
+
+    {
+        "summary": "TIME-060: iOS HealthKit Sleep/Wake Read Integration",
+        "labels": ["ios", "healthkit"],
+        "description": doc(
+            h2("Goal"),
+            p("Build the iOS-side HealthKit read integration deferred from TIME-042: request "
+              "HealthKit authorization for sleep analysis, read the user's most recent sleep/wake "
+              "samples, and POST them to the existing POST /api/v1/sleep/events endpoint (which "
+              "already gates on health_data consent and triggers a morning replan on a late wake). "
+              "Completes the sleep/wake feature's mobile half."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "ios/TimeSense/Core/Health/HealthService.swift — wraps HKHealthStore behind an "
+                "`#if canImport(HealthKit)` guard (mirrors the AuthService Firebase-stub pattern so "
+                "CLI/Simulator builds without the capability still compile): requestAuthorization() "
+                "for HKCategoryType sleepAnalysis, readMostRecentWake() computing the latest "
+                "wake_time from sleep samples, and syncToBackend() POSTing to /api/v1/sleep/events "
+                "via APIClient",
+                "HealthKit capability + com.apple.developer.healthkit entitlement on the app target",
+                "Info.plist NSHealthShareUsageDescription (read-only; no NSHealthUpdate — TimeSense "
+                "only reads sleep)",
+                "A minimal Settings hook or onboarding affordance to trigger the auth request "
+                "(reuse existing Settings/consent surfaces; do not build a new consent system — the "
+                "backend health_data consent already exists)",
+                "SleepWakeSyncRequest Codable matching the backend SleepWakeEventIn (wake_time, "
+                "sleep_start, source='healthkit')",
+                "Verify on the Simulator (HealthKit runs there; inject a sleep sample to exercise "
+                "the read path) + build",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No background/scheduled sync (HKObserverQuery + background delivery) — this ticket "
+                "does an app-foreground read+sync; background delivery is a follow-up",
+                "No writing to HealthKit — read-only sleep analysis",
+                "No on-device end-to-end run in this environment (no physical device) — Simulator "
+                "verification + a real signed build (enabled by TIME-059) are the bar; the user runs "
+                "on a device. Real Health data + the live authorization prompt are inherently "
+                "device/Simulator-interactive",
+                "No change to the backend — POST /api/v1/sleep/events (TIME-042) already exists and "
+                "is unchanged",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Core/Health/HealthService.swift (new)",
+                "ios/TimeSense.xcodeproj/project.pbxproj (HealthKit capability/entitlement, register "
+                "file)",
+                "ios/TimeSense/TimeSense.entitlements (com.apple.developer.healthkit)",
+                "ios/TimeSense Info.plist keys (NSHealthShareUsageDescription — via "
+                "INFOPLIST_KEY_* build settings, since the project uses GENERATE_INFOPLIST_FILE)",
+                "ios/TimeSense/Features/Settings/SettingsView.swift (a 'Connect Apple Health' row)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "HealthService requests read authorization for sleepAnalysis and reads the latest "
+                "wake time from returned samples",
+                "syncToBackend() POSTs wake_time/sleep_start/source=healthkit to "
+                "/api/v1/sleep/events via APIClient",
+                "Code compiles behind the HealthKit availability guard; Simulator build succeeds",
+                "HealthKit entitlement + NSHealthShareUsageDescription present so a device build "
+                "(TIME-059 signing) can provision",
+                "Settings exposes a way to trigger Health authorization",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-042 (backend sleep/wake contract + POST /api/v1/sleep/events), TIME-059 (real "
+              "Apple signing so the HealthKit entitlement provisions on device), an iOS Simulator "
+              "runtime (installed)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-053: Google Assistant Integration"),
+        ),
+    },
 ]
 
 

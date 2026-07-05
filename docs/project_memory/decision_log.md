@@ -196,6 +196,10 @@
   Reason: Notion is fundamentally a different kind of source: a database row is already a discrete, structured task, whereas Slack/Teams are noisy chat streams where an LLM must decide "is this even an action item?". Modeling Notion as a task source (structured title/due extraction, no LLM, import/dismiss framing) is honest to what it is; forcing it through the message-source pipeline would mean either running a pointless LLM detection pass over already-structured tasks or awkwardly stubbing detection. The two abstractions (MessageSourceProvider for chat, TaskSourceProvider for structured task systems) also line up with the integration-provider-pattern skill's own split between "communication integrations" and "task/reminder integrations" (Todoist/Things/Apple Reminders will slot under TaskSourceProvider next).
   Date: 2026-07-05
 
+- Decision: TIME-059 renamed the iOS bundle identifiers + App Group from the placeholder com.timesense.app to the user's registered App ID com.aetheranalytics.timesense (Team WB5NV894N5), aligning the project with the real Apple Developer account; the Android applicationId (com.timesense.app) was left unchanged
+  Reason: The user confirmed their real Apple account/Team is in .env and asked to use it; a device build can only provision against the *registered* App ID, so the project's bundle IDs had to match com.aetheranalytics.timesense (cascading to the widget extension bundle ID and the shared App Group, which must be identical across both entitlements files + WidgetSnapshot.appGroupID or the widget can't read the app's snapshot). Android's applicationId is a separate Google Play registration and was deliberately not touched by this iOS-only signing ticket. Verified real-account provisioning as far as headlessly possible: the App Store Connect API key authenticated and signing reached profile generation, stopping only at "no registered device" — the expected boundary, since a development profile needs a device UDID the headless environment doesn't have.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

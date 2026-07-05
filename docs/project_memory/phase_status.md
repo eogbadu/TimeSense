@@ -1,9 +1,10 @@
 # Phase Status
 
 ## Current Phase
-Phase 13: Integrations Expansion — TIME-049/050/051/052 done; TIME-053 (Google Assistant) next.
-Also queued: a dedicated HealthKit ticket (deferred from TIME-042), now that the iOS Simulator is
-available (on-device runs still need a real Apple Developer account for the HealthKit entitlement).
+Phase 13: Integrations Expansion — TIME-049/050/051/052 done. Plus net-new iOS-signing work:
+TIME-059 (real Apple signing config) done; TIME-060 (HealthKit read integration) next, then
+TIME-053 (Google Assistant). The real Apple Developer account is now wired in (Team WB5NV894N5,
+App ID com.aetheranalytics.timesense) — device runs just need the user to register a device UDID.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -121,9 +122,15 @@ before being trusted — do not assume unchecked = not built.
       ReplanDay opens the app (approval rule). No Siri-voice / backend E2E yet (device + real
       Firebase).
 
+## iOS Signing / Native Capabilities (net-new, outside the original TIME-0xx plan)
+- [x] TIME-059 (Jira TIME-52): iOS Real Apple Signing Configuration — DEVELOPMENT_TEAM=WB5NV894N5
+      + all bundle IDs/App Group renamed to com.aetheranalytics.timesense. Simulator build ✓;
+      signed device build authenticated with Apple, blocked only on "no registered device".
+- [ ] TIME-060 (Jira TIME-53): iOS HealthKit Sleep/Wake Read Integration — next.
+
 ## Active Jira Tickets
-- TIME-51 (impl TIME-052, Siri Shortcuts / App Intents) — Done
-- Next: TIME-053 (Google Assistant Integration), plus a queued HealthKit ticket
+- TIME-52 (impl TIME-059, iOS Real Apple Signing Configuration) — Done
+- Next: TIME-060 (Jira TIME-53, HealthKit), then TIME-053 (Google Assistant Integration)
 
 ## Blockers
 - None
