@@ -20,15 +20,12 @@
 - Verification: N/A.
 - Follow-up needed: Re-run `npm audit` periodically; once a real Next.js patch resolves this, the advisory will clear on its own via a normal `npm update`.
 
-## Issue: No real Firebase project configured for the web app either (TIME-048)
+## Issue: Firebase — backend now real (TIME-061); CLIENT config files still needed (partially updated 2026-07-05)
 - Date: 2026-07-05
-- Area: `web/lib/firebase.ts`, `web/.env.local.example`
-- Symptom: `NEXT_PUBLIC_FIREBASE_*` env vars are all empty placeholders. Sign-in cannot be exercised end-to-end in this environment.
-- Root cause: Same pre-existing gap as iOS's `GoogleService-Info.plist` and Android's `google-services.json` — no real Firebase project exists yet (open_questions.md).
-- Fix: Not applied — same known, cross-platform gap. `getAuth()` construction is lazy and guarded (`isFirebaseConfigured`) so the app still builds and renders without real config; only actual sign-in is blocked.
-- Files changed: None.
-- Verification: N/A.
-- Follow-up needed: Once a real Firebase project exists, fill in `web/.env.local.example` → `.env.local` (and the equivalent iOS/Android config files) and re-verify sign-in on all three platforms together, since they'll likely share the same Firebase project.
+- Area: backend `app/core/firebase.py` (RESOLVED); `web/lib/firebase.ts`, iOS `GoogleService-Info.plist`, Android `google-services.json` (still placeholder)
+- **UPDATE (2026-07-05, TIME-061):** a real Firebase project EXISTS — `timesense-eb7ec`. The .env has the real BACKEND service account (`FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_JSON`), and TIME-061 fixed the parse so the Admin SDK initializes and the backend verifies real ID tokens. So the "no real Firebase project" root cause is gone; what remains is purely the per-app CLIENT config, which is NOT in .env.
+- Symptom (still): `NEXT_PUBLIC_FIREBASE_*` empty; iOS/Android client config files are placeholders; iOS Firebase SDK also unresolved via SPM. So client-side sign-in still can't be exercised end-to-end.
+- Follow-up needed: From the `timesense-eb7ec` Firebase console, register the web/iOS/Android apps and add their config: web `NEXT_PUBLIC_FIREBASE_API_KEY`/`APP_ID`/`AUTH_DOMAIN` (authDomain = `timesense-eb7ec.firebaseapp.com`), iOS `GoogleService-Info.plist` (+ resolve Firebase SPM in Xcode), Android `google-services.json`. Then a client can sign in and its token verifies against the now-real backend. The web apiKey/appId could alternatively be fetched via the Firebase Management API using the service account (untried).
 
 ## Issue: test_recommendations.py's mock LLM provider doesn't actually exercise the LLM-success path
 - Date: 2026-07-05

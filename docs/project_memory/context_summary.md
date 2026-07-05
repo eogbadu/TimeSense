@@ -58,7 +58,9 @@ notion_import_items. (Correction: there is no separate "notification_preferences
 notification_mode field lives directly on user_preferences; a prior version of this file listed
 that table incorrectly.)
 
-Backend tests: 267, all passing (see Known Problems re: 2 flaky Stripe-network tests).
+Backend tests: 271, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
+verifies REAL Firebase ID tokens as of TIME-061 (real service account for project timesense-eb7ec
+in .env; tests still mock verify_id_token and don't run the app lifespan).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes. Insights tab (TIME-046) now shows a real weekly summary + stats grid behind the Premium gate.
@@ -72,6 +74,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-061 (net-new) → Jira TIME-54 (Backend Real Firebase Token Verification) — **Done (this session)**
 - TIME-060 (net-new) → Jira TIME-53 (iOS HealthKit Sleep/Wake Read Integration) — **Done (PR #46 merged 2026-07-05)**
 - TIME-059 (net-new) → Jira TIME-52 (iOS Real Apple Signing Configuration) — **Done (PR #45 merged 2026-07-05)**
 - TIME-052 (impl seq) → Jira TIME-51 (Siri Shortcuts / App Intents) — **Done (PR #44 merged 2026-07-05)**
@@ -93,7 +96,18 @@ both clean.
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-060 (Jira TIME-53): iOS HealthKit Sleep/Wake Read Integration
+TIME-061 (Jira TIME-54): Backend Real Firebase Token Verification
+- `app/core/firebase.py` now robustly parses the real .env service account (project
+  timesense-eb7ec), which is stored single-line with newlines flattened to literal `\n`: try
+  compact `json.loads`, else `json.loads(raw.replace("\\n","\n"), strict=False)`. The Admin SDK now
+  initializes (verified out-of-band: logs "initialized … for project: timesense-eb7ec") and
+  `get_current_user` → `verify_id_token` now checks REAL client tokens
+- 4 new unit tests (fabricated key, never the real one); full suite 271/271 (excl. 2 flaky Stripe)
+- Client config still needed (NOT in .env): iOS GoogleService-Info.plist, Android
+  google-services.json, web NEXT_PUBLIC_FIREBASE_API_KEY/APP_ID/AUTH_DOMAIN — from the
+  timesense-eb7ec console per registered app. Real key stays in .env, never committed.
+
+### (previous) TIME-060 (Jira TIME-53): iOS HealthKit Sleep/Wake Read Integration
 - `HealthService.swift` (HKHealthStore behind `#if canImport(HealthKit)`): requests sleepAnalysis
   read auth, reads the latest sleep window (allAsleepValues; earliest start + latest end = wake),
   POSTs {wake_time, sleep_start, source:"healthkit"} to /api/v1/sleep/events. Read-only. Publishes
@@ -145,8 +159,11 @@ Real signing (Team WB5NV894N5, App ID com.aetheranalytics.timesense) and the Hea
 are wired. For an actual on-device run the user: registers their iPhone's UDID (automatic when the
 device is connected in their Xcode, or manually in the portal), then builds/runs from Xcode. The
 live HealthKit authorization prompt + real sleep data are inherently device/Simulator-interactive
-(not CLI-drivable). Real Firebase Auth is still a placeholder, so backend round-trips (intents,
-HealthKit sync) can't be exercised end-to-end until a real Firebase project is configured.
+(not CLI-drivable). The BACKEND now verifies real Firebase tokens (TIME-061), but the CLIENT apps
+still lack their Firebase config (iOS GoogleService-Info.plist, Android google-services.json, web
+apiKey/appId/authDomain — from the timesense-eb7ec console; iOS also needs Firebase SPM resolved in
+Xcode). So a client can't yet obtain a real token to send — client-side sign-in end-to-end is the
+remaining gap.
 
 ## Important Decisions to Preserve
 - Firebase added via Xcode UI (File > Add Package Dependencies), NOT in pbxproj — `#if canImport` guards ensure CLI builds work

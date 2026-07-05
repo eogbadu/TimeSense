@@ -1,5 +1,36 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-061 (Jira TIME-54): Backend Real Firebase Token Verification
+
+### What changed
+- `app/core/firebase.py` — extracted `_load_service_account(raw) -> dict | None` and made
+  `init_firebase()` use it. The .env's FIREBASE_SERVICE_ACCOUNT_JSON is real (project
+  timesense-eb7ec) but stored single-line with every newline (structural + private_key) flattened
+  to literal `\n`, so the old `json.loads(raw)` failed → the Admin SDK never initialized → real
+  auth was never actually exercised (tests always mock verify_id_token). The helper tries compact
+  `json.loads` first, then falls back to `json.loads(raw.replace("\\n","\n"), strict=False)` (the
+  `strict=False` tolerates the real newlines that end up inside the private_key string), returning
+  None on empty/garbage so the existing ADC/projectId fallback still applies.
+- `tests/test_firebase_init.py` (new) — 4 unit tests for the helper using a FABRICATED service
+  account (never the real key): compact JSON parses; a pretty-printed-then-flattened-to-literal-`\n`
+  string parses and recovers a well-formed PEM private_key; empty/`{}`/blank → None; garbage → None.
+
+### Verification
+- `pytest tests/test_firebase_init.py` → 4/4. Full suite 271/271 (excluding 2 known-flaky Stripe).
+- Out-of-band (not in the committed test, to avoid the real key touching the repo): ran the real
+  `init_firebase()` with the actual .env value → logs "Firebase Admin SDK initialized with service
+  account for project: timesense-eb7ec" and `get_firebase_app().project_id == "timesense-eb7ec"`.
+  Before this fix it silently warned "Firebase init failed". `get_current_user` already calls
+  `firebase_admin.auth.verify_id_token`, so the backend now verifies REAL client ID tokens.
+
+### Scope boundary (what's still needed for client end-to-end)
+- The .env has only the BACKEND service account. Real sign-in from a client additionally needs
+  per-app CLIENT config, which is NOT in .env and must be downloaded/registered in the Firebase
+  console for project timesense-eb7ec: iOS `GoogleService-Info.plist`, Android
+  `google-services.json`, and web `NEXT_PUBLIC_FIREBASE_API_KEY`/`APP_ID`/`AUTH_DOMAIN`. Those are
+  separate follow-ups (and iOS also needs the Firebase SDK resolved via Xcode SPM — a standing gap).
+- The real service account private key stays only in .env (gitignored) — never committed.
+
 ## 2026-07-05 — TIME-060 (Jira TIME-53): iOS HealthKit Sleep/Wake Read Integration
 
 ### Created
