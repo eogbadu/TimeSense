@@ -1960,6 +1960,74 @@ TICKETS = [
             p("TIME-038: Feedback Collection"),
         ),
     },
+
+    {
+        "summary": "TIME-038: Feedback Collection",
+        "labels": ["phase-8", "backend"],
+        "description": doc(
+            h2("Goal"),
+            p("Let users react to a recommendation (Done / Snooze / Not Now) and store that "
+              "reaction so the recommendation engine stops re-suggesting a task the user just "
+              "dismissed or snoozed. Feedback storage must not require a mobile UI change in "
+              "this ticket — it just needs a backend contract the apps can call."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "recommendation_feedback table: user_id, task_id, signal (done/snooze/not_now), "
+                "snooze_until (nullable), timestamps",
+                "POST /api/v1/recommendations/feedback — records a signal for a task",
+                "signal=done also marks the task status=done (via TaskRepository.update)",
+                "signal=snooze stores snooze_until; signal=not_now stores no expiry",
+                "Feedback signal integration into the recommendation flow: GET /api/v1/recommendations "
+                "excludes tasks with an active snooze (snooze_until in the future) or a recent "
+                "not_now (cooldown window) from candidates, per the 'do not nag' rule in the "
+                "recommendation-engine skill",
+                "Tests: 8+ covering feedback CRUD, done marks task done, ownership checks, "
+                "invalid signal rejection, and suppression of snoozed/not_now tasks in recommendations",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No mobile UI for the feedback buttons (Done/Snooze/Not Now actions) — API only",
+                "No feedback-driven scorer weight learning (e.g. adjusting priority weights over time)",
+                "No weekly insight generation from feedback (later phase)",
+                "No 'Bad Suggestion' / 'Wrong timing' / 'Wrong context' signal types — only done/snooze/not_now",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/models/recommendation_feedback.py (new)",
+                "backend/migrations/versions/*_add_recommendation_feedback.py (new)",
+                "backend/app/api/v1/recommendations.py (new POST /feedback route)",
+                "backend/app/repositories/recommendation_feedback_repository.py (new)",
+                "backend/app/services/recommendation_service.py (filter suppressed tasks)",
+                "backend/tests/test_feedback.py (new)",
+                "backend/tests/test_recommendations.py (suppression tests)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/recommendations/feedback returns 201 with the stored signal",
+                "signal=done marks the referenced task status=done",
+                "signal=snooze with snooze_until in the future removes that task from "
+                "GET /api/v1/recommendations candidates until snooze_until passes",
+                "signal=not_now removes that task from candidates for a cooldown window",
+                "Feedback for a task owned by another user returns 404",
+                "Invalid signal value returns 422",
+                "Unauthenticated request returns 401",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_feedback.py tests/test_recommendations.py -v"),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-036 (Recommendation API V1 — GET /api/v1/recommendations and RecommendationService)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-039: Routine Assumptions Model"),
+        ),
+    },
 ]
 
 

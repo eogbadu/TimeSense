@@ -112,6 +112,10 @@
   Reason: Spec requirement. Keeps navigation centered on the assistant experience, not task management.
   Date: 2026-07-03
 
+- Decision: "not_now" feedback suppresses a task from recommendations for a 4-hour cooldown, not permanently or just-for-this-response
+  Reason: The recommendation-engine skill's "do not nag" rule means a dismissed task shouldn't be re-suggested immediately, but a still-pending task also shouldn't disappear from recommendations for the rest of the day just because the user dismissed it once. 4 hours was chosen as a reasonable middle ground pending real usage data.
+  Date: 2026-07-04
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

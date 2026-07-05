@@ -122,3 +122,72 @@ async def test_recommendations_llm_fallback_when_503(client):
 async def test_recommendations_unauthenticated(client):
     r = await client.get("/api/v1/recommendations")
     assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_recommendations_excludes_not_now_task(client):
+    """A task with recent not_now feedback is suppressed from candidates."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    with _mock_verify():
+        r = await client.post(
+            "/api/v1/tasks",
+            headers=_auth_headers(),
+            json={"title": "Dismissed task", "priority": 1,
+                  "scheduled_start": f"{today}T09:00:00Z", "source": "manual"},
+        )
+        task_id = r.json()["id"]
+        await client.post(
+            "/api/v1/recommendations/feedback",
+            headers=_auth_headers(),
+            json={"task_id": task_id, "signal": "not_now"},
+        )
+        r = await client.get("/api/v1/recommendations", headers=_auth_headers())
+    assert r.status_code == 200
+    assert r.json()["best"] is None
+
+
+@pytest.mark.anyio
+async def test_recommendations_excludes_actively_snoozed_task(client):
+    """A task snoozed into the future is suppressed from candidates."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    future = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+    with _mock_verify():
+        r = await client.post(
+            "/api/v1/tasks",
+            headers=_auth_headers(),
+            json={"title": "Snoozed task", "priority": 1,
+                  "scheduled_start": f"{today}T09:00:00Z", "source": "manual"},
+        )
+        task_id = r.json()["id"]
+        await client.post(
+            "/api/v1/recommendations/feedback",
+            headers=_auth_headers(),
+            json={"task_id": task_id, "signal": "snooze", "snooze_until": future},
+        )
+        r = await client.get("/api/v1/recommendations", headers=_auth_headers())
+    assert r.status_code == 200
+    assert r.json()["best"] is None
+
+
+@pytest.mark.anyio
+async def test_recommendations_includes_task_after_snooze_expires(client):
+    """A task whose snooze_until is already in the past is eligible again."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    with _mock_verify():
+        r = await client.post(
+            "/api/v1/tasks",
+            headers=_auth_headers(),
+            json={"title": "Previously snoozed task", "priority": 1,
+                  "scheduled_start": f"{today}T09:00:00Z", "source": "manual"},
+        )
+        task_id = r.json()["id"]
+        await client.post(
+            "/api/v1/recommendations/feedback",
+            headers=_auth_headers(),
+            json={"task_id": task_id, "signal": "snooze", "snooze_until": past},
+        )
+        r = await client.get("/api/v1/recommendations", headers=_auth_headers())
+    assert r.status_code == 200
+    assert r.json()["best"] is not None
+    assert r.json()["best"]["task"]["title"] == "Previously snoozed task"
