@@ -72,8 +72,8 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-060 (net-new) → Jira TIME-53 (iOS HealthKit Sleep/Wake Read Integration) — **Done (this session)**
 - TIME-059 (net-new) → Jira TIME-52 (iOS Real Apple Signing Configuration) — **Done (PR #45 merged 2026-07-05)**
-- TIME-060 (net-new) → Jira TIME-53 (iOS HealthKit Sleep/Wake Read Integration) — in progress next
 - TIME-052 (impl seq) → Jira TIME-51 (Siri Shortcuts / App Intents) — **Done (PR #44 merged 2026-07-05)**
 - TIME-051 (impl seq) → Jira TIME-50 (Notion Integration) — **Done (PR #43 merged 2026-07-05)**
 - TIME-050 (impl seq) → Jira TIME-49 (Microsoft Teams Integration) — **Done (PR #42 merged 2026-07-05)**
@@ -93,7 +93,19 @@ both clean.
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-059 (Jira TIME-52): iOS Real Apple Signing Configuration
+TIME-060 (Jira TIME-53): iOS HealthKit Sleep/Wake Read Integration
+- `HealthService.swift` (HKHealthStore behind `#if canImport(HealthKit)`): requests sleepAnalysis
+  read auth, reads the latest sleep window (allAsleepValues; earliest start + latest end = wake),
+  POSTs {wake_time, sleep_start, source:"healthkit"} to /api/v1/sleep/events. Read-only. Publishes
+  a HealthConnectState surfaced by a "Connect Apple Health" Settings row
+- HealthKit entitlement + NSHealthShareUsageDescription added; completes the TIME-042 sleep/wake
+  feature's mobile half — no backend changes
+- Simulator build ✓; HealthKit really linked (verified in the Debug build's TimeSense.debug.dylib:
+  HealthKit.framework load command + _OBJC_CLASS_$_HKHealthStore ref). App installs + launches
+  cleanly under the new bundle id com.aetheranalytics.timesense. Live auth prompt + real sleep data
+  + on-device run are the user's device step.
+
+### (previous) TIME-059 (Jira TIME-52): iOS Real Apple Signing Configuration
 - Wired the iOS project to the user's real Apple Developer account (Team WB5NV894N5, from .env):
   DEVELOPMENT_TEAM on app + widget targets; bundle IDs renamed com.timesense.app →
   com.aetheranalytics.timesense (+ .TimeSenseWidget); App Group group.com.timesense.app →
@@ -120,28 +132,21 @@ TIME-059 (Jira TIME-52): iOS Real Apple Signing Configuration
 Full history of TIME-034 through TIME-052 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Next up: TIME-060 (Jira TIME-53) — iOS HealthKit Sleep/Wake Read Integration (the piece deferred
-from TIME-042), now unblocked by TIME-059's real signing. Build HealthService.swift (HKHealthStore
-behind an `#if canImport(HealthKit)` guard, request sleepAnalysis auth, read latest wake, POST to
-/api/v1/sleep/events), add the healthkit entitlement + NSHealthShareUsageDescription + a Settings
-"Connect Apple Health" affordance; verify on the Simulator. After that: TIME-053 (Google Assistant).
-Two message-source integrations (Slack, Teams) share `ActionItemDetectionService`; Notion stands
-alone on `TaskSourceProvider`; a 3rd chat source is the trigger to unify Slack+Teams tables
+Next up: TIME-053 (Google Assistant Integration) — "Expose TimeSense actions to Google Assistant."
+Likely Android-side (App Actions / shortcuts.xml or a companion), analogous to TIME-052's iOS App
+Intents. Two message-source integrations (Slack, Teams) share `ActionItemDetectionService`; Notion
+stands alone on `TaskSourceProvider`; a 3rd chat source is the trigger to unify Slack+Teams tables
 (decision_log.md). Also see known_issues.md — the deferred UsableTimeService timezone-awareness pass
 (subtract routine/meal/commute/sleep from usable time + per-user-local Celery timing) is unblocked
-and still worth
-scheduling soon.
+and still worth scheduling soon.
 
-## iOS HealthKit = TIME-060 (Jira TIME-53), IN PROGRESS NEXT (deferred from TIME-042)
-TIME-042 built the backend contract (ingest a wake_time signal, gate on health_data consent,
-trigger a morning replan). The iOS-side read integration (`ios/.../HealthService.swift`, HKHealthStore
-authorization request, NSHealthShareUsageDescription, HealthKit entitlement/capability, POST
-/api/v1/sleep/events after reading sleep-analysis samples) is the TIME-060 work. Both prior blockers
-are now cleared: the Simulator is installed (HealthKit runs there; sleep samples can be injected),
-and TIME-059 wired real Apple signing (Team WB5NV894N5) so the healthkit entitlement can provision.
-Build + Simulator-verify TIME-060; the only remaining device step is the user registering a device
-UDID + running on their iPhone (real Health data + the live auth prompt are inherently
-device-interactive).
+## iOS device runs — remaining user steps (post TIME-059/060)
+Real signing (Team WB5NV894N5, App ID com.aetheranalytics.timesense) and the HealthKit entitlement
+are wired. For an actual on-device run the user: registers their iPhone's UDID (automatic when the
+device is connected in their Xcode, or manually in the portal), then builds/runs from Xcode. The
+live HealthKit authorization prompt + real sleep data are inherently device/Simulator-interactive
+(not CLI-drivable). Real Firebase Auth is still a placeholder, so backend round-trips (intents,
+HealthKit sync) can't be exercised end-to-end until a real Firebase project is configured.
 
 ## Important Decisions to Preserve
 - Firebase added via Xcode UI (File > Add Package Dependencies), NOT in pbxproj — `#if canImport` guards ensure CLI builds work

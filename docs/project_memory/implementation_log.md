@@ -1,5 +1,47 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-060 (Jira TIME-53): iOS HealthKit Sleep/Wake Read Integration
+
+### Created
+- `ios/TimeSense/Core/Health/HealthService.swift` — HKHealthStore wrapper behind
+  `#if canImport(HealthKit)` (real branch compiles on iOS; `#else` stub mirrors AuthService's
+  Firebase-stub pattern). `connectAndSync()` requests read auth for sleepAnalysis, reads the most
+  recent sleep window (earliest asleep start + latest asleep end = wake, grouped within a 6h window
+  using `HKCategoryValueSleepAnalysis.allAsleepValues`), and POSTs {wake_time, sleep_start,
+  source:"healthkit"} to /api/v1/sleep/events via APIClient. Read-only — never writes to HealthKit.
+  Publishes a HealthConnectState (idle/requesting/syncing/synced/noData/unavailable/error)
+
+### Modified
+- `ios/TimeSense/TimeSense.entitlements` — added com.apple.developer.healthkit (+ empty
+  healthkit.access array)
+- `ios/TimeSense.xcodeproj/project.pbxproj` — registered HealthService.swift; added
+  INFOPLIST_KEY_NSHealthShareUsageDescription (project uses GENERATE_INFOPLIST_FILE) — read-only
+  copy, no NSHealthUpdate since TimeSense only reads
+- `ios/TimeSense/Features/Settings/SettingsView.swift` — a "Connect Apple Health" row (Button →
+  HealthService.connectAndSync()) with inline status (spinner/checkmark/no-data/error)
+
+### Design notes
+- Completes the sleep/wake feature's mobile half (backend contract shipped in TIME-042). No backend
+  changes — POST /api/v1/sleep/events already exists (gates on health_data consent, proposes a
+  morning replan on a late wake); the response's replan_suggested is surfaced in the sync state.
+- Unblocked by two things resolved this session: the Simulator (HealthKit runs there) and TIME-059's
+  real Apple signing (the healthkit entitlement can now provision on device).
+
+### Verification
+- Simulator build → **BUILD SUCCEEDED**, zero new warnings
+- Confirmed HealthKit is really linked (not the stub): the Debug build's real code lives in
+  `TimeSense.debug.dylib` (Xcode debug-dylib split — the launcher executable itself has no
+  frameworks), and `otool -L` on the dylib shows `HealthKit.framework`, `nm` shows
+  `_OBJC_CLASS_$_HKHealthStore` referenced, and `HKCategoryValueSleepAnalysis`/`HealthService`
+  strings are present. `canImport(HealthKit)` verified true for the iphonesimulator SDK
+- Built `Info.plist` contains the NSHealthShareUsageDescription
+- Booted iPhone 16 sim, installed + launched under the NEW bundle id **com.aetheranalytics.timesense**
+  (also validates TIME-059's rename end-to-end) → app runs cleanly (launchctl status 0), no crash
+  from the HealthKit addition
+- Not doable headlessly: the live HealthKit authorization prompt + real sleep data + on-device run —
+  those are inherently device/interactive and are the user's step (register a device UDID, run from
+  their Xcode). HealthKit auth can also be exercised in the Simulator interactively but not via CLI.
+
 ## 2026-07-05 — TIME-059 (Jira TIME-52): iOS Real Apple Signing Configuration
 
 ### What changed

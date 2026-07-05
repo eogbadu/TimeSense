@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0FABB452D1E4F020AAF09896 /* UsableTimeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */; };
+		139CC16BB770927E35C73A16 /* HealthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEFDF748BAAB394AB39A6521 /* HealthService.swift */; };
 		1790B0431C0A702E3C4D3A8F /* BestNextActionWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */; };
 		1867B909FA67B3A39C779266 /* LearnedAssumptionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */; };
 		2581959640C248F708C40237 /* NextEventWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735A76942000F597C1CACE5 /* NextEventWidget.swift */; };
@@ -107,6 +108,7 @@
 		C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsViewModel.swift; sourceTree = "<group>"; };
 		D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotProvider.swift; sourceTree = "<group>"; };
 		D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsView.swift; sourceTree = "<group>"; };
+		DEFDF748BAAB394AB39A6521 /* HealthService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthService.swift; sourceTree = "<group>"; };
 		E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseWidgetBundle.swift; sourceTree = "<group>"; };
 		F22CD5D75BA658BEA67CA349 /* InsightsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InsightsViewModel.swift; sourceTree = "<group>"; };
 		FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimeSenseWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -171,6 +173,15 @@
 			name = iOS;
 			sourceTree = "<group>";
 		};
+		9D481B5AC5A997B047604EF2 /* Health */ = {
+			isa = PBXGroup;
+			children = (
+				DEFDF748BAAB394AB39A6521 /* HealthService.swift */,
+			);
+			name = Health;
+			path = Health;
+			sourceTree = "<group>";
+		};
 		A5000000 = {
 			isa = PBXGroup;
 			children = (
@@ -222,6 +233,7 @@
 				A5000023 /* Extensions */,
 				A5000024 /* Auth */,
 				2AE198C288EB427414A4A0BC /* Widgets */,
+				9D481B5AC5A997B047604EF2 /* Health */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -470,6 +482,7 @@
 				6F341198DDE522BD07556E0F /* LearnedAssumptionsView.swift in Sources */,
 				F0D2D149DB35C66A29073F3C /* TimeSenseAppIntents.swift in Sources */,
 				C947A57452119252AB0CE31D /* TimeSenseShortcuts.swift in Sources */,
+				139CC16BB770927E35C73A16 /* HealthService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -606,6 +619,7 @@
 				DEVELOPMENT_TEAM = WB5NV894N5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "TimeSense reads your recent sleep to suggest a better morning plan. It never writes to Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -635,6 +649,7 @@
 				DEVELOPMENT_TEAM = WB5NV894N5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "TimeSense reads your recent sleep to suggest a better morning plan. It never writes to Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
