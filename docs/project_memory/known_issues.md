@@ -1,5 +1,13 @@
 # Known Issues
 
+## Lesson: iOS visual verification must confirm the UI renders, not just that the app launches (2026-07-05)
+- During TIME-052/060 I verified iOS work with "BUILD SUCCEEDED + app installs + launches to its
+  sign-in screen" and treated that as success. But the app's UI was actually almost entirely
+  INVISIBLE (missing color asset catalog — fixed in TIME-066): only the hardcoded-black Apple button
+  rendered. A launch-only check + a glance at a screenshot with one plausible-looking element is not
+  enough. For iOS UI work: confirm the *intended* elements are visible in the screenshot (brand,
+  multiple buttons, text), and prefer checking a screen with rich content.
+
 ## Issue: Integration OAuth tokens are stored as plain Text, not encrypted at rest — RESOLVED 2026-07-05 (TIME-056)
 - Date: 2026-07-05
 - **RESOLVED (2026-07-05, TIME-056):** added `EncryptedString` (Fernet) in `app/core/crypto.py` and applied it to the access_token/refresh_token columns of Calendar/Slack/Teams/Notion integrations — tokens are now ciphertext at rest, decrypted transparently by the ORM. No migration (impl=Text). Key from `settings.token_encryption_key` (derived from secret_key if unset — set a real key in prod). `decrypt_token` tolerates any legacy plaintext.

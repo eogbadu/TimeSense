@@ -48,6 +48,7 @@
 		B98E3891DFBAB8E368AEF84E /* TimeSenseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		C947A57452119252AB0CE31D /* TimeSenseShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */; };
 		F0D2D149DB35C66A29073F3C /* TimeSenseAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27C9273247D83F087DBA4C0 /* TimeSenseAppIntents.swift */; };
+		F38816ECFDA6CE143C0C8729 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A27CCD58C9BAE9E0D039807B /* Assets.xcassets */; };
 		FAA7334EFCCDA29FF0B9667E /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */; };
 /* End PBXBuildFile section */
 
@@ -108,6 +109,7 @@
 		A2000031 /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModel.swift; sourceTree = "<group>"; };
 		A2000032 /* TimelineCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCard.swift; sourceTree = "<group>"; };
 		A2000033 /* NowViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowViewModel.swift; sourceTree = "<group>"; };
+		A27CCD58C9BAE9E0D039807B /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A3000001 /* TimeSense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeSense.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B27C9273247D83F087DBA4C0 /* TimeSenseAppIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseAppIntents.swift; sourceTree = "<group>"; };
 		C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsViewModel.swift; sourceTree = "<group>"; };
@@ -207,6 +209,7 @@
 				7FAA2C64ED43B5EA57A49D6E /* TimeSense.entitlements */,
 				E72265378D15A638603FE532 /* Intents */,
 				10849A270EBDF154E79FD082 /* GoogleService-Info.plist */,
+				A27CCD58C9BAE9E0D039807B /* Assets.xcassets */,
 			);
 			path = TimeSense;
 			sourceTree = "<group>";
@@ -459,6 +462,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B222B5BA80D315FBD04DD843 /* GoogleService-Info.plist in Resources */,
+				F38816ECFDA6CE143C0C8729 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
