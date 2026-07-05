@@ -2880,6 +2880,119 @@ TICKETS = [
             p("TIME-048: Admin Dashboard Foundation (Web)"),
         ),
     },
+
+    {
+        "summary": "TIME-048: Admin Dashboard Foundation (Web)",
+        "labels": ["phase-12", "web", "backend"],
+        "description": doc(
+            h2("Goal"),
+            p("Stand up the web companion app (React/Next.js, the first ticket to touch `web/` — "
+              "no scaffold exists yet) and build a role-protected admin dashboard: key metrics, "
+              "user search, invite code management, subscription/trial view, feedback review, "
+              "and integration status. The ticket sequence's scope line implies the backend "
+              "already exposes all of this, but only user-listing and invite-code management "
+              "admin endpoints actually exist today — this ticket adds the missing "
+              "subscription/feedback/integration/metrics admin endpoints alongside the web UI, "
+              "rather than shipping a dashboard with dead ends."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Bootstrap `web/`: Next.js 14 (App Router) + TypeScript + Tailwind, matching "
+                "architecture_overview.md's planned `web/app/admin/` layout",
+                "Firebase Auth (web SDK) wired the same way as iOS/Android: env-var-driven "
+                "config, graceful placeholder gap (no real Firebase project exists yet — "
+                "open_questions.md) — login itself can't be exercised end-to-end here, same as "
+                "the mobile apps' known gap",
+                "`lib/api.ts` (fetch wrapper attaching the Firebase ID token as a Bearer header, "
+                "mirroring ApiClient.swift/ApiClient.kt) and `lib/auth.ts` (auth context/hook)",
+                "`/admin` route: checks the authenticated user's `role` (from GET /api/v1/users/me) "
+                "client-side for UX, but the real security boundary stays server-side via the "
+                "existing `AdminUser` FastAPI dependency — client-side gating never substitutes "
+                "for it",
+                "`/admin/users`: searchable, paginated user list — extends the existing "
+                "GET /api/v1/admin/users with a `search` param (email match) and fixes its "
+                "`total` field, which was hardcoded to `len(users)` instead of a real count",
+                "`/admin/invites`: list/create/disable invite codes and view the waitlist — uses "
+                "the existing GET/POST /api/v1/invites/codes, DELETE /api/v1/invites/codes/"
+                "{code}, POST /api/v1/invites/waitlist/{id}/invite as-is, no backend changes here",
+                "`/admin/subscriptions` (new): GET /api/v1/admin/subscriptions — subscription/"
+                "trial status per user (platform, status, plan, trial_end, cancel_at_period_end)",
+                "`/admin/feedback` (new): GET /api/v1/admin/feedback — recent "
+                "RecommendationFeedback rows across all users (task title, signal, user email, "
+                "when)",
+                "Dashboard home (new): GET /api/v1/admin/metrics (total users, active/trialing "
+                "subscription counts, waitlist size, active invite codes, calendar integrations "
+                "connected) and GET /api/v1/admin/integrations (calendar integration counts by "
+                "provider/active status)",
+                "Tests: 15+ backend tests covering each new/changed admin endpoint's data "
+                "correctness, the 403-without-admin-role gate, and cross-user aggregation "
+                "correctness (metrics/feedback/subscriptions reflect all users, not just one)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No public-facing web companion (landing page, signup, regular-user /app/* "
+                "routes like insights/settings/subscription) — those aren't in the ticket "
+                "sequence yet and are out of scope; this ticket is the admin surface only",
+                "No real Firebase project — same placeholder-config gap already tracked for iOS/"
+                "Android; login can't be exercised end-to-end in this environment",
+                "No Stripe checkout or billing-management UI beyond read-only subscription status",
+                "No write actions beyond what already existed (invite code create/disable) — "
+                "subscriptions/feedback/integrations/metrics are read-only views in this ticket",
+                "No automated web test suite — no existing web test infra to extend; verification "
+                "is `npm run build` succeeding plus the backend's pytest coverage for the new "
+                "endpoints",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "web/package.json, tsconfig.json, next.config.js, tailwind.config.ts, "
+                "postcss.config.js (new)",
+                "web/app/layout.tsx, web/app/globals.css, web/app/page.tsx (new, minimal)",
+                "web/lib/firebase.ts, web/lib/auth.tsx, web/lib/api.ts (new)",
+                "web/app/admin/layout.tsx, web/app/admin/page.tsx (new — dashboard home/metrics)",
+                "web/app/admin/users/page.tsx (new)",
+                "web/app/admin/invites/page.tsx (new)",
+                "web/app/admin/subscriptions/page.tsx (new)",
+                "web/app/admin/feedback/page.tsx (new)",
+                "backend/app/schemas/admin.py (new response schemas)",
+                "backend/app/api/v1/admin.py (new routes: subscriptions, feedback, integrations, "
+                "metrics; extend users with search)",
+                "backend/app/repositories/user_repository.py (search + count_all)",
+                "backend/app/repositories/subscription_repository.py (list_all, "
+                "count_by_status)",
+                "backend/app/repositories/recommendation_feedback_repository.py (list_recent)",
+                "backend/app/repositories/calendar_repository.py (count_by_provider)",
+                "backend/tests/test_admin.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "GET /api/v1/admin/users?search=... filters by email substring and returns an "
+                "accurate total count",
+                "GET /api/v1/admin/subscriptions, /feedback, /integrations, /metrics all return "
+                "403 for a non-admin user and correct aggregated data for an admin",
+                "The web app's /admin route redirects/blocks non-admin users at the UI layer "
+                "(defense in depth; the API remains the real gate)",
+                "npm run build succeeds for the web app",
+                "All backend tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_admin.py -v\n"
+                "cd backend && pytest -q\n"
+                "cd web && npm install && npm run build"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-007-010 (core auth/admin foundation), TIME-036/038 (recommendation feedback), "
+              "existing invite/waitlist system, existing Subscription/CalendarIntegration models."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-049: Slack Integration"),
+        ),
+    },
 ]
 
 

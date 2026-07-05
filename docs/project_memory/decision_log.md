@@ -168,6 +168,18 @@
   Reason: Material3 has no built-in time-range picker component, and pulling in a third-party library for a single settings edit flow was more dependency weight than the feature warranted. iOS's two side-by-side `DatePicker(.hourAndMinute)` fields don't have this constraint, so the two platforms' edit UIs are shaped slightly differently — an intentional, scope-appropriate platform difference, not an inconsistency to fix.
   Date: 2026-07-05
 
+- Decision: TIME-048 built the backend admin endpoints the ticket sequence's scope line assumed already existed, rather than shipping a dashboard with dead-end pages
+  Reason: Confirmed directly with the user before proceeding (only user-listing and invite-code management had real admin endpoints; subscriptions/feedback/integrations/metrics/waitlist had none). Building the real thing keeps the codebase's established pattern of "every ticket delivers a working feature," not a UI shell with nothing behind it.
+  Date: 2026-07-05
+
+- Decision: Web app admin role-gating checks GET /api/v1/users/me client-side for UX, but the server-side AdminUser FastAPI dependency remains the actual security boundary
+  Reason: Client-side checks can always be bypassed by a motivated user (dev tools, direct API calls); they only exist to give a non-admin a clean "access denied" screen instead of a confusing empty/erroring dashboard. This mirrors the existing backend comment in admin.py: "the route existence is not hidden, but the data is access-controlled at the dependency level."
+  Date: 2026-07-05
+
+- Decision: Firebase Auth construction in the web app is lazy (`getFirebaseAuth()`), not eager at module load
+  Reason: `getAuth()` validates the API key eagerly and throws `auth/invalid-api-key` immediately when it's empty — even during `next build`'s static prerendering, which has nothing to do with a real user visiting the page. Since no real Firebase project exists yet (same gap as iOS/Android), eager construction would have permanently broken the production build. Lazy construction, guarded by `isFirebaseConfigured`, keeps the build green and defers the failure to actual runtime sign-in attempts, where it belongs.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

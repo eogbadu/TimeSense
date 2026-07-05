@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -95,15 +95,22 @@ class UserRepository:
         await self.db.flush()
         return prefs
 
-    async def list_all(self, offset: int = 0, limit: int = 50) -> list[User]:
-        result = await self.db.execute(
-            select(User)
-            .options(selectinload(User.profile))
-            .order_by(User.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+    async def list_all(
+        self, offset: int = 0, limit: int = 50, search: str | None = None
+    ) -> list[User]:
+        q = select(User).options(selectinload(User.profile))
+        if search:
+            q = q.where(User.email.ilike(f"%{search}%"))
+        q = q.order_by(User.created_at.desc()).offset(offset).limit(limit)
+        result = await self.db.execute(q)
         return list(result.scalars().all())
+
+    async def count_all(self, search: str | None = None) -> int:
+        q = select(func.count()).select_from(User)
+        if search:
+            q = q.where(User.email.ilike(f"%{search}%"))
+        result = await self.db.execute(q)
+        return result.scalar_one()
 
     async def list_active_ids(self) -> list[uuid.UUID]:
         """Lightweight id-only query for batch/worker loops (e.g. daily notification tasks)."""

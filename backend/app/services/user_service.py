@@ -30,5 +30,8 @@ class UserService:
     async def update_preferences(self, user_id, **kwargs) -> None:
         await self.repo.update_preferences(user_id, **kwargs)
 
-    async def list_users(self, offset: int = 0, limit: int = 50):
-        return await self.repo.list_all(offset=offset, limit=limit)
+    async def list_users(self, offset: int = 0, limit: int = 50, search: str | None = None):
+        return await self.repo.list_all(offset=offset, limit=limit, search=search)
+
+    async def count_users(self, search: str | None = None) -> int:
+        return await self.repo.count_all(search=search)

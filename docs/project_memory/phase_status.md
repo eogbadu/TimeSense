@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 11: Insights and Learning Summary — TIME-046/047 done. Phase 11 complete; Phase 12 next.
+Phase 12: Admin Dashboard — TIME-048 done. Phase 12 complete; Phase 13 next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -88,12 +88,21 @@ before being trusted — do not assume unchecked = not built.
       on iOS and Android (Settings > Preferences) to view/edit the 6 RoutineAssumption blocks via
       the existing GET/PATCH /api/v1/routines endpoints; no backend changes. Both builds verified.
 
+## Phase 12 Progress
+- [x] TIME-048 (Jira TIME-47): Admin Dashboard Foundation (Web) — bootstrapped web/ from scratch
+      (Next.js 16 + TypeScript + Tailwind 4 + Firebase Auth, no scaffold existed before this
+      ticket). Role-protected /admin dashboard: metrics, integration status, user search, invite
+      code management, subscriptions, feedback review. Added the missing backend admin endpoints
+      (subscriptions/feedback/integrations/metrics/waitlist) since only user-listing and invite
+      codes actually had admin endpoints before this ticket. 11 new backend tests (17 total in
+      test_admin.py). `npm run build`/`npm run lint` clean.
+
 ## Active Jira Tickets
-- TIME-46 (impl TIME-047, Learned Assumptions Settings) — Done
-- Next: TIME-048 (Admin Dashboard Foundation, Web) — Phase 12
+- TIME-47 (impl TIME-048, Admin Dashboard Foundation) — Done
+- Next: TIME-049 (Slack Integration) — Phase 13
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 12: Admin Dashboard — Phase 11 is complete
+Phase 13: Integrations Expansion — Phase 12 is complete

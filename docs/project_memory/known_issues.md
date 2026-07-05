@@ -1,5 +1,25 @@
 # Known Issues
 
+## Issue: `npm audit` in web/ recommends a bad "fix" (Next.js 16 → 9 downgrade)
+- Date: 2026-07-05
+- Area: `web/package.json`
+- Symptom: `npm audit` flags a moderate PostCSS XSS advisory transitively bundled inside this Next.js version's own dependencies. Its suggested `npm audit fix --force` would downgrade `next` from 16.2.10 to `9.3.3` — a completely wrong "fix" that would destroy the entire app.
+- Root cause: This project uses a very new Next.js release; npm's advisory-to-fix-version mapping hasn't caught up and picks the oldest version lacking the vulnerable transitive dependency, ignoring that it's 7 major versions behind.
+- Fix: Not applied — do not run `npm audit fix --force` in `web/`. Wait for a genuine Next.js patch release that bumps its bundled PostCSS instead.
+- Files changed: None.
+- Verification: N/A.
+- Follow-up needed: Re-run `npm audit` periodically; once a real Next.js patch resolves this, the advisory will clear on its own via a normal `npm update`.
+
+## Issue: No real Firebase project configured for the web app either (TIME-048)
+- Date: 2026-07-05
+- Area: `web/lib/firebase.ts`, `web/.env.local.example`
+- Symptom: `NEXT_PUBLIC_FIREBASE_*` env vars are all empty placeholders. Sign-in cannot be exercised end-to-end in this environment.
+- Root cause: Same pre-existing gap as iOS's `GoogleService-Info.plist` and Android's `google-services.json` — no real Firebase project exists yet (open_questions.md).
+- Fix: Not applied — same known, cross-platform gap. `getAuth()` construction is lazy and guarded (`isFirebaseConfigured`) so the app still builds and renders without real config; only actual sign-in is blocked.
+- Files changed: None.
+- Verification: N/A.
+- Follow-up needed: Once a real Firebase project exists, fill in `web/.env.local.example` → `.env.local` (and the equivalent iOS/Android config files) and re-verify sign-in on all three platforms together, since they'll likely share the same Firebase project.
+
 ## Issue: test_recommendations.py's mock LLM provider doesn't actually exercise the LLM-success path
 - Date: 2026-07-05
 - Area: `backend/tests/test_recommendations.py`

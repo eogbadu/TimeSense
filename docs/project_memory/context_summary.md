@@ -6,8 +6,9 @@
 
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
 Phase 8 (Recommendation Engine V1), Phase 9 (Routines/Meals/Commute/Sleep-Wake), Phase 10
-(Notifications, Widgets, Ambient Surfaces), and Phase 11 (Insights and Learning Summary —
-TIME-046/047) complete. Phase 12 (Admin Dashboard, web) next.
+(Notifications, Widgets, Ambient Surfaces), Phase 11 (Insights and Learning Summary), and Phase 12
+(Admin Dashboard — TIME-048, first ticket to touch `web/`) complete. Phase 13 (Integrations
+Expansion) next.
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -28,6 +29,9 @@ Backend API endpoints implemented:
   `GET /api/v1/sleep/today`
 - `GET /api/v1/insights/weekly` (Premium-gated, generates+caches the most recently completed
   week's aggregate + LLM summary), `GET /api/v1/insights/history?limit=8`
+- `GET /api/v1/admin/users?search=` (extended with search + real total), `GET /api/v1/admin/`
+  `subscriptions`/`feedback`/`integrations`/`metrics`/`waitlist` (all new, admin-gated) — built for
+  TIME-048's web admin dashboard alongside the already-existing `GET/POST /api/v1/invites/codes`
 - No new endpoints for TIME-043 — `notification_mode` (gentle/balanced/active_coach) already had
   read/write via `PATCH /api/v1/users/me/preferences`; TIME-043 only added the behavior that acts
   on it (NotificationService.maybe_send_morning_checkin/evening_checkout/learning_prompt), driven
@@ -40,14 +44,20 @@ sleep_wake_events, weekly_insights. (Correction: there is no separate "notificat
 table — the notification_mode field lives directly on user_preferences; a prior version of this
 file listed that table incorrectly.)
 
-Backend tests: 215, all passing (see Known Problems re: 2 flaky Stripe-network tests).
+Backend tests: 226, all passing (see Known Problems re: 2 flaky Stripe-network tests).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes. Insights tab (TIME-046) now shows a real weekly summary + stats grid behind the Premium gate.
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`. Plus (TIME-045) two Jetpack Glance AppWidgets (Usable Time, Next Event), each reading its own Preferences state written by NowViewModel/TodayViewModel. Insights tab (TIME-046) mirrors iOS's real content.
 - Both platforms (TIME-047): Settings > Preferences has a "Learned Assumptions" screen to view/edit the 6 RoutineAssumption blocks via the existing GET/PATCH /api/v1/routines endpoints — no backend changes.
 
+Web companion (TIME-048, new): Next.js 16 (App Router) + TypeScript + Tailwind 4 + Firebase Auth
+(env-var-driven, no real project yet). Role-protected `/admin` dashboard: metrics/integration
+status, user search, invite codes, subscriptions, feedback review. `npm run build`/`npm run lint`
+both clean.
+
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-048 (impl seq) → Jira TIME-47 (Admin Dashboard Foundation, Web) — **Done (this session)**
 - TIME-047 (impl seq) → Jira TIME-46 (Learned Assumptions Settings) — **Done (PR #39 merged 2026-07-05)**
 - TIME-046 (impl seq) → Jira TIME-45 (Weekly Insights Generation) — **Done (PR #38 merged 2026-07-05)**
 - TIME-045 (impl seq) → Jira TIME-44 (Android Widgets) — **Done (PR #37 merged 2026-07-05)**
@@ -62,33 +72,39 @@ Mobile app shells:
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-047 (Jira TIME-46): Learned Assumptions Settings
-- New "Learned Assumptions" screen on both iOS and Android (Settings > Preferences), listing the
-  6 RoutineAssumption types with friendly labels, formatted time ranges, and an "Edited" indicator
-  when `is_customized` — tapping a row opens a time-range editor calling the existing
-  PATCH /api/v1/routines/{routine_type}
-- Pure UI ticket, zero backend changes — GET/PATCH /api/v1/routines (TIME-039) already supported
-  everything needed
-- iOS: extracted `SettingsRowLabel` from `SettingsRow` so the new real `NavigationLink` doesn't
-  double up its own disclosure chevron with the old rows' manually-drawn one
-- Android: `SettingsItem` gained a real `onClick` (was a no-op `.clickable {}` before); added
-  `"learned_assumptions"` as a new destination in the existing single-NavHost tab structure; the
-  edit dialog reuses one Material3 `TimePicker` with Starts/Ends toggle buttons (no built-in
-  two-field time-range picker in Material3, and a third-party dependency felt like overkill)
-- Both mobile builds verified (`xcodebuild -target TimeSense ...` BUILD SUCCEEDED,
-  `./gradlew assembleDebug && ./gradlew test` BUILD SUCCESSFUL), zero new warnings
+TIME-048 (Jira TIME-47): Admin Dashboard Foundation (Web)
+- Bootstrapped `web/` from scratch (no scaffold existed — first ticket in this run to touch the
+  web platform): Next.js 16 + TypeScript + Tailwind 4 + Firebase Auth
+- Role-protected `/admin` dashboard: Overview (metrics + integration status), Users (search +
+  pagination), Invites (codes + waitlist), Subscriptions, Feedback — all consuming real backend
+  data, no mocked/dead-end pages
+- Confirmed with the user before proceeding: the ticket sequence implied the backend already had
+  everything, but only user-listing and invite-code management existed as admin endpoints. Added
+  GET /api/v1/admin/subscriptions/feedback/integrations/metrics/waitlist (all new, admin-gated) so
+  the dashboard has real data everywhere rather than dead ends
+- Also fixed GET /api/v1/admin/users: added a `search` param and a real `total` count (was
+  hardcoded to `len(users)`, always equal to the page size)
+- 11 new backend tests (17 total in test_admin.py); full suite 226/226 (excluding 2 known-flaky
+  Stripe tests)
+- `getAuth()` (Firebase) validates its API key eagerly and throws even during `next build`'s
+  static prerendering when the key is empty — fixed by making auth construction lazy
+  (`getFirebaseAuth()`), only touched at actual runtime use, guarded by `isFirebaseConfigured`
+- This Next.js/React version's ESLint enforces `react-hooks/set-state-in-effect`, which flags any
+  synchronous setState in an effect not immediately followed by async work in the same branch —
+  fixed by deriving loading state from data (`data === null && error === null`) instead of a
+  separate boolean, which also surfaced and fixed a latent bug (error message never cleared on a
+  later successful fetch)
+- `npm run build` and `npm run lint` both clean
 
-Full history of TIME-034 through TIME-046 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-047 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Phase 11 (Insights and Learning Summary) is now complete. Next up: TIME-048 (Admin Dashboard
-Foundation, Web), starting Phase 12 — the first web-app (`web/app/admin/`) ticket in this run;
-role-protected `/admin` route, user search, invite/waitlist management, subscription/trial view,
-feedback review, integration status, basic metrics. Also see known_issues.md — the deferred
-UsableTimeService timezone-awareness pass (to actually subtract routine/meal/commute/sleep blocks
-from usable time, and to make Celery beat/notification timing per-user-local instead of UTC-only)
-is unblocked and still worth scheduling soon rather than continuing to defer it across more
-tickets.
+Phase 12 (Admin Dashboard) is now complete. Next up: TIME-049 (Slack Integration), starting Phase
+13 (Integrations Expansion) — Slack OAuth, message read, action-item detection, user approval
+before task creation. Also see known_issues.md — the deferred UsableTimeService timezone-awareness
+pass (to actually subtract routine/meal/commute/sleep blocks from usable time, and to make Celery
+beat/notification timing per-user-local instead of UTC-only) is unblocked and still worth
+scheduling soon rather than continuing to defer it across more tickets.
 
 ## iOS HealthKit Decision Point (deferred from TIME-042, still open)
 TIME-042 only built the backend contract (ingest a wake_time signal, gate on health_data consent,

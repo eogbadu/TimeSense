@@ -2,7 +2,7 @@ import json
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.calendar_base import CalendarEventCreate
@@ -62,6 +62,18 @@ class CalendarIntegrationRepository:
         integration.is_active = False
         await self.db.flush()
         return True
+
+    async def count_by_provider(self) -> dict[str, dict[str, int]]:
+        """Admin-only: active/inactive integration counts grouped by provider."""
+        result = await self.db.execute(
+            select(CalendarIntegration.provider, CalendarIntegration.is_active, func.count())
+            .group_by(CalendarIntegration.provider, CalendarIntegration.is_active)
+        )
+        counts: dict[str, dict[str, int]] = {}
+        for provider, is_active, count in result.all():
+            bucket = counts.setdefault(provider, {"active": 0, "inactive": 0})
+            bucket["active" if is_active else "inactive"] = count
+        return counts
 
 
 class PendingCalendarActionRepository:

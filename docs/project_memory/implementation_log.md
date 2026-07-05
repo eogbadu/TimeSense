@@ -1,5 +1,59 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-048 (Jira TIME-47): Admin Dashboard Foundation (Web)
+
+### Created — web/ (bootstrapped from scratch; first ticket to touch this platform)
+- Next.js 16 (App Router) + TypeScript + Tailwind 4, scaffolded via `create-next-app` then
+  customized (`npm install firebase`, minimal landing page, real README)
+- `lib/firebase.ts` — Firebase app init + a **lazy** `getFirebaseAuth()` getter. `getAuth()`
+  validates the API key eagerly and throws `auth/invalid-api-key` immediately when it's empty —
+  even during `next build`'s static prerendering of `/_not-found` — so auth is never constructed
+  at module-eval time, only on first actual use at runtime, guarded by `isFirebaseConfigured`
+- `lib/auth.tsx` — auth context/hook (sign in, sign out, get ID token, current user)
+- `lib/api.ts` — `apiFetch()` + `useAdminApi()` hook attaching the Firebase ID token as a Bearer
+  header, mirroring ApiClient.swift/ApiClient.kt
+- `app/admin/layout.tsx` — role gate (checks GET /api/v1/users/me `role` client-side for UX; the
+  real security boundary stays server-side via the existing `AdminUser` FastAPI dependency) + nav
+- `app/admin/page.tsx` (metrics + integration status), `users/page.tsx` (search+pagination),
+  `invites/page.tsx` (list/create/disable codes + waitlist), `subscriptions/page.tsx`,
+  `feedback/page.tsx`
+- `.env.local.example` documenting the Firebase + API base URL env vars (none configured — same
+  placeholder gap as iOS/Android, open_questions.md)
+
+### Created/Modified — backend (extending admin.py beyond the ticket sequence's literal scope)
+- `backend/app/schemas/admin.py` — AdminSubscriptionSummary/ListResponse, AdminFeedbackSummary/
+  ListResponse, AdminIntegrationProviderStatus/StatusResponse, AdminMetricsResponse
+- `backend/app/api/v1/admin.py` — new GET /admin/subscriptions, /admin/feedback,
+  /admin/integrations, /admin/metrics, /admin/waitlist (all AdminUser-gated); extended
+  GET /admin/users with a `search` param and fixed `total` (was hardcoded to `len(users)`)
+- Repository additions: `user_repository.list_all(search)`/`count_all()`,
+  `subscription_repository.list_all()`/`count_by_status()`,
+  `recommendation_feedback_repository.list_recent_across_users()` (joins User+Task for display),
+  `calendar_repository.count_by_provider()`, `invite_repository.count_waiting()`/`count_active()`
+- `backend/tests/test_admin.py` — extended the existing 6-test file to 17 (11 new), covering each
+  new/changed endpoint's data correctness + 403-without-admin-role + cross-aggregation correctness
+
+### Design notes
+- The ticket sequence's scope line ("Files: web/app/admin/") implied the backend already exposed
+  everything needed. In reality only user-listing and invite-code management existed as admin
+  endpoints — subscriptions/feedback/integrations/metrics/waitlist had none. Confirmed with the
+  user before proceeding: build the missing endpoints rather than ship a dashboard with dead ends.
+- Discovered mid-implementation that "view the waitlist" (already committed to in scope) also had
+  no backend endpoint — added `GET /api/v1/admin/waitlist` (reusing the existing `WaitlistEntryOut`
+  schema, no new schema needed) rather than silently dropping that part of the scope.
+- A real, non-lint-blocking discovery: this Next.js/React version's ESLint config enforces a strict
+  `react-hooks/set-state-in-effect` rule that flags ANY synchronous `setState` call in an effect
+  body that isn't immediately followed by async work in the same branch — including the extremely
+  common "setLoading(true) at the top of a data-fetching effect" pattern once other early-return
+  branches exist nearby. Fixed by deriving loading state from data (`data === null && error ===
+  null`) instead of a separate boolean, per React's own "you might not need an effect" guidance —
+  cleaner code, not a workaround. Also fixed a latent bug this surfaced: `error` was never reset
+  on a subsequent successful fetch, so a transient failure would blank the UI's error message
+  permanently even after later successful loads.
+- `npm audit` flags a moderate postcss XSS advisory transitively bundled inside this Next.js
+  version; `npm audit fix --force` would downgrade Next.js 16→9 (a completely wrong "fix" from an
+  audit database that hasn't caught up with this very new release) — left alone, not actioned.
+
 ## 2026-07-05 — TIME-047 (Jira TIME-46): Learned Assumptions Settings
 
 ### Created
