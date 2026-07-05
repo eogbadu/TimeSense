@@ -1,5 +1,15 @@
 # Change Summary
 
+## 2026-07-05 — TIME-063 (Jira TIME-57) Fix Alembic migration ordering
+
+**What changed:** recommendation_feedback (g7h8i9j0k1l2, FK→tasks) now depends on the tasks
+migration (a1b2c3d4e5f7) instead of being a parallel sibling; merge migration e55970716568 tuple
+updated. A fresh Postgres `alembic upgrade head` now completes (was failing with "relation tasks
+does not exist"). Found while standing up a real local Postgres; masked by tests' create_all.
+
+**Verified:** single head; fresh-DB migrate clean (31 tables); backend boots + health 200; suite
+281/281.
+
 ## 2026-07-05 — TIME-062 (Jira TIME-56) Client Firebase Config (iOS + Android)
 
 **What changed:**

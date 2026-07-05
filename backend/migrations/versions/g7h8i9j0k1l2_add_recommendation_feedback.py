@@ -12,7 +12,11 @@ from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
 
 revision = "g7h8i9j0k1l2"
-down_revision = "f6a7b8c9d0e1"
+# Depends on the tasks table (FK recommendation_feedback.task_id -> tasks.id). tasks is created by
+# a1b2c3d4e5f7, which was a *sibling* branch off f6a7b8c9d0e1 — so linearizing the siblings could
+# run this migration before tasks existed, breaking a fresh Postgres upgrade. Chain this after
+# a1b2c3d4e5f7 so tasks is guaranteed to exist first. (TIME-063)
+down_revision = "a1b2c3d4e5f7"
 branch_labels = None
 depends_on = None
 
