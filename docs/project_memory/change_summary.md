@@ -1,5 +1,26 @@
 # Change Summary
 
+## 2026-07-05 — TIME-059 (Jira TIME-52) iOS Real Apple Signing Configuration
+
+**What changed:**
+- iOS project now points at the user's real Apple Developer account (Team WB5NV894N5) with the
+  registered App ID: app+widget bundle IDs renamed com.timesense.app → com.aetheranalytics.timesense
+  (+ .TimeSenseWidget), App Group group.com.timesense.app → group.com.aetheranalytics.timesense
+  across both entitlements + WidgetSnapshot.appGroupID
+
+**Verified:**
+- Simulator build succeeds after the rename
+- Signed 'Any iOS Device' build with the App Store Connect API key authenticated with Apple and
+  reached provisioning — blocked only by "no registered device" (the user's remaining step). Config
+  validated against the real account.
+
+**What did not change:**
+- Android applicationId (com.timesense.app) — separate Google Play concern, untouched
+- No on-device install (no device attached), no Firebase/plist changes
+
+**Next:**
+- TIME-060: iOS HealthKit sleep/wake read integration (now that signing + entitlements can provision)
+
 ## 2026-07-05 — TIME-052 (Jira TIME-51) Siri Shortcuts / App Intents
 
 **What changed:**

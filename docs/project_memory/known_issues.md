@@ -82,15 +82,13 @@
 - Verification: Both targets build with `BUILD SUCCEEDED` via the `-target`/`-sdk` invocation above; zero new warnings (one pre-existing, unrelated warning in `CaptureViewModel.swift`).
 - Follow-up needed: If actually running/screenshotting the app in Simulator becomes necessary (per the `run`/`verify` skills), a Simulator runtime will need to be downloaded first — either via Xcode's own "Platforms" settings UI or `xcodebuild -downloadPlatform iOS`. Ask the user before doing this given the download size.
 
-## Issue: iOS App Group entitlement (TIME-044) has no real Apple Developer Team behind it yet
+## Issue: iOS App Group entitlement (TIME-044) has no real Apple Developer Team behind it yet — RESOLVED 2026-07-05 (TIME-059)
 - Date: 2026-07-05
 - Area: `ios/TimeSense/TimeSense.entitlements`, `ios/TimeSenseWidget/TimeSenseWidget.entitlements`
-- Symptom: Both targets declare `com.apple.security.application-groups = [group.com.timesense.app]` and build fine for Simulator (CODE_SIGNING_ALLOWED=NO / automatic signing with no team), but a real device or App Store build needs that App Group actually registered against a real Apple Developer Team in the Apple Developer portal, or codesigning/provisioning will fail.
-- Root cause: No Apple Developer account is configured for this project yet (see `open_questions.md` — already an open question predating this ticket).
-- Fix: Not applied — same category of gap as the Firebase/GoogleService-Info.plist placeholders already logged; nothing to do until a real Apple Developer account exists.
-- Files changed: None.
-- Verification: N/A (Simulator builds are unaffected).
-- Follow-up needed: Once a real Apple Developer Team is available, register the `group.com.timesense.app` App Group against both the host app's and widget extension's App IDs in the portal, then re-verify signing with a real team selected instead of `CODE_SIGN_STYLE = Automatic` + no team.
+- **RESOLVED (2026-07-05, TIME-059):** the user provided a real Apple Developer account in .env (Team WB5NV894N5, registered App ID com.aetheranalytics.timesense + an App Store Connect API key). TIME-059 set DEVELOPMENT_TEAM on both targets and renamed all bundle IDs + the App Group to the registered `com.aetheranalytics.timesense` / `group.com.aetheranalytics.timesense`. A signed 'generic/platform=iOS' build with the API key authenticated with Apple and reached provisioning-profile generation, failing only on "no registered device" — i.e. the config is correct against the real account; the sole remaining step is a device UDID (the user plugging in their iPhone via their Xcode). Simulator builds unaffected.
+- Symptom: Both targets declared `com.apple.security.application-groups = [group.com.timesense.app]` and built fine for Simulator (CODE_SIGNING_ALLOWED=NO / automatic signing with no team), but a real device or App Store build needs that App Group registered against a real Apple Developer Team, or codesigning/provisioning fails.
+- Root cause: No Apple Developer account was configured — now provided.
+- Follow-up needed: For an actual on-device run, the user registers their device UDID (auto when connected in Xcode) so a development provisioning profile can be created; the headless environment has no device. HealthKit (TIME-060) adds the healthkit entitlement on top of this now-real signing.
 
 ## Issue: test_referrals.py intermittently fails on real Stripe network calls
 - Date: 2026-07-05

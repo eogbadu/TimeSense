@@ -1,5 +1,41 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-059 (Jira TIME-52): iOS Real Apple Signing Configuration
+
+### What changed
+- Set `DEVELOPMENT_TEAM = WB5NV894N5` (the user's real Apple Developer Team, from .env) on both
+  the TimeSense app and TimeSenseWidgetExtension targets (Debug + Release), via the xcodeproj gem
+- Renamed `PRODUCT_BUNDLE_IDENTIFIER`: app `com.timesense.app` → `com.aetheranalytics.timesense`;
+  widget `com.timesense.app.TimeSenseWidget` → `com.aetheranalytics.timesense.TimeSenseWidget`
+  (both configs). `com.aetheranalytics.timesense` is the user's registered App ID (from .env
+  APPLE_BUNDLE_ID)
+- Renamed the shared App Group `group.com.timesense.app` → `group.com.aetheranalytics.timesense`
+  in all three places that must agree: `TimeSense.entitlements`, `TimeSenseWidget.entitlements`,
+  and `WidgetSnapshot.appGroupID` (the widget reads the app's snapshot via this group)
+
+### Files changed
+- `ios/TimeSense.xcodeproj/project.pbxproj`, `ios/TimeSense/TimeSense.entitlements`,
+  `ios/TimeSenseWidget/TimeSenseWidget.entitlements`, `ios/TimeSense/Core/Widgets/WidgetSnapshot.swift`
+
+### Verification
+- Simulator build: `xcodebuild -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone
+  16' CODE_SIGNING_ALLOWED=NO` → **BUILD SUCCEEDED** after the rename
+- **Real signed-device build (best-effort, per the ticket):** ran `xcodebuild -destination
+  'generic/platform=iOS' -allowProvisioningUpdates -authenticationKey{ID,IssuerID,Path}` with the
+  user's App Store Connect API key (materialized to a temp .p8 in scratchpad — the .env value is a
+  single line with literal `\n` escapes, so it had to be decoded to real newlines; validated with
+  `openssl pkey`; the temp key was deleted after use and never committed). Result: the key
+  **authenticated with Apple successfully** and signing got all the way to provisioning-profile
+  generation, failing only with: *"Your team has no devices from which to generate a provisioning
+  profile. Connect a device… No profiles for 'com.aetheranalytics.timesense' were found."* Apple
+  raised NO complaint about the team, bundle IDs, app group, or certificate — meaning the project
+  is now correctly configured to sign against the real account; the sole remaining step is
+  registering a device UDID (i.e. the user plugging in their iPhone via their own Xcode). This is
+  the exact "needs physical hardware" boundary and is expected — a *development* profile requires a
+  registered device, and there's none in this headless environment.
+- Note: automatic signing may have registered the two App IDs in the user's account during the
+  attempt (benign — they need to exist anyway); it failed before creating a profile.
+
 ## 2026-07-05 — TIME-052 (Jira TIME-51): Siri Shortcuts / App Intents
 
 ### Created

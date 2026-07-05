@@ -23,7 +23,7 @@ struct WidgetSnapshot: Codable {
 
     static let empty = WidgetSnapshot(usableMinutes: 0, bestTask: nil, nextEvent: nil, updatedAt: .distantPast)
 
-    static let appGroupID = "group.com.timesense.app"
+    static let appGroupID = "group.com.aetheranalytics.timesense"
     private static let storageKey = "widget_snapshot_v1"
 
     static func load() -> WidgetSnapshot? {
