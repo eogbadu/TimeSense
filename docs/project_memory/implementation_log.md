@@ -1,5 +1,47 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-051 (Jira TIME-50): Notion Integration
+
+### Created
+- `backend/app/integrations/task_source_base.py` — **new** TaskSourceProvider ABC + SourceTask
+  dataclass. Deliberately separate from MessageSourceProvider: a task source (Notion, later
+  Todoist/Things) holds already-structured task-like items, so no LLM detection is needed —
+  structured field extraction does the work
+- `backend/app/integrations/notion_source.py` — NotionTaskSource querying the Notion API
+  POST /v1/databases/{id}/query; `_extract_title` (from the title-type property) and `_extract_due`
+  (first date-type property) pull structured fields, no LLM
+- `backend/app/models/notion.py` — NotionIntegration (token) + NotionImportItem (import queue,
+  status pending|imported|dismissed, carries title/notes/due_at)
+- `backend/migrations/versions/p6q7r8s9t0u1_add_notion_integration.py` — both tables
+- `backend/app/repositories/notion_repository.py`, `schemas/notion.py`, `services/notion_service.py`
+  (connect/disconnect/scan_database/list_pending/import_item/dismiss + NotionNotConnected),
+  `api/v1/notion.py`
+- `backend/tests/test_notion.py` — 15 tests (5 real property-extraction unit tests + scan/import/
+  dismiss + premium gate + isolation)
+
+### Modified
+- `backend/app/core/config.py` — notion_client_id/secret + notion_version ("2022-06-28")
+- `backend/app/api/v1/__init__.py`, `backend/app/models/__init__.py` — registered router/models
+- `backend/app/schemas/task.py` — added "notion" to the TaskSource literal
+
+### Design notes
+- Per the user's direction, Notion got its OWN abstraction rather than being bent into the
+  MessageSourceProvider shape. Justification: a Notion database row is already a discrete task, so
+  the honest operation is structured title/due extraction + explicit user import — not LLM sifting
+  of chat noise. This is why there's no ActionItemDetectionService here. The framing is
+  import/dismiss (not detect/confirm) to reflect it.
+- Same approval-gate discipline as every other external signal: scan_database() creates *pending*
+  NotionImportItem rows only; import_item() is the single path that creates a Task (source="notion",
+  carrying the extracted due_at). Nothing auto-imports.
+- Structured extraction handles Notion's property model: the title lives in whichever property has
+  type=="title" (name varies per database); due comes from the first date-type property. Only these
+  two fields — richer per-database field mapping is an explicit Non-Goal.
+- No real Notion OAuth app (empty NOTION_CLIENT_ID/SECRET) — mobile client posts the token to
+  /notion/connect like the other integrations; no server-side OAuth callback. Token plain Text,
+  same cross-integration encryption deferral (known_issues.md).
+- 15 new tests; full suite 262/262 (excluding 2 known-flaky Stripe tests). Single alembic head,
+  both tables compile offline.
+
 ## 2026-07-05 — TIME-050 (Jira TIME-49): Microsoft Teams Integration
 
 ### Created

@@ -10,6 +10,7 @@ from app.api.v1.insights import router as insights_router
 from app.api.v1.invites import router as invites_router
 from app.api.v1.meals import router as meals_router
 from app.api.v1.notifications import router as notifications_router
+from app.api.v1.notion import router as notion_router
 from app.api.v1.onboarding import router as onboarding_router
 from app.api.v1.referrals import router as referrals_router
 from app.api.v1.capture import router as capture_router
@@ -47,4 +48,5 @@ api_router.include_router(sleep_router)
 api_router.include_router(insights_router)
 api_router.include_router(slack_router)
 api_router.include_router(teams_router)
+api_router.include_router(notion_router)
 api_router.include_router(capture_router)

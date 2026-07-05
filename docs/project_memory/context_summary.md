@@ -7,8 +7,8 @@
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
 Phase 8 (Recommendation Engine V1), Phase 9 (Routines/Meals/Commute/Sleep-Wake), Phase 10
 (Notifications, Widgets, Ambient Surfaces), Phase 11 (Insights and Learning Summary), and Phase 12
-(Admin Dashboard) complete. Phase 13 (Integrations Expansion) in progress — TIME-049 (Slack) and
-TIME-050 (Teams) done, TIME-051 (Notion) next.
+(Admin Dashboard) complete. Phase 13 (Integrations Expansion) in progress — TIME-049 (Slack),
+TIME-050 (Teams), TIME-051 (Notion) done; TIME-052 (Siri Shortcuts / App Intents) next.
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -39,6 +39,10 @@ Backend API endpoints implemented:
 - `POST /api/v1/teams/*` — same shape as slack (connect/disconnect/scan/pending/confirm/reject),
   reads MS Teams via Microsoft Graph, Task source=teams (TIME-050). Slack + Teams share one
   source-neutral `ActionItemDetectionService`
+- `POST /api/v1/notion/*` (connect/disconnect/scan/pending + items/{id}/import|dismiss) — reads a
+  Notion database's pages as candidate tasks (structured title/due extraction, NO LLM), user
+  imports → Task source=notion (TIME-051). Uses a separate `TaskSourceProvider` abstraction, not
+  the chat-oriented `MessageSourceProvider`
 - No new endpoints for TIME-043 — `notification_mode` (gentle/balanced/active_coach) already had
   read/write via `PATCH /api/v1/users/me/preferences`; TIME-043 only added the behavior that acts
   on it (NotificationService.maybe_send_morning_checkin/evening_checkout/learning_prompt), driven
@@ -48,11 +52,12 @@ Database tables: users, profiles, preferences, personalities, onboarding_states,
 subscription_records, replan_requests, notifications, notification_events, tasks,
 internal_reminders, recommendation_feedback, routine_assumptions, meal_events, commute_events,
 sleep_wake_events, weekly_insights, calendar_integrations, pending_calendar_actions,
-slack_integrations, slack_action_items, teams_integrations, teams_action_items. (Correction: there
-is no separate "notification_preferences" table — the notification_mode field lives directly on
-user_preferences; a prior version of this file listed that table incorrectly.)
+slack_integrations, slack_action_items, teams_integrations, teams_action_items, notion_integrations,
+notion_import_items. (Correction: there is no separate "notification_preferences" table — the
+notification_mode field lives directly on user_preferences; a prior version of this file listed
+that table incorrectly.)
 
-Backend tests: 252, all passing (see Known Problems re: 2 flaky Stripe-network tests).
+Backend tests: 267, all passing (see Known Problems re: 2 flaky Stripe-network tests).
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`. Plus (TIME-044) a `TimeSenseWidgetExtension` WidgetKit target with three home-screen widgets (Usable Time, Next Up, Do Next) reading a shared App-Group snapshot the app writes. Insights tab (TIME-046) now shows a real weekly summary + stats grid behind the Premium gate.
@@ -65,6 +70,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-051 (impl seq) → Jira TIME-50 (Notion Integration) — **Done (this session)**
 - TIME-050 (impl seq) → Jira TIME-49 (Microsoft Teams Integration) — **Done (PR #42 merged 2026-07-05)**
 - TIME-049 (impl seq) → Jira TIME-48 (Slack Integration) — **Done (PR #41 merged 2026-07-05)**
 - TIME-048 (impl seq) → Jira TIME-47 (Admin Dashboard Foundation, Web) — **Done (PR #40 merged 2026-07-05)**
@@ -82,32 +88,30 @@ both clean.
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-050 (Jira TIME-49): Microsoft Teams Integration
-- `TeamsMessageSource(MessageSourceProvider)` reading MS Graph /chats/{id}/messages (HTML body
-  stripped to plain text); reuses the abstraction TIME-049 built
-- `teams_integrations` + `teams_action_items` tables; `TeamsService`
-  (connect/disconnect/scan_conversation/confirm/reject) mirroring SlackService, same approval gate
-  (scan → *pending* items only; confirm → Task, source="teams")
-- Extracted the LLM action-item detection into a shared source-neutral `ActionItemDetectionService`
-  (`app/services/action_item_detection.py`); `slack_service.py` now imports it and keeps
-  `SlackDetectionService` as a backward-compat alias so the merged test_slack.py stays green
-- Kept per-source parallel models/service (rule of three) rather than unifying Slack+Teams into one
-  source-tagged schema — deferred to a 3rd source to avoid churning just-merged Slack tables
-- No real Azure AD app (empty MICROSOFT_CLIENT_ID/SECRET) — token posted to /teams/connect like
-  /slack/connect; no server-side OAuth callback / Graph change-notifications
-- 12 new Teams tests; Slack's 14 still green; full suite 252/252 (excluding 2 known-flaky Stripe
-  tests). Single alembic head, both tables compile offline
+TIME-051 (Jira TIME-50): Notion Integration
+- New `TaskSourceProvider` abstraction (`integrations/task_source_base.py`), deliberately separate
+  from `MessageSourceProvider` (per user direction): a task source holds already-structured
+  task-like items, so no LLM detection — structured field extraction does the work
+- `NotionTaskSource` reads a Notion database via POST /v1/databases/{id}/query; `_extract_title`
+  (title-type property) + `_extract_due` (first date-type property) pull the fields, no LLM
+- `notion_integrations` + `notion_import_items` tables; `NotionService`
+  (connect/disconnect/scan_database/list_pending/import_item/dismiss); approval gate framed as
+  import/dismiss (scan → *pending* items only; import → Task source=notion carrying due_at)
+- No real Notion OAuth app — token posted to /notion/connect like the others; token plain Text
+  (same cross-integration encryption deferral)
+- 15 new tests (incl. 5 real property-extraction unit tests); full suite 267/267 (excluding 2
+  known-flaky Stripe tests). Single alembic head, both tables compile offline
 
-Full history of TIME-034 through TIME-049 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-050 is in `implementation_log.md` and `change_summary.md`.
 
 ## Current Active Task
-Phase 13 (Integrations Expansion) is in progress. Next up: TIME-051 (Notion Integration) — Goal is
-"lightweight task/context extraction from Notion." Note: Notion is a docs/pages source, not a chat
-message stream, so the `MessageSourceProvider` abstraction may not fit as cleanly as it did for
-Slack/Teams — decide whether Notion reuses ActionItemDetectionService over page/database content or
-warrants a different shape. If a 3rd message-source-like integration does emerge, that's the trigger
-to unify the Slack+Teams parallel tables into one source-tagged schema (see decision_log.md). Also
-see known_issues.md — the deferred UsableTimeService timezone-awareness pass (subtract routine/meal/
+Phase 13 (Integrations Expansion) is in progress. Next up: TIME-052 (Siri Shortcuts / App Intents)
+— "Expose TimeSense actions to Siri and Shortcuts." This is native iOS work (App Intents / Siri
+Shortcuts in `ios/`), not a backend integration, so it needs Xcode and is a different shape from
+TIME-049-051. Two message-source integrations (Slack, Teams) share `ActionItemDetectionService`;
+Notion stands alone on `TaskSourceProvider`. If a 3rd chat source emerges, that's the trigger to
+unify the Slack+Teams parallel tables into one source-tagged schema (see decision_log.md). Also see
+known_issues.md — the deferred UsableTimeService timezone-awareness pass (subtract routine/meal/
 commute/sleep from usable time + per-user-local Celery timing) is unblocked and still worth
 scheduling soon rather than continuing to defer it across more tickets.
 
