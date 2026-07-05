@@ -25,16 +25,23 @@ enum DesignTokens {
 
     // MARK: – Typography
 
+    // Refined SF Pro scale — clean, Apple-like hierarchy (headings use the default face, not rounded,
+    // for a calmer, more premium read). Apply `.tracking(Tracking.tight)` on large headings in views.
     enum Typography {
-        static let largeTitle   = SwiftUI.Font.system(size: 34, weight: .bold, design: .rounded)
-        static let title        = SwiftUI.Font.system(size: 28, weight: .semibold, design: .rounded)
-        static let title2       = SwiftUI.Font.system(size: 22, weight: .semibold, design: .rounded)
-        static let headline     = SwiftUI.Font.system(size: 17, weight: .semibold, design: .default)
-        static let body         = SwiftUI.Font.system(size: 17, weight: .regular, design: .default)
-        static let callout      = SwiftUI.Font.system(size: 16, weight: .regular, design: .default)
-        static let subheadline  = SwiftUI.Font.system(size: 15, weight: .regular, design: .default)
-        static let footnote     = SwiftUI.Font.system(size: 13, weight: .regular, design: .default)
-        static let caption      = SwiftUI.Font.system(size: 12, weight: .regular, design: .default)
+        static let largeTitle   = SwiftUI.Font.system(size: 34, weight: .bold,      design: .default)
+        static let title        = SwiftUI.Font.system(size: 28, weight: .bold,      design: .default)
+        static let title2       = SwiftUI.Font.system(size: 22, weight: .semibold,  design: .default)
+        static let headline     = SwiftUI.Font.system(size: 17, weight: .semibold,  design: .default)
+        static let body         = SwiftUI.Font.system(size: 17, weight: .regular,   design: .default)
+        static let callout      = SwiftUI.Font.system(size: 16, weight: .regular,   design: .default)
+        static let subheadline  = SwiftUI.Font.system(size: 15, weight: .regular,   design: .default)
+        static let footnote     = SwiftUI.Font.system(size: 13, weight: .regular,   design: .default)
+        static let caption      = SwiftUI.Font.system(size: 12, weight: .medium,    design: .default)
+    }
+
+    enum Tracking {
+        static let tight: CGFloat = -0.5   // large headings
+        static let wide: CGFloat = 0.6     // uppercase section labels
     }
 
     // MARK: – Spacing
@@ -68,8 +75,9 @@ enum DesignTokens {
 
     // MARK: – Shadow
 
+    // Soft, diffuse shadows — cards should feel like they float, not be outlined.
     enum Shadow {
-        static let card  = (color: SwiftUI.Color.black.opacity(0.08), radius: 12.0, x: 0.0, y: 4.0)
-        static let float = (color: SwiftUI.Color.black.opacity(0.14), radius: 20.0, x: 0.0, y: 8.0)
+        static let card  = (color: SwiftUI.Color.black.opacity(0.05), radius: 18.0, x: 0.0, y: 8.0)
+        static let float = (color: SwiftUI.Color.black.opacity(0.10), radius: 28.0, x: 0.0, y: 12.0)
     }
 }
