@@ -1,5 +1,6 @@
 # Import all models here so Alembic autogenerate can detect them
 from app.models.calendar import CalendarIntegration, PendingCalendarAction  # noqa: F401
+from app.models.commute import CommuteEvent  # noqa: F401
 from app.models.consent import ConsentRecord  # noqa: F401
 from app.models.invite import InviteCode, WaitlistEntry  # noqa: F401
 from app.models.meal import MealEvent  # noqa: F401

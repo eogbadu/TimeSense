@@ -2192,6 +2192,94 @@ TICKETS = [
             p("TIME-041: Commute Detection"),
         ),
     },
+
+    {
+        "summary": "TIME-041: Commute Detection",
+        "labels": ["phase-9", "backend", "privacy"],
+        "description": doc(
+            h2("Goal"),
+            p("Detect a likely commute from a batch of location points the mobile app submits, "
+              "and require the user to confirm it before it's treated as real signal — never "
+              "silently assume. Reuses the existing consent and notification/approval "
+              "infrastructure rather than inventing new mechanisms for either."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "CommuteEvent model: user_id, direction (to_work|to_home), detected_start, "
+                "detected_end, estimated_minutes, status (pending|confirmed|rejected), "
+                "notification_id (FK, mirrors ReplanRequest's approval-notification link)",
+                "Alembic migration for commute_events table",
+                "CommuteService.detect_from_pings(pings) — pure heuristic: haversine displacement "
+                "between first/last ping must exceed 500m, elapsed time must be 5–120 minutes; "
+                "direction inferred from the first ping's UTC hour (<14 → to_work, else to_home — "
+                "same UTC-only simplification already used by UsableTimeService/RoutineAssumption)",
+                "CommuteService.propose_commute(user_id, pings) — gates on effective "
+                "location_tracking consent (existing consent_records/ConsentRepository, per the "
+                "privacy-security-consent skill) raising if not granted; on a detected candidate, "
+                "creates a pending CommuteEvent + an approval_needed Notification (same pattern "
+                "NotificationService.propose_replan already uses)",
+                "CommuteService.confirm/reject(user_id, commute_id) — user must approve or reject; "
+                "nothing is ever auto-confirmed",
+                "POST /api/v1/commute/detect, GET /api/v1/commute/pending, "
+                "POST /api/v1/commute/{id}/confirm, POST /api/v1/commute/{id}/reject",
+                "Raw lat/lng points are never persisted — only the derived commute window is "
+                "stored, matching the product's raw-sensitive-data-minimization posture",
+                "Tests: 12+ covering detection math, consent gate (403 without location_tracking "
+                "consent granted), confirm/reject flow, no-op when displacement/time don't qualify, "
+                "cross-user isolation, notification creation",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No real calendar-event-location correlation — no CalendarEvent table with "
+                "location data exists yet in this codebase; that's a separate future ticket",
+                "No mobile location-permission request UI or CoreLocation/FusedLocationProvider "
+                "integration — this ticket is the backend contract only, same split TIME-042 uses "
+                "for its iOS HealthKit piece",
+                "No background/scheduled detection — the mobile app decides when to submit a ping "
+                "batch (e.g. after a period of movement); this ticket doesn't add a Celery job",
+                "No changes to UsableTimeService/recommendations based on commute — that's follow-up "
+                "work once confirmed commute data has accumulated",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/models/commute.py (new)",
+                "backend/migrations/versions/*_add_commute_events.py (new)",
+                "backend/app/repositories/commute_repository.py (new)",
+                "backend/app/schemas/commute.py (new)",
+                "backend/app/services/commute_service.py (new)",
+                "backend/app/api/v1/commutes.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/app/models/__init__.py (register model)",
+                "backend/tests/test_commutes.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/commute/detect without location_tracking consent granted returns 403",
+                "A ping batch with >500m displacement and 5–120 min elapsed time creates a pending "
+                "CommuteEvent and an approval_needed Notification",
+                "A ping batch with too little displacement or an out-of-range duration detects nothing",
+                "POST /api/v1/commute/{id}/confirm sets status=confirmed; reject sets status=rejected",
+                "One user cannot see or confirm/reject another user's commute events",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_commutes.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-010 (consent_records / ConsentRepository), TIME-015 (Notification model / approval pattern)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-042: Sleep/Wake Signal Integration"),
+        ),
+    },
 ]
 
 

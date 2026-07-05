@@ -1,5 +1,24 @@
 # Change Summary
 
+## 2026-07-05 — TIME-041 (Jira TIME-40) Commute Detection
+
+**What changed:**
+- `commute_events` table: derived commute windows (direction, start/end, estimated_minutes, status)
+- `POST /api/v1/commute/detect` (403 without `location_tracking` consent granted) — haversine
+  displacement (>500m) + elapsed-time (5–120min) heuristic on a submitted ping batch; creates a
+  pending CommuteEvent + an approval_needed Notification if a commute is detected
+- `GET /api/v1/commute/pending`, `POST /api/v1/commute/{id}/confirm`, `.../reject`
+- Reused existing `consent_records` (location_tracking) and Notification/approval infrastructure
+  rather than building new mechanisms for either
+
+**What did not change:**
+- No raw lat/lng persistence — only the derived window is stored
+- No calendar-event-location correlation (no such table exists yet)
+- No mobile location-permission UI or CoreLocation/FusedLocationProvider integration
+
+**Next:**
+- TIME-042: Sleep/Wake Signal Integration
+
 ## 2026-07-05 — TIME-040 (Jira TIME-39) Meal Tracking (Lightweight)
 
 **What changed:**
