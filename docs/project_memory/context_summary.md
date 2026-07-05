@@ -89,6 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-066 (net-new) → Jira TIME-64 (Fix iOS missing color assets / invisible UI) — **Done (this session)**
 - TIME-057 (impl seq) → Jira TIME-63 (App Store & Play Store Prep, docs) — **Done (PR #58 merged 2026-07-05)**
 - TIME-056 (impl seq) → Jira TIME-62 (Security Review & Hardening) — **Done (PR #57 merged 2026-07-05)**
 - TIME-055 (impl seq) → Jira TIME-61 (Privacy: Data Export + Account Deletion) — **Done (PR #56 merged 2026-07-05)**

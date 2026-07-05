@@ -1,5 +1,32 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-066 (Jira TIME-64): Fix iOS missing color assets (invisible UI)
+
+### Bug (found while the user tried to sign in on the Simulator)
+Almost the entire iOS UI was invisible — the user reported only a "Continue with Apple" button on the
+sign-in screen. Root cause: `DesignTokens.Color` references named asset-catalog colors
+(`Color("TextPrimary")`, `"Surface"`, `"Background"`, `"AccentColor"`, `"TextSecondary"`,
+`"Destructive"`, `"Success"`), but **the project had no asset catalog at all**. Every token color
+resolved to an invisible fallback, so all text/surfaces/brand rendered white-on-white; only
+hardcoded-black elements (the Apple button) showed.
+
+### Fix
+- Created `ios/TimeSense/Assets.xcassets` with a colorset for each token (light + dark variants;
+  neutral text/surface palette + indigo accent #4A6CF7), plus an empty `AppIcon.appiconset` (actool
+  requires the app-icon set named by ASSETCATALOG_COMPILER_APPICON_NAME).
+- Registered the catalog in the TimeSense target's resources (xcodeproj gem).
+
+### Verification
+- Simulator build → BUILD SUCCEEDED (first attempt failed on the missing AppIcon set until the empty
+  one was added). Installed + launched + screenshotted the sign-in screen: brand header, Continue
+  with Apple, Continue with Google, "or" divider, and Continue with Email all now render.
+
+### Lesson (recorded in known_issues.md)
+Prior iOS "verification" this session (BUILD SUCCEEDED + app launches to its sign-in screen) did NOT
+catch this — the one visible element looked plausible in a screenshot, so "app runs to sign-in" was
+mistaken for a healthy UI. **Visual verification must confirm the intended UI actually renders, not
+just that the app launches.**
+
 ## 2026-07-05 — TIME-057 (Jira TIME-63): App Store and Play Store Prep
 
 Documentation deliverable (no code). Created `docs/launch/`:

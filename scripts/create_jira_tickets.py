@@ -4312,6 +4312,74 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-066: Fix iOS missing color assets (invisible UI)",
+        "labels": ["ios", "bug", "ui"],
+        "description": doc(
+            h2("Goal"),
+            p("Fix an iOS bug where almost the entire UI was invisible. DesignTokens.Color reference "
+              "named asset-catalog colors (Color(\"TextPrimary\"), \"Surface\", \"Background\", "
+              "\"Accent\", etc.), but the project had NO asset catalog at all — so every token color "
+              "resolved to an invisible fallback. Only hardcoded-black elements (the Apple sign-in "
+              "button) were visible; the brand header, Google button, 'Continue with Email' link, "
+              "and effectively all text/surfaces across the app rendered white-on-white."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Create ios/TimeSense/Assets.xcassets with colorsets for every DesignTokens color "
+                "(AccentColor, Background, Surface, TextPrimary, TextSecondary, Destructive, "
+                "Success), each with light + dark (luminosity) variants",
+                "Add an empty AppIcon.appiconset (actool requires the app-icon set named in "
+                "ASSETCATALOG_COMPILER_APPICON_NAME)",
+                "Register Assets.xcassets in the TimeSense target's resources (via the xcodeproj gem)",
+                "Verify: Simulator build succeeds and the sign-in screen renders the full UI (brand "
+                "header + all sign-in options visible)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No real app icon artwork (empty AppIcon set; the icon is a launch-assets task — see "
+                "docs/launch/store_assets_checklist.md)",
+                "No redesign — colors match the intended neutral/indigo palette the tokens implied",
+                "No changes to the widget extension's separate WidgetColors",
+            ]),
+            divider(),
+            h2("Root cause / lesson"),
+            p("Earlier iOS 'verification' (BUILD SUCCEEDED + app launches to its sign-in screen) did "
+              "not catch this because the one visible element (the black Apple button) looked "
+              "plausible in a screenshot. Visual verification must confirm the intended UI renders, "
+              "not just that the app launches. Recorded in known_issues.md."),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Assets.xcassets/** (new — 7 colorsets + AppIcon + root Contents.json)",
+                "ios/TimeSense.xcodeproj/project.pbxproj (register the catalog)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "All 7 named DesignTokens colors exist as colorsets with light + dark values",
+                "Simulator build succeeds (was failing on the missing AppIcon once a catalog was added)",
+                "The sign-in screen shows the brand header, Apple, Google, and Continue-with-Email "
+                "(verified by screenshot)",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO\n"
+                "# then simctl install/launch + screenshot the sign-in screen"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-018 (iOS shell + DesignTokens), the now-available iOS Simulator, TIME-062 "
+              "(Firebase-linked build)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 
