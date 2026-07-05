@@ -3723,6 +3723,79 @@ TICKETS = [
             p("TIME-054: Notion Integration (or next Phase 13 item)."),
         ),
     },
+
+    {
+        "summary": "TIME-062: Client Firebase Config (iOS + Android)",
+        "labels": ["ios", "android", "auth"],
+        "description": doc(
+            h2("Goal"),
+            p("Wire the real Firebase project (timesense-eb7ec) into the iOS and Android clients so "
+              "they can actually sign in against the now-real backend (TIME-061). The app auth code "
+              "already exists behind `#if canImport(FirebaseAuth)` (iOS) / Firebase deps (Android); "
+              "this ticket adds the SDK linkage + the per-app config the Firebase console generates."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "iOS: add the firebase-ios-sdk Swift Package (pinned to 11.x — Firebase 12.x needs "
+                "Swift tools 6.1, newer than this Xcode 16.0 / Swift 6.0) and link FirebaseAuth + "
+                "FirebaseCore to the TimeSense target; also add the GoogleSignIn-iOS package (8.x) "
+                "since AuthService uses GoogleSignIn for Google sign-in",
+                "iOS: add GoogleService-Info.plist to the app target (gitignored — stays local, not "
+                "committed)",
+                "Android: replace the placeholder app/google-services.json with the real one "
+                "(project timesense-eb7ec, package com.timesense.app) — the com.google.gms.google-"
+                "services plugin + firebase-auth deps are already wired",
+                "Commit the reproducible bits: project.pbxproj (package refs + product links + plist "
+                "file ref) and Package.resolved (pins Firebase 11.15.0 et al.); add depth-agnostic "
+                ".gitignore rules for xcuserdata/ and .swiftpm/",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Web client config — pending the user's web apiKey/appId; separate follow-up "
+                "(web/.env.local)",
+                "No sign-in provider enablement in the Firebase console (Apple/Google/email) — that "
+                "console toggle is the user's step",
+                "No on-device run — verified on the Simulator (build + launch); real interactive "
+                "sign-in needs a device/console providers",
+                "GoogleService-Info.plist is NOT committed (gitignored, per repo convention) — each "
+                "dev supplies their own from the console",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense.xcodeproj/project.pbxproj (SPM package refs + product links + plist ref)",
+                "ios/TimeSense.xcodeproj/.../swiftpm/Package.resolved (version pins)",
+                "android/app/google-services.json (real config)",
+                ".gitignore (xcuserdata/ + .swiftpm/)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "iOS Simulator build succeeds with FirebaseAuth/FirebaseCore/GoogleSignIn linked "
+                "(the real `#if canImport(FirebaseAuth)` AuthService compiles)",
+                "iOS app launches on the Simulator with FirebaseApp.configure() running against the "
+                "real plist (no crash)",
+                "android/app/google-services.json is the real timesense-eb7ec config",
+                "No Xcode user-data / temp scripts / the plist itself get committed",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild -resolvePackageDependencies -project ios/TimeSense.xcodeproj -scheme TimeSense\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-061 (backend real Firebase verification), TIME-059 (iOS bundle id "
+              "com.aetheranalytics.timesense matching the registered iOS app), a real Firebase "
+              "project (timesense-eb7ec) with iOS/Android apps registered by the user."),
+            divider(),
+            h2("Next Ticket"),
+            p("Web Firebase config (web/.env.local) once the web apiKey/appId are provided."),
+        ),
+    },
 ]
 
 

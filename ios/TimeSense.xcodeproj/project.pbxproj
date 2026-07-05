@@ -13,8 +13,11 @@
 		1867B909FA67B3A39C779266 /* LearnedAssumptionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */; };
 		2581959640C248F708C40237 /* NextEventWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735A76942000F597C1CACE5 /* NextEventWidget.swift */; };
 		27E0CEE0014BB03E51E55021 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */; };
+		3D092792B9E925D96BBCB8C5 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 0AD19081BFEAB84D2436D502 /* FirebaseAuth */; };
+		3F554C916352558F50E350F1 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B7C454C84B7C4695AE16D3BD /* FirebaseCore */; };
 		52BDFC5568770624F97DA818 /* TimeSenseWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */; };
 		56A356B25C25BEB8CD534EE2 /* InsightsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F22CD5D75BA658BEA67CA349 /* InsightsViewModel.swift */; };
+		6CD4FF6DFF50C030900D4212 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B1E8B7D3AE0CA4FC53BB095C /* GoogleSignIn */; };
 		6DE9467AEC6AECB4110CB3C0 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DesignTokens.swift */; };
 		6F341198DDE522BD07556E0F /* LearnedAssumptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */; };
 		728E116FA78F04E8313637A4 /* SnapshotProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */; };
@@ -41,6 +44,7 @@
 		A1000032 /* TimelineCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000032 /* TimelineCard.swift */; };
 		A1000033 /* NowViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000033 /* NowViewModel.swift */; };
 		AB4928A79E2DF8D711F9C21C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF2C9C92FEC1E46674899DC /* Foundation.framework */; };
+		B222B5BA80D315FBD04DD843 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 10849A270EBDF154E79FD082 /* GoogleService-Info.plist */; };
 		B98E3891DFBAB8E368AEF84E /* TimeSenseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		C947A57452119252AB0CE31D /* TimeSenseShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */; };
 		F0D2D149DB35C66A29073F3C /* TimeSenseAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27C9273247D83F087DBA4C0 /* TimeSenseAppIntents.swift */; };
@@ -73,6 +77,7 @@
 
 /* Begin PBXFileReference section */
 		0735A76942000F597C1CACE5 /* NextEventWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextEventWidget.swift; sourceTree = "<group>"; };
+		10849A270EBDF154E79FD082 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseShortcuts.swift; sourceTree = "<group>"; };
 		2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UsableTimeWidget.swift; sourceTree = "<group>"; };
 		3AF2C9C92FEC1E46674899DC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
@@ -119,6 +124,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D092792B9E925D96BBCB8C5 /* FirebaseAuth in Frameworks */,
+				3F554C916352558F50E350F1 /* FirebaseCore in Frameworks */,
+				6CD4FF6DFF50C030900D4212 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -138,7 +146,6 @@
 			children = (
 				3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */,
 			);
-			name = Widgets;
 			path = Widgets;
 			sourceTree = "<group>";
 		};
@@ -153,7 +160,6 @@
 				6345B92D47288413957CE8BE /* Info.plist */,
 				53053C84F6BDAB4CB9AC5592 /* TimeSenseWidget.entitlements */,
 			);
-			name = TimeSenseWidget;
 			path = TimeSenseWidget;
 			sourceTree = "<group>";
 		};
@@ -178,7 +184,6 @@
 			children = (
 				DEFDF748BAAB394AB39A6521 /* HealthService.swift */,
 			);
-			name = Health;
 			path = Health;
 			sourceTree = "<group>";
 		};
@@ -201,6 +206,7 @@
 				A5000040 /* Components */,
 				7FAA2C64ED43B5EA57A49D6E /* TimeSense.entitlements */,
 				E72265378D15A638603FE532 /* Intents */,
+				10849A270EBDF154E79FD082 /* GoogleService-Info.plist */,
 			);
 			path = TimeSense;
 			sourceTree = "<group>";
@@ -355,7 +361,6 @@
 				B27C9273247D83F087DBA4C0 /* TimeSenseAppIntents.swift */,
 				1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */,
 			);
-			name = Intents;
 			path = Intents;
 			sourceTree = "<group>";
 		};
@@ -377,6 +382,11 @@
 				4C8D09E1D5F3B18B626DDCF9 /* PBXTargetDependency */,
 			);
 			name = TimeSense;
+			packageProductDependencies = (
+				0AD19081BFEAB84D2436D502 /* FirebaseAuth */,
+				B7C454C84B7C4695AE16D3BD /* FirebaseCore */,
+				B1E8B7D3AE0CA4FC53BB095C /* GoogleSignIn */,
+			);
 			productName = TimeSense;
 			productReference = A3000001 /* TimeSense.app */;
 			productType = "com.apple.product-type.application";
@@ -422,6 +432,10 @@
 				Base,
 			);
 			mainGroup = A5000000;
+			packageReferences = (
+				3597EEBF2FFA514100D38BCD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				41E9CEC977B7F48B175E5284 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			productRefGroup = A5000002 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -444,6 +458,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B222B5BA80D315FBD04DD843 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -743,6 +758,43 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3597EEBF2FFA514100D38BCD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+		41E9CEC977B7F48B175E5284 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0AD19081BFEAB84D2436D502 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3597EEBF2FFA514100D38BCD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		B1E8B7D3AE0CA4FC53BB095C /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 41E9CEC977B7F48B175E5284 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		B7C454C84B7C4695AE16D3BD /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3597EEBF2FFA514100D38BCD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A9000001 /* Project object */;
 }

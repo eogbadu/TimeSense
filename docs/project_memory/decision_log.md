@@ -200,6 +200,10 @@
   Reason: The user confirmed their real Apple account/Team is in .env and asked to use it; a device build can only provision against the *registered* App ID, so the project's bundle IDs had to match com.aetheranalytics.timesense (cascading to the widget extension bundle ID and the shared App Group, which must be identical across both entitlements files + WidgetSnapshot.appGroupID or the widget can't read the app's snapshot). Android's applicationId is a separate Google Play registration and was deliberately not touched by this iOS-only signing ticket. Verified real-account provisioning as far as headlessly possible: the App Store Connect API key authenticated and signing reached profile generation, stopping only at "no registered device" — the expected boundary, since a development profile needs a device UDID the headless environment doesn't have.
   Date: 2026-07-05
 
+- Decision: iOS Firebase SDK pinned to 11.x (resolved 11.15.0), not the latest 12.x; GoogleSignIn-iOS added as a separate package; GoogleService-Info.plist kept gitignored (not committed)
+  Reason: Firebase 12.15.x's Package.swift declares Swift tools-version 6.1, which this environment's Xcode 16.0 / Swift 6.0 can't parse ("incompatible tools version") — so 12.x can't resolve here; 11.x (tools 5.9/6.0) does. GoogleSignIn is a distinct package from firebase-ios-sdk and the real AuthService imports it for signInWithGoogle, so it must be linked separately (surfaced as "no such module 'GoogleSignIn'" once Firebase compiled the previously-stubbed code). The plist follows the repo's existing .gitignore convention (client config is per-developer, downloaded from the console) — the committed reproducible bits are project.pbxproj (package refs/links) + Package.resolved.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration
