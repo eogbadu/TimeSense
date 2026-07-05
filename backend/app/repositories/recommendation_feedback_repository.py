@@ -7,6 +7,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.recommendation_feedback import RecommendationFeedback
+from app.models.task import Task
+from app.models.user import User
 
 # How long a "not_now" suppresses a task from recommendations before it's eligible
 # again — long enough to not nag within the same work session, short enough that a
@@ -70,3 +72,17 @@ class RecommendationFeedbackRepository:
             .group_by(RecommendationFeedback.signal)
         )
         return {signal: count for signal, count in result.all()}
+
+    async def list_recent_across_users(
+        self, limit: int = 50
+    ) -> list[tuple[RecommendationFeedback, str, str]]:
+        """Admin-only: most recent feedback across every user, joined with the user's email
+        and the task's title for display. Returns (feedback, user_email, task_title) tuples."""
+        result = await self.db.execute(
+            select(RecommendationFeedback, User.email, Task.title)
+            .join(User, User.id == RecommendationFeedback.user_id)
+            .join(Task, Task.id == RecommendationFeedback.task_id)
+            .order_by(RecommendationFeedback.created_at.desc())
+            .limit(limit)
+        )
+        return [(fb, email, title) for fb, email, title in result.all()]

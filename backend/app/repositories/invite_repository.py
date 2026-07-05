@@ -58,6 +58,13 @@ class WaitlistRepository:
         )
         return list(result.scalars().all())
 
+    async def count_waiting(self) -> int:
+        result = await self.db.execute(
+            select(func.count()).select_from(WaitlistEntry)
+            .where(WaitlistEntry.status == "waiting")
+        )
+        return result.scalar_one()
+
 
 class InviteCodeRepository:
     def __init__(self, db: AsyncSession) -> None:
@@ -99,3 +106,9 @@ class InviteCodeRepository:
             .order_by(InviteCode.created_at.desc())
         )
         return list(result.scalars().all())
+
+    async def count_active(self) -> int:
+        result = await self.db.execute(
+            select(func.count()).select_from(InviteCode).where(InviteCode.is_active.is_(True))
+        )
+        return result.scalar_one()

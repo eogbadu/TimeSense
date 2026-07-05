@@ -1,8 +1,9 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.subscription import Subscription
 
@@ -68,3 +69,19 @@ class SubscriptionRepository:
 
     async def expire_trial(self, user_id: uuid.UUID) -> Subscription | None:
         return await self.update(user_id, status="expired")
+
+    async def list_all(self, offset: int = 0, limit: int = 50) -> list[Subscription]:
+        result = await self.db.execute(
+            select(Subscription)
+            .options(selectinload(Subscription.user))
+            .order_by(Subscription.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def count_by_status(self, statuses: list[str]) -> int:
+        result = await self.db.execute(
+            select(func.count()).select_from(Subscription).where(Subscription.status.in_(statuses))
+        )
+        return result.scalar_one()

@@ -1,5 +1,26 @@
 # Change Summary
 
+## 2026-07-05 — TIME-048 (Jira TIME-47) Admin Dashboard Foundation (Web)
+
+**What changed:**
+- Bootstrapped `web/` from scratch: Next.js 16 (App Router) + TypeScript + Tailwind 4 + Firebase
+  Auth (env-var-driven, no real project configured yet)
+- Role-protected `/admin` dashboard: Overview (metrics + integration status), Users (search +
+  pagination), Invites (list/create/disable codes + waitlist), Subscriptions, Feedback
+- Backend: added GET /api/v1/admin/subscriptions, /feedback, /integrations, /metrics, /waitlist
+  (all admin-gated, new); extended GET /admin/users with search + a real total count (was
+  hardcoded wrong before)
+- 11 new backend tests (17 total in test_admin.py)
+
+**What did not change:**
+- No public-facing web companion (landing page, signup, regular-user routes) — admin only
+- No real Firebase project — same placeholder gap as iOS/Android
+- No Stripe checkout/billing UI, no write actions beyond existing invite code create/disable
+- No automated web test suite — verification is `npm run build`/`npm run lint` plus backend pytest
+
+**Next:**
+- TIME-049: Slack Integration — starts Phase 13
+
 ## 2026-07-05 — TIME-047 (Jira TIME-46) Learned Assumptions Settings
 
 **What changed:**
