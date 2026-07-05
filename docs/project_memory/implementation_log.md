@@ -1,5 +1,34 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-040 (Jira TIME-39): Meal Tracking (Lightweight)
+
+### Created
+- `backend/app/models/meal.py` — MealEvent model, MEAL_TYPES, MEAL_STATUSES
+- `backend/migrations/versions/i9j0k1l2m3n4_add_meal_events.py` — meal_events table
+- `backend/app/repositories/meal_repository.py` — log(), get_today_status() (explicit log wins;
+  else infers skipped/pending from the matching RoutineAssumption window from TIME-039)
+- `backend/app/schemas/meal.py` — MealLogRequest, MealEventResponse, MealTodayResponse
+- `backend/app/api/v1/meals.py` — POST /meals, GET /meals/today
+- `backend/tests/test_meals.py` — 9 tests (API + direct repository skip/pending inference)
+
+### Modified
+- `backend/app/api/v1/__init__.py`, `backend/app/models/__init__.py` — registered meals router/model
+- `backend/app/api/v1/recommendations.py` — RecommendationResponse gained `skipped_meals: list[str]`,
+  sourced from MealRepository, context only (does not change TaskScorer/ranking)
+- `backend/tests/test_recommendations.py` — 3 tests for the new field
+
+### Design notes
+- Skip inference reuses the UTC-minute-of-day RoutineAssumption windows directly — same
+  UTC-only simplification `UsableTimeService` already relies on, not blocked on the
+  timezone-awareness follow-up tracked in known_issues.md.
+- Discovered `test_referrals.py` has 2 tests that intermittently fail on real Stripe network
+  calls in this sandbox (unrelated to this ticket) — documented in known_issues.md, not fixed here.
+
+### Verification
+- `pytest tests/test_meals.py tests/test_recommendations.py -v` — 20 passed
+- Full suite: `pytest` — 172 passed (after a rerun past the flaky Stripe network tests above)
+- `alembic heads` — single head; `alembic upgrade head --sql` — compiles cleanly offline
+
 ## 2026-07-05 — TIME-039 (Jira TIME-38): Routine Assumptions Model
 
 ### Created

@@ -1,5 +1,15 @@
 # Known Issues
 
+## Issue: test_referrals.py intermittently fails on real Stripe network calls
+- Date: 2026-07-05
+- Area: `backend/tests/test_referrals.py` (`test_conversion_extends_subscriptions`, `test_no_double_conversion`)
+- Symptom: These two tests occasionally fail with `stripe._error.APIConnectionError: ... No route to host` for `api.stripe.com`, then pass moments later on an identical rerun with no code changes.
+- Root cause: These tests call through to the real Stripe SDK instead of mocking it, so they depend on outbound network access to `api.stripe.com` actually being available from wherever the suite runs. This sandbox environment's network access appears intermittent/restricted (unlike the `.devcontainer/` firewall setup documented below, which explicitly allowlists `api.stripe.com`).
+- Fix: None applied — out of scope for TIME-040. If seen again, rerun the suite before assuming a regression; a real fix would mock the Stripe client in these two tests like the rest of `test_subscriptions.py` already does.
+- Files changed: None.
+- Verification: Reran `pytest tests/test_referrals.py` — failed once, passed immediately after with no changes.
+- Follow-up needed: Mock Stripe calls in `test_conversion_extends_subscriptions`/`test_no_double_conversion` so the suite doesn't depend on network access.
+
 ## Issue: Alembic accumulated 4 divergent migration heads (TIME-030/033/036 era)
 - Date: 2026-07-04
 - Area: `backend/migrations/versions/`

@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 9: Routines, Meals, Commute, Sleep/Wake (TIME-039 done, TIME-040 next)
+Phase 9: Routines, Meals, Commute, Sleep/Wake (TIME-039, TIME-040 done; TIME-041 next)
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -49,13 +49,15 @@ before being trusted — do not assume unchecked = not built.
 ## Phase 9 Progress
 - [x] TIME-039 (Jira TIME-38): Routine Assumptions Model — routine_assumptions table, GET/PATCH
       /api/v1/routines, default seeding. NOT yet integrated into UsableTimeService (see known_issues.md).
-- [ ] TIME-040: Meal Tracking (Lightweight)
+- [x] TIME-040 (Jira TIME-39): Meal Tracking (Lightweight) — meal_events table, POST /api/v1/meals,
+      GET /api/v1/meals/today (skip inference via TIME-039 routine windows), skipped_meals surfaced
+      in GET /api/v1/recommendations as context only.
 - [ ] TIME-041: Commute Detection
 - [ ] TIME-042: Sleep/Wake Signal Integration
 
 ## Active Jira Tickets
-- TIME-38 (impl TIME-039, Routine Assumptions Model) — Done
-- Next: TIME-040 (Meal Tracking)
+- TIME-39 (impl TIME-040, Meal Tracking) — Done
+- Next: TIME-041 (Commute Detection)
 
 ## Blockers
 - None

@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.models.recommendation_feedback import RecommendationFeedback
+from app.repositories.meal_repository import MealRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
@@ -30,6 +31,7 @@ class RecommendationResponse(BaseModel):
     best: RecommendationItem | None
     alternatives: list[TaskResponse]
     usable_minutes: int
+    skipped_meals: list[str]
 
 
 @router.get("", response_model=RecommendationResponse)
@@ -57,6 +59,9 @@ async def get_recommendations(
         now=now,
     )
 
+    meal_status = await MealRepository(db).get_today_status(user.id, now)
+    skipped_meals = [meal for meal, status in meal_status.items() if status == "skipped"]
+
     return RecommendationResponse(
         best=RecommendationItem(
             task=TaskResponse.model_validate(best_task),
@@ -64,6 +69,7 @@ async def get_recommendations(
         ) if best_task else None,
         alternatives=[TaskResponse.model_validate(t) for t in alternatives],
         usable_minutes=usable_minutes,
+        skipped_meals=skipped_meals,
     )
 
 
