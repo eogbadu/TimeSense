@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
+    @StateObject private var healthService = HealthService()
 
     var body: some View {
         NavigationStack {
@@ -18,6 +19,7 @@ struct SettingsView: View {
                     NavigationLink(destination: LearnedAssumptionsView()) {
                         SettingsRowLabel(icon: "brain.head.profile", title: "Learned Assumptions", tint: .teal)
                     }
+                    HealthConnectRow(healthService: healthService)
                 }
 
                 Section("Privacy") {
@@ -72,6 +74,53 @@ private struct SettingsRowLabel: View {
             Text(title)
                 .font(DesignTokens.Typography.body)
                 .foregroundColor(DesignTokens.Color.textPrimary)
+        }
+    }
+}
+
+/// Tappable row that requests Apple Health access and syncs the latest sleep to the backend.
+private struct HealthConnectRow: View {
+    @ObservedObject var healthService: HealthService
+
+    var body: some View {
+        Button {
+            Task { await healthService.connectAndSync() }
+        } label: {
+            HStack(spacing: DesignTokens.Spacing.md) {
+                SettingsRowLabel(icon: "heart.fill", title: "Connect Apple Health", tint: .pink)
+                Spacer()
+                statusView
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isBusy)
+    }
+
+    private var isBusy: Bool {
+        healthService.state == .requesting || healthService.state == .syncing
+    }
+
+    @ViewBuilder
+    private var statusView: some View {
+        switch healthService.state {
+        case .requesting, .syncing:
+            ProgressView()
+        case .synced:
+            Image(systemName: "checkmark.circle.fill").foregroundColor(DesignTokens.Color.success)
+        case .noData:
+            Text("No sleep data")
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(DesignTokens.Color.textSecondary)
+        case .unavailable:
+            Text("Unavailable")
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(DesignTokens.Color.textSecondary)
+        case .error:
+            Image(systemName: "exclamationmark.triangle.fill").foregroundColor(DesignTokens.Color.destructive)
+        case .idle:
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(DesignTokens.Color.textSecondary)
         }
     }
 }

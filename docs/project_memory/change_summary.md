@@ -1,5 +1,25 @@
 # Change Summary
 
+## 2026-07-05 — TIME-060 (Jira TIME-53) iOS HealthKit Sleep/Wake Read Integration
+
+**What changed:**
+- HealthService.swift (HKHealthStore behind #if canImport(HealthKit)): requests sleepAnalysis read
+  auth, reads the latest sleep window, POSTs wake_time/sleep_start/source=healthkit to the existing
+  /api/v1/sleep/events. Read-only.
+- HealthKit entitlement + NSHealthShareUsageDescription; a "Connect Apple Health" row in Settings
+- Completes the mobile half of the TIME-042 sleep/wake feature; no backend changes
+
+**Verified:**
+- Simulator build ✓ (HealthKit really linked — confirmed via the debug dylib's load commands +
+  HKHealthStore symbol); app installs/launches under the new bundle id com.aetheranalytics.timesense
+- Live Health auth prompt / real sleep data / on-device run are the user's device step
+
+**What did not change:**
+- No backend changes; no HealthKit writes; no background HKObserverQuery sync (foreground read only)
+
+**Next:**
+- TIME-053: Google Assistant Integration
+
 ## 2026-07-05 — TIME-059 (Jira TIME-52) iOS Real Apple Signing Configuration
 
 **What changed:**
