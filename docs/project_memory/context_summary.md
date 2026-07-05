@@ -89,6 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-076 (net-new) → Jira TIME-74 (Make Settings rows functional + Sign Out/Delete) — **Done (this session)**
 - TIME-075 (net-new) → Jira TIME-73 ('Why this?' reasoning on Now) — **Done (PR #68 merged 2026-07-05)**
 - TIME-074 (net-new) → Jira TIME-72 (Fix Now quick actions) — **Done (PR #67 merged 2026-07-05)**
 - TIME-073 (net-new) → Jira TIME-71 (Premium visual redesign, calm/minimal) — **Done (PR #66 merged 2026-07-05)**

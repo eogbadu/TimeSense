@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-05] TIME-076: Settings rows now work — Profile, Subscription, Notifications, Appearance (light/dark), Privacy, Calendar, About are real screens; added Sign Out and a working Delete My Data (erases account + signs out)
 - [2026-07-05] TIME-075: Now hero card has a 'Why this?' explanation (hidden by default, expands on tap) — e.g. "Recommended because it's due today and it fits your 240 free minutes."
 - [2026-07-05] TIME-074: Now quick actions fixed — Snooze/Not-now now work (record feedback; /now hides snoozed/dismissed tasks so a new best task appears) and the action labels no longer wrap
 - [2026-07-05] TIME-073: Premium visual redesign (calm/minimal, Apple-like) — white cards on a soft-gray canvas, deep indigo accent, SF Pro typography, soft shadows, redesigned Now hero. Elevates every screen via the shared design tokens
