@@ -10,6 +10,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Phase 10 — Notifications, Widgets, Ambient Surfaces
 
+- [2026-07-05] TIME-044: iOS widgets — WidgetKit extension with Usable Time, Next Up, and Do Next home-screen widgets, backed by an App-Group-shared snapshot the host app writes (no independent network/auth in the extension)
 - [2026-07-05] TIME-043: Notification modes and learning prompts — notification_mode (gentle/balanced/active_coach) now drives morning check-in/evening check-out/learning-prompt behavior via NotificationService + a Celery beat schedule
 
 ### Phase 9 — Routines, Meals, Commute, Sleep/Wake

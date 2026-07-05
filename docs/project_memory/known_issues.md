@@ -1,5 +1,25 @@
 # Known Issues
 
+## Issue: This environment's Xcode has no iOS Simulator runtimes installed
+- Date: 2026-07-05
+- Area: `ios/` build verification (TIME-044)
+- Symptom: `xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense` (the command documented in CLAUDE.md) fails with `xcodebuild: error: Found no destinations for the scheme 'TimeSense' and action build.` Adding `-destination 'generic/platform=iOS Simulator'` instead reports the iOS Simulator SDK is present (`xcodebuild -showsdks` lists `iphonesimulator18.0`) but `xcrun simctl list runtimes` returns nothing and `/Library/Developer/CoreSimulator/Profiles/Runtimes/` doesn't exist — no simulator runtime disk image has ever been downloaded in this container.
+- Root cause: A fresh/minimal Xcode install where the Simulator platform's runtime bundle was never installed (`xcodebuild -runFirstLaunch` / a runtime download was skipped when this environment was provisioned). This is unrelated to any project code.
+- Fix: Not applied — downloading a Simulator runtime is a large (multi-GB) network operation that wasn't taken without explicit user direction. Worked around for TIME-044 by building each target directly instead of through the scheme: `xcodebuild build -project ios/TimeSense.xcodeproj -target TimeSense -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO` (and `-target TimeSenseWidgetExtension`), which compiles and links without needing to resolve a destination. Both succeeded cleanly.
+- Files changed: None.
+- Verification: Both targets build with `BUILD SUCCEEDED` via the `-target`/`-sdk` invocation above; zero new warnings (one pre-existing, unrelated warning in `CaptureViewModel.swift`).
+- Follow-up needed: If actually running/screenshotting the app in Simulator becomes necessary (per the `run`/`verify` skills), a Simulator runtime will need to be downloaded first — either via Xcode's own "Platforms" settings UI or `xcodebuild -downloadPlatform iOS`. Ask the user before doing this given the download size.
+
+## Issue: iOS App Group entitlement (TIME-044) has no real Apple Developer Team behind it yet
+- Date: 2026-07-05
+- Area: `ios/TimeSense/TimeSense.entitlements`, `ios/TimeSenseWidget/TimeSenseWidget.entitlements`
+- Symptom: Both targets declare `com.apple.security.application-groups = [group.com.timesense.app]` and build fine for Simulator (CODE_SIGNING_ALLOWED=NO / automatic signing with no team), but a real device or App Store build needs that App Group actually registered against a real Apple Developer Team in the Apple Developer portal, or codesigning/provisioning will fail.
+- Root cause: No Apple Developer account is configured for this project yet (see `open_questions.md` — already an open question predating this ticket).
+- Fix: Not applied — same category of gap as the Firebase/GoogleService-Info.plist placeholders already logged; nothing to do until a real Apple Developer account exists.
+- Files changed: None.
+- Verification: N/A (Simulator builds are unaffected).
+- Follow-up needed: Once a real Apple Developer Team is available, register the `group.com.timesense.app` App Group against both the host app's and widget extension's App IDs in the portal, then re-verify signing with a real team selected instead of `CODE_SIGN_STYLE = Automatic` + no team.
+
 ## Issue: test_referrals.py intermittently fails on real Stripe network calls
 - Date: 2026-07-05
 - Area: `backend/tests/test_referrals.py` (`test_conversion_extends_subscriptions`, `test_no_double_conversion`)

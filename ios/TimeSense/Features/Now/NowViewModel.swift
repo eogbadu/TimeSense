@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 struct NowContext: Decodable {
     let greeting: String
@@ -46,9 +47,23 @@ final class NowViewModel: ObservableObject {
         do {
             let ctx: NowContext = try await APIClient.shared.get("/api/v1/now")
             uiState = .loaded(ctx)
+            updateWidgetSnapshot(with: ctx)
         } catch {
             uiState = .error(error.localizedDescription)
         }
+    }
+
+    /// Updates only the fields this endpoint knows about, preserving whatever TodayViewModel
+    /// last wrote for nextEvent, then asks WidgetKit to refresh.
+    private func updateWidgetSnapshot(with ctx: NowContext) {
+        var snapshot = WidgetSnapshot.load() ?? .empty
+        snapshot.usableMinutes = ctx.usableMinutes
+        snapshot.bestTask = ctx.bestTask.map {
+            WidgetSnapshot.Task(id: $0.id, title: $0.title, estimatedMinutes: $0.estimatedMinutes)
+        }
+        snapshot.updatedAt = Date()
+        snapshot.save()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func markDone(taskId: String) async {

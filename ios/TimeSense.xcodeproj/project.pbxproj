@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0FABB452D1E4F020AAF09896 /* UsableTimeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */; };
+		1790B0431C0A702E3C4D3A8F /* BestNextActionWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */; };
+		2581959640C248F708C40237 /* NextEventWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735A76942000F597C1CACE5 /* NextEventWidget.swift */; };
+		27E0CEE0014BB03E51E55021 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */; };
+		52BDFC5568770624F97DA818 /* TimeSenseWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */; };
+		6DE9467AEC6AECB4110CB3C0 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DesignTokens.swift */; };
+		728E116FA78F04E8313637A4 /* SnapshotProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */; };
 		A1000001 /* TimeSenseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001 /* TimeSenseApp.swift */; };
 		A1000002 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002 /* AppState.swift */; };
 		A1000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003 /* ContentView.swift */; };
@@ -14,12 +21,8 @@
 		A1000005 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DesignTokens.swift */; };
 		A1000006 /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006 /* ViewModifiers.swift */; };
 		A1000007 /* NowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000007 /* NowView.swift */; };
-		A1000033 /* NowViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000033 /* NowViewModel.swift */; };
 		A1000008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008 /* TodayView.swift */; };
-		A1000031 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000031 /* TodayViewModel.swift */; };
-		A1000032 /* TimelineCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000032 /* TimelineCard.swift */; };
 		A1000009 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009 /* CaptureView.swift */; };
-		A1000030 /* CaptureViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000030 /* CaptureViewModel.swift */; };
 		A1000010 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000010 /* InsightsView.swift */; };
 		A1000011 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011 /* SettingsView.swift */; };
 		A1000012 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* EmptyStateView.swift */; };
@@ -29,9 +32,48 @@
 		A1000016 /* AppleSignInCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000016 /* AppleSignInCoordinator.swift */; };
 		A1000017 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017 /* SignInView.swift */; };
 		A1000018 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000018 /* OnboardingView.swift */; };
+		A1000030 /* CaptureViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000030 /* CaptureViewModel.swift */; };
+		A1000031 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000031 /* TodayViewModel.swift */; };
+		A1000032 /* TimelineCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000032 /* TimelineCard.swift */; };
+		A1000033 /* NowViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000033 /* NowViewModel.swift */; };
+		AB4928A79E2DF8D711F9C21C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF2C9C92FEC1E46674899DC /* Foundation.framework */; };
+		B98E3891DFBAB8E368AEF84E /* TimeSenseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
+		FAA7334EFCCDA29FF0B9667E /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A644018C0556263546BCAFDA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A9000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C7768A1DC53D81F23727A0A6;
+			remoteInfo = TimeSenseWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C489911DA60F29D17BA57C1D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B98E3891DFBAB8E368AEF84E /* TimeSenseWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0735A76942000F597C1CACE5 /* NextEventWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextEventWidget.swift; sourceTree = "<group>"; };
+		2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UsableTimeWidget.swift; sourceTree = "<group>"; };
+		3AF2C9C92FEC1E46674899DC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		53053C84F6BDAB4CB9AC5592 /* TimeSenseWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = TimeSenseWidget.entitlements; sourceTree = "<group>"; };
+		5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BestNextActionWidget.swift; sourceTree = "<group>"; };
+		6345B92D47288413957CE8BE /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7FAA2C64ED43B5EA57A49D6E /* TimeSense.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = TimeSense.entitlements; sourceTree = "<group>"; };
 		A2000001 /* TimeSenseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSenseApp.swift; sourceTree = "<group>"; };
 		A2000002 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A2000003 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -39,12 +81,8 @@
 		A2000005 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		A2000006 /* ViewModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
 		A2000007 /* NowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowView.swift; sourceTree = "<group>"; };
-		A2000033 /* NowViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowViewModel.swift; sourceTree = "<group>"; };
 		A2000008 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
-		A2000031 /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModel.swift; sourceTree = "<group>"; };
-		A2000032 /* TimelineCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCard.swift; sourceTree = "<group>"; };
 		A2000009 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
-		A2000030 /* CaptureViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureViewModel.swift; sourceTree = "<group>"; };
 		A2000010 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
 		A2000011 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A2000012 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
@@ -54,24 +92,82 @@
 		A2000016 /* AppleSignInCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInCoordinator.swift; sourceTree = "<group>"; };
 		A2000017 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		A2000018 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A2000030 /* CaptureViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureViewModel.swift; sourceTree = "<group>"; };
+		A2000031 /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModel.swift; sourceTree = "<group>"; };
+		A2000032 /* TimelineCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCard.swift; sourceTree = "<group>"; };
+		A2000033 /* NowViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowViewModel.swift; sourceTree = "<group>"; };
 		A3000001 /* TimeSense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeSense.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotProvider.swift; sourceTree = "<group>"; };
+		E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseWidgetBundle.swift; sourceTree = "<group>"; };
+		FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimeSenseWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A4000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9BA3D24745FEF06AC300A89 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB4928A79E2DF8D711F9C21C /* Foundation.framework in Frameworks */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2AE198C288EB427414A4A0BC /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */,
+			);
+			name = Widgets;
+			path = Widgets;
+			sourceTree = "<group>";
+		};
+		4040291497A3B40B6FBDA1C6 /* TimeSenseWidget */ = {
+			isa = PBXGroup;
+			children = (
+				E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */,
+				D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */,
+				2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */,
+				0735A76942000F597C1CACE5 /* NextEventWidget.swift */,
+				5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */,
+				6345B92D47288413957CE8BE /* Info.plist */,
+				53053C84F6BDAB4CB9AC5592 /* TimeSenseWidget.entitlements */,
+			);
+			name = TimeSenseWidget;
+			path = TimeSenseWidget;
+			sourceTree = "<group>";
+		};
+		5813CB2744F38A533663F74D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				8BE9FE69B2254F6BC940D880 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		8BE9FE69B2254F6BC940D880 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				3AF2C9C92FEC1E46674899DC /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		A5000000 = {
 			isa = PBXGroup;
 			children = (
 				A5000001 /* TimeSense */,
 				A5000002 /* Products */,
+				5813CB2744F38A533663F74D /* Frameworks */,
+				4040291497A3B40B6FBDA1C6 /* TimeSenseWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -82,6 +178,7 @@
 				A5000020 /* Core */,
 				A5000030 /* Features */,
 				A5000040 /* Components */,
+				7FAA2C64ED43B5EA57A49D6E /* TimeSense.entitlements */,
 			);
 			path = TimeSense;
 			sourceTree = "<group>";
@@ -90,6 +187,7 @@
 			isa = PBXGroup;
 			children = (
 				A3000001 /* TimeSense.app */,
+				FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -112,17 +210,9 @@
 				A5000022 /* API */,
 				A5000023 /* Extensions */,
 				A5000024 /* Auth */,
+				2AE198C288EB427414A4A0BC /* Widgets */,
 			);
 			path = Core;
-			sourceTree = "<group>";
-		};
-		A5000024 /* Auth */ = {
-			isa = PBXGroup;
-			children = (
-				A2000015 /* AuthService.swift */,
-				A2000016 /* AppleSignInCoordinator.swift */,
-			);
-			path = Auth;
 			sourceTree = "<group>";
 		};
 		A5000021 /* Design */ = {
@@ -142,21 +232,21 @@
 			path = API;
 			sourceTree = "<group>";
 		};
-		A5000036 /* Auth */ = {
-			isa = PBXGroup;
-			children = (
-				A2000017 /* SignInView.swift */,
-				A2000018 /* OnboardingView.swift */,
-			);
-			path = Auth;
-			sourceTree = "<group>";
-		};
 		A5000023 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
 				A2000014 /* View+Extensions.swift */,
 			);
 			path = Extensions;
+			sourceTree = "<group>";
+		};
+		A5000024 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A2000015 /* AuthService.swift */,
+				A2000016 /* AppleSignInCoordinator.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 		A5000030 /* Features */ = {
@@ -170,15 +260,6 @@
 				A5000035 /* Settings */,
 			);
 			path = Features;
-			sourceTree = "<group>";
-		};
-		A5000036 /* Auth */ = {
-			isa = PBXGroup;
-			children = (
-				A2000017 /* SignInView.swift */,
-				A2000018 /* OnboardingView.swift */,
-			);
-			path = Auth;
 			sourceTree = "<group>";
 		};
 		A5000031 /* Now */ = {
@@ -225,6 +306,15 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		A5000036 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A2000017 /* SignInView.swift */,
+				A2000018 /* OnboardingView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
 		A5000040 /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -243,13 +333,34 @@
 				A7000001 /* Sources */,
 				A4000001 /* Frameworks */,
 				A7000002 /* Resources */,
+				C489911DA60F29D17BA57C1D /* Embed Foundation Extensions */,
 			);
-			buildRules = ();
-			dependencies = ();
+			buildRules = (
+			);
+			dependencies = (
+				4C8D09E1D5F3B18B626DDCF9 /* PBXTargetDependency */,
+			);
 			name = TimeSense;
 			productName = TimeSense;
 			productReference = A3000001 /* TimeSense.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C7768A1DC53D81F23727A0A6 /* TimeSenseWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7C2EFB1E82155AA84916195D /* Build configuration list for PBXNativeTarget "TimeSenseWidgetExtension" */;
+			buildPhases = (
+				B438293CE106DB2CFB974B96 /* Sources */,
+				E9BA3D24745FEF06AC300A89 /* Frameworks */,
+				18FBCFF5E6D7A0DEB98563B4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TimeSenseWidgetExtension;
+			productName = TimeSenseWidgetExtension;
+			productReference = FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -280,55 +391,27 @@
 			projectRoot = "";
 			targets = (
 				A6000001 /* TimeSense */,
+				C7768A1DC53D81F23727A0A6 /* TimeSenseWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		18FBCFF5E6D7A0DEB98563B4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A7000002 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		B1000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 11.0.0;
-			};
-		};
-		B1000002 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 7.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		B2000001 /* FirebaseCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B1000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCore;
-		};
-		B2000002 /* FirebaseAuth */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B1000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAuth;
-		};
-		B2000003 /* GoogleSignIn */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B1000002 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignIn;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A7000001 /* Sources */ = {
@@ -357,10 +440,34 @@
 				A1000016 /* AppleSignInCoordinator.swift in Sources */,
 				A1000017 /* SignInView.swift in Sources */,
 				A1000018 /* OnboardingView.swift in Sources */,
+				27E0CEE0014BB03E51E55021 /* WidgetSnapshot.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B438293CE106DB2CFB974B96 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				52BDFC5568770624F97DA818 /* TimeSenseWidgetBundle.swift in Sources */,
+				728E116FA78F04E8313637A4 /* SnapshotProvider.swift in Sources */,
+				0FABB452D1E4F020AAF09896 /* UsableTimeWidget.swift in Sources */,
+				2581959640C248F708C40237 /* NextEventWidget.swift in Sources */,
+				1790B0431C0A702E3C4D3A8F /* BestNextActionWidget.swift in Sources */,
+				FAA7334EFCCDA29FF0B9667E /* WidgetSnapshot.swift in Sources */,
+				6DE9467AEC6AECB4110CB3C0 /* DesignTokens.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4C8D09E1D5F3B18B626DDCF9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = TimeSenseWidgetExtension;
+			target = C7768A1DC53D81F23727A0A6 /* TimeSenseWidgetExtension */;
+			targetProxy = A644018C0556263546BCAFDA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A8000003 /* Debug */ = {
@@ -463,6 +570,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TimeSense/TimeSense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -490,6 +598,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TimeSense/TimeSense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -512,9 +621,61 @@
 			};
 			name = Release;
 		};
+		E3D47E8CECE481DACF005778 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = TimeSenseWidget/TimeSenseWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TimeSenseWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.timesense.app.TimeSenseWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		E8753AB5EC1F6433DCE8A993 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = TimeSenseWidget/TimeSenseWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TimeSenseWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.timesense.app.TimeSenseWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7C2EFB1E82155AA84916195D /* Build configuration list for PBXNativeTarget "TimeSenseWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E8753AB5EC1F6433DCE8A993 /* Release */,
+				E3D47E8CECE481DACF005778 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		A8000001 /* Build configuration list for PBXNativeTarget "TimeSense" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -534,7 +695,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
 	};
 	rootObject = A9000001 /* Project object */;
 }

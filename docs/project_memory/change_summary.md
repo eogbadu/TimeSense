@@ -1,5 +1,24 @@
 # Change Summary
 
+## 2026-07-05 — TIME-044 (Jira TIME-43) iOS Widgets
+
+**What changed:**
+- New TimeSenseWidgetExtension (WidgetKit) target with three widgets: Usable Time, Next Up,
+  Do Next — all read a shared App Group snapshot (`group.com.timesense.app`) the host app writes
+  after its normal `/now` and `/timeline/today` fetches
+- NowViewModel/TodayViewModel now update that shared snapshot and call
+  `WidgetCenter.shared.reloadAllTimelines()` after each successful load
+- No backend changes — this ticket is entirely iOS/WidgetKit
+
+**What did not change:**
+- No independent network/auth in the widget extension (reads the snapshot only)
+- No interactive widgets, no lock-screen circular/inline families, no APNs-triggered refresh
+- No real Apple Developer Team/App Group registration (still an open question)
+
+**Next:**
+- TIME-045: Android Widgets
+- A real device build will need the App Group registered against a real Apple Developer Team
+
 ## 2026-07-05 — TIME-043 (Jira TIME-42) Notification Modes and Learning Prompts
 
 **What changed:**

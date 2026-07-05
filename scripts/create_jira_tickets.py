@@ -2478,6 +2478,110 @@ TICKETS = [
             p("TIME-044: iOS Widgets"),
         ),
     },
+
+    {
+        "summary": "TIME-044: iOS Widgets",
+        "labels": ["phase-10", "ios"],
+        "description": doc(
+            h2("Goal"),
+            p("Add a WidgetKit extension to the iOS app with three home-screen widgets: usable "
+              "time remaining today, the next scheduled event, and the current best-next-action "
+              "task. Widgets read a lightweight snapshot the host app writes to a shared App Group "
+              "container after its normal /now and /timeline/today fetches — the extension process "
+              "never performs its own network calls or holds its own copy of the Firebase auth "
+              "token, avoiding a second parallel auth implementation."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "New TimeSenseWidgetExtension target (WidgetKit app-extension, embedded in the "
+                "TimeSense host app target, iOS 17.0 deployment target matching the app)",
+                "App Group `group.com.timesense.app` + matching .entitlements files added to both "
+                "the host app target and the new extension target (Simulator-buildable now; a real "
+                "device build additionally needs the App Group registered against a real Apple "
+                "Developer Team, which is still an open question per open_questions.md)",
+                "WidgetSnapshot: a small Codable struct (usableMinutes, bestTask, nextEvent, "
+                "updatedAt) persisted as JSON in the App Group's shared UserDefaults suite — the "
+                "single contract between the app and the extension",
+                "NowViewModel.load() and TodayViewModel.load() each update the relevant fields of "
+                "the shared snapshot after a successful fetch (preserving fields the other call "
+                "doesn't know about) and call WidgetCenter.shared.reloadAllTimelines()",
+                "Three widgets sharing one TimelineProvider that reads the snapshot: "
+                "UsableTimeWidget (systemSmall + accessoryRectangular), NextEventWidget, "
+                "BestNextActionWidget — each with a meaningful empty state ('Nothing scheduled', "
+                "'All caught up') rather than a blank or error-looking view, per the mobile-ux-"
+                "premium skill's 'empty states have meaning' rule",
+                "Timeline refresh policy re-requests a reload at the earlier of 30 minutes out or "
+                "the next event's start time, using the last-known snapshot in the meantime — no "
+                "push-triggered instant refresh in this ticket",
+                "Widgets use DesignTokens.Typography/Spacing (pure value constants, safe to share "
+                "across targets) but not DesignTokens.Color, since those are named-asset-catalog "
+                "colors and no Assets.xcassets exists in this project yet even for the host app; "
+                "widgets use system semantic colors (.primary/.secondary/.tint) instead",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No independent network/auth in the widget extension — it only ever reads the "
+                "shared snapshot the host app wrote; this is a deliberate simplification, not an "
+                "oversight, to avoid duplicating Firebase token-refresh logic into a second process",
+                "No APNs-triggered background refresh — the widget's own data goes stale between "
+                "app opens/timeline windows exactly like any WidgetKit app without a push pipeline; "
+                "background push integration is a separate, later ticket",
+                "No interactive widgets (App Intents / button taps that mutate state directly from "
+                "the widget) — iOS 17 supports this, but it's extra surface area beyond this "
+                "ticket's three read-only display widgets",
+                "No lock-screen circular/inline complications — only systemSmall + "
+                "accessoryRectangular families for now",
+                "No real Apple Developer Team/App Group registration — this environment has no "
+                "Apple Developer account configured (open_questions.md); entitlements are wired "
+                "correctly for a Simulator build now and are ready to work once a real team exists",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense.xcodeproj/project.pbxproj (new target, entitlements, embed phase)",
+                "ios/TimeSense/TimeSense.entitlements (new)",
+                "ios/TimeSense/Core/Widgets/WidgetSnapshot.swift (new, shared by both targets)",
+                "ios/TimeSenseWidget/TimeSenseWidgetBundle.swift (new)",
+                "ios/TimeSenseWidget/UsableTimeWidget.swift (new)",
+                "ios/TimeSenseWidget/NextEventWidget.swift (new)",
+                "ios/TimeSenseWidget/BestNextActionWidget.swift (new)",
+                "ios/TimeSenseWidget/Info.plist (new)",
+                "ios/TimeSenseWidget/TimeSenseWidget.entitlements (new)",
+                "ios/TimeSense/Features/Now/NowViewModel.swift (write snapshot + reload timelines)",
+                "ios/TimeSense/Features/Today/TodayViewModel.swift (write snapshot + reload timelines)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "xcodebuild build succeeds for both the TimeSense scheme and the new widget "
+                "extension target on the iphonesimulator SDK",
+                "After NowViewModel.load() succeeds, the shared snapshot reflects the latest "
+                "usable_minutes/best_task without erasing a previously-written next_event",
+                "After TodayViewModel.load() succeeds, the shared snapshot reflects the latest "
+                "next event without erasing a previously-written usable_minutes/best_task",
+                "Each widget renders a meaningful empty state when its portion of the snapshot is "
+                "nil/default rather than a blank view",
+                "The widget extension target has no direct dependency on APIClient/AuthService or "
+                "any network code",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-sdk iphonesimulator\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj "
+                "-scheme TimeSenseWidgetExtension -sdk iphonesimulator"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-018 (iOS App Shell and Navigation), the existing GET /api/v1/now and "
+              "GET /api/v1/timeline/today endpoints (no backend changes needed for this ticket)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-045: Android Widgets"),
+        ),
+    },
 ]
 
 

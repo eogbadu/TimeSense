@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 struct TimelineTask: Decodable, Identifiable {
     let id: String
@@ -41,9 +42,33 @@ final class TodayViewModel: ObservableObject {
             let today = DateFormatter.shortDate.string(from: Date())
             let items: [TimelineTask] = try await APIClient.shared.get("/api/v1/timeline/today?date=\(today)")
             uiState = .loaded(items)
+            updateWidgetSnapshot(with: items)
         } catch {
             uiState = .error(error.localizedDescription)
         }
+    }
+
+    /// Updates only nextEvent, preserving whatever NowViewModel last wrote for
+    /// usableMinutes/bestTask, then asks WidgetKit to refresh.
+    private func updateWidgetSnapshot(with items: [TimelineTask]) {
+        let now = Date()
+        let upcoming: [(task: TimelineTask, start: Date)] = items
+            .filter { $0.status != "done" }
+            .compactMap { task in
+                guard let start = task.scheduledStart else { return nil }
+                let end = task.scheduledEnd ?? start
+                guard end >= now else { return nil }
+                return (task, start)
+            }
+        let next = upcoming.min { $0.start < $1.start }
+
+        var snapshot = WidgetSnapshot.load() ?? .empty
+        snapshot.nextEvent = next.map { entry in
+            WidgetSnapshot.Event(title: entry.task.title, start: entry.start, end: entry.task.scheduledEnd)
+        }
+        snapshot.updatedAt = Date()
+        snapshot.save()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func visualState(for task: TimelineTask) -> TimelineVisualState {
