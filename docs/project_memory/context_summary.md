@@ -44,6 +44,10 @@ Backend API endpoints implemented:
   Notion database's pages as candidate tasks (structured title/due extraction, NO LLM), user
   imports → Task source=notion (TIME-051). Uses a separate `TaskSourceProvider` abstraction, not
   the chat-oriented `MessageSourceProvider`
+- `POST /api/v1/assistant/webhook` — Google Assistant / Dialogflow fulfillment (TIME-053);
+  dispatches the same 5 actions as the iOS App Intents (what to do next / log lunch / start focus /
+  mark done / replan day) to backend actions, returns spoken fulfillment text. Firebase-gated as the
+  account-linked identity
 - No new endpoints for TIME-043 — `notification_mode` (gentle/balanced/active_coach) already had
   read/write via `PATCH /api/v1/users/me/preferences`; TIME-043 only added the behavior that acts
   on it (NotificationService.maybe_send_morning_checkin/evening_checkout/learning_prompt), driven
@@ -58,7 +62,7 @@ notion_import_items. (Correction: there is no separate "notification_preferences
 notification_mode field lives directly on user_preferences; a prior version of this file listed
 that table incorrectly.)
 
-Backend tests: 271, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
+Backend tests: 281, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
 verifies REAL Firebase ID tokens as of TIME-061 (real service account for project timesense-eb7ec
 in .env; tests still mock verify_id_token and don't run the app lifespan).
 
@@ -74,6 +78,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-053 (impl seq) → Jira TIME-55 (Google Assistant Integration) — **Done (this session)**
 - TIME-061 (net-new) → Jira TIME-54 (Backend Real Firebase Token Verification) — **Done (PR #47 merged 2026-07-05)**
 - TIME-060 (net-new) → Jira TIME-53 (iOS HealthKit Sleep/Wake Read Integration) — **Done (PR #46 merged 2026-07-05)**
 - TIME-059 (net-new) → Jira TIME-52 (iOS Real Apple Signing Configuration) — **Done (PR #45 merged 2026-07-05)**
@@ -96,7 +101,17 @@ both clean.
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-061 (Jira TIME-54): Backend Real Firebase Token Verification
+TIME-053 (Jira TIME-55): Google Assistant Integration
+- `backend/app/integrations/google_assistant.py` — Dialogflow fulfillment webhook exposing the same
+  5 actions as the iOS App Intents (WhatToDoNext/StartFocus/LogLunch/MarkDone/ReplanDay); reuses the
+  /now best-task logic (TaskRepository + UsableTimeService + TaskScorer), MealRepository,
+  TaskRepository. POST /api/v1/assistant/webhook, Firebase-gated (account-linked stand-in)
+- Backend-only per the ticket's stated file; ReplanDay opens the app (no headless replan). Honest
+  limits: Actions-on-Google conversational actions were shut down June 2023, so this is the
+  Dialogflow webhook contract + intent→action mapping (unit-tested), not a live Assistant round-trip;
+  account-linking/OAuth out of scope. 10 new tests; suite 281/281 (excl. 2 flaky Stripe)
+
+### (previous) TIME-061 (Jira TIME-54): Backend Real Firebase Token Verification
 - `app/core/firebase.py` now robustly parses the real .env service account (project
   timesense-eb7ec), which is stored single-line with newlines flattened to literal `\n`: try
   compact `json.loads`, else `json.loads(raw.replace("\\n","\n"), strict=False)`. The Admin SDK now
@@ -143,16 +158,20 @@ TIME-061 (Jira TIME-54): Backend Real Firebase Token Verification
 - Not yet: Siri *voice* invocation (real device only) and backend round-trip (real Firebase still
   placeholder — the app sits at the auth gate)
 
-Full history of TIME-034 through TIME-052 is in `implementation_log.md` and `change_summary.md`.
+Full history of TIME-034 through TIME-052 + net-new TIME-059/060/061 is in `implementation_log.md`
+and `change_summary.md`.
 
 ## Current Active Task
-Next up: TIME-053 (Google Assistant Integration) — "Expose TimeSense actions to Google Assistant."
-Likely Android-side (App Actions / shortcuts.xml or a companion), analogous to TIME-052's iOS App
-Intents. Two message-source integrations (Slack, Teams) share `ActionItemDetectionService`; Notion
-stands alone on `TaskSourceProvider`; a 3rd chat source is the trigger to unify Slack+Teams tables
-(decision_log.md). Also see known_issues.md — the deferred UsableTimeService timezone-awareness pass
-(subtract routine/meal/commute/sleep from usable time + per-user-local Celery timing) is unblocked
-and still worth scheduling soon.
+No specific ticket in flight. Candidate next steps (ask the user): (a) client Firebase config so a
+client can actually sign in end-to-end — iOS GoogleService-Info.plist + Firebase SPM, Android
+google-services.json, web NEXT_PUBLIC_FIREBASE_* from the timesense-eb7ec console (the backend
+already verifies real tokens as of TIME-061); (b) remaining Phase 13 items in
+tickets/implementation_sequence.md (TIME-054+); (c) the deferred UsableTimeService timezone-awareness
+pass (subtract routine/meal/commute/sleep from usable time + per-user-local Celery timing). Note the
+impl-seq vs Jira offset changed once net-new tickets (TIME-059/060/061) were inserted — always
+confirm the Jira key from the creation output, don't assume internal-minus-1. Two message-source
+integrations (Slack, Teams) share `ActionItemDetectionService`; Notion stands alone on
+`TaskSourceProvider`; a 3rd chat source is the trigger to unify Slack+Teams tables (decision_log.md).
 
 ## iOS device runs — remaining user steps (post TIME-059/060)
 Real signing (Team WB5NV894N5, App ID com.aetheranalytics.timesense) and the HealthKit entitlement

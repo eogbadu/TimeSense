@@ -1,5 +1,23 @@
 # Change Summary
 
+## 2026-07-05 — TIME-053 (Jira TIME-55) Google Assistant Integration
+
+**What changed:**
+- backend/app/integrations/google_assistant.py — Dialogflow webhook fulfillment dispatching the same
+  5 actions as the iOS App Intents (WhatToDoNext/StartFocus/LogLunch/MarkDone/ReplanDay); reuses /now
+  best-task logic, MealRepository, TaskRepository
+- POST /api/v1/assistant/webhook (Firebase-gated as the account-linked identity)
+- 10 new tests
+
+**What did not change / limits:**
+- No Dialogflow agent / Actions-on-Google setup (and that platform was shut down June 2023) — this
+  is the webhook contract + intent→action mapping, unit-tested
+- No account-linking/OAuth (Firebase token stands in); ReplanDay opens the app (no headless replan);
+  no new backend actions invented; no Android App Actions (that's the iOS App Intents surface)
+
+**Next:**
+- Client Firebase config (console) for end-to-end sign-in; further Phase 13 items
+
 ## 2026-07-05 — TIME-061 (Jira TIME-54) Backend Real Firebase Token Verification
 
 **What changed:**

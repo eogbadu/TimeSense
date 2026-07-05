@@ -138,9 +138,14 @@ before being trusted — do not assume unchecked = not built.
       (fake key). Client config files (iOS plist / Android json / web apiKey) NOT in .env — still
       needed from the Firebase console for client end-to-end.
 
+- [x] TIME-053 (Jira TIME-55): Google Assistant Integration — Dialogflow fulfillment webhook
+      (POST /api/v1/assistant/webhook) exposing the same 5 actions as the iOS App Intents; reuses
+      /now best-task logic, MealRepository, TaskRepository. Backend-only; account-linking/live
+      Assistant out of scope (platform deprecated June 2023). 10 new tests.
+
 ## Active Jira Tickets
-- TIME-54 (impl TIME-061, Backend Real Firebase Token Verification) — Done
-- Next: client Firebase config (console downloads), then TIME-053 (Google Assistant Integration)
+- TIME-55 (impl TIME-053, Google Assistant Integration) — Done
+- Next: client Firebase config (console downloads for iOS/Android/web), or the next Phase 13 item
 
 ## Blockers
 - None

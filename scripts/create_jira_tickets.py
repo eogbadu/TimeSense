@@ -3639,6 +3639,90 @@ TICKETS = [
               "web apiKey) — separate, needs console downloads."),
         ),
     },
+
+    {
+        "summary": "TIME-053: Google Assistant Integration",
+        "labels": ["phase-13", "backend", "integration"],
+        "description": doc(
+            h2("Goal"),
+            p("Expose the same core TimeSense voice actions as the iOS App Intents (TIME-052) to "
+              "Google Assistant, via a backend Dialogflow fulfillment webhook. A Dialogflow agent "
+              "(configured out-of-band) maps spoken phrases to intents and calls the webhook; the "
+              "webhook dispatches each intent to the matching TimeSense action and returns spoken "
+              "fulfillment text. Backend-only, mirroring the ticket's stated file "
+              "backend/app/integrations/google_assistant.py."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "backend/app/integrations/google_assistant.py — parse a Dialogflow ES WebhookRequest "
+                "(queryResult.intent.displayName), a GoogleAssistantService that dispatches 5 "
+                "intents to actions, and a fulfillment_response(text) building the Dialogflow "
+                "WebhookResponse ({fulfillmentText, fulfillmentMessages})",
+                "Five intents mirroring TIME-052: WhatToDoNext (best task + usable minutes), "
+                "LogLunch (log lunch eaten via MealRepository), StartFocus (best task focus), "
+                "MarkDone (mark the best task done via TaskRepository), ReplanDay (spoken 'open the "
+                "app to approve' — replans require in-app approval, never headless)",
+                "Best-task selection reuses the same logic as GET /now (TaskRepository +"
+                " UsableTimeService + TaskScorer)",
+                "POST /api/v1/assistant/webhook — the fulfillment endpoint, gated on the existing "
+                "Firebase CurrentUser (representing the Actions-on-Google account-linked identity); "
+                "returns the Dialogflow fulfillment JSON. Intent name matching is case/space-"
+                "insensitive",
+                "Register the router; tests covering each intent's fulfillment text + side effects "
+                "(lunch logged, best task marked done), unknown-intent fallback, and the "
+                "no-tasks-to-do case",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No Dialogflow agent / Actions-on-Google project setup — that's console "
+                "configuration done out-of-band; and note Google shut down conversational Actions "
+                "on Google Assistant in June 2023, so this is the Dialogflow-webhook contract "
+                "(request/response shapes + intent→action mapping), verifiable by unit tests, not a "
+                "live end-to-end Assistant call",
+                "No account-linking / OAuth implementation — the webhook is gated on the existing "
+                "Firebase token as the account-linked identity stand-in; wiring real Actions-on-"
+                "Google account linking (which would supply that token) is out of scope",
+                "No new backend actions invented — reuses /now best-task logic, MealRepository, "
+                "TaskRepository. ReplanDay does not headlessly replan (approval rule)",
+                "No Android App Actions / shortcuts.xml — the on-device shortcut surface is the iOS "
+                "App Intents work (TIME-052); this ticket is the Assistant/Dialogflow backend, per "
+                "the ticket's stated file path",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/integrations/google_assistant.py (new)",
+                "backend/app/api/v1/assistant.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/tests/test_google_assistant.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/assistant/webhook with a Dialogflow payload for each of the 5 intents "
+                "returns fulfillmentText and the correct side effect (LogLunch logs a lunch meal; "
+                "MarkDone sets the best task's status to done)",
+                "WhatToDoNext with no active tasks returns an 'all caught up' style message",
+                "An unknown intent returns a graceful fallback fulfillment (no 500)",
+                "The webhook without auth returns 401",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_google_assistant.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-030/031 (Now best-task logic, /now), TIME-040 (meal logging), TIME-006/033 "
+              "(Task model), TIME-002 (auth). Parallels TIME-052 (same five actions, iOS side)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-054: Notion Integration (or next Phase 13 item)."),
+        ),
+    },
 ]
 
 
