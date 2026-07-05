@@ -1,5 +1,15 @@
 # Known Issues
 
+## Issue: Integration OAuth tokens are stored as plain Text, not encrypted at rest
+- Date: 2026-07-05
+- Area: `backend/app/models/calendar.py` (CalendarIntegration.access_token), `backend/app/models/slack.py` (SlackIntegration.access_token)
+- Symptom: OAuth/access tokens for connected integrations (Google Calendar since TIME-015-era, Slack as of TIME-049) are stored in plain `Text` columns. The integration-provider-pattern skill calls for encrypted-at-rest storage ("Store encrypted in integration_tokens table").
+- Root cause: The original calendar integration stored tokens as plain Text; TIME-049's Slack integration matched that existing behavior for consistency rather than introducing a one-off encryption scheme for just Slack.
+- Fix: Not applied — deferred deliberately. A proper fix should be a single cross-integration pass (app-level encryption via a KMS/Fernet key, or DB-level column encryption) covering calendar + Slack + future Teams/Notion tokens together, not per-integration.
+- Files changed: None.
+- Verification: N/A.
+- Follow-up needed: Add an encryption layer (e.g. a typed EncryptedText SQLAlchemy column backed by a key from settings/KMS) and migrate existing `calendar_integrations.access_token` / `slack_integrations.access_token` values. Do this before any real production tokens are stored. Tracks alongside the "no real OAuth apps configured yet" gap — neither is exercised until real provider apps exist.
+
 ## Issue: `npm audit` in web/ recommends a bad "fix" (Next.js 16 → 9 downgrade)
 - Date: 2026-07-05
 - Area: `web/package.json`

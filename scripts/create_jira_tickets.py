@@ -2993,6 +2993,112 @@ TICKETS = [
             p("TIME-049: Slack Integration"),
         ),
     },
+
+    {
+        "summary": "TIME-049: Slack Integration",
+        "labels": ["phase-13", "backend", "integration"],
+        "description": doc(
+            h2("Goal"),
+            p("Lightweight action-item detection from Slack: read a user's recent Slack messages, "
+              "use the LLM to detect which ones are genuine action items for that user, and surface "
+              "each as a pending suggestion the user must explicitly approve before it becomes a "
+              "Task. Never auto-creates tasks — mirrors the existing calendar-write approval gate "
+              "(PendingCalendarAction) exactly, and reuses the LLMGateway + the message-source "
+              "provider abstraction rather than hardcoding Slack SDK calls into services."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "MessageSourceProvider ABC (backend/app/integrations/message_source_base.py) + "
+                "SlackMessageSource impl (slack_source.py) calling Slack's conversations.history "
+                "Web API — mirrors the existing calendar_base.py / google_calendar.py flat-file "
+                "pattern already in this repo (not the skill's idealized subdirectory layout)",
+                "SlackIntegration model (user_id, access_token, team_id, is_active) — token "
+                "storage, same shape as CalendarIntegration",
+                "SlackActionItem model (user_id, channel, message_ts, source_text, detected_title, "
+                "detected_priority, detected_estimated_minutes, status pending|confirmed|rejected, "
+                "created_task_id FK) — the approval queue, mirroring PendingCalendarAction",
+                "Alembic migration for slack_integrations + slack_action_items tables",
+                "SlackDetectionService.detect(message_text) — LLM call via LLMGateway returning "
+                "{is_action_item, title, estimated_minutes, priority}; templated no-op fallback "
+                "(is_action_item=False) on LLM failure, same graceful-degradation pattern as "
+                "CaptureService",
+                "SlackService.connect/disconnect (token mgmt), scan_channel (reads messages via "
+                "the provider, runs detection, creates pending SlackActionItem rows for detected "
+                "items — NEVER tasks), list_pending, confirm (creates a real Task from a pending "
+                "item — the approval gate), reject",
+                "POST /api/v1/slack/connect, DELETE /api/v1/slack/disconnect, POST /api/v1/slack/"
+                "scan (Premium-gated, like calendar reads), GET /api/v1/slack/pending, "
+                "POST /api/v1/slack/actions/{id}/confirm, POST /api/v1/slack/actions/{id}/reject",
+                "Add 'slack' to TaskSource literal so confirmed items are attributable",
+                "Tests: 14+ covering detection (action-item vs not), scan creates pending items "
+                "not tasks, confirm creates a Task with source=slack + links created_task_id, "
+                "reject, Premium gate (403) on scan, LLM-failure fallback, cross-user isolation",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No real Slack OAuth flow / Slack app — SLACK_CLIENT_ID/SECRET/SIGNING_SECRET are "
+                "empty placeholders in .env (no Slack app registered yet), same gap as Firebase/"
+                "Stripe/Google. The mobile client does OAuth and POSTs the resulting token to "
+                "/slack/connect, exactly like the existing /calendar/connect flow — no server-side "
+                "OAuth callback handler in this ticket",
+                "No Slack Events API / real-time push (Socket Mode, event subscriptions, request "
+                "signature verification) — scanning is user/app-initiated via POST /slack/scan, "
+                "not push-triggered; the slack_signing_secret stays unused for now",
+                "No writing back to Slack (posting messages, reactions) — read-only, so no "
+                "Slack-side approval gate is needed beyond the task-creation approval already built",
+                "No token encryption-at-rest beyond how CalendarIntegration already stores tokens "
+                "(plain Text column) — matching existing behavior; a cross-integration encryption "
+                "pass is separate future work (noted in known_issues.md)",
+                "No Free Basic Mode background auto-scan — scanning is explicit and Premium-gated; "
+                "there's no Celery job polling Slack in this ticket",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/integrations/message_source_base.py (new)",
+                "backend/app/integrations/slack_source.py (new)",
+                "backend/app/models/slack.py (new)",
+                "backend/migrations/versions/*_add_slack_integration.py (new)",
+                "backend/app/repositories/slack_repository.py (new)",
+                "backend/app/schemas/slack.py (new)",
+                "backend/app/services/slack_service.py (new)",
+                "backend/app/api/v1/slack.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/app/models/__init__.py (register models)",
+                "backend/app/schemas/task.py (add 'slack' to TaskSource)",
+                "backend/tests/test_slack.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/slack/scan without Premium returns 403",
+                "scan on a batch of messages creates pending SlackActionItem rows only for those "
+                "the LLM flags as action items, and creates zero Tasks",
+                "POST /api/v1/slack/actions/{id}/confirm creates a Task (source=slack) and links "
+                "created_task_id on the item; a second confirm on the same item is rejected",
+                "POST /api/v1/slack/actions/{id}/reject sets status=rejected and creates no Task",
+                "LLM failure during scan degrades to detecting nothing (no crash, no tasks)",
+                "One user cannot see or confirm/reject another user's Slack action items",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_slack.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-037 (LLM Gateway), TIME-006/033 (Task model), TIME-015-era "
+              "calendar-integration/approval pattern this mirrors, TIME-003 (Premium entitlement "
+              "gate)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-050: Microsoft Teams Integration"),
+        ),
+    },
 ]
 
 

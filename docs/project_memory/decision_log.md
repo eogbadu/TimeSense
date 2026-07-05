@@ -180,6 +180,14 @@
   Reason: `getAuth()` validates the API key eagerly and throws `auth/invalid-api-key` immediately when it's empty — even during `next build`'s static prerendering, which has nothing to do with a real user visiting the page. Since no real Firebase project exists yet (same gap as iOS/Android), eager construction would have permanently broken the production build. Lazy construction, guarded by `isFirebaseConfigured`, keeps the build green and defers the failure to actual runtime sign-in attempts, where it belongs.
   Date: 2026-07-05
 
+- Decision: TIME-049's Slack action items are detected → queued as *pending* → user-confirmed before any Task is created; scanning never auto-creates Tasks
+  Reason: The product's core trust principle (calendar writes and replans always require approval) extends naturally to "don't turn every Slack message into a task behind the user's back." Reusing the exact request→approve shape of the calendar PendingCalendarAction flow keeps the mental model consistent and the approval gate auditable (SlackActionItem.status + created_task_id).
+  Date: 2026-07-05
+
+- Decision: TIME-049 introduced a generic MessageSourceProvider abstraction (not a Slack-specific service) even though only Slack implements it today
+  Reason: TIME-050 (Teams) is the very next ticket and is the same shape — read messages, detect action items, approve into tasks. Building the read-only-chat-source ABC now (mirroring the existing CalendarProvider ABC) means Teams is a new provider class + registry entry, not a re-architecture. Matches the integration-provider-pattern skill's "core logic calls the interface, never a provider directly."
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration
