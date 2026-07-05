@@ -22,6 +22,34 @@ class NowResponse(BaseModel):
     greeting: str
     usable_minutes: int
     best_task: TaskResponse | None
+    reason: str | None = None
+
+
+def _build_reason(task, usable_minutes: int, now: datetime) -> str:
+    """A calm, human explanation of why this task is recommended — deterministic, no LLM."""
+    parts: list[str] = []
+    if task.due_at is not None:
+        due = task.due_at if task.due_at.tzinfo else task.due_at.replace(tzinfo=timezone.utc)
+        if due < now:
+            parts.append("it's overdue")
+        elif due.date() == now.date():
+            parts.append("it's due today")
+        elif (due.date() - now.date()).days <= 6:
+            parts.append(f"it's due {due.strftime('%A')}")
+    if task.priority and task.priority <= 2:
+        parts.append("it's high priority")
+    if task.estimated_minutes and usable_minutes and task.estimated_minutes <= usable_minutes:
+        parts.append(f"it fits your {usable_minutes} free minutes")
+
+    if not parts:
+        return "It's your best next step right now."
+    if len(parts) == 1:
+        body = parts[0]
+    elif len(parts) == 2:
+        body = f"{parts[0]} and {parts[1]}"
+    else:
+        body = ", ".join(parts[:-1]) + f", and {parts[-1]}"
+    return "Recommended because " + body + "."
 
 
 def _greeting() -> str:
@@ -77,4 +105,5 @@ async def get_now(
         greeting=_greeting(),
         usable_minutes=usable_minutes,
         best_task=TaskResponse.model_validate(ranked[0]),
+        reason=_build_reason(ranked[0], usable_minutes, now),
     )

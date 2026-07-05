@@ -149,3 +149,22 @@ async def test_now_excludes_not_now_task(client, db_session):
     assert r.status_code == 200
     best = r.json()["best_task"]
     assert best is not None and best["title"] == "Keep"
+
+
+@pytest.mark.anyio
+async def test_now_includes_reason(client, db_session):
+    """/now returns a human 'why' for the recommended task."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+    from datetime import datetime, timezone
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    db_session.add(Task(user_id=user.id, title="Pay rent", status="pending", priority=1,
+                        due_at=datetime.now(timezone.utc)))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    assert r.status_code == 200
+    reason = r.json()["reason"]
+    assert reason and ("due today" in reason or "high priority" in reason or "overdue" in reason)

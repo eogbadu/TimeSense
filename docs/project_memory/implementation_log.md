@@ -1,5 +1,13 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-075 (Jira TIME-73): 'Why this?' reasoning on Now
+
+Added a deterministic recommendation reason to /now (reason: str|None) built from the chosen task —
+overdue / due today / due <weekday>, high priority, and "fits your N free minutes", with a calm
+fallback. NowContext decodes it; BestTaskCard shows a "Why this?" button (sparkles + chevron) that
+expands to the reason, hidden by default per the premium-UX spec. No LLM (Now stays fast). Backend
+test asserts a reason is returned. Backend 313 passing; iOS BUILD SUCCEEDED.
+
 ## 2026-07-05 — TIME-074 (Jira TIME-72): Fix Now quick actions (wire Snooze/Not-now + no wrap)
 
 On Now, "Not now" and "Snooze" had empty actions (did nothing) and "Snooze" wrapped to two lines.

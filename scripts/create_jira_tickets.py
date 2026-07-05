@@ -4857,6 +4857,61 @@ TICKETS = [
             p("TIME-075: 'Why this?' reasoning on the Now hero card."),
         ),
     },
+
+    {
+        "summary": "TIME-075: 'Why this?' reasoning on the Now hero card",
+        "labels": ["ios", "backend", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("User asked why the recommended task is the best one. Per the premium-UX spec, Now "
+              "should have a 'Why this?' explanation, hidden by default and revealed on tap. Add a "
+              "deterministic reason to /now and an expandable 'Why this?' on the hero card."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend /now: add reason: str|None built from the chosen task — overdue / due "
+                "today / due <weekday>, high priority, and 'fits your N free minutes'; a calm "
+                "fallback when nothing stands out. Deterministic, no LLM",
+                "iOS NowContext: decode reason; BestTaskCard shows a 'Why this?' button (sparkles + "
+                "chevron) that expands to the reason text, hidden by default",
+                "Backend test: /now returns a reason for the recommended task",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No LLM-generated rationale here (the recommendations endpoint already has an LLM "
+                "'why'; Now stays fast + deterministic)",
+                "No per-factor scoring breakdown UI",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/api/v1/now.py, backend/tests/test_now.py",
+                "ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "/now returns a human reason (e.g. 'Recommended because it's due today and it fits "
+                "your 240 free minutes.')",
+                "Now shows a tappable 'Why this?' that expands to the reason; collapsed by default",
+                "iOS build + backend suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_now.py -v\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-073 (hero card), TIME-074 (Now actions), the TaskScorer."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 
