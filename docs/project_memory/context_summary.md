@@ -89,7 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-070 (net-new) → Jira TIME-68 (iOS recover from 401 / session-expiry) — **Done (this session)**
+- TIME-070 (net-new) → Jira TIME-68 (iOS recover from 401 / session-expiry) — **Done (PR #63 merged 2026-07-05)**
 - TIME-069 (net-new) → Jira TIME-67 (Dual-stack dev server launcher) — **Done (PR #62 merged 2026-07-05)**
 - TIME-068 (net-new) → Jira TIME-66 (Refresh Now/Today on tab return + pull-to-refresh) — **Done (PR #61 merged 2026-07-05)**
 - TIME-067 (net-new) → Jira TIME-65 (Fix day-view task visibility) — **Done (PR #60 merged 2026-07-05)**
