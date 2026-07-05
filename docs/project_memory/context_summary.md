@@ -48,6 +48,10 @@ Backend API endpoints implemented:
   dispatches the same 5 actions as the iOS App Intents (what to do next / log lunch / start focus /
   mark done / replan day) to backend actions, returns spoken fulfillment text. Firebase-gated as the
   account-linked identity
+- `GET /api/v1/admin/analytics` — admin event counts (TIME-054); analytics_events recorded by
+  AnalyticsService gated on the `analytics` consent (emits task_captured from /capture)
+- `GET /api/v1/privacy/export` (portable JSON of all the user's data, tokens redacted) +
+  `DELETE /api/v1/privacy/account?confirm=true` (erase account + cascade all data + Firebase user) (TIME-055)
 - No new endpoints for TIME-043 — `notification_mode` (gentle/balanced/active_coach) already had
   read/write via `PATCH /api/v1/users/me/preferences`; TIME-043 only added the behavior that acts
   on it (NotificationService.maybe_send_morning_checkin/evening_checkout/learning_prompt), driven
@@ -62,7 +66,7 @@ notion_import_items, analytics_events. (Correction: there is no separate "notifi
 notification_mode field lives directly on user_preferences; a prior version of this file listed
 that table incorrectly.)
 
-Backend tests: 292, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
+Backend tests: 299, all passing (see Known Problems re: 2 flaky Stripe-network tests). The backend
 verifies REAL Firebase ID tokens as of TIME-061 (real service account for project timesense-eb7ec
 in .env; tests still mock verify_id_token and don't run the app lifespan). config.py loads the
 repo-root .env from any CWD (TIME-064); /users/me syncs the DB role from the token claim (TIME-065).
@@ -85,6 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-055 (impl seq) → Jira TIME-61 (Privacy: Data Export + Account Deletion) — **Done (this session)**
 - TIME-054 (impl seq) → Jira TIME-60 (Error Monitoring + Analytics, backend) — **Done (PR #55 merged 2026-07-05)** — Phase 14 start
 - TIME-065 (net-new) → Jira TIME-59 (Sync DB role from token claim) — **Done (PR #54 merged 2026-07-05)**
 - TIME-064 (net-new) → Jira TIME-58 (Load .env from repo root) — **Done (PR #53 merged 2026-07-05)**

@@ -1,5 +1,15 @@
 # Change Summary
 
+## 2026-07-05 — TIME-055 (Jira TIME-61) Privacy: Data Export + Account Deletion
+
+- PrivacyService: export_data (portable JSON of all user-owned tables, tokens redacted) +
+  delete_account (delete user → DB cascade erases everything; analytics purged; Firebase user
+  deleted best-effort)
+- GET /api/v1/privacy/export, DELETE /api/v1/privacy/account?confirm=true
+- Test conftest now enforces SQLite FKs so cascade is tested like Postgres
+- 7 new tests; suite 299/299 (excl. 2 flaky); verified via a real-Postgres round-trip
+- Deferred: per-consent-type revocation cleanup (follow-up)
+
 ## 2026-07-05 — TIME-054 (Jira TIME-60) Error Monitoring + Analytics (backend) — Phase 14 start
 
 - Sentry-optional monitoring (`app/core/monitoring.py`, no-op without SENTRY_DSN) wired into the

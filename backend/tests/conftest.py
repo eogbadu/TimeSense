@@ -1,5 +1,6 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import Base, get_db
@@ -19,6 +20,15 @@ def anyio_backend():
 @pytest.fixture
 async def db_engine():
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+
+    # SQLite doesn't enforce foreign keys (or ON DELETE CASCADE) unless asked per-connection.
+    # Turn it on so cascade behaviour (e.g. account deletion, TIME-055) is exercised like Postgres.
+    @event.listens_for(engine.sync_engine, "connect")
+    def _enable_sqlite_fk(dbapi_conn, _record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield engine
