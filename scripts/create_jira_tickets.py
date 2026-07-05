@@ -4443,6 +4443,61 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-068: Refresh Now/Today when returning to the tab (+ pull-to-refresh)",
+        "labels": ["ios", "bug", "ui"],
+        "description": doc(
+            h2("Goal"),
+            p("The Now and Today screens didn't update after capturing a task: they load once via "
+              "SwiftUI `.task { }`, but TabView keeps tab views mounted, so `.task` doesn't re-run "
+              "when you switch back to the tab. Reload on tab re-entry and add pull-to-refresh."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "NowView + TodayView: add `.onChange(of: appState.selectedTab)` to reload the "
+                "view-model whenever the user returns to that tab (appState.selectedTab drives the "
+                "TabView selection) — so a task captured on the Capture tab shows on Now/Today on "
+                "return",
+                "Add `.refreshable { load() }` to both loaded scroll views for manual pull-to-refresh",
+                "Keep the initial `.task { load() }` for first appearance",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No push/live updates or a shared task-changed event bus — reload-on-tab-entry + "
+                "pull-to-refresh is sufficient and simple",
+                "No auto-switch to Now after a capture (leaves the user on Capture to add more)",
+                "No backend changes",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Features/Now/NowView.swift",
+                "ios/TimeSense/Features/Today/TodayView.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Capturing a task then switching to Now shows it as best_task without a manual reload",
+                "Pull-to-refresh reloads Now and Today",
+                "iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-067 (Now now includes captured tasks server-side), TIME-066 (visible UI), "
+              "TIME-030/031 (Now/Today/Capture screens)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 
