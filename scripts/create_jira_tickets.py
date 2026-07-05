@@ -4739,6 +4739,68 @@ TICKETS = [
             p("TIME-073: 'Why this?' explanation on Now."),
         ),
     },
+
+    {
+        "summary": "TIME-073: Premium visual redesign (calm / minimal, Apple-like)",
+        "labels": ["ios", "design", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("User feedback: 'the app looks cheap; it was supposed to look expensive.' Chosen "
+              "direction: calm & minimal, Apple-like — white cards floating on a soft-gray canvas, "
+              "a single refined indigo accent, quiet SF Pro typography, generous spacing, soft "
+              "diffuse shadows. Elevate the design system (which every screen inherits) and the Now "
+              "hero."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Palette (Assets.xcassets): white Surface (#FFFFFF) on soft-gray Background "
+                "(#F4F4F6) so cards pop; deeper indigo accent (#4F46E5); refined neutrals; softer "
+                "destructive/success. Light + dark variants",
+                "DesignTokens: SF Pro (default face, not rounded) with a tighter heading scale + "
+                "Tracking tokens; softer, more diffuse shadow tokens",
+                "CardModifier: continuous-corner rounded surface (Radius.xl) with a hairline stroke "
+                "and soft shadow; refined section-header style (wider tracking, caption size)",
+                "Now hero: large tracked greeting header (not boxed), a spacious 'Do this next' hero "
+                "card with the task/priority/estimate + quick actions, and a warmer empty state",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No new screens or navigation changes; no logic/data changes",
+                "'Why this?' reasoning is the next ticket (plugs into the new hero card)",
+                "Per-screen bespoke layouts beyond Now — other screens inherit the token/card "
+                "upgrades; deeper per-screen polish can follow",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Assets.xcassets/*.colorset",
+                "ios/TimeSense/Core/Design/DesignTokens.swift, Core/Design/ViewModifiers.swift",
+                "ios/TimeSense/Features/Now/NowView.swift, Components/EmptyStateView.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "White cards on a soft-gray canvas with soft shadows; deep indigo accent; SF Pro "
+                "hierarchy",
+                "Now shows a large calm greeting + a spacious hero card",
+                "iOS build succeeds; sign-in + Now render cleanly in light and dark",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO\n"
+                "# + Simulator screenshot review of sign-in / Now"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-066 (asset catalog), the DesignTokens system, Now/Today/Capture screens."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-074: 'Why this?' reasoning on the Now hero card."),
+        ),
+    },
 ]
 
 

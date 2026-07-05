@@ -1,5 +1,17 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-073 (Jira TIME-71): Premium visual redesign (calm/minimal)
+
+User feedback: "the app looks cheap; it was supposed to look expensive." Direction chosen: calm &
+minimal, Apple-like. Elevated the design system (inherited by every screen): white Surface (#FFFFFF)
+cards on a soft-gray Background (#F4F4F6) so cards float; deeper indigo accent (#4F46E5); refined
+neutrals; SF Pro (default face, not rounded) with a tighter heading scale + Tracking tokens; softer
+diffuse shadow tokens; CardModifier now a continuous-corner surface with a hairline + soft shadow.
+Redesigned the Now hero: large tracked greeting header (unboxed), a spacious "Do this next" hero
+card, warmer empty state. iOS BUILD SUCCEEDED; verified the sign-in screen renders premium via a
+Simulator screenshot (authed screens inherit the same tokens). "Why this?" reasoning is the next
+ticket. No logic/data changes.
+
 ## 2026-07-05 — TIME-072 (Jira TIME-70): Rule-based date fallback for capture
 
 Root cause of "the best task on Now doesn't update when I add tasks": the LLM parse was failing

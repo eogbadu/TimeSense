@@ -31,7 +31,8 @@ struct NowView: View {
     private func loadedBody(ctx: NowContext) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
-                GreetingCard(greeting: ctx.greeting, usableMinutes: ctx.usableMinutes)
+                GreetingHeader(greeting: ctx.greeting, usableMinutes: ctx.usableMinutes)
+                    .padding(.top, DesignTokens.Spacing.sm)
                 if let task = ctx.bestTask {
                     BestTaskCard(task: task, onDone: {
                         Task { await viewModel.markDone(taskId: task.id) }
@@ -39,38 +40,39 @@ struct NowView: View {
                 } else {
                     EmptyStateView(
                         icon: "sparkles",
-                        title: "Nothing on your plate right now",
-                        message: "Capture a task to get started."
+                        title: "You're all caught up",
+                        message: "Nothing needs you right now. Capture a task and TimeSense will tell you what to do next."
                     )
+                    .padding(.top, DesignTokens.Spacing.xl)
                 }
             }
-            .padding(.horizontal, DesignTokens.Spacing.md)
-            .padding(.top, DesignTokens.Spacing.sm)
-            .padding(.bottom, DesignTokens.Spacing.xl)
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.bottom, DesignTokens.Spacing.xxl)
         }
         .refreshable { await viewModel.load() }
     }
 }
 
-private struct GreetingCard: View {
+private struct GreetingHeader: View {
     let greeting: String
     let usableMinutes: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text(greeting)
-                .font(DesignTokens.Typography.title2)
+                .font(DesignTokens.Typography.largeTitle)
+                .tracking(DesignTokens.Tracking.tight)
                 .foregroundColor(DesignTokens.Color.textPrimary)
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "clock")
+                    .font(.footnote)
                     .foregroundColor(DesignTokens.Color.accent)
-                Text("\(usableMinutes) min available")
+                Text("\(usableMinutes) usable minutes today")
                     .font(DesignTokens.Typography.callout)
                     .foregroundColor(DesignTokens.Color.textSecondary)
             }
         }
-        .padding(DesignTokens.Spacing.md)
-        .cardStyle()
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -79,26 +81,27 @@ private struct BestTaskCard: View {
     let onDone: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                    Text("Best next task")
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+            HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("Do this next")
                         .sectionHeaderStyle()
                     Text(task.title)
-                        .font(DesignTokens.Typography.headline)
+                        .font(DesignTokens.Typography.title2)
                         .foregroundColor(DesignTokens.Color.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                     if let mins = task.estimatedMinutes {
-                        Text("\(mins) min estimated")
+                        Label("\(mins) min", systemImage: "timer")
                             .font(DesignTokens.Typography.footnote)
                             .foregroundColor(DesignTokens.Color.textSecondary)
                     }
                 }
-                Spacer()
+                Spacer(minLength: 0)
                 PriorityBadge(priority: task.priority)
             }
             QuickActionRow(onDone: onDone)
         }
-        .padding(DesignTokens.Spacing.md)
+        .padding(DesignTokens.Spacing.lg)
         .cardStyle()
     }
 }

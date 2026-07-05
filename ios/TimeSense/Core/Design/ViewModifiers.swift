@@ -5,8 +5,15 @@ import SwiftUI
 struct CardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(DesignTokens.Color.surface)
-            .cornerRadius(DesignTokens.Radius.lg)
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
+                    .fill(DesignTokens.Color.surface)
+            )
+            .overlay(
+                // Hairline to define the white card against the soft canvas (mostly for light mode).
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
+                    .stroke(DesignTokens.Color.textSecondary.opacity(0.08), lineWidth: 0.5)
+            )
             .shadow(
                 color: DesignTokens.Shadow.card.color,
                 radius: DesignTokens.Shadow.card.radius,
@@ -49,10 +56,10 @@ extension View {
 struct SectionHeaderModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .font(DesignTokens.Typography.footnote)
+            .font(DesignTokens.Typography.caption)
             .foregroundColor(DesignTokens.Color.textSecondary)
             .textCase(.uppercase)
-            .tracking(0.5)
+            .tracking(DesignTokens.Tracking.wide)
     }
 }
 
