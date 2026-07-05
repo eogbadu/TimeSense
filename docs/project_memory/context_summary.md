@@ -89,7 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-067 (net-new) → Jira TIME-65 (Fix day-view task visibility: Today 404 + Now ignores captured tasks) — **Done (this session)**
+- TIME-067 (net-new) → Jira TIME-65 (Fix day-view task visibility) — **Done (PR #60 merged 2026-07-05)**
 - TIME-066 (net-new) → Jira TIME-64 (Fix iOS missing color assets, invisible UI) — **Done (PR #59 merged 2026-07-05)**
 - TIME-057 (impl seq) → Jira TIME-63 (App Store & Play Store Prep, docs) — **Done (PR #58 merged 2026-07-05)**
 - TIME-056 (impl seq) → Jira TIME-62 (Security Review & Hardening) — **Done (PR #57 merged 2026-07-05)**
