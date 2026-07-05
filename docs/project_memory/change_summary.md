@@ -1,5 +1,27 @@
 # Change Summary
 
+## 2026-07-05 — TIME-061 (Jira TIME-54) Backend Real Firebase Token Verification
+
+**What changed:**
+- `app/core/firebase.py` now robustly parses the real .env service account (single-line, newlines
+  flattened to literal `\n`) via `json.loads(raw.replace("\\n","\n"), strict=False)`. The Admin SDK
+  now actually initializes for project timesense-eb7ec, so the backend verifies REAL Firebase ID
+  tokens (get_current_user already called verify_id_token).
+- 4 new unit tests (test_firebase_init.py) using a fabricated key.
+
+**Verified:**
+- Out-of-band real init logs "initialized … for project: timesense-eb7ec" (was silently failing);
+  full suite 271/271 excluding 2 known-flaky.
+
+**What did not change / still needed:**
+- Client Firebase config is NOT in .env — iOS GoogleService-Info.plist, Android google-services.json,
+  web apiKey/appId/authDomain must come from the Firebase console per registered app. Backend is the
+  only piece unblocked by the .env credential.
+- Real service account stays in .env (gitignored), never committed.
+
+**Next:**
+- Client Firebase config (console downloads) for true end-to-end sign-in; then TIME-053 (Google Assistant)
+
 ## 2026-07-05 — TIME-060 (Jira TIME-53) iOS HealthKit Sleep/Wake Read Integration
 
 **What changed:**

@@ -132,10 +132,15 @@ before being trusted — do not assume unchecked = not built.
       usage string + Settings "Connect Apple Health" row. Completes the TIME-042 sleep/wake mobile
       half. Simulator build ✓ (HealthKit really linked, verified via debug dylib); app runs under
       the new bundle id. Live auth prompt / device run is the user's step.
+- [x] TIME-061 (Jira TIME-54): Backend Real Firebase Token Verification — robust service-account
+      parse (real .env credential for project timesense-eb7ec, stored single-line with flattened
+      `\n`); Admin SDK now initializes and the backend verifies REAL ID tokens. 4 new unit tests
+      (fake key). Client config files (iOS plist / Android json / web apiKey) NOT in .env — still
+      needed from the Firebase console for client end-to-end.
 
 ## Active Jira Tickets
-- TIME-53 (impl TIME-060, iOS HealthKit Sleep/Wake Read Integration) — Done
-- Next: TIME-053 (Google Assistant Integration)
+- TIME-54 (impl TIME-061, Backend Real Firebase Token Verification) — Done
+- Next: client Firebase config (console downloads), then TIME-053 (Google Assistant Integration)
 
 ## Blockers
 - None

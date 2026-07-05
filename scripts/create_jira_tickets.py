@@ -3557,6 +3557,88 @@ TICKETS = [
             p("TIME-053: Google Assistant Integration"),
         ),
     },
+
+    {
+        "summary": "TIME-061: Backend Real Firebase Token Verification",
+        "labels": ["backend", "auth"],
+        "description": doc(
+            h2("Goal"),
+            p("Make the FastAPI backend actually verify real Firebase ID tokens using the real "
+              "service account now provided in .env (project timesense-eb7ec). init_firebase() "
+              "already runs at startup and get_current_user already calls "
+              "firebase_admin.auth.verify_id_token — but the service-account credential fails to "
+              "parse, so real auth was never actually exercised. Fix the parse so the Admin SDK "
+              "initializes against the real project; real client tokens then verify end-to-end "
+              "(once a client is configured — see Non-Goals)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Robustly parse FIREBASE_SERVICE_ACCOUNT_JSON in app/core/firebase.py: the .env "
+                "stores it single-line with all newlines flattened to literal \\n (pretty-printed "
+                "JSON mangled), so plain json.loads() fails and a blanket \\n→newline replace also "
+                "fails (real newlines inside the private_key string are invalid strict JSON). The "
+                "working parse is json.loads(raw.replace('\\\\n','\\n'), strict=False) — verified to "
+                "yield a valid service account with a well-formed PEM private_key",
+                "Extract a `_load_service_account(raw) -> dict | None` helper: try compact json.loads "
+                "first (for correctly-stored compact JSON), fall back to the replace+strict=False "
+                "form, return None on empty/unparseable so the existing ADC/projectId fallback still "
+                "applies; log which path was used",
+                "Confirmed locally: with this parse, credentials.Certificate(sa) + "
+                "firebase_admin.initialize_app(cred) succeed for project timesense-eb7ec (no code "
+                "change needed to security.py — it already calls verify_id_token)",
+                "Unit tests for _load_service_account: compact JSON parses; a fabricated "
+                "pretty-printed-then-flattened service-account string parses (using a FAKE key, "
+                "never the real one); empty string returns None",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No client-side Firebase config — the .env has only the backend service account. "
+                "Real end-to-end sign-in additionally needs per-app client config NOT in .env: iOS "
+                "GoogleService-Info.plist, Android google-services.json, and web "
+                "NEXT_PUBLIC_FIREBASE_API_KEY/APP_ID/AUTH_DOMAIN, each downloaded/registered in the "
+                "Firebase console for project timesense-eb7ec. Those are separate follow-ups",
+                "No change to the test suite's auth mocking — tests patch verify_id_token and don't "
+                "run the app lifespan, so they neither need nor exercise real init; this ticket "
+                "keeps them green",
+                "No live token round-trip test — there's no real client token to verify here, and "
+                "verify_id_token requires network to Google's public keys; the parse + successful "
+                "SDK init is the verifiable bar",
+                "No secret committed — the real service account stays only in .env (gitignored)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/core/firebase.py (robust _load_service_account parse)",
+                "backend/tests/test_firebase_init.py (new — parse helper unit tests)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "_load_service_account parses both compact JSON and the flattened-literal-\\n form; "
+                "returns None for empty",
+                "With the real .env value, init_firebase() initializes the Admin SDK for "
+                "timesense-eb7ec without the previous parse warning (verified out-of-band, not in "
+                "the committed test which uses a fake key)",
+                "Full backend test suite still passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_firebase_init.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-002-era auth/security foundation (get_current_user, init_firebase), a real "
+              "Firebase service account (now in .env: FIREBASE_PROJECT_ID=timesense-eb7ec, "
+              "FIREBASE_SERVICE_ACCOUNT_JSON)."),
+            divider(),
+            h2("Next Ticket"),
+            p("Client Firebase config (iOS GoogleService-Info.plist / Android google-services.json / "
+              "web apiKey) — separate, needs console downloads."),
+        ),
+    },
 ]
 
 
