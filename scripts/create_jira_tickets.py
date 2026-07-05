@@ -2028,6 +2028,85 @@ TICKETS = [
             p("TIME-039: Routine Assumptions Model"),
         ),
     },
+
+    {
+        "summary": "TIME-039: Routine Assumptions Model",
+        "labels": ["phase-9", "backend"],
+        "description": doc(
+            h2("Goal"),
+            p("Store a per-user set of recurring daily routine blocks (sleep, meals, hygiene) that "
+              "aren't on the calendar but still consume time, and let the user view/edit them. "
+              "Every user gets sensible defaults on first access so the feature works with zero "
+              "setup; editing one marks it as customized so future automatic-learning tickets "
+              "(commute/sleep detection) know not to silently overwrite a user's explicit choice."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "RoutineAssumption model: id, user_id, routine_type (sleep|breakfast|lunch|dinner|"
+                "morning_hygiene|evening_hygiene), start_minute/end_minute (0–1439, minutes since local "
+                "midnight; end < start means the block wraps past midnight, e.g. sleep), is_customized",
+                "Alembic migration for routine_assumptions table",
+                "RoutineAssumptionRepository: get_or_seed_defaults(user_id) — returns the user's 6 "
+                "routine rows, creating them from DEFAULT_ROUTINES on first call; update_one(user_id, "
+                "routine_type, start_minute, end_minute) — marks is_customized=True",
+                "GET /api/v1/routines — list the user's routine assumptions (seeds defaults if none exist)",
+                "PATCH /api/v1/routines/{routine_type} — update start/end minute for one routine",
+                "Tests: 8+ covering default seeding, idempotent seeding, valid update, is_customized "
+                "flip, invalid routine_type, invalid minute range, cross-user isolation, auth",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No integration into UsableTimeService yet — routine blocks are not yet subtracted "
+                "from usable time. UsableTimeService is not timezone-aware today (it only knows UTC "
+                "midnight); wiring routines in properly needs that fixed first, and doing it once "
+                "meal/commute/sleep signals also exist (TIME-040–042) avoids three separate partial "
+                "integrations. Tracked as a follow-up in known_issues.md.",
+                "No automatic learning/detection from user behavior (that's TIME-041 commute "
+                "detection and TIME-042 sleep/wake signal ticket-by-ticket, or a later insights phase)",
+                "No per-day-of-week customization — one block per routine_type, applies every day",
+                "No mobile UI for editing routines — API only",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/models/routine.py (new)",
+                "backend/migrations/versions/*_add_routine_assumptions.py (new)",
+                "backend/app/repositories/routine_repository.py (new)",
+                "backend/app/schemas/routine.py (new)",
+                "backend/app/api/v1/routines.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/app/models/__init__.py (register model)",
+                "backend/tests/test_routines.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "GET /api/v1/routines returns 6 default routine rows on first call for a new user",
+                "Calling GET /api/v1/routines twice does not create duplicate rows",
+                "PATCH /api/v1/routines/{routine_type} updates start_minute/end_minute and sets "
+                "is_customized=True",
+                "PATCH with an unknown routine_type returns 404",
+                "PATCH with start_minute or end_minute outside 0–1439 returns 422",
+                "One user's routines are not visible to another user",
+                "Unauthenticated requests return 401",
+                "All tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_routines.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-022 (user profile — user_id FK), TIME-034 (UsableTimeService — future integration target)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-040: Meal Tracking (Lightweight)"),
+        ),
+    },
 ]
 
 

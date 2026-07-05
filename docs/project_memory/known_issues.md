@@ -10,15 +10,25 @@
 - Verification: `alembic heads` → single head; `alembic upgrade head --sql` compiles the full chain cleanly in offline mode. Could not run a real `alembic upgrade head` against Postgres — no Docker/Postgres available in this session's environment.
 - Follow-up needed: Verify `alembic upgrade head` against a real Postgres instance before this branch is deployed. Going forward, anyone adding a migration should run `alembic heads` first and rebase `down_revision` onto the current head rather than an old parent.
 
-## Issue: `gh` CLI not authenticated in this environment
+## Issue: `gh` CLI not authenticated in this environment — RESOLVED 2026-07-04
 - Date: 2026-07-04
 - Area: Session/environment setup, blocks the GitHub half of the required Jira/GitHub ticket workflow
-- Symptom: `gh auth status` reports not logged into any GitHub hosts, so `gh pr create` cannot run.
+- Symptom: `gh auth status` reports not logged into any GitHub hosts, so `gh pr create` cannot run. (Note: `git push` itself worked before this fix via a separate VS Code remote-container credential helper — only the `gh` CLI specifically was unauthenticated.)
 - Root cause: This devcontainer/session was never authenticated against GitHub (`gh auth login` not run).
-- Fix: None applied — needs the user to authenticate (`gh auth login` or set `GH_TOKEN`) or push/PR manually.
-- Files changed: None.
+- Fix: User ran `gh auth login` (device code flow) mid-session; `gh auth status` now shows logged in as `eogbadu` with `repo` scope. PR #29 (TIME-038) was created successfully afterward.
+- Files changed: None (auth is stored in `~/.config/gh/hosts.yml`, not in the repo).
+- Verification: `gh auth status` → logged in; `gh pr create` succeeded for PR #29.
+- Follow-up needed: None — resolved for this environment's lifetime. A fresh container/session would need `gh auth login` run again.
+
+## Issue: RoutineAssumption data (TIME-039) is not yet subtracted from usable time
+- Date: 2026-07-05
+- Area: `backend/app/services/usable_time_service.py`
+- Symptom: TIME-039 added a `routine_assumptions` table and API (sleep/meal/hygiene blocks), but `UsableTimeService.calculate()` still only looks at scheduled `Task` blocks — it has no awareness of routines yet, and recommendations can still be generated for e.g. 2am if a user has pending tasks.
+- Root cause: `UsableTimeService.calculate()` computes its end-of-day cap from UTC midnight and has never taken a user timezone parameter, despite TIME-034's original ticket scope saying it should. Converting routine minute-of-day values (which are local-time) into UTC blocks correctly requires that timezone awareness to exist first — bolting it on per-signal (routines now, then meals, then commute) would mean rewriting the same timezone logic three times.
+- Fix: Not applied — deliberately deferred (see TIME-039 ticket Non-Goals). Was correct to store the model/API now since meal/commute/sleep tickets (TIME-040–042) need it to exist, but the actual usable-time integration should happen once all Phase 9 signals exist, in one pass, alongside adding proper timezone handling to `UsableTimeService`.
+- Files changed: None yet.
 - Verification: N/A.
-- Follow-up needed: Authenticate `gh` before the next ticket that needs a PR opened from this environment, or push manually and open the PR via the GitHub UI.
+- Follow-up needed: Add a `user_timezone: str` param to `UsableTimeService.calculate()`, convert routine/meal/commute blocks to UTC via `zoneinfo`, and subtract them from the usable window — planned for a ticket after TIME-042 (Sleep/Wake Signal Integration) completes Phase 9's data model, per the recommendation-engine skill's "Empty calendar time ≠ available time" principle.
 
 ## Issue: Devcontainer firewall script breaks Docker Desktop for Mac embedded DNS
 - Date: 2026-07-04

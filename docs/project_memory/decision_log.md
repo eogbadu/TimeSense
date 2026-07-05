@@ -116,6 +116,10 @@
   Reason: The recommendation-engine skill's "do not nag" rule means a dismissed task shouldn't be re-suggested immediately, but a still-pending task also shouldn't disappear from recommendations for the rest of the day just because the user dismissed it once. 4 hours was chosen as a reasonable middle ground pending real usage data.
   Date: 2026-07-04
 
+- Decision: Routine assumption blocks (TIME-039) are stored as minutes-since-local-midnight integers, not a Time/datetime column, and are not yet subtracted from UsableTimeService
+  Reason: A recurring daily block doesn't need a date component, and integers avoid DB-driver Time-type quirks across SQLite (tests) and Postgres. The usable-time integration is deferred until UsableTimeService gains real timezone awareness (currently UTC-midnight-only) — doing it once for routines+meals+commute together after TIME-040–042 avoids three partial, soon-to-be-redone integrations.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration
