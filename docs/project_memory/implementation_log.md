@@ -1,5 +1,14 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-074 (Jira TIME-72): Fix Now quick actions (wire Snooze/Not-now + no wrap)
+
+On Now, "Not now" and "Snooze" had empty actions (did nothing) and "Snooze" wrapped to two lines.
+Fixed: NowViewModel.snooze/notNow POST to /recommendations/feedback (snooze_until ~3h for snooze);
+/now now excludes get_suppressed_task_ids (active snooze / not_now cooldown) so those actions
+actually surface a different best task; QuickActionRow rebuilt as a full-width primary Done + two
+compact secondary pills (lineLimit(1)+fixedSize → never wrap). Backend test: not_now suppresses the
+task from /now. Backend 312 passing; iOS BUILD SUCCEEDED.
+
 ## 2026-07-05 — TIME-073 (Jira TIME-71): Premium visual redesign (calm/minimal)
 
 User feedback: "the app looks cheap; it was supposed to look expensive." Direction chosen: calm &
