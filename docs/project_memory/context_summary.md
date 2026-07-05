@@ -2,10 +2,19 @@
 
 **Last updated:** 2026-07-05
 
+## ⚠️ DO NOT MERGE PR #33 (feature/TIME-042-sleep-wake-signal) WITHOUT MAC VERIFICATION
+PR #33 contains `ios/TimeSense/Core/Health/HealthService.swift`, written with no macOS/Xcode
+access (this session runs on Linux) and never compiled. Per explicit user instruction, it must be
+built and tested on a real Mac (`xcodebuild build`/`test`, see known_issues.md for exact steps)
+before merging. The backend half of that same PR (sleep_wake_events, morning replan trigger) IS
+fully tested — 194/194 — only the iOS file is unverified. Do not merge, and do not run
+`python scripts/move_ticket.py TIME-41 done` until the user confirms the Xcode build passed.
+
 ## Current Build State
 
 Phases 0–2 merged to main. Phases 3 (subscriptions), 4 (mobile shells), early Phase 5 tasks,
-and Phase 8 (Recommendation Engine V1) complete. Phase 9 in progress (TIME-039–041 done).
+and Phase 8 (Recommendation Engine V1) complete. Phase 9 in progress (TIME-039–041 done, TIME-042
+backend done / iOS unverified — see warning above).
 
 Backend API endpoints implemented:
 - `GET /api/v1/health`, `GET /api/v1/auth/me`
@@ -22,19 +31,27 @@ Backend API endpoints implemented:
 - `POST /api/v1/meals`, `GET /api/v1/meals/today` (skip inference via routine windows)
 - `POST /api/v1/commute/detect` (location-consent gated), `GET /api/v1/commute/pending`,
   `POST /api/v1/commute/{id}/confirm`/`.../reject`
+- `POST /api/v1/sleep-wake` (triggers morning replan on late wake), `GET /api/v1/sleep-wake/today`
+  — code-complete and fully tested, but NOT YET on `main`: it ships in PR #33 alongside the
+  unverified iOS file, and the whole PR is held unmerged (see warning above) rather than splitting
+  the backend out separately
 
-Database tables: users, profiles, preferences, personalities, onboarding_states, consent_records,
-subscription_records, notification_preferences, replan_requests, tasks, internal_reminders,
-recommendation_feedback, routine_assumptions, meal_events, commute_events.
+Database tables on `main` through TIME-041: users, profiles, preferences, personalities,
+onboarding_states, consent_records, subscription_records, notification_preferences,
+replan_requests, tasks, internal_reminders, recommendation_feedback, routine_assumptions,
+meal_events, commute_events. `sleep_wake_events` exists only on the unmerged PR #33 branch.
 
-Backend tests: 181, all passing (see Known Problems re: 2 flaky Stripe-network tests).
+Backend tests: 194 passing on the PR #33 branch (181 on `main`); see Known Problems re: 2 flaky
+Stripe-network tests.
 
 Mobile app shells:
 - iOS SwiftUI: bottom tab navigator (Now/Today/Capture/Insights/Settings), AuthService with `#if canImport(FirebaseAuth)` stubs, CaptureViewModel + CaptureView wired to backend. `xcodebuild → BUILD SUCCEEDED`.
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-041 (impl seq) → Jira TIME-40 (Commute Detection) — **Done (PR #32 merged 2026-07-05)**
+- TIME-042 (impl seq) → Jira TIME-41 (Sleep/Wake Signal Integration) — **In Review, PR #33 OPEN
+  AND UNMERGED — do not merge without Mac verification, see warning at top of this file**
+- TIME-041 (impl seq) → Jira TIME-40 (Commute Detection) — Done (PR #32 merged 2026-07-05)
 - TIME-040 (impl seq) → Jira TIME-39 (Meal Tracking) — Done (PR #31, 2026-07-05)
 - TIME-039 (impl seq) → Jira TIME-38 (Routine Assumptions Model) — Done (PR #30, 2026-07-05)
 - TIME-038 (impl seq) → Jira TIME-37 (Feedback Collection) — Done (PR #29, 2026-07-05)
@@ -42,20 +59,20 @@ Mobile app shells:
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-041 (Jira TIME-40): Commute Detection
-- `commute_events` table; `POST /api/v1/commute/detect` (403 without location_tracking consent),
-  haversine displacement + elapsed-time heuristic, `GET /pending`, `confirm`/`reject`
-- Reuses existing consent_records + Notification/approval infra, no new mechanisms invented
-- No raw lat/lng persisted, no calendar-event-location correlation (not modeled yet)
-- 11 new tests; full suite 181/181 (excluding 2 known-flaky Stripe tests)
-
-Full history of TIME-034 through TIME-040 is in `implementation_log.md` and `change_summary.md`.
+TIME-042 (Jira TIME-41): Sleep/Wake Signal Integration — backend done & verified, iOS unverified
+- `sleep_wake_events`; `POST /api/v1/sleep-wake` triggers `MorningReplanService` which calls the
+  existing `NotificationService.propose_replan()` when wake is >45min later than the sleep
+  RoutineAssumption window (reused approval flow, no new mechanism)
+- `HealthService.swift` written but NOT compiled/tested — see warning at top of this file
+- 11 new backend tests; full suite 194/194 on the PR branch
+- PR #33 open, held unmerged pending Mac build verification
 
 ## Current Active Task
-TIME-042: Sleep/Wake Signal Integration — next in the autonomous build sequence (user directed
-continuous autonomous build through the remaining ticket backlog, merging each PR without waiting
-for review). Note: TIME-042 explicitly includes an iOS HealthKit piece — first backend/mobile-split
-ticket in this run; scope the backend half first and treat the iOS half as its own decision point.
+Waiting on the user to build/verify PR #33 on macOS before it merges. Do NOT start work that
+assumes TIME-042 is on `main` (e.g. anything using sleep_wake_events) until that happens. Once
+merged: run `python scripts/move_ticket.py TIME-41 done`, then move on to TIME-043 (Notification
+Modes and Learning Prompts, Phase 10) — the next backend-only ticket in the sequence, per the
+user's "continue autonomously" instruction from earlier this session.
 
 ## Important Decisions to Preserve
 - Firebase added via Xcode UI (File > Add Package Dependencies), NOT in pbxproj — `#if canImport` guards ensure CLI builds work
@@ -69,7 +86,11 @@ ticket in this run; scope the backend half first and treat the iOS half as its o
 - Routine/meal blocks are UTC-minute-of-day only — not yet subtracted from usable time, deferred
   until UsableTimeService gains real timezone awareness (see Known Problems)
 - User has authorized merging PRs without waiting for review during this autonomous run
-  (2026-07-04) — re-confirm at the start of a new session rather than assuming it still stands
+  (2026-07-04) — re-confirm at the start of a new session rather than assuming it still stands.
+  EXCEPTION: PR #33 (TIME-042) is explicitly held unmerged pending Mac verification — this
+  override does not apply to it.
+- HealthKit capability + NSHealthShareUsageDescription (TIME-042) go through Xcode UI on macOS,
+  never hand-edited into project.pbxproj here — same reasoning as the Firebase decision above
 
 ## Known Problems
 - `python-dotenv` cannot parse multi-line `.env` values → non-blocking (warnings only)

@@ -1,5 +1,28 @@
 # Known Issues
 
+## Issue: TIME-042's HealthService.swift is unverified — DO NOT MERGE PR #33 without Xcode verification
+- Date: 2026-07-05
+- Area: `ios/TimeSense/Core/Health/HealthService.swift` (feature/TIME-042-sleep-wake-signal, PR #33)
+- Symptom: This authoring session runs on Linux (`uname` confirms Linux/aarch64) with no
+  `xcodebuild` available — Xcode and the iOS toolchain only run on macOS at all, so this is not a
+  fixable devcontainer/config issue. `HealthService.swift` was written from HealthKit API
+  knowledge but has never been compiled, run, or tested with XCTest.
+- Root cause: This ticket spans both backend (fully buildable/testable here) and iOS/HealthKit
+  (not buildable here). The backend half (sleep_wake_events, POST /api/v1/sleep-wake,
+  MorningReplanService) was fully verified — 194/194 tests pass. The Swift half was not.
+- Fix: Per explicit user instruction (2026-07-05): hold PR #33 UNMERGED. The user will build it on
+  their MacBook — `git checkout feature/TIME-042-sleep-wake-signal` (or pull the PR), open
+  `ios/TimeSense.xcodeproj` in Xcode, add the HealthKit capability (Signing & Capabilities — do not
+  hand-edit project.pbxproj, same precedent as Firebase below) and an
+  `NSHealthShareUsageDescription` string, then run:
+  `xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination "platform=iOS Simulator,name=iPhone 15"`
+  and the equivalent `xcodebuild test ...` command. Only merge after both pass.
+- Files changed: `ios/TimeSense/Core/Health/HealthService.swift` (new, unverified).
+- Verification: Not yet done — this is the blocking action item.
+- Follow-up needed: Whoever builds this on macOS should also run
+  `python scripts/move_ticket.py TIME-41 done` only after merging, per checkpoint 3. If the build
+  reveals bugs, treat this like a normal fix on the same branch, not a new ticket.
+
 ## Issue: test_referrals.py intermittently fails on real Stripe network calls
 - Date: 2026-07-05
 - Area: `backend/tests/test_referrals.py` (`test_conversion_extends_subscriptions`, `test_no_double_conversion`)

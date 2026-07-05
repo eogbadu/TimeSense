@@ -120,6 +120,10 @@
   Reason: A recurring daily block doesn't need a date component, and integers avoid DB-driver Time-type quirks across SQLite (tests) and Postgres. The usable-time integration is deferred until UsableTimeService gains real timezone awareness (currently UTC-midnight-only) — doing it once for routines+meals+commute together after TIME-040–042 avoids three partial, soon-to-be-redone integrations.
   Date: 2026-07-05
 
+- Decision: HealthKit capability + NSHealthShareUsageDescription for TIME-042 are added via Xcode UI on a Mac, not hand-edited into project.pbxproj/Info.plist in this session
+  Reason: Same precedent as Firebase's SPM dependency (see above) — hand-editing pbxproj is fragile and this session can't build to verify the edit didn't break the project. HealthService.swift itself was written and committed, but is explicitly unverified (see known_issues.md) since this session has no macOS/Xcode access at all.
+  Date: 2026-07-05
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

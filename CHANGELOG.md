@@ -10,6 +10,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Phase 9 — Routines, Meals, Commute, Sleep/Wake
 
+- [2026-07-05] TIME-042: Sleep/wake signal integration — POST /api/v1/sleep-wake triggers morning replan on late wake (backend verified; iOS HealthService.swift unverified, PR #33 held unmerged — see known_issues.md)
 - [2026-07-05] TIME-041: Commute detection — POST /api/v1/commute/detect (location-consent gated), confirm/reject flow
 - [2026-07-05] TIME-040: Meal tracking — POST /api/v1/meals, GET /api/v1/meals/today (skip inference), skipped_meals in recommendations
 - [2026-07-05] TIME-039: Routine assumptions — GET/PATCH /api/v1/routines with default-seeded sleep/meal/hygiene blocks per user
