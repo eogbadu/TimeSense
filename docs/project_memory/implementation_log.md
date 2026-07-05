@@ -1,5 +1,30 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-063 (Jira TIME-57): Fix Alembic migration ordering (tasks before recommendation_feedback)
+
+### Bug
+Bringing up a real local Postgres for the running app, `alembic upgrade head` failed on a fresh DB
+with `relation "tasks" does not exist` at the `add_recommendation_feedback` migration. Root cause:
+`g7h8i9j0k1l2` (recommendation_feedback, FK → tasks.id) and `a1b2c3d4e5f7` (tasks) were **parallel
+sibling branches** off the same parent `f6a7b8c9d0e1` (an artifact of the earlier 4-head merge).
+Alembic linearized the siblings with feedback *before* tasks, so the FK target didn't exist yet.
+Masked from the test suite because tests build the schema from models via `Base.metadata.create_all`,
+not by running migrations — so no test ever exercised the migration order.
+
+### Fix
+- `g7h8i9j0k1l2` down_revision: `f6a7b8c9d0e1` → `a1b2c3d4e5f7` (tasks now guaranteed first).
+- Merge migration `e55970716568` down_revision tuple: dropped `a1b2c3d4e5f7` (no longer a head),
+  now `('a7b8c9d0e1f2','b8c9d0e1f2a3','g7h8i9j0k1l2')`.
+
+### Verification
+- `alembic heads` → single head `p6q7r8s9t0u1`.
+- Dropped + recreated an empty Postgres `timesense` DB and ran `alembic upgrade head` → completes
+  end-to-end (31 tables; tasks/recommendation_feedback/users all present). Backend then boots and
+  `GET /api/v1/health` → 200.
+- Full suite 281/281 (excl. 2 flaky) — unaffected (uses create_all).
+- Safe change: no DB had ever successfully migrated from scratch in the old order, so there's no
+  already-migrated alembic_version graph to disrupt.
+
 ## 2026-07-05 — TIME-062 (Jira TIME-56): Client Firebase Config (iOS + Android)
 
 Interactive session with the user, who registered the iOS/Android/web apps in the real Firebase

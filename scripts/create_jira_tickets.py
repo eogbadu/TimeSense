@@ -3796,6 +3796,69 @@ TICKETS = [
             p("Web Firebase config (web/.env.local) once the web apiKey/appId are provided."),
         ),
     },
+
+    {
+        "summary": "TIME-063: Fix Alembic migration ordering (tasks before recommendation_feedback)",
+        "labels": ["backend", "bug", "migrations"],
+        "description": doc(
+            h2("Goal"),
+            p("Fix a migration-ordering bug that breaks any fresh Postgres `alembic upgrade head`: "
+              "the recommendation_feedback migration has a FK to tasks.id, but its migration "
+              "(g7h8i9j0k1l2) and the tasks migration (a1b2c3d4e5f7) are *parallel sibling branches* "
+              "off the same parent (f6a7b8c9d0e1). Alembic can linearize the siblings with feedback "
+              "before tasks, failing with `relation \"tasks\" does not exist`. Discovered while "
+              "bringing up a real local Postgres for the app; masked from the test suite because "
+              "tests build the schema from models via create_all, not migrations."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Repoint g7h8i9j0k1l2 (add_recommendation_feedback) down_revision from f6a7b8c9d0e1 "
+                "to a1b2c3d4e5f7 (tasks), so tasks is guaranteed to exist before the FK is added",
+                "Update the merge migration e55970716568's down_revision tuple to drop a1b2c3d4e5f7 "
+                "(no longer a head — g7h8i9j0k1l2 now descends from it): "
+                "('a7b8c9d0e1f2','b8c9d0e1f2a3','g7h8i9j0k1l2')",
+                "Verify a fresh Postgres `alembic upgrade head` completes end-to-end and reaches the "
+                "single head p6q7r8s9t0u1",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No schema/model changes — only migration dependency pointers",
+                "No change to the test suite (it uses create_all; unaffected). Safe because no DB "
+                "ever successfully migrated from scratch in the old order, so there's no "
+                "already-migrated DB whose alembic_version graph could be disrupted",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/migrations/versions/g7h8i9j0k1l2_add_recommendation_feedback.py (down_revision)",
+                "backend/migrations/versions/e55970716568_merge_parallel_migration_heads.py (merge tuple)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "`alembic heads` shows the single head p6q7r8s9t0u1",
+                "`alembic upgrade head` on an empty Postgres DB completes with no "
+                "'relation tasks does not exist' error",
+                "Full backend test suite still passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic heads\n"
+                "# against a fresh DB:\n"
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("The TIME-030/033/036-era migrations + the earlier head-merge (e55970716568) that "
+              "introduced the sibling branches."),
+            divider(),
+            h2("Next Ticket"),
+            p("Web Firebase config (web/.env.local)."),
+        ),
+    },
 ]
 
 
