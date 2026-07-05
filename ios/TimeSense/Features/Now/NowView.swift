@@ -36,6 +36,7 @@ struct NowView: View {
                 if let task = ctx.bestTask {
                     BestTaskCard(
                         task: task,
+                        reason: ctx.reason,
                         onDone: { Task { await viewModel.markDone(taskId: task.id) } },
                         onSnooze: { Task { await viewModel.snooze(taskId: task.id) } },
                         onNotNow: { Task { await viewModel.notNow(taskId: task.id) } }
@@ -81,9 +82,12 @@ private struct GreetingHeader: View {
 
 private struct BestTaskCard: View {
     let task: NowTask
+    let reason: String?
     let onDone: () -> Void
     let onSnooze: () -> Void
     let onNotNow: () -> Void
+
+    @State private var showWhy = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
@@ -104,10 +108,47 @@ private struct BestTaskCard: View {
                 Spacer(minLength: 0)
                 PriorityBadge(priority: task.priority)
             }
+
+            if let reason, !reason.isEmpty {
+                WhyThis(reason: reason, isExpanded: $showWhy)
+            }
+
             QuickActionRow(onDone: onDone, onSnooze: onSnooze, onNotNow: onNotNow)
         }
         .padding(DesignTokens.Spacing.lg)
         .cardStyle()
+    }
+}
+
+/// "Why this?" — hidden by default, reveals the recommendation reason on tap (per premium-UX spec).
+private struct WhyThis: View {
+    let reason: String
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            Button {
+                withAnimation(DesignTokens.Animation.fast) { isExpanded.toggle() }
+            } label: {
+                HStack(spacing: DesignTokens.Spacing.xs) {
+                    Image(systemName: "sparkles")
+                    Text("Why this?")
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                }
+                .font(DesignTokens.Typography.footnote.weight(.semibold))
+                .foregroundColor(DesignTokens.Color.accent)
+            }
+            if isExpanded {
+                Text(reason)
+                    .font(DesignTokens.Typography.subheadline)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
