@@ -4380,6 +4380,69 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-067: Fix day-view task visibility (Today 404 + Now ignores captured tasks)",
+        "labels": ["ios", "backend", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("Two bugs found while using the app: the Today tab shows 'Couldn't load today — 404', "
+              "and a task added via Capture never appears on the Now tab. Fix both."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Today 404 (iOS): APIClient built the URL with URL.appending(path:), which "
+                "percent-encodes the WHOLE string as one path component — so any '?query' (Today "
+                "sends '?date=YYYY-MM-DD') became '%3Fdate=...', producing a non-existent path → 404. "
+                "This broke EVERY query-param endpoint (insights history, admin search, etc.), not "
+                "just Today. Fix: build the URL as baseURL.absoluteString + path so the query "
+                "survives.",
+                "Now ignores captured tasks (backend): GET /now's candidate set was only "
+                "scheduled-today + overdue tasks. A freshly captured task has no scheduled_start and "
+                "no due_at, so it was neither → never surfaced. Fix: also include unscheduled pending "
+                "tasks as 'do it whenever' candidates.",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No change to the timeline/today endpoint itself (it correctly returns scheduled "
+                "tasks; the 404 was purely the client URL bug)",
+                "No new scheduling UI — unscheduled tasks simply become eligible for Now",
+                "No iOS unit-test harness added (verified by build + the backend Now test); the "
+                "APIClient fix is a one-line URL-construction change",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Core/API/APIClient.swift (URL construction preserves query)",
+                "backend/app/api/v1/now.py (include unscheduled pending tasks)",
+                "backend/tests/test_now.py (unscheduled-task test)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "GET /api/v1/now returns a just-captured (unscheduled, no-due) pending task as "
+                "best_task",
+                "iOS query-param requests (e.g. /timeline/today?date=...) hit the right route (no "
+                "404 from encoding)",
+                "iOS build succeeds; backend suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_now.py -v\n"
+                "cd backend && pytest -q\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-030/031 (capture + Now/Today), TIME-066 (visible UI so the screens can be used)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 

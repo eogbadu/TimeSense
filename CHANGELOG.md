@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-05] TIME-067: Fix day-view task visibility — iOS APIClient no longer mangles query strings (URL.appending(path:) was percent-encoding '?query' → 404 on Today and every query-param endpoint); backend Now now surfaces unscheduled just-captured tasks (were excluded as neither scheduled-today nor overdue)
 - [2026-07-05] TIME-066: Fix iOS invisible UI — the project had no asset catalog, so DesignTokens named colors (TextPrimary/Surface/Background/etc.) resolved to invisible fallbacks and nearly the whole UI rendered white-on-white; added Assets.xcassets with all colorsets (light+dark) + an AppIcon set
 - [2026-07-05] TIME-065: Sync DB user role from the Firebase token claim — `/users/me` now mirrors the claim into the DB `role`, so granting admin is one step (set the claim) instead of also updating the DB row; the claim is the single source of truth
 - [2026-07-05] TIME-064: Load `.env` from the repo root regardless of working directory — `cd backend && uvicorn` previously loaded no env (looked for backend/.env), silently disabling real Firebase auth at runtime; config.py now resolves the root .env by absolute path

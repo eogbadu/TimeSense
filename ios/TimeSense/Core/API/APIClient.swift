@@ -39,7 +39,13 @@ final class APIClient {
     private func request<B: Encodable, T: Decodable>(
         method: String, path: String, body: B?
     ) async throws -> T {
-        var request = URLRequest(url: baseURL.appending(path: path))
+        // NB: URL.appending(path:) percent-encodes the whole string as a single path component,
+        // which mangles any "?query" (e.g. "?date=...") into "%3Fdate=..." and 404s. Concatenate
+        // onto the base's absolute string so query parameters survive.
+        guard let url = URL(string: baseURL.absoluteString + path) else {
+            throw APIError.invalidResponse
+        }
+        var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let token = authToken {
