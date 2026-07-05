@@ -1,7 +1,8 @@
 # Phase Status
 
 ## Current Phase
-Phase 9: Routines, Meals, Commute, Sleep/Wake (TIME-039, TIME-040, TIME-041 done; TIME-042 next)
+Phase 9: Routines, Meals, Commute, Sleep/Wake (TIME-039–041 done; TIME-042 backend done, iOS
+piece awaiting Mac verification — PR #33 open, unmerged, see known_issues.md)
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -55,11 +56,15 @@ before being trusted — do not assume unchecked = not built.
 - [x] TIME-041 (Jira TIME-40): Commute Detection — commute_events table, POST /api/v1/commute/detect
       (gated on location_tracking consent) + confirm/reject flow, reusing existing consent/notification
       infrastructure. No calendar-event-location correlation yet (no such table exists).
-- [ ] TIME-042: Sleep/Wake Signal Integration
+- [~] TIME-042 (Jira TIME-41): Sleep/Wake Signal Integration — backend DONE and fully verified
+      (sleep_wake_events, POST /api/v1/sleep-wake, MorningReplanService triggering the existing
+      replan-approval flow on a late wake). iOS HealthService.swift written but UNVERIFIED (no
+      Xcode in this session) — PR #33 held unmerged pending a real build/test pass on macOS.
 
 ## Active Jira Tickets
-- TIME-40 (impl TIME-041, Commute Detection) — Done
-- Next: TIME-042 (Sleep/Wake Signal Integration)
+- TIME-41 (impl TIME-042, Sleep/Wake Signal Integration) — In Review, PR #33 OPEN AND UNMERGED —
+  do not merge until iOS build verified on macOS (see known_issues.md)
+- Next after TIME-042 merges: TIME-043 (Notification Modes and Learning Prompts)
 
 ## Blockers
 - None

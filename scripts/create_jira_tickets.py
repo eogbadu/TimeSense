@@ -2280,6 +2280,100 @@ TICKETS = [
             p("TIME-042: Sleep/Wake Signal Integration"),
         ),
     },
+
+    {
+        "summary": "TIME-042: Sleep/Wake Signal Integration",
+        "labels": ["phase-9", "backend", "ios"],
+        "description": doc(
+            h2("Goal"),
+            p("When the user wakes up meaningfully later than their usual RoutineAssumption sleep "
+              "window (TIME-039), propose a morning replan via the existing approval flow — reusing "
+              "NotificationService.propose_replan rather than a new mechanism. iOS reads the wake "
+              "time from HealthKit sleep-analysis samples and logs it to the backend."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "SleepWakeEvent model: user_id, sleep_start (nullable), wake_time, source "
+                "(healthkit|manual)",
+                "Alembic migration for sleep_wake_events table",
+                "SleepWakeRepository: create(), get_latest_for_today()",
+                "MorningReplanService.check_and_propose(user_id, wake_time) — compares wake_time's "
+                "UTC minute-of-day against the user's 'sleep' RoutineAssumption end_minute; if "
+                "wake_time is >45 min later, calls NotificationService.propose_replan() with a "
+                "placeholder proposed_changes payload ({'type': 'shift_schedule', "
+                "'delta_minutes': N}) — the actual schedule-shifting algorithm is future work, this "
+                "ticket only wires the trigger",
+                "POST /api/v1/sleep-wake — logs an event and runs the morning-replan check inline",
+                "GET /api/v1/sleep-wake/today",
+                "ios/TimeSense/Core/Health/HealthService.swift — HKHealthStore wrapper: requests "
+                "read-only sleep-analysis authorization, fetches the most recent sleep sample, "
+                "posts wake time to POST /api/v1/sleep-wake via the shared APIClient",
+                "Tests (backend, fully verified): 10+ covering event logging, late-wake replan "
+                "trigger, on-time wake (no replan), source variants, cross-user isolation",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No actual schedule-shifting algorithm — proposed_changes is a placeholder delta, "
+                "not a computed new schedule",
+                "No dedupe/rate-limiting beyond 'one log call = at most one replan proposal' — "
+                "logging is expected to happen once per morning from HealthKit, not on a poll loop",
+                "No HealthKit capability/entitlement wiring in project.pbxproj — capabilities are "
+                "added via Xcode UI on a real Mac, same precedent as Firebase's SPM setup (see "
+                "decision_log.md); this ticket ships the Swift source only",
+                "No Info.plist NSHealthShareUsageDescription string — added alongside the "
+                "capability in Xcode UI, for the same reason",
+                "iOS code in this ticket is NOT built or tested with xcodebuild/XCTest in the "
+                "authoring environment (no macOS/Xcode available there) — it must be verified on "
+                "a real Mac before this ticket's PR is merged. This is an explicit exception to "
+                "this project's otherwise-normal 'test before merge' rule.",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/models/sleep_wake.py (new)",
+                "backend/migrations/versions/*_add_sleep_wake_events.py (new)",
+                "backend/app/repositories/sleep_wake_repository.py (new)",
+                "backend/app/schemas/sleep_wake.py (new)",
+                "backend/app/services/morning_replan.py (new)",
+                "backend/app/api/v1/sleep_wake.py (new)",
+                "backend/app/api/v1/__init__.py (register router)",
+                "backend/app/models/__init__.py (register model)",
+                "backend/tests/test_sleep_wake.py (new)",
+                "ios/TimeSense/Core/Health/HealthService.swift (new, unverified — see Non-Goals)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /api/v1/sleep-wake logs an event and returns it",
+                "A wake_time >45 min later than the sleep routine's end_minute creates a pending "
+                "ReplanRequest + Notification",
+                "A wake_time within 45 min of the routine's end_minute creates no replan",
+                "One user's sleep/wake events are not visible to another user",
+                "All backend tests pass",
+                "HealthService.swift builds successfully in Xcode and passes any XCTests added for "
+                "it — verified on macOS before merge, not in this authoring session",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head\n"
+                "cd backend && pytest tests/test_sleep_wake.py -v\n"
+                "cd backend && pytest -q\n"
+                "# On macOS with Xcode, before merging this ticket's PR:\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination \"platform=iOS Simulator,name=iPhone 15\"\n"
+                "xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination \"platform=iOS Simulator,name=iPhone 15\""
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-039 (RoutineAssumption sleep window), TIME-015 (ReplanRequest / NotificationService)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-043: Notification Modes and Learning Prompts"),
+        ),
+    },
 ]
 
 

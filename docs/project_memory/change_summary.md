@@ -1,5 +1,26 @@
 # Change Summary
 
+## 2026-07-05 — TIME-042 (Jira TIME-41) Sleep/Wake Signal Integration
+
+**What changed:**
+- `sleep_wake_events` table; `POST /api/v1/sleep-wake` (logs + triggers replan check inline), `GET /api/v1/sleep-wake/today`
+- `MorningReplanService` — wakes >45min later than the TIME-039 sleep routine window trigger the
+  existing `NotificationService.propose_replan()` flow (reused, no new approval mechanism)
+- `ios/TimeSense/Core/Health/HealthService.swift` — HealthKit sleep-analysis read + backend sync
+
+**What did not change / is NOT done:**
+- No real schedule-shifting algorithm — proposed_changes is a placeholder delta_minutes payload
+- iOS `HealthService.swift` is UNVERIFIED — written with no macOS/Xcode access in this session.
+  **PR #33 is held unmerged** per explicit user instruction until built/tested on a real Mac (see
+  known_issues.md for exact steps). The backend half is fully tested and could ship independently,
+  but the whole ticket's PR stays open until the iOS half is confirmed.
+- No HealthKit capability/entitlement or Info.plist string added to the Xcode project — must be
+  added via Xcode UI on macOS (same precedent as Firebase), not hand-edited here
+
+**Next:**
+- Build/verify HealthService.swift on macOS, then merge PR #33 and run checkpoint 3
+- TIME-043: Notification Modes and Learning Prompts (Phase 10)
+
 ## 2026-07-05 — TIME-041 (Jira TIME-40) Commute Detection
 
 **What changed:**

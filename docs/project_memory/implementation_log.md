@@ -1,5 +1,34 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-042 (Jira TIME-41): Sleep/Wake Signal Integration
+
+### Created (backend — fully verified)
+- `backend/app/models/sleep_wake.py` — SleepWakeEvent model
+- `backend/migrations/versions/k1l2m3n4o5p6_add_sleep_wake_events.py` — sleep_wake_events table
+- `backend/app/repositories/sleep_wake_repository.py` — create(), get_latest_for_today()
+- `backend/app/schemas/sleep_wake.py` — SleepWakeLogRequest, SleepWakeEventResponse
+- `backend/app/services/morning_replan.py` — MorningReplanService.check_and_propose(): compares
+  wake_time against the TIME-039 sleep RoutineAssumption's end_minute; if >45 min late, calls the
+  existing NotificationService.propose_replan() (reused, not reinvented) with a placeholder
+  `{"type": "shift_schedule", "delta_minutes": N}` payload — no real schedule-shifting algorithm yet
+- `backend/app/api/v1/sleep_wake.py` — POST /sleep-wake (logs + runs the replan check inline), GET /sleep-wake/today
+- `backend/tests/test_sleep_wake.py` — 11 tests
+
+### Created (iOS — UNVERIFIED, see known_issues.md)
+- `ios/TimeSense/Core/Health/HealthService.swift` — HKHealthStore wrapper, read-only sleep-analysis
+  authorization, posts latest wake time to the backend. Written without any macOS/Xcode access in
+  this session (Linux devcontainer) — has never been compiled. **Per explicit user instruction,
+  PR #33 for this ticket is held UNMERGED until built/tested on a real Mac.**
+
+### Modified
+- `backend/app/api/v1/__init__.py`, `backend/app/models/__init__.py` — registered sleep-wake router/model
+
+### Verification
+- Backend: `pytest tests/test_sleep_wake.py -v` — 11 passed; full suite `pytest` — 194/194 passed
+- `alembic heads` — single head; `alembic upgrade head --sql` — compiles cleanly offline
+- iOS: NOT verified — no xcodebuild available in this session. See known_issues.md for the exact
+  steps needed on macOS before merge.
+
 ## 2026-07-05 — TIME-041 (Jira TIME-40): Commute Detection
 
 ### Created
