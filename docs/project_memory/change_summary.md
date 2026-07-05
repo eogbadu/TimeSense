@@ -1,5 +1,30 @@
 # Change Summary
 
+## 2026-07-05 — TIME-042 (Jira TIME-41) Sleep/Wake Signal Integration
+
+**What changed:**
+- `sleep_wake_events` table: wake_time, sleep_start (nullable), source (healthkit/manual),
+  replan_request_id (nullable FK)
+- `POST /api/v1/sleep/events` (403 without `health_data` consent granted) — records the event and,
+  if wake_time is >=45min past the user's "sleep" RoutineAssumption (TIME-039) assumed wake minute,
+  proposes a morning replan via the existing NotificationService.propose_replan/ReplanRequest
+  approval flow (TIME-015); dedupes so a second late wake the same day doesn't double-propose
+- `GET /api/v1/sleep/today`
+- No new approve/reject endpoints — a suggested replan goes through the existing
+  `/api/v1/notifications/replans/{id}/approve|reject` routes like any other replan
+
+**What did not change:**
+- No iOS HealthKit read integration, entitlements, or permission UI — backend contract only, same
+  split TIME-041 used for its location-permission piece; flagged as its own decision point
+- No real per-user timezone handling — same UTC-only simplification as RoutineAssumption/
+  UsableTimeService/CommuteService
+- No automatic replan execution — user approval is still required
+
+**Next:**
+- TIME-043: Notification Modes and Learning Prompts (Phase 10)
+- The deferred UsableTimeService timezone-awareness pass (subtracting routine/meal/commute/sleep
+  blocks from usable time) is now unblocked since all Phase 9 signals exist
+
 ## 2026-07-05 — TIME-041 (Jira TIME-40) Commute Detection
 
 **What changed:**
