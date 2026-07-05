@@ -47,6 +47,7 @@
 		B222B5BA80D315FBD04DD843 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 10849A270EBDF154E79FD082 /* GoogleService-Info.plist */; };
 		B98E3891DFBAB8E368AEF84E /* TimeSenseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		C947A57452119252AB0CE31D /* TimeSenseShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */; };
+		DF73E27F96DC6091FCDB6F74 /* SettingsScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AC9046CC1824BBE8217F24B /* SettingsScreens.swift */; };
 		F0D2D149DB35C66A29073F3C /* TimeSenseAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27C9273247D83F087DBA4C0 /* TimeSenseAppIntents.swift */; };
 		F38816ECFDA6CE143C0C8729 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A27CCD58C9BAE9E0D039807B /* Assets.xcassets */; };
 		FAA7334EFCCDA29FF0B9667E /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */; };
@@ -83,6 +84,7 @@
 		2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UsableTimeWidget.swift; sourceTree = "<group>"; };
 		3AF2C9C92FEC1E46674899DC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		4AC9046CC1824BBE8217F24B /* SettingsScreens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsScreens.swift; sourceTree = "<group>"; };
 		53053C84F6BDAB4CB9AC5592 /* TimeSenseWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = TimeSenseWidget.entitlements; sourceTree = "<group>"; };
 		5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BestNextActionWidget.swift; sourceTree = "<group>"; };
 		6345B92D47288413957CE8BE /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -337,6 +339,7 @@
 				A2000011 /* SettingsView.swift */,
 				C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */,
 				D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */,
+				4AC9046CC1824BBE8217F24B /* SettingsScreens.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -502,6 +505,7 @@
 				F0D2D149DB35C66A29073F3C /* TimeSenseAppIntents.swift in Sources */,
 				C947A57452119252AB0CE31D /* TimeSenseShortcuts.swift in Sources */,
 				139CC16BB770927E35C73A16 /* HealthService.swift in Sources */,
+				DF73E27F96DC6091FCDB6F74 /* SettingsScreens.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

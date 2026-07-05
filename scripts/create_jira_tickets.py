@@ -4912,6 +4912,66 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-076: Make Settings rows functional (+ Sign Out, Delete My Data)",
+        "labels": ["ios", "settings"],
+        "description": doc(
+            h2("Goal"),
+            p("Most Settings rows were dead placeholders (chevron, no action), and there was no Sign "
+              "Out. Wire every row to a real screen/action backed by existing endpoints, and add "
+              "Sign Out + a working Delete My Data."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "New screens (SettingsScreens.swift): Profile (email + editable display_name via "
+                "PATCH /users/me/profile), Subscription (read-only status from /subscriptions/me), "
+                "Notifications (notification_mode picker → PATCH /users/me/preferences), Appearance "
+                "(System/Light/Dark → @AppStorage applied at app root + PATCH preferences.theme), "
+                "Privacy & Consent (summary), Calendar (honest status), About",
+                "SettingsView: NavigationLinks to all of the above; Delete My Data → confirm alert "
+                "→ DELETE /privacy/account?confirm=true → signOut; a Sign Out section → "
+                "authService.signOut()",
+                "App root applies the stored theme via .preferredColorScheme",
+                "Register SettingsScreens.swift in the Xcode target",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No in-app StoreKit purchase / trial start (billing via the App Store); Subscription "
+                "is read-only status",
+                "No in-app calendar OAuth yet (Calendar screen states web-managed for now)",
+                "No in-app data-export download yet (Privacy screen summarizes; delete is wired)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Features/Settings/SettingsView.swift, SettingsScreens.swift (new)",
+                "ios/TimeSense/App/TimeSenseApp.swift (theme), TimeSense.xcodeproj (add file)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Every Settings row navigates to a working screen or performs its action",
+                "Sign Out returns to the sign-in screen; Delete My Data confirms then erases + signs "
+                "out",
+                "Appearance changes the app theme immediately; iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-055 (privacy export/delete), users preferences/profile endpoints, "
+              "/subscriptions/me, AuthService.signOut, TIME-073 (design tokens)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 

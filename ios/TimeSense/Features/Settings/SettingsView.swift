@@ -2,20 +2,34 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var authService: AuthService
     @StateObject private var healthService = HealthService()
+
+    @State private var showDeleteConfirm = false
+    @State private var deleting = false
 
     var body: some View {
         NavigationStack {
             List {
                 Section("Account") {
-                    SettingsRow(icon: "person.circle", title: "Profile", tint: .blue)
-                    SettingsRow(icon: "crown.fill", title: "Subscription", tint: .yellow)
+                    NavigationLink { ProfileSettingsView() } label: {
+                        SettingsRowLabel(icon: "person.circle", title: "Profile", tint: .blue)
+                    }
+                    NavigationLink { SubscriptionSettingsView() } label: {
+                        SettingsRowLabel(icon: "crown.fill", title: "Subscription", tint: .yellow)
+                    }
                 }
 
                 Section("Preferences") {
-                    SettingsRow(icon: "bell.fill", title: "Notifications", tint: .red)
-                    SettingsRow(icon: "calendar", title: "Calendar", tint: .green)
-                    SettingsRow(icon: "paintbrush.fill", title: "Appearance", tint: .purple)
+                    NavigationLink { NotificationsSettingsView() } label: {
+                        SettingsRowLabel(icon: "bell.fill", title: "Notifications", tint: .red)
+                    }
+                    NavigationLink { CalendarSettingsView() } label: {
+                        SettingsRowLabel(icon: "calendar", title: "Calendar", tint: .green)
+                    }
+                    NavigationLink { AppearanceSettingsView() } label: {
+                        SettingsRowLabel(icon: "paintbrush.fill", title: "Appearance", tint: .purple)
+                    }
                     NavigationLink(destination: LearnedAssumptionsView()) {
                         SettingsRowLabel(icon: "brain.head.profile", title: "Learned Assumptions", tint: .teal)
                     }
@@ -23,42 +37,61 @@ struct SettingsView: View {
                 }
 
                 Section("Privacy") {
-                    SettingsRow(icon: "hand.raised.fill", title: "Privacy & Consent", tint: .orange)
-                    SettingsRow(icon: "trash.fill", title: "Delete My Data", tint: .red)
+                    NavigationLink { PrivacyConsentView() } label: {
+                        SettingsRowLabel(icon: "hand.raised.fill", title: "Privacy & Consent", tint: .orange)
+                    }
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        HStack(spacing: DesignTokens.Spacing.md) {
+                            SettingsRowLabel(icon: "trash.fill", title: "Delete My Data", tint: .red)
+                            Spacer()
+                            if deleting { ProgressView() }
+                        }
+                    }
                 }
 
                 Section("About") {
-                    SettingsRow(icon: "info.circle", title: "About TimeSense", tint: .gray)
+                    NavigationLink { AboutSettingsView() } label: {
+                        SettingsRowLabel(icon: "info.circle", title: "About TimeSense", tint: .gray)
+                    }
                     LabeledContent("Version", value: "0.1.0")
                         .foregroundColor(DesignTokens.Color.textSecondary)
+                }
+
+                Section {
+                    Button(role: .destructive) {
+                        authService.signOut()
+                    } label: {
+                        Text("Sign Out")
+                            .frame(maxWidth: .infinity)
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
             .background(DesignTokens.Color.background)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
+            .alert("Delete your account?", isPresented: $showDeleteConfirm) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete everything", role: .destructive) {
+                    Task { await deleteAccount() }
+                }
+            } message: {
+                Text("This permanently erases your account and all your data. This cannot be undone.")
+            }
         }
+    }
+
+    private func deleteAccount() async {
+        deleting = true
+        defer { deleting = false }
+        try? await APIClient.shared.delete("/api/v1/privacy/account?confirm=true")
+        authService.signOut()   // drop the local session → returns to sign-in
     }
 }
 
-private struct SettingsRow: View {
-    let icon: String
-    let title: String
-    let tint: SwiftUI.Color
-
-    var body: some View {
-        HStack(spacing: DesignTokens.Spacing.md) {
-            SettingsRowLabel(icon: icon, title: title, tint: tint)
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(DesignTokens.Color.textSecondary)
-        }
-    }
-}
-
-/// Icon + title only, no chevron — used inside a real `NavigationLink`, which draws its own
-/// disclosure indicator (unlike `SettingsRow`'s manually-drawn one on the placeholder rows above).
+/// Icon + title — used inside a `NavigationLink`, which draws its own disclosure indicator.
 private struct SettingsRowLabel: View {
     let icon: String
     let title: String

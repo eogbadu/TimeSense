@@ -1,5 +1,18 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-076 (Jira TIME-74): Make Settings rows functional (+ Sign Out, Delete)
+
+Most Settings rows were dead placeholders (chevron, no action) and there was no Sign Out. Added
+SettingsScreens.swift with real screens wired to existing endpoints: Profile (email + display_name
+PATCH /users/me/profile), Subscription (read-only status from /subscriptions/me), Notifications
+(notification_mode picker → PATCH /users/me/preferences), Appearance (System/Light/Dark via
+@AppStorage applied at app root + PATCH preferences.theme), Privacy & Consent (summary), Calendar
+(honest web-managed status), About. SettingsView now uses NavigationLinks for all; Delete My Data →
+confirm alert → DELETE /privacy/account?confirm=true → signOut; a Sign Out section → signOut.
+TimeSenseApp applies the stored theme via .preferredColorScheme. Registered the new file in the
+Xcode target (xcodeproj gem). iOS BUILD SUCCEEDED. No backend changes (existing endpoints). Not
+visually verified (Settings is behind auth; can't headless sign-in) — standard SwiftUI Forms.
+
 ## 2026-07-05 — TIME-075 (Jira TIME-73): 'Why this?' reasoning on Now
 
 Added a deterministic recommendation reason to /now (reason: str|None) built from the chosen task —
