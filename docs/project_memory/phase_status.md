@@ -1,7 +1,7 @@
 # Phase Status
 
 ## Current Phase
-Phase 9: Routines, Meals, Commute, Sleep/Wake (TIME-039, TIME-040, TIME-041 done; TIME-042 next)
+Phase 9: Routines, Meals, Commute, Sleep/Wake — TIME-039–042 done. Phase 9 complete; Phase 10 next.
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -55,14 +55,18 @@ before being trusted — do not assume unchecked = not built.
 - [x] TIME-041 (Jira TIME-40): Commute Detection — commute_events table, POST /api/v1/commute/detect
       (gated on location_tracking consent) + confirm/reject flow, reusing existing consent/notification
       infrastructure. No calendar-event-location correlation yet (no such table exists).
-- [ ] TIME-042: Sleep/Wake Signal Integration
+- [x] TIME-042 (Jira TIME-41): Sleep/Wake Signal Integration — sleep_wake_events table,
+      POST /api/v1/sleep/events (gated on health_data consent) + GET /api/v1/sleep/today; late wake
+      (>=45min past the "sleep" RoutineAssumption's assumed wake minute) proposes a morning replan
+      via the existing NotificationService.propose_replan/ReplanRequest approval flow. iOS HealthKit
+      read integration is out of scope (backend contract only, per TIME-041's precedent).
 
 ## Active Jira Tickets
-- TIME-40 (impl TIME-041, Commute Detection) — Done
-- Next: TIME-042 (Sleep/Wake Signal Integration)
+- TIME-41 (impl TIME-042, Sleep/Wake Signal Integration) — Done
+- Next: TIME-043 (Notification Modes and Learning Prompts) — Phase 10
 
 ## Blockers
 - None
 
 ## Next Phase
-Phase 10: Notifications, Widgets, Ambient Surfaces — after Phase 9 completes
+Phase 10: Notifications, Widgets, Ambient Surfaces — Phase 9 is complete
