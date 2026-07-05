@@ -1,5 +1,13 @@
 # Change Summary
 
+## 2026-07-05 — TIME-054 (Jira TIME-60) Error Monitoring + Analytics (backend) — Phase 14 start
+
+- Sentry-optional monitoring (`app/core/monitoring.py`, no-op without SENTRY_DSN) wired into the
+  lifespan + error handlers (500s captured with path/method context)
+- Analytics pipeline: analytics_events table + AnalyticsService.track() gated on the `analytics`
+  consent; emits task_captured from /capture; GET /api/v1/admin/analytics counts
+- 9 new tests; suite 292/292 (excl. 2 flaky). Client (iOS/Android) analytics deferred to a follow-up
+
 ## 2026-07-05 — TIME-064 / TIME-065 (Jira TIME-58 / TIME-59) Local-run + auth cleanups
 
 - **TIME-064:** config.py resolves the root `.env` by absolute path so `cd backend && uvicorn` loads

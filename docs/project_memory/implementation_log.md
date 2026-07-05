@@ -1,5 +1,39 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-054 (Jira TIME-60): Error Monitoring and Analytics (backend) — starts Phase 14
+
+Phase 13 (Integrations Expansion, TIME-049–053) is complete; this is the first Phase 14 (Beta
+Hardening & Launch Readiness) ticket.
+
+### Monitoring
+- `app/core/monitoring.py` — Sentry-optional: `init_monitoring()` initializes Sentry only when
+  `settings.sentry_dsn` is set AND sentry-sdk imports; else a clean no-op (graceful pattern).
+  `capture_exception(exc, context)` delegates or no-ops; never raises. `send_default_pii=False`,
+  `traces_sample_rate=0`.
+- Wired into `main.py` lifespan (`init_monitoring()`) and `app/core/errors.py` (the 500 handler +
+  a new catch-all Exception handler both call `capture_exception` with path/method context).
+- `config.sentry_dsn` (default ""); `sentry-sdk[fastapi]==2.19.2` added to requirements (imported
+  lazily inside the functions, so tests run without it installed).
+
+### Analytics (privacy-respecting)
+- `AnalyticsEvent` model (user_id nullable FK, event_name, properties JSON text) + migration
+  `q7r8s9t0u1v2`; `AnalyticsRepository` (create, counts_by_event).
+- `AnalyticsService.track(event_name, user_id=None, properties=None)` — records a user-attributed
+  event ONLY if that user granted the existing **`analytics` consent** (ConsentRepository); system
+  events (user_id None) record without a check; never raises (best-effort, rides along the request).
+- Emits `task_captured` from `POST /api/v1/capture` (properties={source}).
+- `GET /api/v1/admin/analytics` (admin-gated) → per-event counts + total.
+
+### Verification
+- 9 new tests (test_monitoring_analytics.py): monitoring no-op/safe-capture; analytics
+  records-with-consent / skips-without / system-event; capture emits (and skips without consent);
+  admin counts + 403. Full suite 292/292 (287 via --ignore + 5 referral subset), excl. 2 flaky.
+- Single alembic head; migration applies cleanly to the live Postgres.
+
+### Deferred (Non-Goal)
+- Client-side analytics (iOS Analytics.swift / Android analytics/) — follow-up ticket; this
+  establishes the backend pipeline + event schema + consent gating first.
+
 ## 2026-07-05 — TIME-065 (Jira TIME-59): Sync DB user role from the Firebase token claim
 
 ### Why

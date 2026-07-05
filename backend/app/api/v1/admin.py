@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import AdminUser
+from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.calendar_repository import CalendarIntegrationRepository
 from app.repositories.invite_repository import InviteCodeRepository, WaitlistRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
@@ -166,6 +167,15 @@ async def list_waitlist(
 ) -> list[WaitlistEntryOut]:
     entries = await WaitlistRepository(db).list_waiting(limit=min(limit, 500))
     return [WaitlistEntryOut.model_validate(e) for e in entries]
+
+
+@router.get("/analytics", summary="Product analytics event counts (admin)")
+async def analytics_counts(
+    _admin: AdminUser = None,  # type: ignore[assignment]
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    counts = await AnalyticsRepository(db).counts_by_event()
+    return {"event_counts": counts, "total": sum(counts.values())}
 
 
 @router.get("/health", summary="Admin health check (admin)")

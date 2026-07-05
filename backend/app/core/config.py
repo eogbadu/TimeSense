@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     # Notion
     notion_client_id: str = ""
     notion_client_secret: str = ""
+
+    # Monitoring (Sentry-optional; empty DSN => disabled)
+    sentry_dsn: str = ""
     notion_version: str = "2022-06-28"
 
     @property

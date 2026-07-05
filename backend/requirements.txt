@@ -24,3 +24,6 @@ stripe==11.3.0
 python-multipart==0.0.19
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+
+# Monitoring (optional at runtime — only active when SENTRY_DSN is set)
+sentry-sdk[fastapi]==2.19.2

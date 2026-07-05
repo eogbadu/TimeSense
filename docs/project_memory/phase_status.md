@@ -1,11 +1,11 @@
 # Phase Status
 
 ## Current Phase
-Phase 13: Integrations Expansion — TIME-049/050/051/052 done. Net-new iOS work TIME-059 (real Apple
-signing) + TIME-060 (HealthKit read integration) both done. Next: TIME-053 (Google Assistant). The
-real Apple Developer account is wired in (Team WB5NV894N5, App ID com.aetheranalytics.timesense);
-HealthKit entitlement is set — device runs just need the user to register a device UDID + run from
-their Xcode.
+Phase 14: Beta Hardening & Launch Readiness. **Phase 13 (Integrations Expansion, TIME-049–053) is
+COMPLETE.** TIME-054 (Error Monitoring + Analytics, backend) done. Next: TIME-055 (Privacy Review &
+Data Export), then TIME-056/057/058. Outstanding follow-up: client (iOS/Android) analytics. The full
+local stack (web+backend+Postgres+real Firebase, admin dashboard) is verified working; real Apple
+signing + HealthKit are wired (device runs need a registered UDID).
 
 ## Staleness Warning (2026-07-04)
 This file's "Completed Phases" and per-phase acceptance-criteria checkboxes were not kept
@@ -149,6 +149,7 @@ before being trusted — do not assume unchecked = not built.
       (web/.env.local) still pending the user's apiKey/appId.
 
 ## Active Jira Tickets
+- TIME-60 (impl TIME-054, Error Monitoring + Analytics backend) — Done; Phase 14 begun
 - TIME-59 (impl TIME-065, Sync DB role from token claim) — Done
 - TIME-58 (impl TIME-064, Load .env from repo root) — Done
 - TIME-57 (impl TIME-063, Fix Alembic migration ordering) — Done

@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.schemas.task import TaskResponse
+from app.services.analytics_service import AnalyticsService
 from app.services.capture_service import CaptureService
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
@@ -31,4 +32,7 @@ async def capture(
     parser = CaptureService(gateway)
     task_create = await parser.parse(body.raw_input, user_timezone=body.user_timezone)
     task = await TaskService(db).create_task(user.id, task_create)
+    await AnalyticsService(db).track(
+        "task_captured", user_id=user.id, properties={"source": task_create.source}
+    )
     return TaskResponse.model_validate(task)
