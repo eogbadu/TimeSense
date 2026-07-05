@@ -10,11 +10,13 @@ from app.services.task_scorer import TaskScorer
 from app.services.usable_time_service import UsableTimeService
 
 _EXPLAIN_SYSTEM = (
-    "You are a calm, concise personal time assistant. In one or two short sentences "
-    "(≤ 35 words total), explain why the chosen task is the best thing to do RIGHT NOW compared "
-    "with the other options — weighing the time of day and the user's likely energy, the free time "
-    "available before their next commitment, and any deadlines. Speak directly to the user ('you'). "
-    "No preamble, no lists, no restating the task title verbatim."
+    "You are a calm, concise personal time assistant. The app has ALREADY chosen this task as the "
+    "best thing for the user to do now. Your job is only to justify that choice — in one or two "
+    "short sentences (≤ 35 words) explain why this task is a good use of THIS moment, drawing on "
+    "the time of day, the user's likely energy, the free time before their next commitment, and any "
+    "deadline. Frame it as a good fit for now and, when helpful, why it beats the other options. "
+    "IMPORTANT: never suggest resting, waiting, doing it later, or picking a different task — the "
+    "recommendation is fixed. Speak directly to 'you'. No preamble, no lists, no restating the title."
 )
 
 _scorer = TaskScorer()
@@ -91,16 +93,18 @@ def _part_of_day(now: datetime, user_timezone: str) -> tuple[str, str]:
         local = now.astimezone(ZoneInfo(user_timezone))
     except Exception:
         local = now
+    # Descriptive energy framing only — never phrased as a reason to avoid the task (the pick is
+    # fixed; these just help explain why it fits the moment).
     h = local.hour
     if 5 <= h < 11:
-        return "morning", "energy is usually fresh, good for focus or harder tasks"
+        return "morning", "energy is usually fresh — a good time to make progress"
     if 11 <= h < 14:
-        return "midday", "a steady stretch before the afternoon"
+        return "midday", "a steady, focused stretch"
     if 14 <= h < 17:
-        return "afternoon", "energy can dip after lunch, so lighter tasks fit well"
+        return "afternoon", "energy may dip after lunch, so a clear next step feels easier"
     if 17 <= h < 21:
-        return "evening", "winding down, better to wrap up than start heavy work"
-    return "late", "low energy, keep it light or rest"
+        return "evening", "energy is winding down, so finishing a manageable task feels satisfying"
+    return "late", "energy is low, so a light, simple task fits best"
 
 
 def _fallback_why(
