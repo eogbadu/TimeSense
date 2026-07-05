@@ -32,7 +32,7 @@ Mobile app shells:
 - Android Kotlin/Compose: bottom nav, AuthViewModel, CaptureViewModel + CaptureScreen wired to backend. `./gradlew assembleDebug → BUILD SUCCESSFUL`.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-040 (impl seq) → Jira TIME-39 (Meal Tracking) — **Done (this session)**
+- TIME-040 (impl seq) → Jira TIME-39 (Meal Tracking) — **Done (PR #31 merged 2026-07-05)**
 - TIME-039 (impl seq) → Jira TIME-38 (Routine Assumptions Model) — Done (PR #30, 2026-07-05)
 - TIME-038 (impl seq) → Jira TIME-37 (Feedback Collection) — Done (PR #29, 2026-07-05)
 - TIME-036 (impl seq) → Jira TIME-36 (Recommendation API V1) — Done (PR #28, 2026-07-04)
