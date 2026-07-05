@@ -1,5 +1,48 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-062 (Jira TIME-56): Client Firebase Config (iOS + Android)
+
+Interactive session with the user, who registered the iOS/Android/web apps in the real Firebase
+project **timesense-eb7ec** and supplied the config files. Wired the iOS + Android clients to real
+Firebase (web pending the user's apiKey/appId).
+
+### iOS
+- Added the **firebase-ios-sdk** Swift Package and linked **FirebaseAuth + FirebaseCore** to the
+  TimeSense target (done programmatically via the xcodeproj gem — the user was blocked on Xcode's
+  product-selection dialog; the package *reference* had been added by an earlier Xcode attempt but
+  no products were linked, which is why they never appeared in the target's "+" list).
+- **Pinned Firebase to 11.x** (resolved to **11.15.0**): the reference Xcode created defaulted to
+  12.15.0, which requires Swift tools 6.1 — newer than this Xcode 16.0 / Swift 6.0. Changed the
+  requirement to `upToNextMajorVersion 11.0.0`.
+- Added the **GoogleSignIn-iOS** package (8.x) and linked **GoogleSignIn** — the real AuthService
+  (previously never compiled, hidden behind `#if canImport(FirebaseAuth)`) imports GoogleSignIn for
+  its `signInWithGoogle`; the first build after linking Firebase surfaced `no such module
+  'GoogleSignIn'`.
+- Added **GoogleService-Info.plist** to the app target (project_id timesense-eb7ec, bundle id
+  com.aetheranalytics.timesense) — **gitignored, NOT committed** (repo convention; each dev supplies
+  their own).
+
+### Android
+- Replaced the placeholder `android/app/google-services.json` (was project_id
+  "timesense-placeholder") with the user's real one (project timesense-eb7ec). The
+  com.google.gms.google-services plugin + firebase-auth deps were already wired (TIME-018-era).
+
+### Repo hygiene
+- Committed the reproducible bits: `project.pbxproj` (SPM package refs + product links + plist file
+  ref) and `Package.resolved` (pins Firebase 11.15.0, GoogleSignIn, gRPC, abseil, …).
+- Added depth-agnostic `.gitignore` rules `xcuserdata/` and `.swiftpm/` — the existing
+  `*.xcodeproj/xcuserdata/` pattern is root-anchored and missed the nested `ios/...` dirs.
+
+### Verification
+- `xcodebuild -resolvePackageDependencies` → resolved Firebase 11.15.0 + full dep graph
+- Simulator build (`-scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'
+  CODE_SIGNING_ALLOWED=NO`) → **BUILD SUCCEEDED** — the real FirebaseAuth/GoogleSignIn AuthService
+  now compiles
+- Booted iPhone 16 sim, installed + launched → app runs (status 0), `FirebaseApp.configure()` runs
+  against the real plist without crashing
+- Remaining user steps: enable sign-in providers (Apple/Google) in the console; run on a device for
+  real interactive sign-in; web/.env.local still needs the web apiKey/appId
+
 ## 2026-07-05 — TIME-053 (Jira TIME-55): Google Assistant Integration
 
 ### Created

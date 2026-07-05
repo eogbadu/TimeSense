@@ -143,9 +143,14 @@ before being trusted — do not assume unchecked = not built.
       /now best-task logic, MealRepository, TaskRepository. Backend-only; account-linking/live
       Assistant out of scope (platform deprecated June 2023). 10 new tests.
 
+- [x] TIME-062 (Jira TIME-56): Client Firebase Config (iOS + Android) — linked firebase-ios-sdk
+      (11.15.0) + GoogleSignIn to the iOS app + GoogleService-Info.plist (gitignored); real Android
+      google-services.json. iOS Simulator build + launch verified with real Firebase. Web config
+      (web/.env.local) still pending the user's apiKey/appId.
+
 ## Active Jira Tickets
-- TIME-55 (impl TIME-053, Google Assistant Integration) — Done
-- Next: client Firebase config (console downloads for iOS/Android/web), or the next Phase 13 item
+- TIME-56 (impl TIME-062, Client Firebase Config iOS+Android) — Done
+- Next: web Firebase config (web/.env.local, needs user's apiKey/appId), or the next Phase 13 item
 
 ## Blockers
 - None

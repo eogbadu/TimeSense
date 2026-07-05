@@ -51,6 +51,8 @@ Thumbs.db
 # Xcode / iOS
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+xcuserdata/
+.swiftpm/
 DerivedData/
 *.ipa
 *.dSYM.zip

@@ -78,6 +78,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-062 (net-new) → Jira TIME-56 (Client Firebase Config iOS+Android) — **Done (this session)**
 - TIME-053 (impl seq) → Jira TIME-55 (Google Assistant Integration) — **Done (PR #48 merged 2026-07-05)**
 - TIME-061 (net-new) → Jira TIME-54 (Backend Real Firebase Token Verification) — **Done (PR #47 merged 2026-07-05)**
 - TIME-060 (net-new) → Jira TIME-53 (iOS HealthKit Sleep/Wake Read Integration) — **Done (PR #46 merged 2026-07-05)**
@@ -101,7 +102,19 @@ both clean.
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-053 (Jira TIME-55): Google Assistant Integration
+TIME-062 (Jira TIME-56): Client Firebase Config (iOS + Android)
+- iOS: linked firebase-ios-sdk (pinned 11.x → 11.15.0; 12.x needs Swift tools 6.1 > this Xcode 16.0)
+  + GoogleSignIn-iOS (8.x) to the TimeSense target via the xcodeproj gem; added
+  GoogleService-Info.plist (project timesense-eb7ec, bundle com.aetheranalytics.timesense —
+  gitignored, not committed). The real `#if canImport(FirebaseAuth)` AuthService now compiles (it
+  imports GoogleSignIn for signInWithGoogle → had to add that package too)
+- Android: replaced the placeholder google-services.json with the real timesense-eb7ec config
+  (google-services plugin + firebase-auth deps already wired)
+- Committed project.pbxproj + Package.resolved; .gitignore now ignores xcuserdata/ + .swiftpm/
+- Verified: iOS Simulator BUILD SUCCEEDED; app launches with FirebaseApp.configure() on the real
+  plist. Remaining: web/.env.local (user's apiKey/appId), console sign-in providers, device run
+
+### (previous) TIME-053 (Jira TIME-55): Google Assistant Integration
 - `backend/app/integrations/google_assistant.py` — Dialogflow fulfillment webhook exposing the same
   5 actions as the iOS App Intents (WhatToDoNext/StartFocus/LogLunch/MarkDone/ReplanDay); reuses the
   /now best-task logic (TaskRepository + UsableTimeService + TaskScorer), MealRepository,
@@ -185,7 +198,7 @@ Xcode). So a client can't yet obtain a real token to send — client-side sign-i
 remaining gap.
 
 ## Important Decisions to Preserve
-- Firebase added via Xcode UI (File > Add Package Dependencies), NOT in pbxproj — `#if canImport` guards ensure CLI builds work
+- Firebase iOS SDK (11.15.0) + GoogleSignIn are now IN the pbxproj as SPM packages (TIME-062), linked to the TimeSense target; the `#if canImport(FirebaseAuth)` guards still protect any toolchain that can't resolve them. Pinned to 11.x because 12.x needs Swift tools 6.1 > Xcode 16.0
 - `google-services.json` / `GoogleService-Info.plist` are placeholders — need real Firebase Console files
 - Native iOS (Swift/SwiftUI) + native Android (Kotlin/Compose); web is companion only
 - FastAPI + PostgreSQL + Firebase Auth + Redis/Celery + LLM abstraction

@@ -1,5 +1,19 @@
 # Change Summary
 
+## 2026-07-05 — TIME-062 (Jira TIME-56) Client Firebase Config (iOS + Android)
+
+**What changed:**
+- iOS: added firebase-ios-sdk (pinned 11.x → 11.15.0; 12.x needs Swift tools 6.1 > Xcode 16.0) +
+  GoogleSignIn-iOS (8.x); linked FirebaseAuth/FirebaseCore/GoogleSignIn to TimeSense; added
+  GoogleService-Info.plist (gitignored). Real AuthService now compiles + app runs with real Firebase.
+- Android: replaced placeholder google-services.json with the real timesense-eb7ec config.
+- Committed project.pbxproj + Package.resolved; added .gitignore rules for xcuserdata/ + .swiftpm/.
+
+**Verified:** iOS Simulator build SUCCEEDED; app launches with FirebaseApp.configure() on the real
+plist (no crash).
+
+**Still needed:** web/.env.local (web apiKey/appId), console sign-in providers, on-device run.
+
 ## 2026-07-05 — TIME-053 (Jira TIME-55) Google Assistant Integration
 
 **What changed:**

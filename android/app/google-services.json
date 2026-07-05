@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "timesense-placeholder",
-    "storage_bucket": "timesense-placeholder.appspot.com"
+    "project_number": "588062373177",
+    "project_id": "timesense-eb7ec",
+    "storage_bucket": "timesense-eb7ec.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:588062373177:android:68e1118f19c4537b0fa4e8",
         "android_client_info": {
           "package_name": "com.timesense.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "placeholder-replace-with-real-firebase-key"
+          "current_key": "AIzaSyDtJD_nLMm9Fwnzj_x32Zv9_N6C11ZvU4Q"
         }
       ],
       "services": {

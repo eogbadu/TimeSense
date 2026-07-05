@@ -10,6 +10,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Auth & Native Capabilities
 
+- [2026-07-05] TIME-062: Client Firebase config (iOS + Android) — linked firebase-ios-sdk (11.x) + GoogleSignIn to the iOS app and added GoogleService-Info.plist; replaced the Android google-services.json placeholder with the real timesense-eb7ec config. iOS builds + runs with real Firebase (web config still pending)
 - [2026-07-05] TIME-061: Backend real Firebase token verification — robust service-account parse so the Admin SDK initializes with the real .env credential (project timesense-eb7ec); the backend now verifies real Firebase ID tokens (client config files still needed for end-to-end)
 
 ### iOS Signing & Native Capabilities
