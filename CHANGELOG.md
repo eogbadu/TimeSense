@@ -19,6 +19,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Phase 13 — Integrations Expansion
 
+- [2026-07-05] TIME-053: Google Assistant integration — Dialogflow fulfillment webhook exposing the same 5 actions as the iOS App Intents (what to do next, log lunch, start focus, mark done, replan day); POST /api/v1/assistant/webhook, backend-only, unit-tested intent→action mapping
 - [2026-07-05] TIME-052: Siri Shortcuts / App Intents — 5 App Intents (what to do next, log lunch, start focus, mark done, replan day) exposed to Siri and the Shortcuts app via an AppShortcutsProvider; verified with a real iOS Simulator build + install/launch (Simulator runtime now available)
 - [2026-07-05] TIME-051: Notion integration — read a Notion database's pages as candidate tasks (structured title + due extraction, no LLM), user-imported into Tasks; POST /api/v1/notion/connect, /scan (Premium-gated), /pending, /items/{id}/import|dismiss. Introduces a TaskSourceProvider abstraction, distinct from the chat-oriented MessageSourceProvider
 - [2026-07-05] TIME-050: Microsoft Teams integration — read Teams chat messages via Microsoft Graph, LLM-detect action items, approve-before-task-creation; POST /api/v1/teams/connect, /scan (Premium-gated), /pending, /actions/{id}/confirm|reject. Extracts a shared source-neutral action-item detection service reused by Slack + Teams

@@ -1,5 +1,36 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-053 (Jira TIME-55): Google Assistant Integration
+
+### Created
+- `backend/app/integrations/google_assistant.py` — Dialogflow fulfillment: `parse_intent(body)`
+  (reads queryResult.intent.displayName), `fulfillment_response(text)` (builds the Dialogflow
+  WebhookResponse), and `GoogleAssistantService.handle(intent, user_id)` dispatching the same 5
+  actions as the iOS App Intents (TIME-052): WhatToDoNext, StartFocus, LogLunch, MarkDone, ReplanDay.
+  Intent name matching is case/space-insensitive (`_normalize`). Best-task selection reuses the /now
+  logic (TaskRepository + UsableTimeService + TaskScorer)
+- `backend/app/api/v1/assistant.py` — POST /api/v1/assistant/webhook, gated on the existing Firebase
+  CurrentUser (the account-linked identity stand-in); returns the Dialogflow fulfillment JSON
+- `backend/tests/test_google_assistant.py` — 10 tests (each intent's text + side effects: lunch
+  logged, best task → done; unknown-intent fallback; no-tasks case; auth required)
+
+### Modified
+- `backend/app/api/v1/__init__.py` — register the assistant router
+
+### Design notes
+- Backend-only, matching the ticket's stated file (`backend/app/integrations/google_assistant.py`)
+  and scope ("Actions on Google / Dialogflow integration"). The on-device shortcut surface was the
+  iOS App Intents work (TIME-052); this is the Assistant/Dialogflow backend counterpart, exposing
+  the identical 5 actions.
+- ReplanDay does NOT headlessly replan — it returns "open the app to approve" (replans require in-app
+  approval, same rule as everywhere else).
+- Honest scope limits (Non-Goals): Google shut down conversational Actions on Google Assistant in
+  June 2023, so this implements the Dialogflow-webhook *contract* (request/response shapes +
+  intent→action mapping), verifiable by unit tests, not a live Assistant round-trip. Real Actions-
+  on-Google account linking (which would supply the user identity) is out of scope; the webhook is
+  gated on the Firebase token as the account-linked stand-in.
+- 10 new tests; full suite 281/281 (excluding 2 known-flaky Stripe tests).
+
 ## 2026-07-05 — TIME-061 (Jira TIME-54): Backend Real Firebase Token Verification
 
 ### What changed
