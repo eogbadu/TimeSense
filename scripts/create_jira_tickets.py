@@ -5550,6 +5550,65 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-087: On-device dev — reach the Mac backend over the LAN (fix 'cannot connect')",
+        "labels": ["ios", "devx", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("Demoing on a physical iPhone failed with 'cannot connect to the server': on a device "
+              "'localhost' is the phone, not the Mac. Point device debug builds at the Mac's backend "
+              "over the LAN and allow the plain-HTTP local connection."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "APIClient.resolveBaseURL(): API_BASE_URL env still wins; simulator → localhost; "
+                "physical device DEBUG → the Mac's Bonjour .local name (stable across IP changes); "
+                "release → production URL placeholder",
+                "Info.plist (new, merged with GENERATE_INFOPLIST_FILE=YES): "
+                "NSAppTransportSecurity.NSAllowsLocalNetworking=true + NSLocalNetworkUsageDescription "
+                "so cleartext HTTP to the LAN/.local is permitted and the device prompts for local-"
+                "network access",
+                "Set INFOPLIST_FILE for the app target (both configs); verified the built plist has "
+                "both the ATS key and the generated keys (launch screen, bundle id)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Not a production networking change — Release keeps the (placeholder) HTTPS API URL",
+                "No TLS/tunnel; relies on same-Wi-Fi + Bonjour for local dev",
+                "The .local name is this Mac's; overridable via the API_BASE_URL scheme env var",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Core/API/APIClient.swift",
+                "ios/TimeSense/Info.plist (new) + TimeSense.xcodeproj (INFOPLIST_FILE)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Device debug build connects to the Mac backend over Wi-Fi (backend already binds all "
+                "interfaces via run_dev.py)",
+                "Built Info.plist contains NSAllowsLocalNetworking AND the generated keys; iOS build "
+                "succeeds",
+                "Simulator still uses localhost",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO\n"
+                "# on device: same Wi-Fi, run_dev.py running, tap Allow on the local-network prompt"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("run_dev.py (binds all interfaces, TIME-069), the app's networking layer."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 

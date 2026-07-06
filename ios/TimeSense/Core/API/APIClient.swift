@@ -16,11 +16,30 @@ final class APIClient {
     private var tokenProvider: (() async -> String?)?
 
     private init() {
-        let base = ProcessInfo.processInfo.environment["API_BASE_URL"] ?? "http://localhost:8000"
-        self.baseURL = URL(string: base)!
+        self.baseURL = URL(string: Self.resolveBaseURL())!
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         self.session = URLSession(configuration: config)
+    }
+
+    /// Where the backend lives, resolved per environment:
+    /// - `API_BASE_URL` env var always wins (set it in the Xcode scheme to override).
+    /// - Simulator: localhost (the Mac's loopback).
+    /// - Physical device (DEBUG): the Mac's Bonjour `.local` name — the phone and Mac must be on the
+    ///   same Wi-Fi, and NSAllowsLocalNetworking is set (Info.plist). `localhost` on a device is the
+    ///   phone itself, so it can't reach the Mac.
+    /// - Release: the production API URL.
+    private static func resolveBaseURL() -> String {
+        if let env = ProcessInfo.processInfo.environment["API_BASE_URL"], !env.isEmpty {
+            return env
+        }
+        #if targetEnvironment(simulator)
+        return "http://localhost:8000"
+        #elseif DEBUG
+        return "http://ekeles-MacBook-Pro.local:8000"
+        #else
+        return "https://api.timesense.app"  // TODO: real production URL
+        #endif
     }
 
     func setAuthToken(_ token: String?) {
