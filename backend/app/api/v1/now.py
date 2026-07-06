@@ -15,11 +15,18 @@ from app.repositories.recommendation_feedback_repository import RecommendationFe
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.recommendation_service import RecommendationService
+from app.services.scheduling_service import SchedulingService
 from app.services.task_scorer import TaskScorer
 from app.services.usable_time_service import UsableTimeService
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/now", tags=["now"])
+
+
+class Feasibility(BaseModel):
+    fits: bool
+    message: str
+    suggested_slot: datetime | None = None
 
 
 class NowResponse(BaseModel):
@@ -30,6 +37,8 @@ class NowResponse(BaseModel):
     alternatives: list[TaskResponse] = []
     # A local-time-aware nudge (e.g. a gentle wind-down when it's late and nothing is urgent).
     moment: str | None = None
+    # Set when the best task can't be finished before it's due (with a suggested slot).
+    feasibility: Feasibility | None = None
 
 
 def _local_now(now: datetime, user_timezone: str) -> datetime:
@@ -76,7 +85,7 @@ def _moment(local_now: datetime, ranked, now: datetime) -> str | None:
 
 
 async def _ranked_candidates(db: AsyncSession, user, now: datetime):
-    """Shared Now ranking: returns (ranked_tasks, usable_minutes)."""
+    """Shared Now ranking: returns (ranked_tasks, usable_minutes, today_scheduled_tasks)."""
     repo = TaskRepository(db)
     today = now.date()
 
@@ -100,8 +109,44 @@ async def _ranked_candidates(db: AsyncSession, user, now: datetime):
     suppressed = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
     candidates = [t for t in (pending + overdue + unscheduled) if t.id not in suppressed]
     if not candidates:
-        return [], usable_minutes
-    return TaskScorer().rank(candidates, usable_minutes, now), usable_minutes
+        return [], usable_minutes, today_tasks
+    return TaskScorer().rank(candidates, usable_minutes, now), usable_minutes, today_tasks
+
+
+def _fmt_local(dt: datetime, tz_name: str) -> str:
+    from zoneinfo import ZoneInfo as _ZI
+    try:
+        local = dt.astimezone(_ZI(tz_name))
+    except Exception:
+        local = dt
+    return local.strftime("%-I:%M %p")
+
+
+def _feasibility(best, today_tasks, now: datetime, user_tz: str) -> "Feasibility | None":
+    """Warn when the best task can't be finished before it's due within working hours, and suggest
+    the next realistic slot."""
+    if best.due_at is None or not best.estimated_minutes:
+        return None
+    due = best.due_at if best.due_at.tzinfo else best.due_at.replace(tzinfo=timezone.utc)
+    if due <= now:
+        return None  # already overdue — handled by ranking, not a feasibility warning
+    sched = SchedulingService()
+    free_before = sched.free_minutes_before(due, now, today_tasks, user_tz)
+    if free_before >= best.estimated_minutes:
+        return None
+    slot = sched.find_slot(now, best.estimated_minutes, today_tasks, user_tz, not_before=due)
+    due_str = _fmt_local(due, user_tz)
+    if slot is not None:
+        msg = (
+            f"This needs about {best.estimated_minutes} min, but you only have {free_before} free "
+            f"before it's due at {due_str}. Next realistic slot: {_fmt_local(slot, user_tz)}."
+        )
+    else:
+        msg = (
+            f"This needs about {best.estimated_minutes} min, but you only have {free_before} free "
+            f"before it's due at {due_str}, and there's no open slot left today."
+        )
+    return Feasibility(fits=False, message=msg, suggested_slot=slot)
 
 
 @router.get("", response_model=NowResponse)
@@ -117,7 +162,7 @@ async def get_now(
     user_tz = user.profile.timezone if user.profile else "UTC"
     local_now = _local_now(now, user_tz)
 
-    ranked, usable_minutes = await _ranked_candidates(db, user, now)
+    ranked, usable_minutes, today_tasks = await _ranked_candidates(db, user, now)
     if not ranked:
         return NowResponse(
             greeting=_greeting(local_now), usable_minutes=usable_minutes, best_task=None
@@ -129,6 +174,7 @@ async def get_now(
         best_task=TaskResponse.model_validate(ranked[0]),
         alternatives=[TaskResponse.model_validate(t) for t in ranked[1:3]],
         moment=_moment(local_now, ranked, now),
+        feasibility=_feasibility(ranked[0], today_tasks, now, user_tz),
     )
 
 
@@ -152,7 +198,7 @@ async def get_now_why(
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
 
     now = datetime.now(timezone.utc)
-    ranked, usable_minutes = await _ranked_candidates(db, user, now)
+    ranked, usable_minutes, _today = await _ranked_candidates(db, user, now)
 
     target = next((t for t in ranked if t.id == task_id), None)
     if target is None:

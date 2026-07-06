@@ -5372,6 +5372,66 @@ TICKETS = [
             p("TIME-084: feasibility warnings; TIME-085: best-time scheduling."),
         ),
     },
+
+    {
+        "summary": "TIME-084: Feasibility — warn when the best task won't fit, suggest a slot",
+        "labels": ["ios", "backend", "brain"],
+        "description": doc(
+            h2("Goal"),
+            p("Warn the user when a task can't realistically be finished before it's due, and point "
+              "to the next open slot — using the task's estimated duration, the working-hours window "
+              "(default 8am–9pm local), and existing scheduled blocks."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "SchedulingService (shared core): find_slot(now, duration, scheduled, tz, "
+                "not_before) → earliest fitting start today within the working window and around "
+                "busy blocks; free_minutes_before(deadline, ...) → free minutes before a deadline",
+                "/now: for the best task, if it has a due_at in the future today and "
+                "free_minutes_before(due) < estimated_minutes → return a feasibility warning "
+                "{fits:false, message, suggested_slot} with the next realistic slot (or 'no slot "
+                "left today')",
+                "iOS: NowContext decodes feasibility; a gentle FeasibilityCard (warning tint) under "
+                "the best task when fits==false",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Working hours are a hardcoded default (8–21) for v1 — a Settings preference is a "
+                "follow-up",
+                "Feasibility only for the best task (not every task) for v1",
+                "No auto-scheduling here (TIME-085)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/scheduling_service.py (new), app/api/v1/now.py, "
+                "tests/test_scheduling.py (new)",
+                "ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "find_slot respects the working window + busy blocks; free_minutes_before excludes "
+                "scheduled time",
+                "Best task due soon with too little free time → Now shows a warning + next slot",
+                "iOS build + backend suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_scheduling.py tests/test_now.py -v\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-082 (durations), TIME-080/081 (local-time Now), user profile timezone."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-085: best-time auto-scheduling with undo."),
+        ),
+    },
 ]
 
 

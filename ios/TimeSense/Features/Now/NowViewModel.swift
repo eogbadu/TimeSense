@@ -8,6 +8,7 @@ struct NowContext: Decodable {
     let reason: String?
     let alternatives: [NowTask]?
     let moment: String?
+    let feasibility: Feasibility?
 
     enum CodingKeys: String, CodingKey {
         case greeting
@@ -16,7 +17,13 @@ struct NowContext: Decodable {
         case reason
         case alternatives
         case moment
+        case feasibility
     }
+}
+
+struct Feasibility: Decodable {
+    let fits: Bool
+    let message: String   // already includes the suggested slot time, formatted
 }
 
 struct NowTask: Decodable, Identifiable {
