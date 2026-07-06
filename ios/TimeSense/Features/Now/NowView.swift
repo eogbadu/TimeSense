@@ -59,7 +59,7 @@ struct NowView: View {
                 if let task = ctx.bestTask {
                     BestTaskCard(
                         task: task,
-                        loadWhy: { await viewModel.fetchWhy(taskId: task.id) },
+                        loadExplanation: { await viewModel.fetchExplanation(taskId: task.id) },
                         onDone: { Task { await viewModel.markDone(taskId: task.id, title: task.title) } },
                         onSnooze: { Task { await viewModel.snooze(taskId: task.id) } },
                         onNotNow: { Task { await viewModel.notNow(taskId: task.id) } }
@@ -167,7 +167,7 @@ private struct MomentCard: View {
 
 private struct BestTaskCard: View {
     let task: NowTask
-    let loadWhy: () async -> String?
+    let loadExplanation: () async -> RecommendationExplanation?
     let onDone: () -> Void
     let onSnooze: () -> Void
     let onNotNow: () -> Void
@@ -192,7 +192,7 @@ private struct BestTaskCard: View {
                 PriorityBadge(priority: task.priority)
             }
 
-            WhyThis(load: loadWhy)
+            WhyThis(load: loadExplanation)
 
             QuickActionRow(onDone: onDone, onSnooze: onSnooze, onNotNow: onNotNow)
         }
@@ -201,60 +201,135 @@ private struct BestTaskCard: View {
     }
 }
 
-/// "Why this?" — hidden by default; fetches the recommendation reason lazily on first tap so the
-/// Now screen stays instant and we only spend an LLM call when the user actually asks.
+/// "Why This Recommendation?" — fetches the structured explanation lazily on tap (so Now stays
+/// instant and we only spend an LLM call when asked), then presents it as a sheet.
 private struct WhyThis: View {
-    let load: () async -> String?
+    let load: () async -> RecommendationExplanation?
 
-    @State private var isExpanded = false
-    @State private var reason: String?
     @State private var loading = false
+    @State private var explanation: RecommendationExplanation?
+    @State private var showSheet = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-            Button(action: toggle) {
-                HStack(spacing: DesignTokens.Spacing.xs) {
-                    Image(systemName: "sparkles")
-                    Text("Why This Recommendation?")
-                    Image(systemName: "chevron.down")
-                        .font(.caption2.weight(.semibold))
-                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+        Button {
+            guard !loading else { return }
+            loading = true
+            Task {
+                let result = await load()
+                await MainActor.run {
+                    explanation = result
+                    loading = false
+                    showSheet = result != nil
                 }
-                .font(DesignTokens.Typography.footnote.weight(.semibold))
-                .foregroundColor(DesignTokens.Color.accent)
             }
-            if isExpanded {
-                Group {
-                    if loading {
-                        HStack(spacing: DesignTokens.Spacing.xs) {
-                            ProgressView().controlSize(.small)
-                            Text("Thinking…")
-                                .font(DesignTokens.Typography.subheadline)
-                                .foregroundColor(DesignTokens.Color.textSecondary)
-                        }
-                    } else if let reason {
-                        Text(reason)
-                            .font(DesignTokens.Typography.subheadline)
-                            .foregroundColor(DesignTokens.Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+        } label: {
+            HStack(spacing: DesignTokens.Spacing.xs) {
+                Image(systemName: "sparkles")
+                Text("Why This Recommendation?")
+                if loading {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
                 }
-                .transition(.opacity)
             }
+            .font(DesignTokens.Typography.footnote.weight(.semibold))
+            .foregroundColor(DesignTokens.Color.accent)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func toggle() {
-        withAnimation(DesignTokens.Animation.fast) { isExpanded.toggle() }
-        guard isExpanded, reason == nil, !loading else { return }
-        loading = true
-        Task {
-            let result = await load()
-            await MainActor.run {
-                reason = result ?? "It's your best next step right now."
-                loading = false
+        .sheet(isPresented: $showSheet) {
+            if let explanation {
+                RecommendationExplanationSheet(explanation: explanation)
             }
+        }
+    }
+}
+
+private struct RecommendationExplanationSheet: View {
+    let explanation: RecommendationExplanation
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Recommended action") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(explanation.recommendedAction.title)
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                        if let m = explanation.recommendedAction.recommendedDurationMinutes {
+                            Text("about \(m) minutes")
+                                .font(DesignTokens.Typography.footnote)
+                                .foregroundColor(DesignTokens.Color.textSecondary)
+                        }
+                    }
+                }
+                Section("Confidence") {
+                    HStack(spacing: DesignTokens.Spacing.md) {
+                        Text("\(Int((explanation.confidence * 100).rounded()))%")
+                            .font(DesignTokens.Typography.title2)
+                            .foregroundColor(DesignTokens.Color.accent)
+                        ProgressView(value: explanation.confidence)
+                            .tint(DesignTokens.Color.accent)
+                    }
+                }
+                Section("Context used") {
+                    ForEach(explanation.contextUsed, id: \.self) { line in
+                        Label(line, systemImage: "circle.fill")
+                            .labelStyle(BulletLabelStyle())
+                            .font(DesignTokens.Typography.subheadline)
+                    }
+                }
+                Section("Decision factors") {
+                    ForEach(explanation.decisionFactors) { f in
+                        HStack {
+                            Text(f.name).foregroundColor(DesignTokens.Color.textPrimary)
+                            Spacer()
+                            Text(f.rating)
+                                .font(DesignTokens.Typography.footnote.weight(.semibold))
+                                .foregroundColor(DesignTokens.Color.textSecondary)
+                        }
+                    }
+                }
+                if !explanation.alternativesConsidered.isEmpty {
+                    Section("Other options considered") {
+                        ForEach(explanation.alternativesConsidered) { a in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(a.title)
+                                    .font(DesignTokens.Typography.subheadline)
+                                    .foregroundColor(DesignTokens.Color.textPrimary)
+                                Text(a.reasonNotSelected)
+                                    .font(DesignTokens.Typography.caption)
+                                    .foregroundColor(DesignTokens.Color.textSecondary)
+                            }
+                        }
+                    }
+                }
+                Section("Summary") {
+                    Text(explanation.summary)
+                        .font(DesignTokens.Typography.subheadline)
+                        .foregroundColor(DesignTokens.Color.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .navigationTitle("Why This Recommendation?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+/// Renders a tiny bullet before the text.
+private struct BulletLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Spacing.sm) {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 5))
+                .foregroundColor(DesignTokens.Color.accent)
+            configuration.title
         }
     }
 }

@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-06] TIME-089: "Why This Recommendation?" is now a full breakdown — recommended action, the context used (calendar/time/energy/location/task), decision factors, alternatives considered, a confidence score, and a summary; opens as a sheet. Backed by a real explanation pipeline with an audit trail
 - [2026-07-06] TIME-088: Renamed the Now recommendation-explanation link from "Why this?" to "Why This Recommendation?"
 - [2026-07-06] TIME-058: v1 close-out — beta smoke-test script + manual beta checklist + go/no-go release checklist (docs/launch/); v1 is feature-complete
 - [2026-07-06] TIME-087: On-device demos work — the app now reaches the Mac's dev backend over the LAN (via its .local name) with local-network HTTP allowed, instead of failing on localhost

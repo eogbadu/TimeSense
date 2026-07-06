@@ -10,6 +10,7 @@ from app.models.notification import Notification, ReplanRequest  # noqa: F401
 from app.models.notification_event import NotificationEvent  # noqa: F401
 from app.models.notion import NotionImportItem, NotionIntegration  # noqa: F401
 from app.models.onboarding import AssistantPersonality, OnboardingState  # noqa: F401
+from app.models.recommendation_event import RecommendationEvent  # noqa: F401
 from app.models.recommendation_feedback import RecommendationFeedback  # noqa: F401
 from app.models.referral import ReferralCode, ReferralConversion  # noqa: F401
 from app.models.routine import RoutineAssumption  # noqa: F401

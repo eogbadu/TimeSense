@@ -44,6 +44,32 @@ struct DurationPrompt: Identifiable, Equatable {
     let title: String
 }
 
+struct RecommendationExplanation: Decodable {
+    struct Action: Decodable { let title: String; let recommendedDurationMinutes: Int?
+        enum CodingKeys: String, CodingKey { case title; case recommendedDurationMinutes = "recommended_duration_minutes" } }
+    struct Factor: Decodable, Identifiable { let name: String; let rating: String; var id: String { name } }
+    struct Alternative: Decodable, Identifiable {
+        let taskId: String; let title: String; let reasonNotSelected: String
+        var id: String { taskId }
+        enum CodingKeys: String, CodingKey { case taskId = "task_id"; case title; case reasonNotSelected = "reason_not_selected" }
+    }
+    let recommendedAction: Action
+    let confidence: Double
+    let contextUsed: [String]
+    let decisionFactors: [Factor]
+    let alternativesConsidered: [Alternative]
+    let summary: String
+
+    enum CodingKeys: String, CodingKey {
+        case recommendedAction = "recommended_action"
+        case confidence
+        case contextUsed = "context_used"
+        case decisionFactors = "decision_factors"
+        case alternativesConsidered = "alternatives_considered"
+        case summary
+    }
+}
+
 enum NowUiState {
     case idle
     case loading
@@ -122,11 +148,9 @@ final class NowViewModel: ObservableObject {
         durationPrompt = nil
     }
 
-    /// Lazily fetch the "Why this?" explanation for a task (only when the user taps to expand).
-    func fetchWhy(taskId: String) async -> String? {
-        struct WhyResp: Decodable { let reason: String }
-        let resp: WhyResp? = try? await APIClient.shared.get("/api/v1/now/why?task_id=\(taskId)")
-        return resp?.reason
+    /// Lazily fetch the structured "Why This Recommendation?" explanation (only on tap).
+    func fetchExplanation(taskId: String) async -> RecommendationExplanation? {
+        return try? await APIClient.shared.get("/api/v1/now/why?task_id=\(taskId)")
     }
 
     /// Snooze the current best task for a few hours; it drops out of Now until then.
