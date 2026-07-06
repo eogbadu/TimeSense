@@ -22,6 +22,11 @@ class TaskDurationEstimator:
         learned = await self._repo.get_minutes(user_id, category)
         return (learned if learned is not None else seed_duration(category)), category
 
+    async def should_ask(self, user_id: uuid.UUID, title: str) -> tuple[bool, str]:
+        """Whether to prompt 'how long did that take?' for this task (only while still learning)."""
+        category = infer_category(title)
+        return await self._repo.learning_active(user_id, category), category
+
     async def record_actual(self, user_id: uuid.UUID, title: str, actual_minutes: int) -> None:
         """Teach the estimator how long a task actually took (by its inferred category)."""
         await self._repo.record_actual(user_id, infer_category(title), actual_minutes)

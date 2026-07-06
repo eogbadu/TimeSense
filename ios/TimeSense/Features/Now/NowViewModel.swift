@@ -32,6 +32,11 @@ struct NowTask: Decodable, Identifiable {
     }
 }
 
+struct DurationPrompt: Identifiable, Equatable {
+    let id: String   // the completed task's id
+    let title: String
+}
+
 enum NowUiState {
     case idle
     case loading
@@ -72,18 +77,42 @@ final class NowViewModel: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    func markDone(taskId: String) async {
+    /// Set when a just-completed task should trigger the "How long did that take?" prompt (only
+    /// while the assistant is still learning that kind of task).
+    @Published var durationPrompt: DurationPrompt?
+
+    func markDone(taskId: String, title: String) async {
         guard case .loaded = uiState else { return }
         struct StatusUpdate: Encodable { let status: String }
         do {
             let _: TaskPatchResponse = try await APIClient.shared.patch(
                 "/api/v1/tasks/\(taskId)", body: StatusUpdate(status: "done")
             )
+            await maybePromptDuration(taskId: taskId, title: title)
             await load()
         } catch {
             // Reload anyway so UI stays consistent
             await load()
         }
+    }
+
+    private func maybePromptDuration(taskId: String, title: String) async {
+        struct PromptResp: Decodable { let ask: Bool }
+        if let resp: PromptResp = try? await APIClient.shared.get(
+            "/api/v1/tasks/\(taskId)/duration-prompt"
+        ), resp.ask {
+            durationPrompt = DurationPrompt(id: taskId, title: title)
+        }
+    }
+
+    /// Record how long the task actually took → teaches the per-user estimate.
+    func submitDuration(taskId: String, minutes: Int) async {
+        struct Body: Encodable { let actual_minutes: Int }
+        struct Resp: Decodable { let estimated_minutes: Int }
+        let _: Resp? = try? await APIClient.shared.post(
+            "/api/v1/tasks/\(taskId)/duration-feedback", body: Body(actual_minutes: minutes)
+        )
+        durationPrompt = nil
     }
 
     /// Lazily fetch the "Why this?" explanation for a task (only when the user taps to expand).

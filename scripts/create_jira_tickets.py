@@ -5314,6 +5314,64 @@ TICKETS = [
               "TIME-085: best-time scheduling."),
         ),
     },
+
+    {
+        "summary": "TIME-083: Learn actual durations — 'How long did that take?' during learning",
+        "labels": ["ios", "backend", "brain"],
+        "description": doc(
+            h2("Goal"),
+            p("Feed the duration brain real data: when a task is completed, ask a one-tap 'How long "
+              "did that take?' (chips ~15/30/60m) — but only while the assistant is still learning "
+              "that category (so it fades away and never becomes a chore)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Repo: LEARNING_SAMPLE_TARGET (5) + learning_active(user, category) = sample_count < "
+                "target; estimator.should_ask(user, title)",
+                "Endpoints: GET /tasks/{id}/duration-prompt → {ask, category} (ask only during "
+                "learning); POST /tasks/{id}/duration-feedback {actual_minutes} → record_actual "
+                "(EMA) and return the updated learned {category, estimated_minutes}",
+                "iOS: after markDone, call duration-prompt; if ask, present a confirmationDialog "
+                "('~15 min / ~30 min / ~1 hour / Skip'); the chip POSTs feedback. markDone now "
+                "takes the title (hero + alternatives)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No manual duration entry beyond the three chips (keep it one-tap); no editing past "
+                "observations",
+                "No feasibility/scheduling yet (TIME-084/085)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/repositories/task_duration_repository.py, "
+                "app/services/task_duration_service.py, app/api/v1/tasks.py, tests/test_task_duration.py",
+                "ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Completing a task in a still-learning category prompts once; a chip records the "
+                "actual and moves the learned estimate",
+                "After the sample target is reached, the prompt stops appearing for that category",
+                "iOS build + backend suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_task_duration.py -v\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-082 (duration brain), the tasks router, Now markDone flow."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-084: feasibility warnings; TIME-085: best-time scheduling."),
+        ),
+    },
 ]
 
 

@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-083 (Jira TIME-81): Learn actual durations ("How long did that take?")
+
+The learning trigger for the duration brain. Repo LEARNING_SAMPLE_TARGET=5 + learning_active();
+estimator.should_ask(). Endpoints: GET /tasks/{id}/duration-prompt → {ask, category} (ask only while
+sample_count < 5), POST /tasks/{id}/duration-feedback {actual_minutes} → record_actual (EMA) and
+returns the updated learned {category, estimated_minutes}. iOS: after markDone (now takes the title,
+from hero + alternatives), calls duration-prompt; if ask, shows a confirmationDialog (~15/~30/~1h/
+Skip) whose chip POSTs feedback. So the prompt appears only during the learning period and fades as
+estimates get confident — never becomes a chore. 5 new duration tests (incl. learn-then-stop-asking);
+suite 322 passing; iOS BUILD SUCCEEDED.
+
 ## 2026-07-05 — TIME-082 (Jira TIME-80): Task duration brain (seed table + learned estimates)
 
 Foundation of the scheduling "brain": every task gets a realistic time estimate. app/services/

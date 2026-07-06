@@ -2,11 +2,13 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
+from app.services.task_duration_service import TaskDurationEstimator
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
 
@@ -58,6 +60,59 @@ async def get_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
     return TaskResponse.model_validate(task)
+
+
+class DurationPromptResponse(BaseModel):
+    ask: bool
+    category: str
+
+
+@router.get("/{task_id}/duration-prompt", response_model=DurationPromptResponse)
+async def duration_prompt(
+    task_id: UUID,
+    current_user: CurrentUser,
+    task_svc: TaskService = Depends(get_task_service),
+    user_svc: UserService = Depends(get_user_service),
+    db: AsyncSession = Depends(get_db),
+) -> DurationPromptResponse:
+    """Whether to ask 'how long did that take?' after completing this task — only while the
+    assistant is still learning this category's typical duration."""
+    user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
+    task = await task_svc.get_task(task_id, user.id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+    ask, category = await TaskDurationEstimator(db).should_ask(user.id, task.title)
+    return DurationPromptResponse(ask=ask, category=category)
+
+
+class DurationFeedback(BaseModel):
+    actual_minutes: int = Field(..., ge=1, le=1440)
+
+
+class DurationFeedbackResponse(BaseModel):
+    category: str
+    estimated_minutes: int  # the updated learned estimate after this observation
+
+
+@router.post("/{task_id}/duration-feedback", response_model=DurationFeedbackResponse)
+async def duration_feedback(
+    task_id: UUID,
+    body: DurationFeedback,
+    current_user: CurrentUser,
+    task_svc: TaskService = Depends(get_task_service),
+    user_svc: UserService = Depends(get_user_service),
+    db: AsyncSession = Depends(get_db),
+) -> DurationFeedbackResponse:
+    """Record how long a task actually took, teaching the per-user duration estimate."""
+    user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
+    task = await task_svc.get_task(task_id, user.id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+    estimator = TaskDurationEstimator(db)
+    await estimator.record_actual(user.id, task.title, body.actual_minutes)
+    minutes, category = await estimator.estimate(user.id, task.title)
+    await db.commit()
+    return DurationFeedbackResponse(category=category, estimated_minutes=minutes)
 
 
 @router.patch("/{task_id}", response_model=TaskResponse)

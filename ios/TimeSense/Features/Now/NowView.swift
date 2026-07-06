@@ -26,6 +26,24 @@ struct NowView: View {
         .onChange(of: appState.selectedTab) { _, tab in
             if tab == .now { Task { await viewModel.load() } }
         }
+        // "How long did that take?" — shown only while TimeSense is still learning this kind of
+        // task, so it fades away once estimates are confident (never becomes a chore).
+        .confirmationDialog(
+            "How long did that take?",
+            isPresented: Binding(
+                get: { viewModel.durationPrompt != nil },
+                set: { if !$0 { viewModel.durationPrompt = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: viewModel.durationPrompt
+        ) { prompt in
+            Button("~15 min") { Task { await viewModel.submitDuration(taskId: prompt.id, minutes: 15) } }
+            Button("~30 min") { Task { await viewModel.submitDuration(taskId: prompt.id, minutes: 30) } }
+            Button("~1 hour") { Task { await viewModel.submitDuration(taskId: prompt.id, minutes: 60) } }
+            Button("Skip", role: .cancel) { viewModel.durationPrompt = nil }
+        } message: { _ in
+            Text("This helps TimeSense learn your pace.")
+        }
     }
 
     private func loadedBody(ctx: NowContext) -> some View {
@@ -42,7 +60,7 @@ struct NowView: View {
                     BestTaskCard(
                         task: task,
                         loadWhy: { await viewModel.fetchWhy(taskId: task.id) },
-                        onDone: { Task { await viewModel.markDone(taskId: task.id) } },
+                        onDone: { Task { await viewModel.markDone(taskId: task.id, title: task.title) } },
                         onSnooze: { Task { await viewModel.snooze(taskId: task.id) } },
                         onNotNow: { Task { await viewModel.notNow(taskId: task.id) } }
                     )
@@ -55,7 +73,7 @@ struct NowView: View {
                                 .padding(.horizontal, DesignTokens.Spacing.xs)
                             ForEach(alts) { alt in
                                 AlternativeRow(task: alt) {
-                                    Task { await viewModel.markDone(taskId: alt.id) }
+                                    Task { await viewModel.markDone(taskId: alt.id, title: alt.title) }
                                 }
                             }
                         }

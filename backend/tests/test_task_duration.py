@@ -56,3 +56,35 @@ async def test_capture_fills_estimate_from_lookup(client, db_session):
         )
     assert r.status_code == 201
     assert r.json()["estimated_minutes"] == DEFAULT_DURATIONS["call"]
+
+
+@pytest.mark.anyio
+async def test_duration_prompt_and_feedback_learns(client, db_session):
+    """During the learning period /duration-prompt asks; feedback teaches and eventually stops asking."""
+    from unittest.mock import patch
+    from app.services.task_duration import DEFAULT_DURATIONS
+
+    claims = {"uid": "dur-3", "email": "dur3@example.com", "role": "user", "email_verified": True}
+    with patch("app.core.security.firebase_auth.verify_id_token", return_value=claims):
+        # capture a task (shopping) → gets seed estimate
+        r = await client.post("/api/v1/capture", headers={"Authorization": "Bearer t"},
+                              json={"raw_input": "Buy groceries"})
+        task_id = r.json()["id"]
+
+        # prompt should ask (nothing learned yet)
+        p = await client.get(f"/api/v1/tasks/{task_id}/duration-prompt", headers={"Authorization": "Bearer t"})
+        assert p.status_code == 200 and p.json()["ask"] is True and p.json()["category"] == "shopping"
+
+        # give feedback: it took 90 min → learned estimate moves up
+        f = await client.post(f"/api/v1/tasks/{task_id}/duration-feedback",
+                              headers={"Authorization": "Bearer t"}, json={"actual_minutes": 90})
+        assert f.status_code == 200
+        assert f.json()["category"] == "shopping"
+        assert f.json()["estimated_minutes"] > DEFAULT_DURATIONS["shopping"]
+
+        # after enough observations, it stops asking
+        for _ in range(5):
+            await client.post(f"/api/v1/tasks/{task_id}/duration-feedback",
+                              headers={"Authorization": "Bearer t"}, json={"actual_minutes": 90})
+        p2 = await client.get(f"/api/v1/tasks/{task_id}/duration-prompt", headers={"Authorization": "Bearer t"})
+        assert p2.json()["ask"] is False
