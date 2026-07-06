@@ -9,6 +9,7 @@ from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.schemas.task import TaskResponse
 from app.services.analytics_service import AnalyticsService
 from app.services.capture_service import CaptureService
+from app.services.task_duration_service import TaskDurationEstimator
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
 
@@ -37,6 +38,13 @@ async def capture(
     )
     parser = CaptureService(gateway)
     task_create = await parser.parse(body.raw_input, user_timezone=body.user_timezone)
+
+    # Every task gets a realistic duration: the LLM's explicit estimate wins; otherwise fall back to
+    # the duration lookup table (seed defaults, refined by what we've learned about this user).
+    if task_create.estimated_minutes is None:
+        minutes, _category = await TaskDurationEstimator(db).estimate(user.id, task_create.title)
+        task_create.estimated_minutes = minutes
+
     task = await TaskService(db).create_task(user.id, task_create)
     await AnalyticsService(db).track(
         "task_captured", user_id=user.id, properties={"source": task_create.source}
