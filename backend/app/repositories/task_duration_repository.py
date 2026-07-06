@@ -9,6 +9,8 @@ from app.models.task_duration import TaskDurationEstimate
 
 # Weight given to a new observation when updating a learned estimate (exponential moving average).
 _LEARN_ALPHA = 0.3
+# How many real observations before a category's estimate is "confident" and we stop asking.
+LEARNING_SAMPLE_TARGET = 5
 
 
 class TaskDurationRepository:
@@ -18,6 +20,12 @@ class TaskDurationRepository:
     async def get_minutes(self, user_id: uuid.UUID, category: str) -> int | None:
         row = await self._get(user_id, category)
         return row.estimated_minutes if row else None
+
+    async def learning_active(self, user_id: uuid.UUID, category: str) -> bool:
+        """True while we still want real-duration feedback for this category (estimate not yet
+        confident) — used to only prompt 'how long did that take?' during the learning period."""
+        row = await self._get(user_id, category)
+        return row is None or row.sample_count < LEARNING_SAMPLE_TARGET
 
     async def _get(self, user_id: uuid.UUID, category: str) -> TaskDurationEstimate | None:
         result = await self.db.execute(

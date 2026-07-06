@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-05] TIME-083: TimeSense learns your pace — completing a task briefly asks 'How long did that take?' (~15/30/60m), but only while it's still learning that kind of task, then stops. Feeds the per-user duration estimates
 - [2026-07-05] TIME-082: Task duration brain — every task now gets a realistic time estimate from a seed lookup table (works without the LLM), plus a per-user learned table the assistant refines from real durations over time (foundation for scheduling + feasibility)
 - [2026-07-05] TIME-081: 'Usable minutes' on Now now measures time left until your LOCAL midnight (was UTC), so the number is correct for your timezone
 - [2026-07-05] TIME-080: Now is local-time-aware — fixed the greeting (was UTC-based) and added a gentle wind-down 'moment' when it's late locally and nothing is urgent, instead of always pushing a task
