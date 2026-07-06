@@ -89,7 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-085 (net-new) → Jira TIME-83 (Best-time auto-scheduling with Undo) — **Done (this session)**
+- TIME-085 (net-new) → Jira TIME-83 (Best-time auto-scheduling with Undo) — **Done (PR #78 merged 2026-07-05)**
 - TIME-084 (net-new) → Jira TIME-82 (Feasibility warnings + scheduling core) — **Done (PR #77 merged 2026-07-05)**
 - TIME-083 (net-new) → Jira TIME-81 (Learn actual durations) — **Done (PR #76 merged 2026-07-05)**
 - TIME-082 (net-new) → Jira TIME-80 (Task duration brain) — **Done (PR #75 merged 2026-07-05)**
