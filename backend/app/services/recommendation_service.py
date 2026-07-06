@@ -41,7 +41,7 @@ class RecommendationService:
         energy, free time, and deadlines — or a deterministic fallback when the LLM is unavailable.
         """
         now = now or datetime.now(timezone.utc)
-        usable = _usable_svc.calculate(list(scheduled_tasks), anchor=now)
+        usable = _usable_svc.calculate(list(scheduled_tasks), anchor=now, user_timezone=user_timezone)
 
         candidates = [t for t in tasks if t.status in ("pending", "in_progress")]
         if not candidates:

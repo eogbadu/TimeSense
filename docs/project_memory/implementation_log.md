@@ -1,5 +1,14 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-081 (Jira TIME-79): Usable-time cap uses local midnight
+
+UsableTimeService capped "time left today" at UTC midnight, so the "usable minutes" on Now was wrong
+for non-UTC users (over/under-reported, esp. in the evening) — same class of bug as the greeting
+(TIME-080). calculate() now takes user_timezone and caps at the user's next LOCAL midnight (converted
+to UTC; bad tz → UTC fallback). Callers pass the tz: /now (_ranked_candidates via
+user.profile.timezone) and RecommendationService.recommend. Google Assistant webhook keeps the UTC
+default. New test (UTC+11 late-local → ~60 min vs UTC → 240). Backend-only; 317 passing.
+
 ## 2026-07-05 — TIME-080 (Jira TIME-78): Local-time-aware Now (greeting + wind-down moment)
 
 Per user guidance ("local time you always have; energy you don't"), grounded Now in local time.

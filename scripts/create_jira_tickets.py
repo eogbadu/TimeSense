@@ -5199,6 +5199,55 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-081: Usable-time 'time left today' cap uses local midnight",
+        "labels": ["backend", "bug", "recommendations"],
+        "description": doc(
+            h2("Goal"),
+            p("UsableTimeService capped 'time left today' at UTC midnight, so the 'usable minutes' "
+              "shown on Now was wrong for anyone not on UTC (over- or under-reported, especially in "
+              "the evening). Use the user's local midnight instead — consistent with the local-time "
+              "greeting/moment work (TIME-080)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "UsableTimeService.calculate takes user_timezone; the end-of-day cap is the user's "
+                "next LOCAL midnight converted to UTC (bad tz string falls back to UTC)",
+                "Callers pass the timezone: /now (_ranked_candidates via user.profile.timezone) and "
+                "RecommendationService.recommend (already has user_timezone). Google Assistant "
+                "webhook keeps the UTC default",
+                "Test: local-midnight cap (UTC+11 late-local → ~60 min vs UTC → 240)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No change to the free-gap / block-merging logic or the 4h/5min caps",
+                "No iOS change (display already shows whatever the API returns)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/usable_time_service.py, app/api/v1/now.py, "
+                "app/services/recommendation_service.py, tests/test_usable_time.py",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "'time left today' is measured to the user's local midnight, not UTC",
+                "Backward compatible (defaults to UTC); full suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_usable_time.py tests/test_now.py -v"),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-080 (local-time Now), user profile timezone."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 

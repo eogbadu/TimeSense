@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Sequence
+from zoneinfo import ZoneInfo
 
 from app.models.task import Task
 
@@ -18,7 +19,8 @@ class UsableTimeService:
          capped at MAX_WINDOW_MINUTES.
 
     "Usable" means: no scheduled task is blocking the time.
-    End-of-day cap: we never return more than the minutes remaining until midnight UTC.
+    End-of-day cap: we never return more than the minutes remaining until the user's *local*
+    midnight (so "time left today" reflects the user's day, not the UTC day).
     """
 
     MAX_WINDOW_MINUTES: int = 240  # 4-hour cap — anything longer isn't meaningful for "right now"
@@ -28,11 +30,18 @@ class UsableTimeService:
         self,
         tasks: Sequence[Task],
         anchor: datetime | None = None,
+        user_timezone: str = "UTC",
     ) -> int:
         now = anchor or datetime.now(timezone.utc)
 
-        # Minutes until midnight UTC (end-of-day cap)
-        midnight = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) + timedelta(days=1)
+        # End-of-day cap = the user's next *local* midnight (converted to UTC), not UTC midnight —
+        # otherwise "time left today" is wrong for anyone not on UTC.
+        try:
+            tz = ZoneInfo(user_timezone)
+        except Exception:
+            tz = timezone.utc
+        local_now = now.astimezone(tz)
+        midnight = datetime.combine(local_now.date() + timedelta(days=1), time(0, 0), tzinfo=tz).astimezone(timezone.utc)
         minutes_to_midnight = int((midnight - now).total_seconds() / 60)
 
         # Collect blocks that start before midnight and have a scheduled_end

@@ -91,3 +91,15 @@ class TestUsableTimeService:
         result = self.svc.calculate([t1, t2], anchor=ANCHOR)
         # currently in t1 (start == now); after t1 ends at +60, next block at +90 → 30 min gap
         assert result == 30
+
+
+def test_end_of_day_cap_uses_local_midnight():
+    """The 'time left today' cap follows the user's local midnight, not UTC midnight."""
+    svc = UsableTimeService()
+    # 2026-07-05 12:00 UTC. In UTC+11 that's 23:00 local → only ~60 min left in the local day.
+    anchor = datetime(2026, 7, 5, 12, 0, tzinfo=timezone.utc)
+    assert svc.calculate([], anchor=anchor, user_timezone="Pacific/Noumea") == 60
+    # Same instant on UTC: 12h to UTC midnight → capped at the 4-hour max.
+    assert svc.calculate([], anchor=anchor, user_timezone="UTC") == 240
+    # Bad timezone string falls back to UTC without crashing.
+    assert svc.calculate([], anchor=anchor, user_timezone="Not/AZone") == 240
