@@ -1,5 +1,11 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-088 (Jira TIME-88): Rename Now 'Why this?' → 'Why This Recommendation?'
+
+Copy tweak on the Now best-task card: the expandable recommendation-explanation link now reads
+"Why This Recommendation?" (was "Why this?"). No behavior change — still collapsed by default,
+lazily fetches the reason on tap. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-058 (Jira TIME-86): Beta Smoke Test & Release Checklist (v1 close-out)
 
 Closed out the v1 build. Added scripts/smoke_test.py (liveness + auth-gate checks: health 200,

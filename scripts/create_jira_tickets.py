@@ -5667,6 +5667,49 @@ TICKETS = [
               "for all tasks; in-app calendar/subscription/export."),
         ),
     },
+
+    {
+        "summary": "TIME-088: Rename Now 'Why this?' link to 'Why This Recommendation?'",
+        "labels": ["ios", "copy", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Clarify the recommendation-explanation affordance on the Now page: rename the "
+              "'Why this?' link to 'Why This Recommendation?'."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "NowView WhyThis: change the button label 'Why this?' → 'Why This Recommendation?'",
+                "No behavior change — still collapsed by default, lazily fetches the reason on tap",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No change to the reason content, the lazy-load, or the backend /now/why endpoint",
+                "No other copy changes",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Now/NowView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "The Now best-task card shows 'Why This Recommendation?' instead of 'Why this?'",
+                "Tapping it still expands and loads the explanation; iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-075/078 ('Why this?' + lazy load)."),
+            divider(),
+            h2("Next Ticket"),
+            p("Post-v1 backlog."),
+        ),
+    },
 ]
 
 

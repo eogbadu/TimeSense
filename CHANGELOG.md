@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-06] TIME-088: Renamed the Now recommendation-explanation link from "Why this?" to "Why This Recommendation?"
 - [2026-07-06] TIME-058: v1 close-out — beta smoke-test script + manual beta checklist + go/no-go release checklist (docs/launch/); v1 is feature-complete
 - [2026-07-06] TIME-087: On-device demos work — the app now reaches the Mac's dev backend over the LAN (via its .local name) with local-network HTTP allowed, instead of failing on localhost
 - [2026-07-05] TIME-086: Working hours are configurable (Settings ▸ Working Hours) — auto-scheduling and feasibility now use your hours instead of a fixed 8am–9pm
