@@ -1,5 +1,18 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-082 (Jira TIME-80): Task duration brain (seed table + learned estimates)
+
+Foundation of the scheduling "brain": every task gets a realistic time estimate. app/services/
+task_duration.py holds a seed DEFAULT_DURATIONS table + keyword infer_category() (appointment/
+meeting/call/email/shopping/errand/chore/exercise/cooking/writing/reading/admin/travel/general) so
+estimates work without the LLM. New task_duration_estimates table (user_id, category,
+estimated_minutes, sample_count; unique per user+category; migration r8s9t0u1v2w3) is the personal
+lookup table the AI refines: TaskDurationRepository.record_actual folds real durations in via EMA
+(alpha 0.3); TaskDurationEstimator.estimate returns the learned value when present else the seed.
+Capture now fills estimated_minutes from the estimator when the LLM didn't. Does NOT yet schedule/
+check feasibility or capture actual durations from the UI (follow-ups TIME-083/084/085 teed up).
+4 new tests; suite 321 passing. Migration applied to the live dev DB.
+
 ## 2026-07-05 — TIME-081 (Jira TIME-79): Usable-time cap uses local midnight
 
 UsableTimeService capped "time left today" at UTC midnight, so the "usable minutes" on Now was wrong

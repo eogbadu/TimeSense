@@ -5248,6 +5248,72 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-082: Task duration brain — seed lookup table + per-user learned estimates",
+        "labels": ["backend", "recommendations", "brain"],
+        "description": doc(
+            h2("Goal"),
+            p("Foundation of the scheduling 'brain': every task gets a realistic time estimate. "
+              "Start from a seed lookup table (category → minutes) so estimates work even without "
+              "the LLM, and add a per-user learned table the assistant refines from real durations "
+              "over time. This underpins later best-time scheduling and feasibility warnings."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "app/services/task_duration.py: DEFAULT_DURATIONS seed table + keyword-based "
+                "infer_category(title) (appointment/meeting/call/email/shopping/errand/chore/"
+                "exercise/cooking/writing/reading/admin/travel/general)",
+                "Model + migration: task_duration_estimates (user_id, category, estimated_minutes, "
+                "sample_count; unique per user+category) — the personal table the AI edits",
+                "TaskDurationRepository.record_actual: EMA (alpha 0.3) folds a real observed "
+                "duration into the learned estimate; TaskDurationEstimator.estimate returns the "
+                "learned value when present else the seed",
+                "Capture: fill estimated_minutes from the estimator when the LLM didn't provide one "
+                "— so every task has a sensible duration",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "This ticket does NOT schedule tasks to a time or check feasibility (follow-ups) — "
+                "it just makes durations reliable + learnable",
+                "No UI to capture 'how long did it take?' yet (the learning trigger is a follow-up); "
+                "record_actual is ready for it",
+                "Category inference is keyword-based for reliability; an LLM categoriser can refine "
+                "later",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/task_duration.py, task_duration_service.py (new)",
+                "backend/app/models/task_duration.py + migration + models/__init__.py",
+                "backend/app/repositories/task_duration_repository.py (new)",
+                "backend/app/api/v1/capture.py; backend/tests/test_task_duration.py (new)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "infer_category maps common titles correctly (dentist→appointment, Home Depot→"
+                "shopping, etc.)",
+                "A captured task with no LLM estimate still gets the seed duration",
+                "record_actual moves the learned estimate toward observed durations; later estimates "
+                "use it; full suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head && pytest tests/test_task_duration.py -v\n"
+                "cd backend && pytest -q"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("Capture (TIME-031/072), Task model."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-083: learn actual durations on completion; TIME-084: feasibility warnings; "
+              "TIME-085: best-time scheduling."),
+        ),
+    },
 ]
 
 
