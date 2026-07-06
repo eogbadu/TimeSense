@@ -65,6 +65,10 @@ struct NowView: View {
                         onNotNow: { Task { await viewModel.notNow(taskId: task.id) } }
                     )
 
+                    if let feasibility = ctx.feasibility, !feasibility.fits {
+                        FeasibilityCard(message: feasibility.message)
+                    }
+
                     let alts = ctx.alternatives ?? []
                     if !alts.isEmpty {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
@@ -115,6 +119,29 @@ private struct GreetingHeader: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// A gentle heads-up when the best task can't be finished before it's due — with the next slot.
+private struct FeasibilityCard: View {
+    let message: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.callout)
+                .foregroundColor(DesignTokens.Color.destructive)
+            Text(message)
+                .font(DesignTokens.Typography.footnote)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(DesignTokens.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
+                .fill(DesignTokens.Color.destructive.opacity(0.10))
+        )
     }
 }
 

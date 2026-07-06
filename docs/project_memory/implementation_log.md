@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-084 (Jira TIME-82): Feasibility warnings (+ scheduling core)
+
+Added SchedulingService (shared core): find_slot(now, duration, scheduled_tasks, tz, not_before) →
+earliest fitting start today inside the working window (default 8am–9pm local) and around busy
+blocks; free_minutes_before(deadline, ...) → free minutes before a deadline. /now: for the best
+task, if it has a future due_at today and free_minutes_before(due) < estimated_minutes → returns a
+feasibility warning {fits:false, message, suggested_slot} naming the next realistic slot (or "no
+slot left today"). _ranked_candidates now also returns today_tasks. iOS: NowContext decodes
+feasibility; a gentle FeasibilityCard (warning tint) shows under the best task when it won't fit.
+4 new scheduling tests; suite 326 passing; iOS BUILD SUCCEEDED.
+
 ## 2026-07-05 — TIME-083 (Jira TIME-81): Learn actual durations ("How long did that take?")
 
 The learning trigger for the duration brain. Repo LEARNING_SAMPLE_TARGET=5 + learning_active();
