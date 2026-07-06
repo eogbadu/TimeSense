@@ -89,7 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-087 (net-new) → Jira TIME-85 (On-device dev: reach Mac backend over LAN) — **Done (this session)**
+- TIME-087 (net-new) → Jira TIME-85 (On-device dev: reach Mac backend over LAN) — **Done (PR #80 merged 2026-07-06)**
 - TIME-086 (net-new) → Jira TIME-84 (Configurable working hours) — **Done (PR #79 merged 2026-07-05)**
 - TIME-085 (net-new) → Jira TIME-83 (Best-time auto-scheduling with Undo) — **Done (PR #78 merged 2026-07-05)**
 - TIME-084 (net-new) → Jira TIME-82 (Feasibility warnings + scheduling core) — **Done (PR #77 merged 2026-07-05)**
