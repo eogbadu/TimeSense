@@ -88,3 +88,23 @@ async def test_duration_prompt_and_feedback_learns(client, db_session):
                               headers={"Authorization": "Bearer t"}, json={"actual_minutes": 90})
         p2 = await client.get(f"/api/v1/tasks/{task_id}/duration-prompt", headers={"Authorization": "Bearer t"})
         assert p2.json()["ask"] is False
+
+
+@pytest.mark.anyio
+async def test_working_hours_preference_roundtrip(client, db_session):
+    from unittest.mock import patch
+    claims = {"uid": "wh-1", "email": "wh@example.com", "role": "user", "email_verified": True}
+    with patch("app.core.security.firebase_auth.verify_id_token", return_value=claims):
+        # default 8–21
+        me = await client.get("/api/v1/users/me", headers={"Authorization": "Bearer t"})
+        prefs = me.json()["preferences"]
+        assert prefs["work_start_hour"] == 8 and prefs["work_end_hour"] == 21
+        # update
+        r = await client.patch("/api/v1/users/me/preferences", headers={"Authorization": "Bearer t"},
+                               json={"work_start_hour": 9, "work_end_hour": 18})
+        assert r.status_code == 200
+        assert r.json()["work_start_hour"] == 9 and r.json()["work_end_hour"] == 18
+        # invalid: end <= start
+        bad = await client.patch("/api/v1/users/me/preferences", headers={"Authorization": "Bearer t"},
+                                 json={"work_start_hour": 20, "work_end_hour": 8})
+        assert bad.status_code == 422

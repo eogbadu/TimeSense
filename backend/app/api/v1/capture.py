@@ -61,7 +61,12 @@ async def capture(
     if task_create.scheduled_start is None and task_create.estimated_minutes and due_today_or_none:
         today_scheduled = await TaskRepository(db).list_by_user(user_id=user.id, for_date=today, limit=200)
         user_tz = user.profile.timezone if user.profile else "UTC"
-        slot = SchedulingService().find_slot(
+        prefs = user.preferences
+        scheduler = SchedulingService(
+            work_start_hour=prefs.work_start_hour if prefs else 8,
+            work_end_hour=prefs.work_end_hour if prefs else 21,
+        )
+        slot = scheduler.find_slot(
             now, task_create.estimated_minutes, today_scheduled, user_tz
         )
         if slot is not None:

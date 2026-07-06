@@ -30,6 +30,9 @@ struct SettingsView: View {
                     NavigationLink { AppearanceSettingsView() } label: {
                         SettingsRowLabel(icon: "paintbrush.fill", title: "Appearance", tint: .purple)
                     }
+                    NavigationLink { WorkingHoursSettingsView() } label: {
+                        SettingsRowLabel(icon: "clock.fill", title: "Working Hours", tint: .indigo)
+                    }
                     NavigationLink(destination: LearnedAssumptionsView()) {
                         SettingsRowLabel(icon: "brain.head.profile", title: "Learned Assumptions", tint: .teal)
                     }

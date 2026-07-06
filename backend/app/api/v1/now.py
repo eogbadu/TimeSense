@@ -122,7 +122,7 @@ def _fmt_local(dt: datetime, tz_name: str) -> str:
     return local.strftime("%-I:%M %p")
 
 
-def _feasibility(best, today_tasks, now: datetime, user_tz: str) -> "Feasibility | None":
+def _feasibility(best, today_tasks, now: datetime, user_tz: str, work_hours: tuple[int, int]) -> "Feasibility | None":
     """Warn when the best task can't be finished before it's due within working hours, and suggest
     the next realistic slot."""
     if best.due_at is None or not best.estimated_minutes:
@@ -130,7 +130,7 @@ def _feasibility(best, today_tasks, now: datetime, user_tz: str) -> "Feasibility
     due = best.due_at if best.due_at.tzinfo else best.due_at.replace(tzinfo=timezone.utc)
     if due <= now:
         return None  # already overdue — handled by ranking, not a feasibility warning
-    sched = SchedulingService()
+    sched = SchedulingService(work_start_hour=work_hours[0], work_end_hour=work_hours[1])
     free_before = sched.free_minutes_before(due, now, today_tasks, user_tz)
     if free_before >= best.estimated_minutes:
         return None
@@ -174,7 +174,11 @@ async def get_now(
         best_task=TaskResponse.model_validate(ranked[0]),
         alternatives=[TaskResponse.model_validate(t) for t in ranked[1:3]],
         moment=_moment(local_now, ranked, now),
-        feasibility=_feasibility(ranked[0], today_tasks, now, user_tz),
+        feasibility=_feasibility(
+            ranked[0], today_tasks, now, user_tz,
+            (user.preferences.work_start_hour, user.preferences.work_end_hour)
+            if user.preferences else (8, 21),
+        ),
     )
 
 
