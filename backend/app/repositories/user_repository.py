@@ -77,6 +77,8 @@ class UserRepository:
         capture_auto_create: str | None = None,
         theme: str | None = None,
         language: str | None = None,
+        work_start_hour: int | None = None,
+        work_end_hour: int | None = None,
     ) -> UserPreferences | None:
         result = await self.db.execute(
             select(UserPreferences).where(UserPreferences.user_id == user_id)
@@ -92,6 +94,10 @@ class UserRepository:
             prefs.theme = theme
         if language is not None:
             prefs.language = language
+        if work_start_hour is not None:
+            prefs.work_start_hour = work_start_hour
+        if work_end_hour is not None:
+            prefs.work_end_hour = work_end_hour
         await self.db.flush()
         return prefs
 

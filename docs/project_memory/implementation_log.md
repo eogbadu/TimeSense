@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-086 (Jira TIME-84): Configurable working hours
+
+Replaced the hardcoded 8am–9pm scheduling window with a per-user preference. Added
+user_preferences.work_start_hour/work_end_hour (migration t0u1v2w3x4y5; defaults 8/21) on the model,
+UserPreferencesResponse, and UserPreferencesUpdate (validated 0–22 / 1–23, end > start via
+model_validator; end capped at 23 to avoid the replace(hour=24) window-math edge). Repo
+update_preferences accepts them. Capture auto-schedule and /now feasibility now build
+SchedulingService from the user's hours (fallback 8/21). iOS: Settings ▸ Working Hours screen (start/
+end hour pickers with 12-hour labels, Save → PATCH; disabled when end ≤ start). 1 new test
+(roundtrip + 422 on end≤start); suite 329 passing; iOS BUILD SUCCEEDED; migration applied.
+
 ## 2026-07-05 — TIME-085 (Jira TIME-83): Best-time auto-scheduling with Undo
 
 Completes the scheduling brain. Added tasks.auto_scheduled (migration s9t0u1v2w3x4) on the model +

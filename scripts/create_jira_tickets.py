@@ -5493,6 +5493,63 @@ TICKETS = [
               "checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-086: Configurable working hours (Settings) drive scheduling",
+        "labels": ["ios", "backend", "settings"],
+        "description": doc(
+            h2("Goal"),
+            p("Replace the hardcoded 8am–9pm scheduling window with a per-user preference so "
+              "auto-scheduling and feasibility match the user's real day."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "user_preferences.work_start_hour / work_end_hour (migration; defaults 8/21) on the "
+                "model, UserPreferencesResponse, and UserPreferencesUpdate (validated 0–22 / 1–23, "
+                "end > start)",
+                "Repo update_preferences accepts the new fields; PATCH /users/me/preferences already "
+                "routes them",
+                "Capture auto-schedule and /now feasibility build SchedulingService from the user's "
+                "hours (fallback 8/21)",
+                "iOS: Settings ▸ Working Hours screen (start/end hour pickers, 12-hour labels, save "
+                "→ PATCH); disabled when end ≤ start",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No per-day-of-week hours or multiple windows (single daily window for v1)",
+                "End hour capped at 23 (avoids midnight-rollover edge in the window math)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend: models/user.py + migration, schemas/user.py, repositories/user_repository.py, "
+                "api/v1/capture.py, api/v1/now.py, tests/test_task_duration.py",
+                "ios: Features/Settings/SettingsScreens.swift, SettingsView.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "GET /users/me returns work_start_hour/work_end_hour (default 8/21); PATCH updates "
+                "them; end ≤ start → 422",
+                "Auto-scheduling + feasibility respect the configured hours",
+                "Settings ▸ Working Hours edits and saves; iOS build + backend suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head && pytest -q\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-084/085 (scheduling), TIME-076 (Settings screens), preferences endpoints."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-058: Beta Smoke Test and Release Checklist."),
+        ),
+    },
 ]
 
 

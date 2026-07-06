@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -106,6 +106,9 @@ class UserPreferences(UUIDMixin, TimestampMixin, Base):
     capture_auto_create: Mapped[str] = mapped_column(String(10), nullable=False, default="ask")
     theme: Mapped[str] = mapped_column(String(10), nullable=False, default="light")
     language: Mapped[str] = mapped_column(String(10), nullable=False, default="en")
+    # Working-hours window (local hours) TimeSense schedules within.
+    work_start_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=8)
+    work_end_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=21)
 
     user: Mapped[User] = relationship("User", back_populates="preferences")
 

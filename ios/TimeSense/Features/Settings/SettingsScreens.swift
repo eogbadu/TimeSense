@@ -223,6 +223,87 @@ struct AppearanceSettingsView: View {
     }
 }
 
+// MARK: - Working Hours
+
+struct WorkingHoursSettingsView: View {
+    @State private var start = 8
+    @State private var end = 21
+    @State private var loaded = false
+    @State private var saving = false
+    @State private var saved = false
+
+    private struct Me: Decodable {
+        let preferences: Prefs?
+        struct Prefs: Decodable { let work_start_hour: Int; let work_end_hour: Int }
+    }
+    private struct Update: Encodable { let work_start_hour: Int; let work_end_hour: Int }
+    private struct Resp: Decodable { let work_start_hour: Int }
+
+    private func label(_ h: Int) -> String {
+        let period = h < 12 ? "AM" : "PM"
+        let hour12 = h % 12 == 0 ? 12 : h % 12
+        return "\(hour12):00 \(period)"
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Start", selection: $start) {
+                    ForEach(0..<23) { h in Text(label(h)).tag(h) }
+                }
+                Picker("End", selection: $end) {
+                    ForEach(1..<24) { h in Text(label(h)).tag(h) }
+                }
+            } header: {
+                Text("When are you available?")
+            } footer: {
+                Text("TimeSense only auto-schedules tasks between these hours.")
+            }
+            if end <= start {
+                Text("End time must be after start time.")
+                    .font(DesignTokens.Typography.footnote)
+                    .foregroundColor(DesignTokens.Color.destructive)
+            }
+            Section {
+                Button {
+                    Task { await save() }
+                } label: {
+                    HStack {
+                        Text(saved ? "Saved" : "Save")
+                        Spacer()
+                        if saving { ProgressView() }
+                        else if saved { Image(systemName: "checkmark").foregroundColor(DesignTokens.Color.success) }
+                    }
+                }
+                .disabled(saving || end <= start)
+            }
+        }
+        .navigationTitle("Working Hours")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+        .onChange(of: start) { _, _ in saved = false }
+        .onChange(of: end) { _, _ in saved = false }
+    }
+
+    private func load() async {
+        guard !loaded else { return }
+        loaded = true
+        if let me: Me = try? await APIClient.shared.get("/api/v1/users/me"), let p = me.preferences {
+            start = p.work_start_hour
+            end = p.work_end_hour
+        }
+    }
+
+    private func save() async {
+        saving = true
+        defer { saving = false }
+        let _: Resp? = try? await APIClient.shared.patch(
+            "/api/v1/users/me/preferences", body: Update(work_start_hour: start, work_end_hour: end)
+        )
+        saved = true
+    }
+}
+
 // MARK: - Privacy & Consent
 
 struct PrivacyConsentView: View {
