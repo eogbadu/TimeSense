@@ -5432,6 +5432,67 @@ TICKETS = [
             p("TIME-085: best-time auto-scheduling with undo."),
         ),
     },
+
+    {
+        "summary": "TIME-085: Best-time auto-scheduling with easy Undo",
+        "labels": ["ios", "backend", "brain"],
+        "description": doc(
+            h2("Goal"),
+            p("Complete the scheduling brain: when a task is captured, auto-place it into the next "
+              "open slot in the day (using its estimate + working hours + existing blocks), and let "
+              "the user Undo the placement on Today with one tap."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "tasks.auto_scheduled boolean (migration) + on Task model + TaskResponse",
+                "Capture: if the task is untimed and due today/undated, SchedulingService.find_slot "
+                "assigns scheduled_start/end and marks auto_scheduled=True (skips when no slot fits "
+                "today)",
+                "POST /tasks/{id}/unschedule → clears the slot + auto_scheduled (returns the task)",
+                "iOS: TimelineTask decodes auto_scheduled; Today's TimelineCard shows 'Scheduled by "
+                "TimeSense · Undo' for auto-placed tasks; Undo calls unschedule + reloads",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No rescheduling/optimisation of already-placed tasks; no drag-and-drop (product "
+                "rule)",
+                "Only auto-places today (not future days); working hours still the 8–21 default",
+                "Auto-placement isn't a calendar write (internal scheduling only; calendar writes "
+                "still require approval)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend: models/task.py + migration, schemas/task.py, services/task_service.py, "
+                "api/v1/capture.py, api/v1/tasks.py, tests/test_autoschedule.py",
+                "ios: Features/Today/TodayViewModel.swift, TimelineCard.swift, TodayView.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "A captured today/undated task is placed into the next open slot within working "
+                "hours (when one exists) with auto_scheduled=true",
+                "Undo on Today clears the time (scheduled_start null, auto_scheduled false)",
+                "iOS build + backend suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head && pytest tests/test_autoschedule.py -v\n"
+                "cd backend && pytest -q\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-084 (SchedulingService), TIME-082 (durations), capture + Today timeline."),
+            divider(),
+            h2("Next Ticket"),
+            p("Working-hours preference in Settings; feasibility for all tasks; TIME-058 beta "
+              "checklist."),
+        ),
+    },
 ]
 
 

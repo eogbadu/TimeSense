@@ -62,6 +62,27 @@ async def get_task(
     return TaskResponse.model_validate(task)
 
 
+@router.post("/{task_id}/unschedule", response_model=TaskResponse)
+async def unschedule_task(
+    task_id: UUID,
+    current_user: CurrentUser,
+    task_svc: TaskService = Depends(get_task_service),
+    user_svc: UserService = Depends(get_user_service),
+    db: AsyncSession = Depends(get_db),
+) -> TaskResponse:
+    """Undo an auto-placed time — clears the scheduled slot so the task becomes untimed again."""
+    user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
+    task = await task_svc.get_task(task_id, user.id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+    task.scheduled_start = None
+    task.scheduled_end = None
+    task.auto_scheduled = False
+    await db.commit()
+    await db.refresh(task)
+    return TaskResponse.model_validate(task)
+
+
 class DurationPromptResponse(BaseModel):
     ask: bool
     category: str

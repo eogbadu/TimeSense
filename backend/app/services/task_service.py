@@ -14,7 +14,9 @@ class TaskService:
     def __init__(self, db: AsyncSession) -> None:
         self.repo = TaskRepository(db)
 
-    async def create_task(self, user_id: uuid.UUID, body: TaskCreate) -> Task:
+    async def create_task(
+        self, user_id: uuid.UUID, body: TaskCreate, auto_scheduled: bool = False
+    ) -> Task:
         return await self.repo.create(
             user_id=user_id,
             title=body.title,
@@ -25,6 +27,7 @@ class TaskService:
             scheduled_end=body.scheduled_end,
             due_at=body.due_at,
             source=body.source,
+            auto_scheduled=auto_scheduled,
             raw_input=body.raw_input,
         )
 

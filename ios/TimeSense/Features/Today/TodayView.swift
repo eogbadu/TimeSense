@@ -46,7 +46,11 @@ struct TodayView: View {
                     .padding(.horizontal, DesignTokens.Spacing.md)
                 LazyVStack(spacing: DesignTokens.Spacing.sm) {
                     ForEach(tasks) { task in
-                        TimelineCard(task: task, visualState: viewModel.visualState(for: task))
+                        TimelineCard(
+                            task: task,
+                            visualState: viewModel.visualState(for: task),
+                            onUndo: { Task { await viewModel.unschedule(taskId: task.id) } }
+                        )
                     }
                 }
                 .padding(.horizontal, DesignTokens.Spacing.md)

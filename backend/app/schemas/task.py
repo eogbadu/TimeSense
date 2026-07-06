@@ -44,6 +44,7 @@ class TaskResponse(BaseModel):
     scheduled_end: datetime | None
     due_at: datetime | None
     source: str
+    auto_scheduled: bool = False
     raw_input: str | None
     created_at: datetime
     updated_at: datetime
