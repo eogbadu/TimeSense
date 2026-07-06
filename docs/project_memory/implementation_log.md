@@ -1,5 +1,17 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-087 (Jira TIME-85): On-device dev — reach the Mac backend over the LAN
+
+Demoing on a physical iPhone failed with "cannot connect to the server" — on a device localhost is
+the phone, not the Mac. APIClient.resolveBaseURL() now: API_BASE_URL env wins; simulator → localhost;
+physical-device DEBUG → the Mac's Bonjour .local name (ekeles-MacBook-Pro.local:8000, stable across
+IP changes); release → prod URL placeholder. Added ios/TimeSense/Info.plist (merged via
+GENERATE_INFOPLIST_FILE=YES + INFOPLIST_FILE) with NSAllowsLocalNetworking=true +
+NSLocalNetworkUsageDescription so cleartext HTTP to the LAN/.local is allowed and iOS prompts for
+local-network access. Verified the built plist has BOTH the ATS key and the generated keys
+(UILaunchScreen, bundle id); iOS BUILD SUCCEEDED. Backend already reachable on the LAN via run_dev.py
+(all interfaces). Requires phone+Mac same Wi-Fi and tapping Allow on the local-network prompt.
+
 ## 2026-07-05 — TIME-086 (Jira TIME-84): Configurable working hours
 
 Replaced the hardcoded 8am–9pm scheduling window with a per-user preference. Added

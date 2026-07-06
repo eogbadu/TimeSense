@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Allow plain-HTTP connections to the local network (e.g. the dev backend on the Mac reached
+	     via its .local Bonjour name) while keeping App Transport Security on for everything else. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- iOS 14+ requires a purpose string before the app makes local-network connections. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>TimeSense connects to your development server on the local network.</string>
+</dict>
+</plist>
