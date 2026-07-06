@@ -5609,6 +5609,64 @@ TICKETS = [
             p("TIME-058: Beta Smoke Test and Release Checklist."),
         ),
     },
+
+    {
+        "summary": "TIME-058: Beta Smoke Test & Release Checklist (v1 close-out)",
+        "labels": ["release", "docs", "qa"],
+        "description": doc(
+            h2("Goal"),
+            p("Close out the v1 build: a repeatable smoke test, a manual beta test checklist, and a "
+              "go/no-go release checklist — so any build can be validated before it ships."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "scripts/smoke_test.py: liveness + auth-gate checks against a running backend "
+                "(health 200; protected routes 401) — fast 'is it alive and sane?' check",
+                "docs/launch/beta_smoke_test.md: ~10-min manual device checklist covering the full "
+                "loop (auth, capture→brain, Now, Today, Settings, web)",
+                "docs/launch/release_checklist.md: go/no-go across engineering, infra, auth/data, "
+                "store prep, legal, and post-v1 follow-ups",
+                "Verify + record the stack state (backend suite, iOS/web builds, live smoke); mark "
+                "v1 feature-complete in project memory",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Not the actual store submission or production deploy (gated items in the checklist)",
+                "No automated device UI tests (manual checklist for now)",
+                "Post-v1 feature work is captured as follow-ups, not built here",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "scripts/smoke_test.py (new)",
+                "docs/launch/beta_smoke_test.md, docs/launch/release_checklist.md (new)",
+                "docs/project_memory/* (v1 close-out)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "smoke_test.py passes against the running backend",
+                "Beta + release checklists exist and reflect the true build state (honest about "
+                "unverified items, e.g. Android build needs a JDK)",
+                "Project memory marks v1 feature-complete with the post-v1 follow-up list",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "python scripts/smoke_test.py\n"
+                "cd backend && pytest -q\n"
+                "cd web && npm run build"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("The whole v1 build (Phases 0–14) + the brain (TIME-082–087)."),
+            divider(),
+            h2("Next Ticket"),
+            p("Post-v1: production deploy + store submission; per-weekday working hours; feasibility "
+              "for all tasks; in-app calendar/subscription/export."),
+        ),
+    },
 ]
 
 
@@ -5712,7 +5770,7 @@ def get_existing_tickets() -> dict[str, str]:
         f"{JIRA_BASE_URL}/rest/api/3/search/jql",
         auth=AUTH,
         headers=HEADERS,
-        params={"jql": f"project={JIRA_PROJECT_KEY} ORDER BY created ASC", "maxResults": 100, "fields": "summary"},
+        params={"jql": f"project={JIRA_PROJECT_KEY} ORDER BY created ASC", "maxResults": 500, "fields": "summary"},
     )
     if response.status_code != 200:
         return {}

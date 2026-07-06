@@ -1,5 +1,17 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-058 (Jira TIME-86): Beta Smoke Test & Release Checklist (v1 close-out)
+
+Closed out the v1 build. Added scripts/smoke_test.py (liveness + auth-gate checks: health 200,
+protected routes 401 — all PASS against the live backend), docs/launch/beta_smoke_test.md (~10-min
+manual device checklist), and docs/launch/release_checklist.md (go/no-go across engineering/infra/
+auth/store/legal + post-v1 follow-ups). Verified this session: backend suite 329 passing, iOS build
+SUCCEEDED, web `npm run build` compiled, live smoke all PASS. Android build NOT verified — no JDK on
+the dev machine ("Unable to locate a Java Runtime"); noted in the checklist. (Also fixed: the Jira
+create-script dedup cap 100→500, and deleted a duplicate TIME-058 ticket created by an accidental
+double-run + Jira indexing lag.) v1 is feature-complete; remaining items are release-gating (deploy,
+store submission) or post-v1 features, tracked as follow-ups.
+
 ## 2026-07-06 — TIME-087 (Jira TIME-85): On-device dev — reach the Mac backend over the LAN
 
 Demoing on a physical iPhone failed with "cannot connect to the server" — on a device localhost is

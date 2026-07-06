@@ -1,6 +1,24 @@
 # Context Summary
 
-**Last updated:** 2026-07-05
+**Last updated:** 2026-07-06
+
+## v1 STATUS: FEATURE-COMPLETE (2026-07-06)
+
+The v1 build is closed out (TIME-058 / Jira TIME-86). The full loop works end-to-end on device:
+sign in → capture → auto-scheduled into the day → Now recommends the best next action with a
+justified "Why this?" + alternatives → complete → the assistant learns your durations. The
+scheduling **"brain"** is done: duration estimation (seed lookup table + per-user learned overrides,
+TIME-082/083), auto-placement with Undo (TIME-085), feasibility warnings (TIME-084), configurable
+working hours (TIME-086), all grounded in local time (TIME-080/081). Premium UI pass done (TIME-073);
+Settings fully functional incl. Sign Out + Delete (TIME-076). On-device dev reaches the Mac backend
+over the LAN (TIME-087). Backend suite **329 passing**; iOS + web build clean (Android unverified —
+no JDK locally). Smoke: `python scripts/smoke_test.py` all PASS. See docs/launch/release_checklist.md
++ beta_smoke_test.md.
+
+**Next:** release-gating work (deploy backend behind HTTPS + point apps at the prod URL; store
+assets/submission; human privacy-policy review; rotate the exposed Android API key) and the post-v1
+feature backlog (per-weekday working hours, feasibility for all tasks, in-app calendar OAuth /
+StoreKit purchase / data-export download). The user will file tickets for these after v1.
 
 ## Current Build State
 
