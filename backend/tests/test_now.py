@@ -224,3 +224,28 @@ async def test_now_winddown_moment_when_late_and_not_urgent(client, db_session):
         now_mod._local_now = real_local_now
     assert r.status_code == 200
     assert r.json()["moment"] and "wind down" in r.json()["moment"]
+
+
+@pytest.mark.anyio
+async def test_now_why_returns_structured_explanation(client, db_session):
+    """/now/why returns the rich structured explanation (action, factors, confidence, summary)."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+    from datetime import datetime, timezone
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    db_session.add(Task(user_id=user.id, title="Revise paper", status="pending", priority=1,
+                        estimated_minutes=45, due_at=datetime.now(timezone.utc)))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+        best = r.json()["best_task"]
+        w = await client.get(f"/api/v1/now/why?task_id={best['id']}", headers={"Authorization": "Bearer t"})
+    assert w.status_code == 200
+    body = w.json()
+    assert body["recommended_action"]["title"] == "Revise paper"
+    assert 0.5 <= body["confidence"] <= 0.95
+    assert any(f["name"] == "Priority" for f in body["decision_factors"])
+    assert isinstance(body["context_used"], list) and body["context_used"]
+    assert body["summary"] and body["reason"] == body["summary"]

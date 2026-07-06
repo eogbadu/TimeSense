@@ -11,9 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
+from app.models.recommendation_event import RecommendationEvent
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
+from app.services.recommendation_explainer import build_explanation
 from app.services.recommendation_service import RecommendationService
 from app.services.scheduling_service import SchedulingService
 from app.services.task_scorer import TaskScorer
@@ -182,7 +184,32 @@ async def get_now(
     )
 
 
+class RecommendedAction(BaseModel):
+    task_id: uuid.UUID
+    title: str
+    recommended_duration_minutes: int | None = None
+
+
+class DecisionFactor(BaseModel):
+    name: str
+    rating: str
+
+
+class AlternativeConsidered(BaseModel):
+    task_id: uuid.UUID
+    title: str
+    reason_not_selected: str
+
+
 class WhyResponse(BaseModel):
+    """Rich, structured 'Why This Recommendation?' explanation."""
+    recommended_action: RecommendedAction
+    confidence: float
+    context_used: list[str]
+    decision_factors: list[DecisionFactor]
+    alternatives_considered: list[AlternativeConsidered]
+    summary: str
+    # Backward-compatible one-liner (older clients read `reason`).
     reason: str
 
 
@@ -193,16 +220,17 @@ async def get_now_why(
     db: AsyncSession = Depends(get_db),
     gateway: LLMGateway = Depends(get_llm_gateway),
 ) -> WhyResponse:
-    """Lazily generate the "Why this?" explanation for a task (LLM, deterministic fallback).
+    """Lazily build the structured recommendation explanation for a task.
 
-    Computed on demand so the main /now stays instant and we only spend an LLM call when the user
-    actually taps "Why this?".
+    Pipeline: pull context (calendar/time/health/location/tasks) → normalize → score the candidates →
+    LLM summary (deterministic fallback) → return the explanation and store an audit event. Computed
+    on demand so the main /now stays instant.
     """
     user_svc = UserService(db)
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
 
     now = datetime.now(timezone.utc)
-    ranked, usable_minutes, _today = await _ranked_candidates(db, user, now)
+    ranked, _usable, today_tasks = await _ranked_candidates(db, user, now)
 
     target = next((t for t in ranked if t.id == task_id), None)
     if target is None:
@@ -210,7 +238,19 @@ async def get_now_why(
 
     alternatives = [t for t in ranked if t.id != task_id][:2]
     user_tz = user.profile.timezone if user.profile else "UTC"
-    reason = await RecommendationService(gateway).explain_choice(
-        target, alternatives, usable_minutes, now, user_tz
+
+    explanation = await build_explanation(
+        db, user, target, alternatives, today_tasks, now, user_tz, gateway
     )
-    return WhyResponse(reason=reason)
+
+    # Audit trail (best-effort — never block the response on it).
+    try:
+        db.add(RecommendationEvent(
+            user_id=user.id, task_id=target.id,
+            confidence=explanation["confidence"], explanation=explanation,
+        ))
+        await db.commit()
+    except Exception:
+        await db.rollback()
+
+    return WhyResponse(reason=explanation["summary"], **explanation)

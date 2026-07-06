@@ -1,5 +1,20 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-089 (Jira TIME-89): Rich structured "Why This Recommendation?" + pipeline
+
+Turned the one-line why into a full structured explanation. recommendation_explainer.build_explanation
+normalizes live context (calendar free-time + next event, time-of-day/focus, health/energy from
+today's sleep signal if present, location from a recent commute if present, task data), computes
+deterministic decision_factors (Priority/Time fit/Energy match/Location fit/Urgency) + a heuristic
+confidence (0.5–0.95), deterministic alternative reasons, and an LLM summary (deterministic
+fallback). Signals only appear when we actually have them — never fabricated. GET /now/why now
+returns the structured WhyResponse (recommended_action, confidence, context_used, decision_factors,
+alternatives_considered, summary; keeps backward-compatible `reason`) and writes a
+recommendation_events audit row (JSONB on Postgres / JSON on SQLite via with_variant — the initial
+JSONB-only column broke SQLite test DB creation; fixed). iOS: RecommendationExplanation model; the
+button lazily fetches then presents a sheet with sections. 1 new test; suite 330 passing; iOS BUILD
+SUCCEEDED; migration u1v2w3x4y5z6 applied.
+
 ## 2026-07-06 — TIME-088 (Jira TIME-88): Rename Now 'Why this?' → 'Why This Recommendation?'
 
 Copy tweak on the Now best-task card: the expandable recommendation-explanation link now reads

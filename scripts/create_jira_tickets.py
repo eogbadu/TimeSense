@@ -5710,6 +5710,75 @@ TICKETS = [
             p("Post-v1 backlog."),
         ),
     },
+
+    {
+        "summary": "TIME-089: Rich structured 'Why This Recommendation?' explanation + pipeline",
+        "labels": ["ios", "backend", "recommendations", "brain"],
+        "description": doc(
+            h2("Goal"),
+            p("Replace the one-line 'Why This Recommendation?' with a full, structured explanation "
+              "(recommended action, the context used, decision factors, alternatives considered, a "
+              "confidence score, and a summary), backed by a real recommendation-explanation "
+              "pipeline that stores an audit event. Signals are included only when we actually have "
+              "them — no fabricated context."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "recommendation_explainer.build_explanation: normalizes live context (calendar free "
+                "time + next event, time-of-day/focus, health/energy from today's sleep signal if "
+                "present, location from a recent commute if present, task data), computes "
+                "deterministic decision_factors (Priority/Time fit/Energy match/Location fit/"
+                "Urgency) + a heuristic confidence, deterministic alternative reasons, and an LLM "
+                "summary (deterministic fallback)",
+                "GET /now/why returns the structured WhyResponse (recommended_action, confidence, "
+                "context_used, decision_factors, alternatives_considered, summary; keeps a "
+                "backward-compatible `reason`) and stores a recommendation_events audit row",
+                "recommendation_events table (JSONB on Postgres / JSON on SQLite; migration)",
+                "iOS: RecommendationExplanation model; 'Why This Recommendation?' now fetches lazily "
+                "then presents a sheet with sections (Recommended action, Confidence, Context used, "
+                "Decision factors, Other options considered, Summary)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No live GPS place-type ('at home') — location is only commute-derived; energy is "
+                "sleep-derived; both omitted honestly when absent",
+                "Not a separate /recommendation/next-action route — the same pipeline runs behind "
+                "the lazy /now/why (the recommendation itself is already on /now)",
+                "No per-factor numeric weights exposed; confidence is a documented heuristic",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend: services/recommendation_explainer.py (new), models/recommendation_event.py "
+                "(new) + migration + __init__, api/v1/now.py, tests/test_now.py",
+                "ios: Features/Now/NowView.swift (sheet), NowViewModel.swift (model + fetch)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "/now/why returns recommended_action + confidence (0.5–0.95) + context_used + "
+                "decision_factors + alternatives_considered + summary",
+                "Only available signals appear (health/location omitted when absent); an audit row "
+                "is written",
+                "Tapping 'Why This Recommendation?' opens the structured sheet; iOS build + suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && alembic upgrade head && pytest tests/test_now.py -v\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-077/078 (why + lazy load), TIME-082 (durations), TIME-084 (scheduling context), "
+              "sleep/commute signals."),
+            divider(),
+            h2("Next Ticket"),
+            p("Post-v1 backlog."),
+        ),
+    },
 ]
 
 
