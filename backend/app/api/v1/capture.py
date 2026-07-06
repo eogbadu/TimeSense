@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,9 +8,11 @@ from app.core.database import get_db
 from app.core.rate_limit import capture_rate_limit
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
+from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.analytics_service import AnalyticsService
 from app.services.capture_service import CaptureService
+from app.services.scheduling_service import SchedulingService
 from app.services.task_duration_service import TaskDurationEstimator
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
@@ -45,7 +49,27 @@ async def capture(
         minutes, _category = await TaskDurationEstimator(db).estimate(user.id, task_create.title)
         task_create.estimated_minutes = minutes
 
-    task = await TaskService(db).create_task(user.id, task_create)
+    # Auto-place the task into the day: if it isn't already timed and is meant for today (or has no
+    # date), find the next open slot within working hours. The user can Undo on Today.
+    auto_scheduled = False
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    due_today_or_none = (
+        task_create.due_at is None
+        or (task_create.due_at if task_create.due_at.tzinfo else task_create.due_at.replace(tzinfo=timezone.utc)).date() == today
+    )
+    if task_create.scheduled_start is None and task_create.estimated_minutes and due_today_or_none:
+        today_scheduled = await TaskRepository(db).list_by_user(user_id=user.id, for_date=today, limit=200)
+        user_tz = user.profile.timezone if user.profile else "UTC"
+        slot = SchedulingService().find_slot(
+            now, task_create.estimated_minutes, today_scheduled, user_tz
+        )
+        if slot is not None:
+            task_create.scheduled_start = slot
+            task_create.scheduled_end = slot + timedelta(minutes=task_create.estimated_minutes)
+            auto_scheduled = True
+
+    task = await TaskService(db).create_task(user.id, task_create, auto_scheduled=auto_scheduled)
     await AnalyticsService(db).track(
         "task_captured", user_id=user.id, properties={"source": task_create.source}
     )

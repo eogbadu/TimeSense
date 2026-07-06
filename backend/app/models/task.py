@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -38,6 +38,9 @@ class Task(UUIDMixin, TimestampMixin, Base):
     )
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     source: Mapped[str] = mapped_column(String(20), nullable=False, default="manual")
+    # True when TimeSense auto-placed this task into the day (vs. a user-set time) — drives the
+    # "Scheduled · Undo" affordance on Today.
+    auto_scheduled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     raw_input: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user: Mapped[User] = relationship("User", back_populates="tasks")

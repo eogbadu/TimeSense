@@ -9,12 +9,14 @@ struct TimelineTask: Decodable, Identifiable {
     let scheduledEnd: Date?
     let estimatedMinutes: Int?
     let priority: Int
+    let autoScheduled: Bool
 
     enum CodingKeys: String, CodingKey {
         case id, title, status, priority
         case scheduledStart = "scheduled_start"
         case scheduledEnd = "scheduled_end"
         case estimatedMinutes = "estimated_minutes"
+        case autoScheduled = "auto_scheduled"
     }
 }
 
@@ -35,6 +37,16 @@ final class TodayViewModel: ObservableObject {
     }
 
     var doneCount: Int { tasks.filter { $0.status == "done" }.count }
+
+    /// Undo an auto-placed time — the task becomes untimed again.
+    func unschedule(taskId: String) async {
+        struct Empty: Encodable {}
+        struct TaskResp: Decodable { let id: String }
+        let _: TaskResp? = try? await APIClient.shared.post(
+            "/api/v1/tasks/\(taskId)/unschedule", body: Empty()
+        )
+        await load()
+    }
 
     func load() async {
         uiState = .loading

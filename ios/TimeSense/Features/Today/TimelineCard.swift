@@ -3,6 +3,7 @@ import SwiftUI
 struct TimelineCard: View {
     let task: TimelineTask
     let visualState: TimelineVisualState
+    var onUndo: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.md) {
@@ -51,6 +52,17 @@ struct TimelineCard: View {
                 Text("\(mins) min")
                     .font(DesignTokens.Typography.caption)
                     .foregroundColor(DesignTokens.Color.textSecondary)
+            }
+            if task.autoScheduled, task.status != "done", let onUndo {
+                HStack(spacing: DesignTokens.Spacing.xs) {
+                    Image(systemName: "sparkles")
+                    Text("Scheduled by TimeSense")
+                    Text("·")
+                    Button("Undo", action: onUndo)
+                        .fontWeight(.semibold)
+                }
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(DesignTokens.Color.accent)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

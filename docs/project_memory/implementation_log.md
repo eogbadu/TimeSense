@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-07-05 — TIME-085 (Jira TIME-83): Best-time auto-scheduling with Undo
+
+Completes the scheduling brain. Added tasks.auto_scheduled (migration s9t0u1v2w3x4) on the model +
+TaskResponse. Capture now auto-places an untimed, due-today/undated task into the next open slot via
+SchedulingService.find_slot (estimate + working hours + existing blocks), marking auto_scheduled=True
+(skips when no slot fits today). POST /tasks/{id}/unschedule clears the slot + flag. iOS: TimelineTask
+decodes auto_scheduled; Today's TimelineCard shows "Scheduled by TimeSense · Undo" for auto-placed
+tasks, Undo → TodayViewModel.unschedule → reload. Only places today; 8–21 default window; internal
+scheduling (not a calendar write). 2 new tests; suite 328 passing; iOS BUILD SUCCEEDED; migration
+applied to dev DB.
+
 ## 2026-07-05 — TIME-084 (Jira TIME-82): Feasibility warnings (+ scheduling core)
 
 Added SchedulingService (shared core): find_slot(now, duration, scheduled_tasks, tz, not_before) →
