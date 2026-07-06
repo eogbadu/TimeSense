@@ -89,7 +89,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
-- TIME-081 (net-new) → Jira TIME-79 (Usable-time cap uses local midnight) — **Done (this session)**
+- TIME-081 (net-new) → Jira TIME-79 (Usable-time cap uses local midnight) — **Done (PR #74 merged 2026-07-05)**
 - TIME-080 (net-new) → Jira TIME-78 (Local-time-aware Now) — **Done (PR #73 merged 2026-07-05)**
 - TIME-079 (net-new) → Jira TIME-77 ('Why this?' justifies the pick) — **Done (PR #72 merged 2026-07-05)**
 - TIME-078 (net-new) → Jira TIME-76 (Lazy-load 'Why this?' on tap) — **Done (PR #71 merged 2026-07-05)**
