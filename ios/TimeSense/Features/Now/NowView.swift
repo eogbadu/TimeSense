@@ -215,7 +215,7 @@ private struct WhyThis: View {
             Button(action: toggle) {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: "sparkles")
-                    Text("Why this?")
+                    Text("Why This Recommendation?")
                     Image(systemName: "chevron.down")
                         .font(.caption2.weight(.semibold))
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
