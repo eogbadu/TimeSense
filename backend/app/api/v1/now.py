@@ -93,7 +93,8 @@ async def _ranked_candidates(db: AsyncSession, user, now: datetime):
     already |= {t.id for t in overdue}
     unscheduled = [t for t in all_pending if t.scheduled_start is None and t.id not in already]
 
-    usable_minutes = UsableTimeService().calculate(today_tasks, anchor=now)
+    user_tz = user.profile.timezone if user.profile else "UTC"
+    usable_minutes = UsableTimeService().calculate(today_tasks, anchor=now, user_timezone=user_tz)
 
     # Respect recommendation feedback: hide snoozed (active) / "not now" (cooldown) tasks.
     suppressed = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
