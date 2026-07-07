@@ -22,6 +22,11 @@ final class LocationService: NSObject, ObservableObject {
     private let manager = CLLocationManager()
     private let placesKey = "saved_places"
 
+    // Geofence events are laggy and can arrive stale/out-of-order, so we don't trust them directly:
+    // on any event we ask iOS for the authoritative current state and only notify on a real change.
+    private var lastRegionState: [String: Bool] = [:]   // regionId -> isInside
+    private var pendingEvents: Set<String> = []          // regions whose state query came from an event
+
     @Published private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published private(set) var places: [SavedPlace] = []
 
@@ -85,7 +90,7 @@ final class LocationService: NSObject, ObservableObject {
         var updated = places.filter { $0.name.caseInsensitiveCompare(name) != .orderedSame }
         let place = SavedPlace(
             id: UUID().uuidString, name: name,
-            latitude: loc.coordinate.latitude, longitude: loc.coordinate.longitude, radius: 130
+            latitude: loc.coordinate.latitude, longitude: loc.coordinate.longitude, radius: 150
         )
         updated.append(place)
         places = updated
@@ -113,12 +118,19 @@ final class LocationService: NSObject, ObservableObject {
 
     private func registerGeofence(_ place: SavedPlace) {
         guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
-        manager.startMonitoring(for: region(for: place))
+        let r = region(for: place)
+        manager.startMonitoring(for: r)
+        manager.requestState(for: r)   // seed current state (no notification for the seed)
     }
 
     private func reregisterGeofences() {
+        // Re-arm monitoring after (re)launch. We do NOT seed state here — on a background relaunch
+        // from a geofence event, seeding could dedup the very event that woke us. With no seed, the
+        // triggering event (previous == nil) correctly fires once.
         let monitored = manager.monitoredRegions.map(\.identifier)
-        for p in places where !monitored.contains(p.id) { registerGeofence(p) }
+        for p in places where !monitored.contains(p.id) {
+            manager.startMonitoring(for: region(for: p))
+        }
     }
 
     // MARK: - Persistence (only user-chosen place centers)
@@ -175,12 +187,29 @@ extension LocationService: CLLocationManagerDelegate {
         start()
     }
 
+    // On any enter/exit, verify the *actual* current state with iOS rather than trusting the (often
+    // stale/late) event, then notify only on a genuine change.
     func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-        handleRegionEvent(region.identifier, entered: true)
+        pendingEvents.insert(region.identifier)
+        manager.requestState(for: region)
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-        handleRegionEvent(region.identifier, entered: false)
+        pendingEvents.insert(region.identifier)
+        manager.requestState(for: region)
+    }
+
+    func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
+        let cameFromEvent = pendingEvents.remove(region.identifier) != nil
+        guard state != .unknown else { return }
+        let isInside = (state == .inside)
+        let previous = lastRegionState[region.identifier]
+        lastRegionState[region.identifier] = isInside
+        // Notify only for a real event that reflects an actual change (dedups stale/out-of-order
+        // events, e.g. a late "exit" that arrives while you're actually back inside).
+        if cameFromEvent, previous != isInside {
+            handleRegionEvent(region.identifier, entered: isInside)
+        }
     }
 
     // manager.location is updated automatically; these satisfy requestLocation().

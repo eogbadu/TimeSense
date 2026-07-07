@@ -6470,6 +6470,50 @@ TICKETS = [
             h2("Next Ticket"), p("Location-informed recommendation server-side."),
         ),
     },
+
+    {
+        "summary": "TIME-105: Reliable geofence notifications (verify state, dedup stale events)",
+        "labels": ["ios", "location", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("Fix wrong/late arrival notifications (e.g. 'you left home' shown on arrival). iOS "
+              "geofence events are laggy and arrive stale/out-of-order; trust the authoritative "
+              "current state instead."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "On didEnter/didExit, call manager.requestState(for:) and act on didDetermineState "
+                "(authoritative inside/outside), not the raw event",
+                "Track lastRegionState per region and notify only on a real change (dedups a late "
+                "'exit' that arrives while you're actually back inside)",
+                "Seed state when a place is saved (no spurious alert), but NOT on relaunch (so a "
+                "background-relaunch event still fires once)",
+                "Radius 130 -> 150 m for a bit more reliability",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Can't remove iOS's inherent exit-detection latency (minutes; requires moving well "
+                "beyond the boundary) — but events are now correct when they arrive",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/Location/LocationService.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Arrival fires 'You are at X'; departure fires 'You left X'; stale/contradictory "
+                "events are suppressed; iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-103/104 (location subsystem)."),
+            divider(),
+            h2("Next Ticket"), p("Location-informed recommendation server-side."),
+        ),
+    },
 ]
 
 

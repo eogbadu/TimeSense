@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] TIME-105: More reliable arrival/departure notifications — verify the authoritative geofence state and dedup stale/out-of-order events (fixes 'you left home' showing on arrival); radius 130->150m
 - [2026-07-07] TIME-104: 'Allow Always' now guides you to iOS Settings — tapping it did nothing because iOS silently no-ops the in-app Always prompt; the Location & Places screen now shows an 'Open iOS Settings' button + explainer for the While-Using state
 - [2026-07-06] TIME-103: Location-aware arrival notifications — with Always location, TimeSense monitors geofences around your saved places (Home/Work) and, on arrival/departure, fires a local notification with your best next task. Settings ▸ Location & Places. Raw location is never stored (needs on-device testing)
 - [2026-07-06] TIME-102: Visual polish — darkened light-mode secondary text for better contrast/legibility (chips, card hierarchy, and section headers were delivered across the screen redesigns)
