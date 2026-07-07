@@ -7,6 +7,7 @@ struct NowContext: Decodable {
     let bestTask: NowTask?
     let reason: String?
     let alternatives: [NowTask]?
+    let confidence: Double?
     let moment: String?
     let feasibility: Feasibility?
 
@@ -16,6 +17,7 @@ struct NowContext: Decodable {
         case bestTask = "best_task"
         case reason
         case alternatives
+        case confidence
         case moment
         case feasibility
     }
@@ -80,6 +82,8 @@ enum NowUiState {
 @MainActor
 final class NowViewModel: ObservableObject {
     @Published var uiState: NowUiState = .idle
+    /// When the recommendation was last (re-)computed — drives the "Re-evaluated X min ago" banner.
+    @Published var lastLoaded: Date?
 
     var context: NowContext? {
         if case .loaded(let c) = uiState { return c }
@@ -91,6 +95,7 @@ final class NowViewModel: ObservableObject {
         do {
             let ctx: NowContext = try await APIClient.shared.get("/api/v1/now")
             uiState = .loaded(ctx)
+            lastLoaded = Date()
             updateWidgetSnapshot(with: ctx)
         } catch {
             uiState = .error(error.localizedDescription)

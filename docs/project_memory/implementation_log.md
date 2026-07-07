@@ -1,5 +1,18 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-090 (Jira TIME-90): Redesign the Now page to the approved mockup
+
+Rebuilt Now to match the user's mockup. Backend: exposed `confidence` (0–1) on /now via a shared
+compute_confidence() (extracted from the explainer) so the card and the explanation sheet agree.
+iOS NowView: inline "Now" title + sparkles; AnalysisBanner ("TimeSense analyzed your day ·
+Re-evaluated N min ago" from lastLoaded); ContextChipsRow (Calendar/Routine/Location/Time/Tasks);
+BestNextActionCard (header + "AI Recommended" badge, category icon, title + "for N minutes", centered
+meta line, inline Confidence bar, "Why this recommendation?" → sheet, kept Done/Snooze/Not-now);
+OtherOptionsSection list (category icon, title, "N min · descriptor", chevron → the task's
+explanation sheet). Added client-side taskCategoryStyle(title) → icon/colour/descriptor. Removed the
+old GreetingHeader + PriorityBadge. The mockup's center "+" FAB tab bar is a separate follow-up.
+Backend 330 passing; iOS BUILD SUCCEEDED. Not visually verified (Now is behind auth).
+
 ## 2026-07-06 — TIME-089 (Jira TIME-89): Rich structured "Why This Recommendation?" + pipeline
 
 Turned the one-line why into a full structured explanation. recommendation_explainer.build_explanation

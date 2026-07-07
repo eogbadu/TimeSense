@@ -15,7 +15,7 @@ from app.models.recommendation_event import RecommendationEvent
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
-from app.services.recommendation_explainer import build_explanation
+from app.services.recommendation_explainer import build_explanation, compute_confidence
 from app.services.recommendation_service import RecommendationService
 from app.services.scheduling_service import SchedulingService
 from app.services.task_scorer import TaskScorer
@@ -37,6 +37,8 @@ class NowResponse(BaseModel):
     best_task: TaskResponse | None
     reason: str | None = None
     alternatives: list[TaskResponse] = []
+    # Inline confidence for the best task (0–1), matching the "Why This Recommendation?" sheet.
+    confidence: float | None = None
     # A local-time-aware nudge (e.g. a gentle wind-down when it's late and nothing is urgent).
     moment: str | None = None
     # Set when the best task can't be finished before it's due (with a suggested slot).
@@ -175,6 +177,7 @@ async def get_now(
         usable_minutes=usable_minutes,
         best_task=TaskResponse.model_validate(ranked[0]),
         alternatives=[TaskResponse.model_validate(t) for t in ranked[1:3]],
+        confidence=compute_confidence(ranked[0], usable_minutes, len(ranked[1:3]), now),
         moment=_moment(local_now, ranked, now),
         feasibility=_feasibility(
             ranked[0], today_tasks, now, user_tz,

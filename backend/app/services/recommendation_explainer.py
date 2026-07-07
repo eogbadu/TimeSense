@@ -44,6 +44,29 @@ def _priority_label(p: int) -> str:
     return "High" if p <= 2 else ("Medium" if p == 3 else "Low")
 
 
+def compute_confidence(best, free_minutes: int, alt_count: int, now: datetime) -> float:
+    """Heuristic, explainable confidence (0.5–0.95) — shared by /now (inline bar) and the full
+    explanation so they always agree."""
+    est = best.estimated_minutes or 0
+    fits = (est <= free_minutes) if est else True
+    urgent = False
+    if best.due_at is not None:
+        due = _utc(best.due_at)
+        urgent = due < now or due.date() == now.date()
+    conf = 0.70
+    if est and fits:
+        conf += 0.10
+    if best.priority <= 2:
+        conf += 0.06
+    if urgent:
+        conf += 0.05
+    if est and not fits:
+        conf -= 0.15
+    if alt_count == 0:
+        conf += 0.05
+    return round(max(0.5, min(0.95, conf)), 2)
+
+
 def _time_of_day(local_now: datetime) -> tuple[str, str]:
     h = local_now.hour
     if 5 <= h < 11:
@@ -180,19 +203,8 @@ async def build_explanation(
         urg = "Low"
     factors.append({"name": "Urgency", "rating": urg})
 
-    # ---- Confidence (heuristic, explainable) ----
-    conf = 0.70
-    if est and fits:
-        conf += 0.10
-    if best.priority <= 2:
-        conf += 0.06
-    if urg in ("High", "Medium"):
-        conf += 0.05
-    if est and not fits:
-        conf -= 0.15
-    if len(alternatives) == 0:
-        conf += 0.05
-    confidence = round(max(0.5, min(0.95, conf)), 2)
+    # ---- Confidence (heuristic, explainable — shared with /now) ----
+    confidence = compute_confidence(best, free_minutes, len(alternatives), now)
 
     # ---- Alternatives considered ----
     alts = []
