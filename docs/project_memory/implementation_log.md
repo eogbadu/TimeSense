@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-104 (Jira TIME-104): Deep-link to iOS Settings for Always location
+
+User report: tapping 'Allow Always' did nothing — iOS silently no-ops requestAlwaysAuthorization (shows the upgrade prompt at most once, usually deferred). Verified the built Info.plist HAS the Always usage key + background mode (not a config bug). Added LocationService.openAppSettings() (UIApplication.openSettingsURLString) and made PlacesSettingsView's permission card state-based: notDetermined->Enable; WhenInUse->explainer + 'Open iOS Settings'; denied->Open Settings; always->all set. iOS BUILD SUCCEEDED.
+
 ## 2026-07-07 — TIME-103 (Jira TIME-103): Location-aware background arrival notifications
 
 Added the location subsystem. LocationService (CoreLocation): permission step-up (WhenInUse->Always), region monitoring of saved places, on enter/exit -> GET /now -> local notification; one-time fix for saving places. AppDelegate (@UIApplicationDelegateAdaptor) configures Firebase + inits LocationService on launch so geofence events are handled after background relaunch (moved Firebase.configure out of App.init). Info.plist: location usage strings + UIBackgroundModes location. PlacesSettingsView (Settings -> Integrations -> Location & Places): enable location, save Home/Work from current location, list/remove, shows real auth status. Notification permission requested. Privacy Location row now reflects the real permission. Only user-chosen place centers persisted (UserDefaults) — no raw track. NEEDS ON-DEVICE TESTING (permissions/background/geofence can't be verified headless). Recommendation not yet location-informed server-side (arrival surfaces the current best task) — follow-up. iOS BUILD SUCCEEDED.
