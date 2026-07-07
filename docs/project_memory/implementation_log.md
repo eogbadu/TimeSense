@@ -1,5 +1,17 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-092 (Jira TIME-92): Redesign the Today page to the approved mockup
+
+Rebuilt Today to the mockup. TodayViewModel also fetches /now for the recommendation card + adds
+fetchExplanation and markDone(taskId). NowTask now decodes due_at (for "before 6:00 PM");
+TaskCategoryStyle gained locationAware (Errand/Appointment) for the "Location-aware" tag; shared
+WhyThis / RecommendationExplanationSheet / taskCategoryStyle made internal for reuse. TodayView:
+DateSummaryRow ("July 6, 2026" + "N of M complete" + calendar icon); "AI Recommended Now" card
+(category icon, title + "before <due>", meta line, "Why this recommendation?" → sheet); "Smart Plan"
+card grouping tasks by Morning/Afternoon/Evening/Anytime with tap-to-complete rows. Dropped the
+visible auto-schedule Undo on rows for the clean look (unschedule still in the VM). iOS BUILD
+SUCCEEDED. Not visually verified (Today is behind auth). Tab bar unchanged.
+
 ## 2026-07-06 — TIME-091 (Jira TIME-91): Context chips fit on one row (no scroll)
 
 Per user: the Now context chips (Calendar/Routine/Location/Time/Tasks) should all be visible at

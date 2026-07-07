@@ -286,6 +286,7 @@ struct TaskCategoryStyle {
     let icon: String
     let color: Color
     let descriptor: String
+    var locationAware: Bool = false
 }
 
 func taskCategoryStyle(for title: String) -> TaskCategoryStyle {
@@ -306,8 +307,8 @@ func taskCategoryStyle(for title: String) -> TaskCategoryStyle {
     if has(["call", "phone", "dial"]) {
         return TaskCategoryStyle(icon: "phone.fill", color: .green, descriptor: "Quick task")
     }
-    if has(["buy", "shop", "store", "groceries", "grocery", "home depot", "mall", "walmart", "target", "market", "errand"]) {
-        return TaskCategoryStyle(icon: "cart.fill", color: .teal, descriptor: "Errand")
+    if has(["buy", "shop", "store", "groceries", "grocery", "home depot", "mall", "walmart", "target", "market", "errand", "gift"]) {
+        return TaskCategoryStyle(icon: "cart.fill", color: .orange, descriptor: "Errand", locationAware: true)
     }
     if has(["clean", "laundry", "dishes", "tidy", "vacuum", "organize"]) {
         return TaskCategoryStyle(icon: "sparkles", color: .teal, descriptor: "Chore")
@@ -316,14 +317,17 @@ func taskCategoryStyle(for title: String) -> TaskCategoryStyle {
         return TaskCategoryStyle(icon: "person.2.fill", color: .purple, descriptor: "Meeting")
     }
     if has(["doctor", "dentist", "appointment", "chiropractor"]) {
-        return TaskCategoryStyle(icon: "cross.case.fill", color: .pink, descriptor: "Appointment")
+        return TaskCategoryStyle(icon: "cross.case.fill", color: .pink, descriptor: "Appointment", locationAware: true)
+    }
+    if has(["family", "kids", "wife", "husband", "date night"]) {
+        return TaskCategoryStyle(icon: "house.fill", color: .blue, descriptor: "Personal")
     }
     return TaskCategoryStyle(icon: "checkmark.circle.fill", color: DesignTokens.Color.accent, descriptor: "Task")
 }
 
 /// "Why This Recommendation?" — fetches the structured explanation lazily on tap (so Now stays
 /// instant and we only spend an LLM call when asked), then presents it as a sheet.
-private struct WhyThis: View {
+struct WhyThis: View {
     let load: () async -> RecommendationExplanation?
 
     @State private var loading = false
@@ -364,7 +368,7 @@ private struct WhyThis: View {
     }
 }
 
-private struct RecommendationExplanationSheet: View {
+struct RecommendationExplanationSheet: View {
     let explanation: RecommendationExplanation
     @Environment(\.dismiss) private var dismiss
 
@@ -443,7 +447,7 @@ private struct RecommendationExplanationSheet: View {
 }
 
 /// Renders a tiny bullet before the text.
-private struct BulletLabelStyle: LabelStyle {
+struct BulletLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Spacing.sm) {
             Image(systemName: "circle.fill")

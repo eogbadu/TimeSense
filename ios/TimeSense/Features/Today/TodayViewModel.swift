@@ -30,6 +30,8 @@ enum TodayUiState {
 @MainActor
 final class TodayViewModel: ObservableObject {
     @Published var uiState: TodayUiState = .idle
+    /// The current best-next-action (same as Now) — shown in the "AI Recommended Now" card.
+    @Published var recommendation: NowContext?
 
     var tasks: [TimelineTask] {
         if case .loaded(let items) = uiState { return items }
@@ -37,6 +39,20 @@ final class TodayViewModel: ObservableObject {
     }
 
     var doneCount: Int { tasks.filter { $0.status == "done" }.count }
+
+    /// Lazily fetch the structured explanation for the recommended task.
+    func fetchExplanation(taskId: String) async -> RecommendationExplanation? {
+        return try? await APIClient.shared.get("/api/v1/now/why?task_id=\(taskId)")
+    }
+
+    func markDone(taskId: String) async {
+        struct StatusUpdate: Encodable { let status: String }
+        struct Resp: Decodable { let id: String }
+        let _: Resp? = try? await APIClient.shared.patch(
+            "/api/v1/tasks/\(taskId)", body: StatusUpdate(status: "done")
+        )
+        await load()
+    }
 
     /// Undo an auto-placed time — the task becomes untimed again.
     func unschedule(taskId: String) async {
@@ -53,6 +69,7 @@ final class TodayViewModel: ObservableObject {
         do {
             let today = DateFormatter.shortDate.string(from: Date())
             let items: [TimelineTask] = try await APIClient.shared.get("/api/v1/timeline/today?date=\(today)")
+            recommendation = try? await APIClient.shared.get("/api/v1/now")
             uiState = .loaded(items)
             updateWidgetSnapshot(with: items)
         } catch {
