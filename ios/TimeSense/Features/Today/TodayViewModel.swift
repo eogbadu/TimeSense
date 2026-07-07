@@ -54,6 +54,12 @@ final class TodayViewModel: ObservableObject {
         await load()
     }
 
+    /// Delete a task that's completed or no longer viable (soft-delete on the backend).
+    func deleteTask(taskId: String) async {
+        try? await APIClient.shared.delete("/api/v1/tasks/\(taskId)")
+        await load()
+    }
+
     /// Undo an auto-placed time — the task becomes untimed again.
     func unschedule(taskId: String) async {
         struct Empty: Encodable {}

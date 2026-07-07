@@ -6633,6 +6633,37 @@ TICKETS = [
             h2("Next Ticket"), p("Proximity-to-errand matching; commute-window signals; APNs remote push."),
         ),
     },
+
+    {
+        "summary": "TIME-109: Delete tasks from Today (long-press menu)",
+        "labels": ["ios", "tasks", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Let the user remove tasks that are completed or no longer viable."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "TodayViewModel.deleteTask -> DELETE /api/v1/tasks/{id} (existing soft-delete) -> reload",
+                "Smart Plan rows get a long-press context menu: 'Mark done' (if pending) + 'Delete task'",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Delete affordance only on Today for now (Now cards could get it later); soft-delete (recoverable server-side), no undo UI"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Today/TodayView.swift, TodayViewModel.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Long-pressing a Today task offers Delete; deleting removes it and reloads; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("DELETE /tasks/{id} (existing), TIME-092 (Today Smart Plan)."),
+            divider(),
+            h2("Next Ticket"), p("Delete on Now cards; swipe-to-delete; undo."),
+        ),
+    },
 ]
 
 
