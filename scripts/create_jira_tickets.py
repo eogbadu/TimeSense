@@ -6664,6 +6664,51 @@ TICKETS = [
             h2("Next Ticket"), p("Delete on Now cards; swipe-to-delete; undo."),
         ),
     },
+
+    {
+        "summary": "TIME-110: Location always factored — errands never lead while home",
+        "labels": ["backend", "ios", "location", "recommendations", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("Bug: at home at 5pm, the app recommended 'Go to Walmart' (an errand you cannot do "
+              "from home). Two causes: the app never told the backend it was home (no enter event "
+              "fires when you're already there), and the at-home errand demotion was too soft."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "iOS: post the current place on EVERY geofence state determination (incl. seed/sync "
+                "on save + relaunch), so the backend knows you're home even without leaving/returning; "
+                "seeds never touch lastRegionState so they can't dedup a real event",
+                "Backend: at home, errands sink below every non-errand (delta n+1) — they can never be "
+                "the top pick while home; when out, errands still surface",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No true travel-time/geo-distance modelling yet (heuristic: at home => errands aren't "
+                "doable now); if ALL tasks are errands, one still leads (nothing else to do)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Core/Location/LocationService.swift",
+                "backend: api/v1/now.py, tests/test_location.py",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "A due-now high-priority errand does NOT lead while home (sinks below a home-doable "
+                "task); still surfaces when out; suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_location.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-108 (location shapes recommendation)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-111 swipe-to-delete; later: real travel-time modelling."),
+        ),
+    },
 ]
 
 

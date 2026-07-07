@@ -126,18 +126,23 @@ _ERRAND_CATS = {"shopping", "errand", "appointment", "travel"}
 
 
 async def _location_rerank(db: AsyncSession, user, ranked: list, now: datetime) -> list:
-    """Nudge the order by the user's current place: when out and about, surface errands/location
-    tasks; when home, push them down (you'd have to leave). Keeps the scorer's order as the tiebreak."""
+    """Reorder by the user's current place. When at home, an errand isn't actually doable (you'd have
+    to leave), so errands drop below everything you *can* do from here — they should never be the top
+    recommendation while you're home. When out and about, errands surface. The scorer order is the
+    tiebreak, and order within each group is preserved."""
     state = await UserLocationRepository(db).get_current(user.id, now)
     if state is None:
         return ranked
-    out = (state.place_name is None) or (not state.is_home)   # away, or at a non-home place
+    at_home = (state.place_name is not None) and state.is_home
+    out = not at_home   # away, or at a non-home place — a fine time for errands
+    n = len(ranked)
     scored = []
     for i, task in enumerate(ranked):
         is_errand = infer_category(task.title) in _ERRAND_CATS
         delta = 0
         if is_errand:
-            delta = -2 if out else 2   # out → errands earlier; home → errands later
+            # At home: sink errands below every non-errand (you can't do them now). Out: surface them.
+            delta = -2 if out else (n + 1)
         scored.append((i + delta, i, task))
     scored.sort(key=lambda x: (x[0], x[1]))
     return [t for _, _, t in scored]

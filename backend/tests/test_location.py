@@ -58,6 +58,31 @@ async def test_location_rerank_promotes_errand_when_out(client, db_session):
         await client.post("/api/v1/location/place", headers={"Authorization": "Bearer t"},
                           json={"place_name": "Home", "is_home": True})
         home = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
-    # when out, the errand should outrank the focus task; at home it shouldn't lead
+    # when out, the errand should outrank the focus task; at home it must not lead (you'd have to
+    # leave — an errand should never be the top pick while home).
     assert "groceries" in out.json()["best_task"]["title"].lower()
     assert "groceries" not in home.json()["best_task"]["title"].lower()
+
+
+@pytest.mark.anyio
+async def test_at_home_errand_sinks_below_focus_even_when_higher_priority(client, db_session):
+    """The reported bug: a due-now errand was recommended while home. It must sink below any
+    home-doable task even if the errand has higher priority/urgency."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+    from datetime import datetime, timezone
+
+    user, _ = await UserService(db_session).get_or_create_user(USER.uid, USER.email)
+    db_session.add_all([
+        # urgent errand (due now, top priority) + a lower-priority focus task
+        Task(user_id=user.id, title="Go to Walmart", status="pending", priority=1,
+             due_at=datetime.now(timezone.utc)),
+        Task(user_id=user.id, title="Draft the essay", status="pending", priority=4),
+    ])
+    await db_session.flush()
+
+    with _verify():
+        await client.post("/api/v1/location/place", headers={"Authorization": "Bearer t"},
+                          json={"place_name": "Home", "is_home": True})
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    assert "walmart" not in r.json()["best_task"]["title"].lower()
