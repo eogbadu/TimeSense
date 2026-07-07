@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-111 (Jira TIME-111): Swipe-to-reveal Done + Delete on Today
+
+User: wanted swipe-to-delete showing Delete + Mark done buttons. Added SwipeableRow (custom DragGesture — Smart Plan is a card, not a List, so .swipeActions isn't available) revealing green Done (hidden if already done) + red Delete; highPriorityGesture with horizontal-intent guard so vertical scroll still works; snaps open/closed; tapping a button runs markDone/deleteTask and closes. Replaced the long-press context menu. iOS BUILD SUCCEEDED.
+
 ## 2026-07-07 — TIME-110 (Jira TIME-110): Location always factored; errands never lead while home
 
 User bug: at home at 5pm, app recommended 'Go to Walmart' (an errand you can't do from home). Two causes fixed: (1) iOS never told the backend it was home — no enter event fires when already inside a region on save/launch. Now LocationService posts the current place on EVERY didDetermineState (incl. seed/sync from registerGeofence + reregisterGeofences requestState), split from notify; seeds never touch lastRegionState so they can't dedup a real relaunch event. (2) Backend _location_rerank: at home, errands now sink below every non-errand (delta n+1) so they can never be the top pick while home; out, errands still surface (-2). New test: due-now high-priority 'Go to Walmart' does not lead while home. Location tests 3; iOS BUILD SUCCEEDED.
