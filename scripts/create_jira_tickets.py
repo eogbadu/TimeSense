@@ -6978,6 +6978,56 @@ TICKETS = [
             h2("Next Ticket"), p("LLM explanation layer (final phase)."),
         ),
     },
+
+    {
+        "summary": "TIME-117: LLM explanation layer for the recommendation engine",
+        "labels": ["backend", "recommendations", "llm"],
+        "description": doc(
+            h2("Goal"),
+            p("Final engine phase: use the LLM ONLY to turn the already-selected recommendation into "
+              "friendly text. The LLM never chooses a recommendation and never invents facts; on any "
+              "failure we use deterministic fallback text. Also document GOOGLE_MAPS_API_KEY."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                ".env.example + release_checklist: GOOGLE_MAPS_API_KEY",
+                "llm/fallback_recommendation_text.py: deterministic LLMRecommendationText from the rec",
+                "llm/generate_recommendation_text.py: strict prompt (context summary + reason codes + "
+                "travel/place if present + tone) -> JSON {notification_title, notification_body, "
+                "explanation}; parse; fallback on any error. Cannot change the action (returns text only)",
+                "run_engine gains an optional gateway -> populates the recommendation's message/"
+                "explanation via the LLM (deterministic without a gateway)",
+                "tests: fallback shape; LLM parse success; LLM failure/garbage -> fallback; action "
+                "unchanged regardless of LLM output",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "LLM does not select/rank; /now stays LLM-free (fast); /now/why keeps its existing "
+                "structured explainer",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/recommendation/llm/** (new), engine.py; backend/.env.example, "
+                "docs/launch/release_checklist.md; tests/test_recommendation_engine_llm.py",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "generate_recommendation_text returns parsed text with a working gateway and falls "
+                "back deterministically on failure; the selected action_type is never changed by the LLM",
+                "run_engine(gateway=...) sets human text; full suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_recommendation_engine_llm.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-112/113 (engine), the LLM gateway."),
+            divider(),
+            h2("Next Ticket"), p("Optional: expose a full-engine /now/recommendation endpoint; adopt LLM text for push."),
+        ),
+    },
 ]
 
 

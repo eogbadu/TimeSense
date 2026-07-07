@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-117 (Jira TIME-117): LLM explanation layer (final engine phase)
+
+Built the spec's phase 12. llm/fallback_recommendation_text.fallback_text(rec) — deterministic LLMRecommendationText (title/body/explanation), enriched with a KNOWN travel time when present. llm/generate_recommendation_text.generate_recommendation_text(rec, ctx, gateway) — strict system prompt (rewrite-only; never change the action; never invent distances/times/open-closed/conflicts/preferences; return strict JSON title<=6w/body<=24w/explanation<=40w); builds context facts (part of day, free block, place, destination, KNOWN travel time, tone); parses JSON (handles markdown fences); any exception/empty/unparseable -> fallback. engine.run_engine gained optional gateway -> populates rec.title/message/explanation from the LLM (action_type/domain unchanged — LLM returns text only). Documented GOOGLE_MAPS_API_KEY in backend/.env.example + docs/launch/release_checklist.md. 7 new tests (fallback shape; JSON parse incl. markdown; failure/garbage->fallback; run_engine(gateway) sets text but NOT action; no-gateway deterministic). Suite 384. /now stays LLM-free (fast); /now/why keeps its structured explainer. This COMPLETES the recommendation-engine-build-spec.md (phases 1-12).
+
 ## 2026-07-07 — TIME-116 (Jira TIME-116): iOS syncs saved places to /places
 
 Added APIClient.put; LocationService.syncPlaces() PUTs the saved places (name, place_type inferred from name keywords, lat/lng, is_preferred) to /api/v1/places, called after savePlace/removePlace and on start(). This populates the backend user_places so the engine (TIME-115) can resolve errands + compute travel time. Only a GOOGLE_MAPS_API_KEY on the server remains for real driving-time. iOS BUILD SUCCEEDED. Completes the location-aware engine path end-to-end (pending API key).
