@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-106 (Jira TIME-106): Geofence radius 150->100m
+
+User point: a smaller radius crosses the exit boundary sooner, so departures fire earlier. Reduced SavedPlace radius 150->100m — the practical reliability floor (iOS accuracy ~50-150m; below 100m brings jitter/false triggers, mitigated by TIME-105's state-verification dedup). iOS exit hysteresis (~150-200m beyond boundary) is inherent so radius only helps at the margin. iOS BUILD SUCCEEDED.
+
 ## 2026-07-07 — TIME-105 (Jira TIME-105): Reliable geofence notifications
 
 User report: leaving home fired no notification, and arriving fired 'you left home' (a stale/late exit event delivered on return). Fixed by not trusting raw enter/exit events: on didEnter/didExit we now call requestState(for:) and act on didDetermineState (authoritative inside/outside), tracking lastRegionState per region and notifying only on a real change (dedups contradictory late events). Seed state on save (no spurious alert) but not on relaunch (so a background-relaunch event still fires once). Radius 130->150m. iOS exit latency (minutes) is inherent but events are now correct. iOS BUILD SUCCEEDED.

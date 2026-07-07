@@ -90,7 +90,7 @@ final class LocationService: NSObject, ObservableObject {
         var updated = places.filter { $0.name.caseInsensitiveCompare(name) != .orderedSame }
         let place = SavedPlace(
             id: UUID().uuidString, name: name,
-            latitude: loc.coordinate.latitude, longitude: loc.coordinate.longitude, radius: 150
+            latitude: loc.coordinate.latitude, longitude: loc.coordinate.longitude, radius: 100
         )
         updated.append(place)
         places = updated
