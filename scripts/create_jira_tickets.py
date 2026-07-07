@@ -6545,6 +6545,39 @@ TICKETS = [
             h2("Next Ticket"), p("Location-informed recommendation server-side."),
         ),
     },
+
+    {
+        "summary": "TIME-107: Save any number of named places (not just Home/Work)",
+        "labels": ["ios", "location", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Let the user save arbitrary named places, not only the two fixed Home/Work buttons."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "PlacesSettingsView 'Add this location': a name text field + 'Save here' button, plus "
+                "quick-pick chips (Home/Work/Gym/School/Errands) that prefill the name",
+                "Name-aware icons on saved rows; save disabled until a name + a location fix exist",
+                "Cap at iOS's 20-region limit (UI note + service guard); trims/validates the name",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No map picker (saves the current location); no per-place radius editing"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Settings/PlacesSettingsView.swift, Core/Location/LocationService.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["User can save multiple custom-named places; each gets a geofence; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-103 (location subsystem)."),
+            divider(),
+            h2("Next Ticket"), p("Location-informed recommendation server-side."),
+        ),
+    },
 ]
 
 
