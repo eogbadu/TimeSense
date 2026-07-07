@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-06] TIME-097: Working Hours redesigned — an explainer banner ('why this matters'), Start/End rows, and a Repeat day selector (Mon-Fri)
 - [2026-07-06] TIME-096: Renamed 'Learned Assumptions' to 'Learned Patterns' and redesigned it — explainer banner + icon rows with confidence/source + an add button
 - [2026-07-06] TIME-095: Insights locked state now previews the AI value — a 'Your AI Insights' banner + sample preview cards (best focus window, patterns, schedule balance, routine consistency) instead of a bare paywall
 - [2026-07-06] TIME-094: Redesigned Capture to feel AI-native — hero capture icon, clearer AI copy, quick type chips, a voice affordance, and a 'TimeSense can detect' row

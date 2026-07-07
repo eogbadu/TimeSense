@@ -245,44 +245,99 @@ struct WorkingHoursSettingsView: View {
         return "\(hour12):00 \(period)"
     }
 
+    private let days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    @State private var selectedDays: Set<String> = ["Mon", "Tue", "Wed", "Thu", "Fri"]
+
     var body: some View {
-        Form {
-            Section {
-                Picker("Start", selection: $start) {
-                    ForEach(0..<23) { h in Text(label(h)).tag(h) }
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+                Text("TimeSense uses your working hours to decide when tasks are appropriate and to protect your personal time.")
+                    .font(DesignTokens.Typography.subheadline)
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DesignTokens.Spacing.lg)
+                    .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous).fill(DesignTokens.Color.accent.opacity(0.10)))
+
+                VStack(spacing: 0) {
+                    hourRow(title: "Start", selection: $start, range: Array(0..<23))
+                    Divider().padding(.leading, DesignTokens.Spacing.md)
+                    hourRow(title: "End", selection: $end, range: Array(1..<24))
+                    Divider().padding(.leading, DesignTokens.Spacing.md)
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                        Text("Repeat")
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                        HStack(spacing: DesignTokens.Spacing.xs) {
+                            ForEach(days, id: \.self) { day in
+                                let on = selectedDays.contains(day)
+                                Button {
+                                    if on { selectedDays.remove(day) } else { selectedDays.insert(day) }
+                                } label: {
+                                    Text(day)
+                                        .font(DesignTokens.Typography.caption.weight(.semibold))
+                                        .foregroundColor(on ? .white : DesignTokens.Color.textSecondary)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 40)
+                                        .background(Circle().fill(on ? DesignTokens.Color.accent : DesignTokens.Color.surface))
+                                        .overlay(Circle().stroke(DesignTokens.Color.textSecondary.opacity(0.2), lineWidth: on ? 0 : 1))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(DesignTokens.Spacing.md)
                 }
-                Picker("End", selection: $end) {
-                    ForEach(1..<24) { h in Text(label(h)).tag(h) }
+                .cardStyle()
+
+                if end <= start {
+                    Text("End time must be after start time.")
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundColor(DesignTokens.Color.destructive)
+                        .padding(.horizontal, DesignTokens.Spacing.xs)
                 }
-            } header: {
-                Text("When are you available?")
-            } footer: {
-                Text("TimeSense only auto-schedules tasks between these hours.")
-            }
-            if end <= start {
-                Text("End time must be after start time.")
-                    .font(DesignTokens.Typography.footnote)
-                    .foregroundColor(DesignTokens.Color.destructive)
-            }
-            Section {
+
                 Button {
                     Task { await save() }
                 } label: {
                     HStack {
-                        Text(saved ? "Saved" : "Save")
-                        Spacer()
-                        if saving { ProgressView() }
-                        else if saved { Image(systemName: "checkmark").foregroundColor(DesignTokens.Color.success) }
+                        if saving { ProgressView().tint(.white) }
+                        Text(saved ? "Saved" : "Save").font(DesignTokens.Typography.headline)
                     }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DesignTokens.Spacing.md)
+                    .background(Capsule().fill(DesignTokens.Color.accent))
                 }
                 .disabled(saving || end <= start)
+                .opacity(end <= start ? 0.5 : 1)
+                .padding(.top, DesignTokens.Spacing.sm)
             }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.top, DesignTokens.Spacing.sm)
+            .padding(.bottom, DesignTokens.Spacing.xxl)
         }
+        .background(DesignTokens.Color.background)
         .navigationTitle("Working Hours")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .onChange(of: start) { _, _ in saved = false }
         .onChange(of: end) { _, _ in saved = false }
+    }
+
+    private func hourRow(title: String, selection: Binding<Int>, range: [Int]) -> some View {
+        HStack {
+            Text(title)
+                .font(DesignTokens.Typography.body)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+            Spacer()
+            Picker(title, selection: selection) {
+                ForEach(range, id: \.self) { h in Text(label(h)).tag(h) }
+            }
+            .labelsHidden()
+            .tint(DesignTokens.Color.accent)
+        }
+        .padding(DesignTokens.Spacing.md)
     }
 
     private func load() async {
