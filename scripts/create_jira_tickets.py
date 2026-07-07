@@ -6945,6 +6945,39 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-116: iOS syncs saved places (with coords) to /places; then LLM explanation."),
         ),
     },
+
+    {
+        "summary": "TIME-116: iOS syncs saved places (with coordinates) to the backend",
+        "labels": ["ios", "location", "maps"],
+        "description": doc(
+            h2("Goal"),
+            p("Populate the backend user_places so the engine's location features actually work on "
+              "device — the last piece before only an API key is needed."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "APIClient.put helper",
+                "LocationService.syncPlaces() PUTs saved places (name, inferred place_type, lat/lng, "
+                "is_preferred) to /api/v1/places; called after save/remove and on launch",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Real driving-time still needs a GOOGLE_MAPS_API_KEY on the backend; LLM explanation later"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/API/APIClient.swift, Core/Location/LocationService.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Saving/removing a place syncs the full set to /places; launch re-syncs; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-115 (/places + provider)."),
+            divider(),
+            h2("Next Ticket"), p("LLM explanation layer (final phase)."),
+        ),
+    },
 ]
 
 

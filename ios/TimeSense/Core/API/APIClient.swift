@@ -65,6 +65,10 @@ final class APIClient {
         try await request(method: "PATCH", path: path, body: body)
     }
 
+    func put<B: Encodable, T: Decodable>(_ path: String, body: B) async throws -> T {
+        try await request(method: "PUT", path: path, body: body)
+    }
+
     func delete(_ path: String) async throws {
         let _: EmptyResponse = try await request(method: "DELETE", path: path, body: nil as EmptyBody?)
     }
