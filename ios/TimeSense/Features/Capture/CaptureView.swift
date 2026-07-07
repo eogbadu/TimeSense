@@ -3,70 +3,165 @@ import SwiftUI
 struct CaptureView: View {
     @StateObject private var viewModel = CaptureViewModel()
     @State private var captureText: String = ""
+    @State private var selectedChip: String?
+    @State private var showVoiceComingSoon = false
     @FocusState private var isInputFocused: Bool
+
+    private let chips = ["Task", "Reminder", "Schedule", "Errand", "Idea"]
+    private let detectors: [(icon: String, label: String)] = [
+        ("clock", "Time"),
+        ("gauge.medium", "Priority"),
+        ("tray.full.fill", "Task type"),
+        ("checkmark.seal.fill", "Schedule fit"),
+    ]
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: DesignTokens.Spacing.lg) {
-                Spacer()
+            ScrollView {
+                VStack(spacing: DesignTokens.Spacing.lg) {
+                    heroIcon.padding(.top, DesignTokens.Spacing.lg)
 
-                VStack(spacing: DesignTokens.Spacing.md) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 48))
-                        .foregroundColor(DesignTokens.Color.accent)
-
-                    Text("What's on your mind?")
-                        .font(DesignTokens.Typography.title2)
-                        .foregroundColor(DesignTokens.Color.textPrimary)
-
-                    Text("Speak or type — TimeSense will figure out the rest.")
-                        .font(DesignTokens.Typography.callout)
-                        .foregroundColor(DesignTokens.Color.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, DesignTokens.Spacing.xl)
-                }
-
-                VStack(spacing: DesignTokens.Spacing.sm) {
-                    TextField("e.g. Call dentist tomorrow at 2pm", text: $captureText, axis: .vertical)
-                        .font(DesignTokens.Typography.body)
-                        .padding(DesignTokens.Spacing.md)
-                        .background(DesignTokens.Color.surface)
-                        .cornerRadius(DesignTokens.Radius.lg)
-                        .lineLimit(3...6)
-                        .focused($isInputFocused)
-                        .disabled(viewModel.uiState == .loading)
-
-                    Button {
-                        Task { await submitCapture() }
-                    } label: {
-                        if viewModel.uiState == .loading {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 22)
-                        } else {
-                            Text("Capture")
-                                .primaryButtonStyle()
-                        }
+                    VStack(spacing: DesignTokens.Spacing.sm) {
+                        Text("What's on your mind?")
+                            .font(DesignTokens.Typography.title)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                        Text("Speak or type naturally. TimeSense uses AI to turn it into tasks, reminders, and plans.")
+                            .font(DesignTokens.Typography.callout)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, DesignTokens.Spacing.md)
                     }
-                    .disabled(
-                        captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || viewModel.uiState == .loading
-                    )
-                    .opacity(
-                        captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1.0
-                    )
+
+                    inputBox
+                    chipsRow
+                    captureButton
+                    statusView
+                    detectSection
                 }
-                .padding(.horizontal, DesignTokens.Spacing.md)
-
-                statusView
-
-                Spacer()
+                .padding(.horizontal, DesignTokens.Spacing.lg)
+                .padding(.bottom, DesignTokens.Spacing.xxl)
             }
             .background(DesignTokens.Color.background)
             .navigationTitle("Capture")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear { isInputFocused = true }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Image(systemName: "sparkles").foregroundColor(DesignTokens.Color.accent)
+                }
+            }
+            .alert("Voice capture is coming soon", isPresented: $showVoiceComingSoon) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("For now, type your thought and TimeSense will structure it.")
+            }
         }
+    }
+
+    private var heroIcon: some View {
+        ZStack {
+            Circle()
+                .fill(DesignTokens.Color.accent)
+                .frame(width: 110, height: 110)
+                .shadow(color: DesignTokens.Color.accent.opacity(0.35), radius: 20, y: 8)
+            Image(systemName: "waveform")
+                .font(.system(size: 40, weight: .semibold))
+                .foregroundColor(.white)
+        }
+    }
+
+    private var inputBox: some View {
+        HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
+            TextField("e.g. Call dentist tomorrow at 2pm", text: $captureText, axis: .vertical)
+                .font(DesignTokens.Typography.body)
+                .lineLimit(1...5)
+                .focused($isInputFocused)
+                .disabled(viewModel.uiState == .loading)
+            Button { showVoiceComingSoon = true } label: {
+                Image(systemName: "mic.fill")
+                    .foregroundColor(DesignTokens.Color.accent)
+            }
+        }
+        .padding(DesignTokens.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
+                .fill(DesignTokens.Color.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
+                .stroke(DesignTokens.Color.textSecondary.opacity(0.15), lineWidth: 1)
+        )
+    }
+
+    private var chipsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                ForEach(chips, id: \.self) { chip in
+                    let selected = selectedChip == chip
+                    Button {
+                        selectedChip = selected ? nil : chip
+                    } label: {
+                        Text(chip)
+                            .font(DesignTokens.Typography.footnote.weight(.medium))
+                            .foregroundColor(selected ? .white : DesignTokens.Color.accent)
+                            .padding(.horizontal, DesignTokens.Spacing.md)
+                            .padding(.vertical, DesignTokens.Spacing.sm)
+                            .background(
+                                Capsule().fill(selected ? DesignTokens.Color.accent : DesignTokens.Color.surface)
+                            )
+                            .overlay(Capsule().stroke(DesignTokens.Color.accent.opacity(0.4), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 2)
+        }
+    }
+
+    private var captureButton: some View {
+        Button {
+            Task { await submitCapture() }
+        } label: {
+            Group {
+                if viewModel.uiState == .loading {
+                    ProgressView().tint(.white)
+                } else {
+                    Text("Capture").font(DesignTokens.Typography.headline)
+                }
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, DesignTokens.Spacing.md)
+            .background(Capsule().fill(DesignTokens.Color.accent))
+        }
+        .disabled(
+            captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || viewModel.uiState == .loading
+        )
+        .opacity(captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1.0)
+    }
+
+    private var detectSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Text("TimeSense can detect")
+                .font(DesignTokens.Typography.headline)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+            HStack(spacing: 0) {
+                ForEach(detectors, id: \.label) { d in
+                    VStack(spacing: DesignTokens.Spacing.xs) {
+                        Image(systemName: d.icon)
+                            .font(.title3)
+                            .foregroundColor(DesignTokens.Color.accent)
+                        Text(d.label)
+                            .font(DesignTokens.Typography.caption)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, DesignTokens.Spacing.sm)
     }
 
     @ViewBuilder
@@ -76,25 +171,21 @@ struct CaptureView: View {
             EmptyView()
         case .success(let title):
             HStack(spacing: DesignTokens.Spacing.sm) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
                 Text("Captured: \(title)")
                     .font(DesignTokens.Typography.callout)
                     .foregroundColor(DesignTokens.Color.textPrimary)
                     .lineLimit(1)
             }
-            .padding(.horizontal, DesignTokens.Spacing.md)
             .transition(.opacity)
         case .error(let message):
             HStack(spacing: DesignTokens.Spacing.sm) {
-                Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundColor(DesignTokens.Color.destructive)
+                Image(systemName: "exclamationmark.circle.fill").foregroundColor(DesignTokens.Color.destructive)
                 Text(message)
                     .font(DesignTokens.Typography.callout)
                     .foregroundColor(DesignTokens.Color.destructive)
                     .lineLimit(2)
             }
-            .padding(.horizontal, DesignTokens.Spacing.md)
             .transition(.opacity)
         }
     }
@@ -104,8 +195,8 @@ struct CaptureView: View {
         await viewModel.submit(rawInput: text)
         if case .success = viewModel.uiState {
             captureText = ""
+            selectedChip = nil
             isInputFocused = false
-            // Auto-clear success banner after 3 seconds
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             viewModel.reset()
         }
