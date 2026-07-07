@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-107 (Jira TIME-107): Save any number of named places
+
+User: could only save Home/Work. Replaced the two fixed buttons in PlacesSettingsView with an 'Add this location' card: a name TextField + 'Save here' button + quick-pick chips (Home/Work/Gym/School/Errands) that prefill the name. Name-aware row icons; save gated on name+location; capped at iOS's 20-region limit (UI note + LocationService.savePlace guard, trims/validates the name). The service already accepted arbitrary names. iOS BUILD SUCCEEDED.
+
 ## 2026-07-07 — TIME-106 (Jira TIME-106): Geofence radius 150->100m
 
 User point: a smaller radius crosses the exit boundary sooner, so departures fire earlier. Reduced SavedPlace radius 150->100m — the practical reliability floor (iOS accuracy ~50-150m; below 100m brings jitter/false triggers, mitigated by TIME-105's state-verification dedup). iOS exit hysteresis (~150-200m beyond boundary) is inherent so radius only helps at the margin. iOS BUILD SUCCEEDED.

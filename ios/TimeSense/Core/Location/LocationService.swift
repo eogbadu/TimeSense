@@ -85,8 +85,12 @@ final class LocationService: NSObject, ObservableObject {
 
     // MARK: - Saved places
 
-    func savePlace(named name: String) {
-        guard let loc = manager.location else { return }
+    func savePlace(named rawName: String) {
+        let name = rawName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, let loc = manager.location else { return }
+        let isNew = !places.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        // iOS monitors at most 20 regions; don't exceed it.
+        guard !isNew || places.count < 20 else { return }
         var updated = places.filter { $0.name.caseInsensitiveCompare(name) != .orderedSame }
         let place = SavedPlace(
             id: UUID().uuidString, name: name,

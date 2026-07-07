@@ -3,6 +3,14 @@ import SwiftUI
 
 struct PlacesSettingsView: View {
     @ObservedObject private var location = LocationService.shared
+    @State private var newPlaceName = ""
+
+    private let quickNames = ["Home", "Work", "Gym", "School", "Errands"]
+    private var atCap: Bool { location.places.count >= 20 }
+    private var canSave: Bool {
+        !newPlaceName.trimmingCharacters(in: .whitespaces).isEmpty
+            && location.currentLocation != nil && !atCap
+    }
 
     var body: some View {
         ScrollView {
@@ -61,7 +69,7 @@ struct PlacesSettingsView: View {
                     VStack(spacing: 0) {
                         ForEach(Array(location.places.enumerated()), id: \.element.id) { idx, place in
                             HStack(spacing: DesignTokens.Spacing.md) {
-                                Image(systemName: place.name.lowercased() == "home" ? "house.fill" : "mappin.circle.fill")
+                                Image(systemName: placeIcon(place.name))
                                     .font(.title3).foregroundColor(DesignTokens.Color.accent).frame(width: 28)
                                 Text(place.name).font(DesignTokens.Typography.body).foregroundColor(DesignTokens.Color.textPrimary)
                                 Spacer()
@@ -77,17 +85,61 @@ struct PlacesSettingsView: View {
                 }
 
                 if location.isAuthorized {
-                    HStack(spacing: DesignTokens.Spacing.md) {
-                        savePlaceButton("Home", icon: "house.fill")
-                        savePlaceButton("Work", icon: "briefcase.fill")
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                        Text("Add this location")
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: DesignTokens.Spacing.sm) {
+                                ForEach(quickNames, id: \.self) { name in
+                                    Button { newPlaceName = name } label: {
+                                        Text(name)
+                                            .font(DesignTokens.Typography.footnote.weight(.medium))
+                                            .foregroundColor(DesignTokens.Color.accent)
+                                            .padding(.horizontal, DesignTokens.Spacing.md)
+                                            .padding(.vertical, DesignTokens.Spacing.sm)
+                                            .background(Capsule().stroke(DesignTokens.Color.accent.opacity(0.4), lineWidth: 1))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 2)
+                        }
+
+                        HStack(spacing: DesignTokens.Spacing.sm) {
+                            TextField("Name (e.g. Gym)", text: $newPlaceName)
+                                .font(DesignTokens.Typography.body)
+                                .padding(DesignTokens.Spacing.md)
+                                .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous).fill(DesignTokens.Color.surface))
+                                .overlay(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous).stroke(DesignTokens.Color.textSecondary.opacity(0.15), lineWidth: 1))
+                            Button {
+                                location.savePlace(named: newPlaceName.trimmingCharacters(in: .whitespaces))
+                                newPlaceName = ""
+                            } label: {
+                                Text("Save here")
+                                    .font(DesignTokens.Typography.headline)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                                    .padding(.vertical, DesignTokens.Spacing.md)
+                                    .background(Capsule().fill(DesignTokens.Color.accent))
+                            }
+                            .disabled(!canSave)
+                            .opacity(canSave ? 1 : 0.5)
+                        }
+
+                        if location.currentLocation == nil {
+                            Text("Getting your current location…")
+                                .font(DesignTokens.Typography.footnote)
+                                .foregroundColor(DesignTokens.Color.textSecondary)
+                        } else if atCap {
+                            Text("You've reached the maximum of 20 saved places. Remove one to add another.")
+                                .font(DesignTokens.Typography.footnote)
+                                .foregroundColor(DesignTokens.Color.textSecondary)
+                        }
                     }
-                    .disabled(location.currentLocation == nil)
-                    .opacity(location.currentLocation == nil ? 0.5 : 1)
-                    if location.currentLocation == nil {
-                        Text("Getting your current location…")
-                            .font(DesignTokens.Typography.footnote)
-                            .foregroundColor(DesignTokens.Color.textSecondary)
-                    }
+                    .padding(DesignTokens.Spacing.lg)
+                    .cardStyle()
                 }
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
@@ -100,16 +152,15 @@ struct PlacesSettingsView: View {
         .onAppear { location.requestOneTimeLocation() }
     }
 
-    private func savePlaceButton(_ name: String, icon: String) -> some View {
-        Button { location.savePlace(named: name) } label: {
-            Label("Save current as \(name)", systemImage: icon)
-                .font(DesignTokens.Typography.footnote.weight(.semibold))
-                .foregroundColor(DesignTokens.Color.accent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DesignTokens.Spacing.md)
-                .background(Capsule().stroke(DesignTokens.Color.accent, lineWidth: 1))
+    private func placeIcon(_ name: String) -> String {
+        switch name.lowercased() {
+        case "home": return "house.fill"
+        case "work", "office": return "briefcase.fill"
+        case "gym": return "figure.run"
+        case "school": return "graduationcap.fill"
+        case "errands": return "cart.fill"
+        default: return "mappin.circle.fill"
         }
-        .buttonStyle(.plain)
     }
 
     private var statusLabel: String {
