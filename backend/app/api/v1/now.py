@@ -14,13 +14,15 @@ from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.models.recommendation_event import RecommendationEvent
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
-from app.repositories.user_location_repository import UserLocationRepository
 from app.schemas.task import TaskResponse
+from app.services.recommendation.candidates.generate import generate_candidate_actions
+from app.services.recommendation.context_builder import build_user_context
+from app.services.recommendation.maps.factory import get_maps_provider
+from app.services.recommendation.maps.maps_skill_service import MapsSkillService
+from app.services.recommendation.selection.rank import rank_candidates
 from app.services.recommendation_explainer import build_explanation, compute_confidence
 from app.services.recommendation_service import RecommendationService
 from app.services.scheduling_service import SchedulingService
-from app.services.task_duration import infer_category
-from app.services.task_scorer import TaskScorer
 from app.services.usable_time_service import UsableTimeService
 from app.services.user_service import UserService
 
@@ -116,36 +118,33 @@ async def _ranked_candidates(db: AsyncSession, user, now: datetime):
     candidates = [t for t in (pending + overdue + unscheduled) if t.id not in suppressed]
     if not candidates:
         return [], usable_minutes, today_tasks
-    ranked = TaskScorer().rank(candidates, usable_minutes, now)
-    ranked = await _location_rerank(db, user, ranked, now)
+    ranked = await _engine_rank_tasks(db, user, candidates, now, usable_minutes)
     return ranked, usable_minutes, today_tasks
 
 
-# Location-relevant categories — worth doing while you're out.
-_ERRAND_CATS = {"shopping", "errand", "appointment", "travel"}
+async def _engine_rank_tasks(db: AsyncSession, user, candidates: list, now: datetime, usable_minutes: int) -> list:
+    """Order candidate Tasks using the deterministic recommendation engine (task + location domains),
+    then map the engine's ranked candidates back to the ORM Tasks. Any candidate the engine didn't
+    surface is safety-appended so best_task is never dropped."""
+    ctx, task_map = await build_user_context(db, user, candidates, now, usable_minutes)
+    maps = MapsSkillService(get_maps_provider())
+    actions = await generate_candidate_actions(ctx, maps, now)
+    ranked = rank_candidates(actions, ctx)
 
-
-async def _location_rerank(db: AsyncSession, user, ranked: list, now: datetime) -> list:
-    """Reorder by the user's current place. When at home, an errand isn't actually doable (you'd have
-    to leave), so errands drop below everything you *can* do from here — they should never be the top
-    recommendation while you're home. When out and about, errands surface. The scorer order is the
-    tiebreak, and order within each group is preserved."""
-    state = await UserLocationRepository(db).get_current(user.id, now)
-    if state is None:
-        return ranked
-    at_home = (state.place_name is not None) and state.is_home
-    out = not at_home   # away, or at a non-home place — a fine time for errands
-    n = len(ranked)
-    scored = []
-    for i, task in enumerate(ranked):
-        is_errand = infer_category(task.title) in _ERRAND_CATS
-        delta = 0
-        if is_errand:
-            # At home: sink errands below every non-errand (you can't do them now). Out: surface them.
-            delta = -2 if out else (n + 1)
-        scored.append((i + delta, i, task))
-    scored.sort(key=lambda x: (x[0], x[1]))
-    return [t for _, _, t in scored]
+    ordered: list = []
+    seen: set = set()
+    for scored in ranked:
+        c = scored.candidate
+        if c.domain not in ("task", "location") or not c.related_entity_ids:
+            continue
+        tid = c.related_entity_ids[0]
+        if tid in task_map and tid not in seen:
+            ordered.append(task_map[tid])
+            seen.add(tid)
+    for t in candidates:  # safety net — keep any task the engine didn't rank
+        if str(t.id) not in seen:
+            ordered.append(t)
+    return ordered
 
 
 def _fmt_local(dt: datetime, tz_name: str) -> str:

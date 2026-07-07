@@ -108,6 +108,7 @@ def _task_context(tasks: list[TaskItem], now: datetime) -> tuple[TaskContext, bo
 
     has_hard_deadline_today = bool(overdue or due_today)
     ctx = TaskContext(
+        all_tasks=active,
         overdue_tasks=overdue,
         due_today_tasks=due_today,
         high_priority_tasks=high,

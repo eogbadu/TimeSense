@@ -277,6 +277,7 @@ class CalendarContext:
 
 @dataclass(frozen=True)
 class TaskContext:
+    all_tasks: list[TaskItem] = field(default_factory=list)  # every active (non-completed) task
     overdue_tasks: list[TaskItem] = field(default_factory=list)
     due_today_tasks: list[TaskItem] = field(default_factory=list)
     high_priority_tasks: list[TaskItem] = field(default_factory=list)

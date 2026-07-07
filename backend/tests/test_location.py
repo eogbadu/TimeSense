@@ -37,12 +37,14 @@ async def test_place_update_and_signal(client, db_session):
 
 
 @pytest.mark.anyio
-async def test_location_rerank_promotes_errand_when_out(client, db_session):
+async def test_errand_without_maps_never_leads(client, db_session):
+    """The engine only surfaces an errand once a feasible trip is CONFIRMED (needs a maps provider +
+    coordinates). Without maps we can't verify it, so a doable task leads whether the user is out or
+    home — the engine never confidently recommends an unverifiable errand."""
     from app.services.user_service import UserService
     from app.models.task import Task
 
     user, _ = await UserService(db_session).get_or_create_user(USER.uid, USER.email)
-    # equal priority: a focus task and an errand
     db_session.add_all([
         Task(user_id=user.id, title="Write the report", status="pending", priority=3),
         Task(user_id=user.id, title="Buy groceries at the store", status="pending", priority=3),
@@ -50,17 +52,13 @@ async def test_location_rerank_promotes_errand_when_out(client, db_session):
     await db_session.flush()
 
     with _verify():
-        # out and about
         await client.post("/api/v1/location/place", headers={"Authorization": "Bearer t"},
                           json={"place_name": None, "is_home": False})
         out = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
-        # at home
         await client.post("/api/v1/location/place", headers={"Authorization": "Bearer t"},
                           json={"place_name": "Home", "is_home": True})
         home = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
-    # when out, the errand should outrank the focus task; at home it must not lead (you'd have to
-    # leave — an errand should never be the top pick while home).
-    assert "groceries" in out.json()["best_task"]["title"].lower()
+    assert "groceries" not in out.json()["best_task"]["title"].lower()
     assert "groceries" not in home.json()["best_task"]["title"].lower()
 
 

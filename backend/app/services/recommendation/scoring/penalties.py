@@ -47,6 +47,13 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
         if c.type in _WORKISH and not overdue:
             penalty += 40
 
+    # At home, an errand is only doable if we've confirmed a feasible trip — otherwise it must not
+    # lead (you'd have to leave, and we can't verify it fits). Restores the TIME-110 guarantee.
+    loc = ctx.location_context
+    if (c.domain == "location" and loc is not None and loc.location_category == "home"
+            and "TRIP_FITS_FREE_BLOCK" not in codes):
+        penalty += 60
+
     # Location feasibility / availability.
     if "TRIP_DOES_NOT_FIT_FREE_BLOCK" in codes:
         penalty += 70
