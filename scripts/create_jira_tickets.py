@@ -6424,9 +6424,7 @@ TICKETS = [
             h2("Verification"),
             code_block(
                 "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
-                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO
-"
-                "# on device: enable Always, save Home, leave/return the radius -> notification"
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
             ),
             divider(),
             h2("Dependencies"),
