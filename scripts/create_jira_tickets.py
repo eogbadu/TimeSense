@@ -6709,6 +6709,40 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-111 swipe-to-delete; later: real travel-time modelling."),
         ),
     },
+
+    {
+        "summary": "TIME-111: Swipe-to-reveal Done + Delete on Today tasks",
+        "labels": ["ios", "tasks", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Replace the long-press menu with a Mail-style left-swipe that reveals Done + Delete "
+              "buttons on each Today task."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "SwipeableRow: custom drag gesture (Smart Plan is a card, not a List, so "
+                ".swipeActions isn't available) revealing green Done (hidden if already done) + red "
+                "Delete; snaps open/closed; tapping a button runs the action and closes",
+                "Wired to markDone / deleteTask",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No full-swipe-to-commit; no undo toast; Today only"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Today/TodayView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Swiping a Today task left reveals Done + Delete; each works; vertical scroll still works; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-109 (delete), TIME-092 (Today)."),
+            divider(),
+            h2("Next Ticket"), p("Undo toast; swipe on Now cards."),
+        ),
+    },
 ]
 
 

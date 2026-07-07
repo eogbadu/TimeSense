@@ -176,21 +176,83 @@ private struct SmartPlanCard: View {
 
                 VStack(spacing: DesignTokens.Spacing.md) {
                     ForEach(group.tasks) { task in
-                        SmartPlanRow(task: task, onToggle: { onToggle(task.id) })
-                            .contextMenu {
-                                if task.status != "done" {
-                                    Button { onToggle(task.id) } label: { Label("Mark done", systemImage: "checkmark.circle") }
-                                }
-                                Button(role: .destructive) { onDelete(task.id) } label: {
-                                    Label("Delete task", systemImage: "trash")
-                                }
-                            }
+                        SwipeableRow(
+                            onDone: task.status == "done" ? nil : { onToggle(task.id) },
+                            onDelete: { onDelete(task.id) }
+                        ) {
+                            SmartPlanRow(task: task, onToggle: { onToggle(task.id) })
+                        }
                     }
                 }
             }
         }
         .padding(DesignTokens.Spacing.lg)
         .cardStyle()
+    }
+}
+
+/// Swipe left to reveal Done + Delete buttons (Mail-style). Used because the Smart Plan is a custom
+/// card, not a List (so `.swipeActions` isn't available).
+private struct SwipeableRow<Content: View>: View {
+    let onDone: (() -> Void)?
+    let onDelete: () -> Void
+    @ViewBuilder var content: () -> Content
+
+    @State private var offset: CGFloat = 0
+    @State private var startOffset: CGFloat = 0
+    @State private var isDragging = false
+
+    private let buttonWidth: CGFloat = 78
+    private var revealWidth: CGFloat { buttonWidth * (onDone == nil ? 1 : 2) }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            HStack(spacing: 0) {
+                if let onDone {
+                    actionButton("Done", "checkmark", .green) { close(); onDone() }
+                }
+                actionButton("Delete", "trash", DesignTokens.Color.destructive) { close(); onDelete() }
+            }
+            .frame(maxHeight: .infinity)
+
+            content()
+                .padding(.vertical, DesignTokens.Spacing.xs)
+                .background(DesignTokens.Color.surface)
+                .offset(x: offset)
+                .highPriorityGesture(
+                    DragGesture(minimumDistance: 14)
+                        .onChanged { value in
+                            guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                            if !isDragging { startOffset = offset; isDragging = true }
+                            offset = min(0, max(startOffset + value.translation.width, -revealWidth))
+                        }
+                        .onEnded { value in
+                            isDragging = false
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                                offset = offset < -revealWidth / 2 ? -revealWidth : 0
+                            }
+                        }
+                )
+        }
+        .clipped()
+    }
+
+    private func close() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { offset = 0 }
+    }
+
+    private func actionButton(_ title: String, _ icon: String, _ color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon).font(.body.weight(.semibold))
+                Text(title).font(.caption2.weight(.semibold))
+            }
+            .foregroundColor(.white)
+            .frame(width: buttonWidth)
+            .frame(maxHeight: .infinity)
+            .background(color)
+        }
+        .buttonStyle(.plain)
     }
 }
 
