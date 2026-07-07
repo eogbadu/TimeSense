@@ -11,30 +11,21 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Account") {
-                    NavigationLink { ProfileSettingsView() } label: {
-                        SettingsRowLabel(icon: "person.circle", title: "Profile", tint: .blue)
-                    }
-                    NavigationLink { SubscriptionSettingsView() } label: {
-                        SettingsRowLabel(icon: "crown.fill", title: "Subscription", tint: .yellow)
-                    }
-                }
-
-                Section("Preferences") {
-                    NavigationLink { NotificationsSettingsView() } label: {
-                        SettingsRowLabel(icon: "bell.fill", title: "Notifications", tint: .red)
-                    }
-                    NavigationLink { CalendarSettingsView() } label: {
-                        SettingsRowLabel(icon: "calendar", title: "Calendar", tint: .green)
-                    }
-                    NavigationLink { AppearanceSettingsView() } label: {
-                        SettingsRowLabel(icon: "paintbrush.fill", title: "Appearance", tint: .purple)
+                Section("AI Planning") {
+                    NavigationLink(destination: LearnedAssumptionsView()) {
+                        SettingsRowLabel(icon: "brain.head.profile", title: "Learned Patterns", tint: .teal)
                     }
                     NavigationLink { WorkingHoursSettingsView() } label: {
                         SettingsRowLabel(icon: "clock.fill", title: "Working Hours", tint: .indigo)
                     }
-                    NavigationLink(destination: LearnedAssumptionsView()) {
-                        SettingsRowLabel(icon: "brain.head.profile", title: "Learned Patterns", tint: .teal)
+                    NavigationLink { NotificationsSettingsView() } label: {
+                        SettingsRowLabel(icon: "bell.fill", title: "Notification Timing", tint: .red)
+                    }
+                }
+
+                Section("Integrations") {
+                    NavigationLink { CalendarSettingsView() } label: {
+                        SettingsRowLabel(icon: "calendar", title: "Calendar", tint: .green)
                     }
                     HealthConnectRow(healthService: healthService)
                 }
@@ -54,7 +45,16 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("About") {
+                Section("Account") {
+                    NavigationLink { ProfileSettingsView() } label: {
+                        SettingsRowLabel(icon: "person.circle", title: "Profile", tint: .blue)
+                    }
+                    NavigationLink { SubscriptionSettingsView() } label: {
+                        SettingsRowLabel(icon: "crown.fill", title: "Subscription", tint: .yellow)
+                    }
+                    NavigationLink { AppearanceSettingsView() } label: {
+                        SettingsRowLabel(icon: "paintbrush.fill", title: "Appearance", tint: .purple)
+                    }
                     NavigationLink { AboutSettingsView() } label: {
                         SettingsRowLabel(icon: "info.circle", title: "About TimeSense", tint: .gray)
                     }

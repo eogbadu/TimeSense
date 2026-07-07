@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-101 (Jira TIME-101): Settings home grouping
+
+Regrouped SettingsView into AI Planning (Learned Patterns, Working Hours, Notification Timing) / Integrations (Calendar, Health) / Privacy (Privacy & Consent, Delete My Data) / Account (Profile, Subscription, Appearance, About, Version). Sign Out stays at the bottom. Skipped non-existent rows (Recommendation Preferences, Notion, Location, separate Export) to avoid dead stubs. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-100 (Jira TIME-100): Subscription redesign
 
 Rebuilt SubscriptionSettingsView to the mockup: Current Plan card (Basic (Free)/Premium + leaf/crown icon); 'Basic includes' checklist; indigo 'Premium unlocks' card (AI best-next-action, integrations, weekly insights, proactive notifications, unlimited integrations); 'Upgrade to Premium' button + 'Plans managed in the App Store'. is_premium hides the upgrade CTA. StoreKit purchase still a follow-up. iOS BUILD SUCCEEDED.

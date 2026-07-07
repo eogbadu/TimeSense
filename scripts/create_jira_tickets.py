@@ -6294,6 +6294,43 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-101: Settings home grouping."),
         ),
     },
+
+    {
+        "summary": "TIME-101: Settings home grouping (AI Planning / Integrations / Privacy / Account)",
+        "labels": ["ios", "design", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Regroup the Settings home into structured, mature sections per the notes."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "AI Planning: Learned Patterns, Working Hours, Notification Timing",
+                "Integrations: Calendar, Health (Apple Health connect)",
+                "Privacy: Privacy & Consent, Delete My Data",
+                "Account: Profile, Subscription, Appearance, About, Version",
+                "Sign Out stays at the bottom",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Skipped rows for screens that don't exist yet (Recommendation Preferences, Notion, "
+                "Location, separate Export) to avoid dead stubs",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Settings/SettingsView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Settings shows the four grouped sections; all rows work; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-076 (Settings screens)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-102: Visual polish (contrast, chips, section headers)."),
+        ),
+    },
 ]
 
 
