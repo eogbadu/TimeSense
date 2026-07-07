@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-105 (Jira TIME-105): Reliable geofence notifications
+
+User report: leaving home fired no notification, and arriving fired 'you left home' (a stale/late exit event delivered on return). Fixed by not trusting raw enter/exit events: on didEnter/didExit we now call requestState(for:) and act on didDetermineState (authoritative inside/outside), tracking lastRegionState per region and notifying only on a real change (dedups contradictory late events). Seed state on save (no spurious alert) but not on relaunch (so a background-relaunch event still fires once). Radius 130->150m. iOS exit latency (minutes) is inherent but events are now correct. iOS BUILD SUCCEEDED.
+
 ## 2026-07-07 — TIME-104 (Jira TIME-104): Deep-link to iOS Settings for Always location
 
 User report: tapping 'Allow Always' did nothing — iOS silently no-ops requestAlwaysAuthorization (shows the upgrade prompt at most once, usually deferred). Verified the built Info.plist HAS the Always usage key + background mode (not a config bug). Added LocationService.openAppSettings() (UIApplication.openSettingsURLString) and made PlacesSettingsView's permission card state-based: notDetermined->Enable; WhenInUse->explainer + 'Open iOS Settings'; denied->Open Settings; always->all set. iOS BUILD SUCCEEDED.
