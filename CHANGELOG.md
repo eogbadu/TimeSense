@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] TIME-116: The app now syncs your saved places (with coordinates) to the backend, so the recommendation engine can resolve errands and compute real travel time (needs a maps API key set on the server)
 - [2026-07-07] TIME-115: Real maps provider — added a Google Maps provider (geocode/nearby/travel-time) gated by GOOGLE_MAPS_API_KEY, a user_places store + GET/PUT /api/v1/places to sync saved places with coordinates, and context plumbing (preferred destinations + travel origin from the current saved place). With a key + synced places, the engine computes real driving time and errands lead only when the trip actually fits
 - [2026-07-07] TIME-114: /now is now driven by the deterministic recommendation engine — best_task ordering comes from generate→score→rank (task + location domains) over a real UserContext (tasks, location, sleep-derived health, work hours), replacing the ad-hoc TaskScorer + rerank. An at-home errand with no confirmed travel never leads; existing behaviors (overdue, priority, suppression, wind-down) preserved
 - [2026-07-07] TIME-113: Recommendation engine decision core — multi-domain candidate generation (calendar/task/location/health/routine/planning/context-switch/fallback), deterministic weighted scoring + hard-rule penalties, ranking, selection, and push-eligibility. Errands that can't be confirmed feasible never win; meeting-soon suppresses deep work; night suppresses errands; poor sleep favors recovery. 17 new tests

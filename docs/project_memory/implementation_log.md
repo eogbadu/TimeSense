@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-116 (Jira TIME-116): iOS syncs saved places to /places
+
+Added APIClient.put; LocationService.syncPlaces() PUTs the saved places (name, place_type inferred from name keywords, lat/lng, is_preferred) to /api/v1/places, called after savePlace/removePlace and on start(). This populates the backend user_places so the engine (TIME-115) can resolve errands + compute travel time. Only a GOOGLE_MAPS_API_KEY on the server remains for real driving-time. iOS BUILD SUCCEEDED. Completes the location-aware engine path end-to-end (pending API key).
 ## 2026-07-07 — TIME-115 (Jira TIME-115): Real maps provider + coordinate plumbing
 
 Made the engine's location features real (gated). Added: config google_maps_api_key; user_places table (name/place_type/lat/lng/is_preferred per user; unique(user,name); migration w3x4y5z6a7b8) + UserPlaceRepository (list, replace_all) + GET/PUT /api/v1/places (app syncs its saved places WITH coords — deliberate named places, not a trail). GoogleMapsProvider (httpx async geocode/nearbysearch/textsearch/distancematrix; never raises → None/[]; available iff key). maps/factory.get_maps_provider() returns GoogleMapsProvider(key) when settings.google_maps_api_key set else NullMapsProvider. context_builder: preferred_places from user_places; travel ORIGIN = coords of the saved place the user is currently at (location.place_name match) — no live-GPS storage. 9 new tests (places sync/replace; context origin+preferred; end-to-end errand-leads-when-maps-confirms-fit via stub provider; provider gating + distance-matrix parse). Suite 377. Still dormant until a real key is set AND the app syncs places (iOS sync = TIME-116).

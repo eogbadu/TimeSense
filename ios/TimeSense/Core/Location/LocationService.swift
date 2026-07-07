@@ -45,6 +45,7 @@ final class LocationService: NSObject, ObservableObject {
             manager.allowsBackgroundLocationUpdates = true
             reregisterGeofences()
         }
+        if !places.isEmpty { syncPlaces() }   // keep the backend's copy in sync on launch
     }
 
     var currentLocation: CLLocation? { manager.location }
@@ -100,12 +101,14 @@ final class LocationService: NSObject, ObservableObject {
         places = updated
         persistPlaces()
         registerGeofence(place)
+        syncPlaces()
     }
 
     func removePlace(_ place: SavedPlace) {
         manager.stopMonitoring(for: region(for: place))
         places.removeAll { $0.id == place.id }
         persistPlaces()
+        syncPlaces()
     }
 
     // MARK: - Geofencing
@@ -155,6 +158,34 @@ final class LocationService: NSObject, ObservableObject {
     }
 
     // MARK: - On arrival → recompute → notify
+
+    /// Sync saved places (with coordinates) to the backend so the engine can resolve errands and
+    /// compute real travel time. These are deliberate, user-named places — not a location trail.
+    func syncPlaces() {
+        struct PlaceBody: Encodable {
+            let name: String; let place_type: String?
+            let latitude: Double; let longitude: Double; let is_preferred: Bool
+        }
+        struct Payload: Encodable { let places: [PlaceBody] }
+        let payload = Payload(places: places.map {
+            PlaceBody(name: $0.name, place_type: Self.placeType(for: $0.name),
+                      latitude: $0.latitude, longitude: $0.longitude, is_preferred: true)
+        })
+        Task {
+            struct Resp: Decodable { let name: String }
+            let _: [Resp]? = try? await APIClient.shared.put("/api/v1/places", body: payload)
+        }
+    }
+
+    private static func placeType(for name: String) -> String? {
+        let n = name.lowercased()
+        for (kw, type) in [("walmart", "walmart"), ("target", "target"), ("costco", "costco"),
+                           ("grocery", "grocery_store"), ("pharmacy", "pharmacy"),
+                           ("gym", "gym"), ("school", "school")] where n.contains(kw) {
+            return type
+        }
+        return nil
+    }
 
     /// Tell the backend the user's current place (nil = away) so it can shape the recommendation.
     private func postPlace(placeName: String?, isHome: Bool) async {
