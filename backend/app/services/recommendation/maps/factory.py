@@ -4,10 +4,15 @@ to candidate generators."""
 
 from __future__ import annotations
 
+from app.core.config import settings
+from app.services.recommendation.maps.google_provider import GoogleMapsProvider
 from app.services.recommendation.maps.provider import MapsProvider, NullMapsProvider
 
 
 def get_maps_provider() -> MapsProvider:
-    # A real provider (e.g. Google) is wired here in TIME-115 based on settings. Until then, the
-    # NullMapsProvider keeps location candidates honest (low-confidence, no invented distances).
+    """Return the configured maps provider. With a Google Maps API key, location features go live;
+    without one, the NullMapsProvider keeps candidates honest (low-confidence, no invented distances)."""
+    key = settings.google_maps_api_key
+    if key:
+        return GoogleMapsProvider(key)
     return NullMapsProvider()

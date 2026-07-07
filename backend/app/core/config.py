@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     google_play_package_name: str = "com.timesense.app"
     google_play_service_account_json: str = "{}"
 
+    # Maps (server-side geocoding / places / travel time). Empty → NullMapsProvider (location
+    # candidates stay low-confidence and never invent distances).
+    google_maps_api_key: str = ""
+
     # LLM
     openai_api_key: str = ""
     llm_default_provider: str = "openai"
