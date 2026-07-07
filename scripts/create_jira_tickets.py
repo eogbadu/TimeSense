@@ -6514,6 +6514,37 @@ TICKETS = [
             h2("Next Ticket"), p("Location-informed recommendation server-side."),
         ),
     },
+
+    {
+        "summary": "TIME-106: Geofence radius 150 -> 100m for sooner exit detection",
+        "labels": ["ios", "location", "tuning"],
+        "description": doc(
+            h2("Goal"),
+            p("A smaller radius crosses the exit boundary after less travel, so departures fire "
+              "sooner. 100m is the practical reliability floor (iOS location accuracy ~50-150m); "
+              "below that, jitter/false triggers appear. TIME-105's state-verification dedups any "
+              "wobble."),
+            divider(),
+            h2("Scope"),
+            bullet_list(["SavedPlace geofence radius 150 -> 100 m"]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["iOS exit hysteresis (~150-200m beyond the boundary) is inherent — radius only helps at the margin"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/Location/LocationService.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["New places use a 100m geofence; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-103/105 (location)."),
+            divider(),
+            h2("Next Ticket"), p("Location-informed recommendation server-side."),
+        ),
+    },
 ]
 
 
