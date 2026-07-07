@@ -21,20 +21,23 @@ struct PlacesSettingsView: View {
                         Spacer()
                         Text(statusLabel).font(DesignTokens.Typography.footnote.weight(.semibold)).foregroundColor(statusColor)
                     }
-                    if location.authorizationStatus != .authorizedAlways && location.authorizationStatus != .denied {
-                        Button {
-                            location.requestPermission()
-                        } label: {
-                            Text(enableTitle)
-                                .font(DesignTokens.Typography.headline)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, DesignTokens.Spacing.md)
-                                .background(Capsule().fill(DesignTokens.Color.accent))
-                        }
-                    }
-                    if location.authorizationStatus == .denied {
-                        Text("Location is off. Enable it in iOS Settings ▸ TimeSense ▸ Location.")
+
+                    switch location.authorizationStatus {
+                    case .notDetermined:
+                        primaryButton("Enable location") { location.requestPermission() }
+                    case .authorizedWhenInUse:
+                        Text("Arrival alerts need **Always** access. iOS won't show that prompt in the app — set it in Settings ▸ Location ▸ Always.")
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        primaryButton("Open iOS Settings") { location.openAppSettings() }
+                    case .denied, .restricted:
+                        Text("Location is off. Turn it on in Settings ▸ Location.")
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                        primaryButton("Open iOS Settings") { location.openAppSettings() }
+                    default:
+                        Text("You're all set — arrival alerts are on.")
                             .font(DesignTokens.Typography.footnote)
                             .foregroundColor(DesignTokens.Color.textSecondary)
                     }
@@ -120,9 +123,14 @@ struct PlacesSettingsView: View {
     private var statusColor: Color {
         location.authorizationStatus == .authorizedAlways ? .green : DesignTokens.Color.textSecondary
     }
-    private var enableTitle: String {
-        location.authorizationStatus == .authorizedWhenInUse
-            ? "Allow Always (for arrival alerts)"
-            : "Enable location"
+    private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(DesignTokens.Typography.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DesignTokens.Spacing.md)
+                .background(Capsule().fill(DesignTokens.Color.accent))
+        }
     }
 }

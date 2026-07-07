@@ -1,5 +1,6 @@
 import CoreLocation
 import Foundation
+import UIKit
 import UserNotifications
 
 /// A place the user chose to save (Home/Work). We persist only these user-chosen centers — never a
@@ -68,6 +69,13 @@ final class LocationService: NSObject, ObservableObject {
     /// Grab a single fresh fix so "Save current place" has coordinates to use.
     func requestOneTimeLocation() {
         if isAuthorized { manager.requestLocation() }
+    }
+
+    /// Deep-link to this app's iOS Settings page — the reliable way to enable "Always" (iOS often
+    /// won't show the in-app upgrade prompt).
+    func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        DispatchQueue.main.async { UIApplication.shared.open(url) }
     }
 
     // MARK: - Saved places
