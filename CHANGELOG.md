@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] TIME-110: Location is now always factored — an errand (e.g. 'Go to Walmart') can never be the top recommendation while you're home, and the app now syncs your current place even when you were already there. Errands still surface when you're out
 - [2026-07-07] TIME-109: Delete tasks from Today — long-press a task in the Smart Plan for 'Mark done' / 'Delete task'
 - [2026-07-07] TIME-108: Location now shapes the recommendation — the app reports your current place (POST /location/place; only the name, never raw coords), and Now surfaces errands when you're out / de-prioritizes them at home. 'Why this recommendation?' Location signal shows your real place
 - [2026-07-07] TIME-107: Save any number of named places — replaced the fixed Home/Work buttons with a name field + quick-pick chips (Home/Work/Gym/School/Errands), up to iOS's 20-region limit

@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-110 (Jira TIME-110): Location always factored; errands never lead while home
+
+User bug: at home at 5pm, app recommended 'Go to Walmart' (an errand you can't do from home). Two causes fixed: (1) iOS never told the backend it was home — no enter event fires when already inside a region on save/launch. Now LocationService posts the current place on EVERY didDetermineState (incl. seed/sync from registerGeofence + reregisterGeofences requestState), split from notify; seeds never touch lastRegionState so they can't dedup a real relaunch event. (2) Backend _location_rerank: at home, errands now sink below every non-errand (delta n+1) so they can never be the top pick while home; out, errands still surface (-2). New test: due-now high-priority 'Go to Walmart' does not lead while home. Location tests 3; iOS BUILD SUCCEEDED.
+
 ## 2026-07-07 — TIME-109 (Jira TIME-109): Delete tasks from Today
 
 User: needed to delete completed / no-longer-viable tasks. Added TodayViewModel.deleteTask -> DELETE /api/v1/tasks/{id} (existing soft-delete) -> reload; Smart Plan rows get a long-press context menu ('Mark done' if pending + 'Delete task'). Delete only on Today for now. iOS BUILD SUCCEEDED.

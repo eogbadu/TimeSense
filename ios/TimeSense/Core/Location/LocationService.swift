@@ -128,12 +128,14 @@ final class LocationService: NSObject, ObservableObject {
     }
 
     private func reregisterGeofences() {
-        // Re-arm monitoring after (re)launch. We do NOT seed state here — on a background relaunch
-        // from a geofence event, seeding could dedup the very event that woke us. With no seed, the
-        // triggering event (previous == nil) correctly fires once.
+        // Re-arm monitoring after (re)launch and sync the current place. requestState only updates
+        // the backend place (it never seeds lastRegionState — see didDetermineState — so it can't
+        // dedup a real relaunch event).
         let monitored = manager.monitoredRegions.map(\.identifier)
-        for p in places where !monitored.contains(p.id) {
-            manager.startMonitoring(for: region(for: p))
+        for p in places {
+            let r = region(for: p)
+            if !monitored.contains(p.id) { manager.startMonitoring(for: r) }
+            manager.requestState(for: r)
         }
     }
 
@@ -153,16 +155,6 @@ final class LocationService: NSObject, ObservableObject {
     }
 
     // MARK: - On arrival → recompute → notify
-
-    private func handleRegionEvent(_ identifier: String, entered: Bool) {
-        let placeName = places.first { $0.id == identifier }?.name ?? "a saved place"
-        let isHome = entered && placeName.caseInsensitiveCompare("home") == .orderedSame
-        Task {
-            // Report the place first so the recommendation reflects where you are, then notify.
-            await postPlace(placeName: entered ? placeName : nil, isHome: isHome)
-            await notifyBestTask(placeName: placeName, entered: entered)
-        }
-    }
 
     /// Tell the backend the user's current place (nil = away) so it can shape the recommendation.
     private func postPlace(placeName: String?, isHome: Bool) async {
@@ -221,13 +213,27 @@ extension LocationService: CLLocationManagerDelegate {
         let cameFromEvent = pendingEvents.remove(region.identifier) != nil
         guard state != .unknown else { return }
         let isInside = (state == .inside)
+        let placeName = places.first { $0.id == region.identifier }?.name
+
+        // Keep the backend's current place in sync on EVERY determination — even a seed/sync — so it
+        // knows where you are even when you were already there and no enter event fired.
+        if isInside {
+            let isHome = placeName?.caseInsensitiveCompare("home") == .orderedSame
+            Task { await postPlace(placeName: placeName, isHome: isHome) }
+        }
+
+        // A seed/sync (not from an enter/exit event) only refreshes the place above — never notifies
+        // and never seeds lastRegionState (so it can't dedup a real relaunch event).
+        guard cameFromEvent else { return }
         let previous = lastRegionState[region.identifier]
         lastRegionState[region.identifier] = isInside
-        // Notify only for a real event that reflects an actual change (dedups stale/out-of-order
-        // events, e.g. a late "exit" that arrives while you're actually back inside).
-        if cameFromEvent, previous != isInside {
-            handleRegionEvent(region.identifier, entered: isInside)
+        guard previous != isInside else { return }   // dedup stale/out-of-order events
+
+        if !isInside, !lastRegionState.values.contains(true) {
+            // Left this place and not inside any other tracked place → you're out and about.
+            Task { await postPlace(placeName: nil, isHome: false) }
         }
+        Task { await notifyBestTask(placeName: placeName ?? "a saved place", entered: isInside) }
     }
 
     // manager.location is updated automatically; these satisfy requestLocation().
