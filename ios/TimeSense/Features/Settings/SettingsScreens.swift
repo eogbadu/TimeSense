@@ -383,17 +383,88 @@ struct PrivacyConsentView: View {
 // MARK: - Calendar
 
 struct CalendarSettingsView: View {
+    @State private var showComingSoon = false
+
     var body: some View {
-        Form {
-            Section {
-                Label("No calendar connected", systemImage: "calendar.badge.exclamationmark")
-                    .foregroundColor(DesignTokens.Color.textSecondary)
-            } footer: {
-                Text("Calendar sync (Google / Apple) reads your events so TimeSense can plan around them. Connect it from the TimeSense web app for now — in-app connection is coming soon.")
+        ScrollView {
+            VStack(spacing: DesignTokens.Spacing.lg) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
+                        .fill(DesignTokens.Color.accent.opacity(0.10))
+                        .frame(width: 150, height: 150)
+                    Image(systemName: "calendar")
+                        .font(.system(size: 64, weight: .regular))
+                        .foregroundColor(DesignTokens.Color.accent)
+                }
+                .padding(.top, DesignTokens.Spacing.lg)
+
+                VStack(spacing: DesignTokens.Spacing.sm) {
+                    Text("Connect your calendar")
+                        .font(DesignTokens.Typography.title)
+                        .foregroundColor(DesignTokens.Color.textPrimary)
+                    Text("Let TimeSense avoid conflicts, find open focus blocks, and recommend the right task at the right time.")
+                        .font(DesignTokens.Typography.callout)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, DesignTokens.Spacing.md)
+                }
+
+                Button { showComingSoon = true } label: {
+                    Text("Connect Calendar")
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DesignTokens.Spacing.md)
+                        .background(Capsule().fill(DesignTokens.Color.accent))
+                }
+
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("Supported providers")
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                    VStack(spacing: 0) {
+                        providerRow(icon: "calendar.circle.fill", name: "Google Calendar")
+                        Divider().padding(.leading, 56)
+                        providerRow(icon: "applelogo", name: "Apple Calendar")
+                    }
+                    .cardStyle()
+                }
+
+                Text("Learn more about calendar privacy")
+                    .font(DesignTokens.Typography.subheadline.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.accent)
             }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.bottom, DesignTokens.Spacing.xxl)
         }
+        .background(DesignTokens.Color.background)
         .navigationTitle("Calendar")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Calendar connection is coming soon", isPresented: $showComingSoon) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("TimeSense reads only event timing and availability. Sensitive calendar access is opt-in.")
+        }
+    }
+
+    private func providerRow(icon: String, name: String) -> some View {
+        Button { showComingSoon = true } label: {
+            HStack(spacing: DesignTokens.Spacing.md) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(DesignTokens.Color.accent)
+                    .frame(width: 28)
+                Text(name)
+                    .font(DesignTokens.Typography.body)
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+            }
+            .padding(DesignTokens.Spacing.md)
+        }
+        .buttonStyle(.plain)
     }
 }
 

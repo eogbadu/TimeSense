@@ -6187,6 +6187,41 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-098: Calendar screen redesign."),
         ),
     },
+
+    {
+        "summary": "TIME-098: Calendar screen redesign (hero + Connect CTA)",
+        "labels": ["ios", "design", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Make calendar connection feel central to the AI per the mockup, instead of an "
+              "unfinished 'connect on web' note."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Large calendar hero; 'Connect your calendar'; copy 'Let TimeSense avoid conflicts, "
+                "find open focus blocks, and recommend the right task at the right time.'",
+                "'Connect Calendar' button; 'Supported providers' card (Google / Apple rows); "
+                "'Learn more about calendar privacy' link; connect actions = coming-soon alert with "
+                "the privacy note",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["In-app calendar OAuth not implemented (coming-soon stub); removed the 'connect on web' text"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Settings/SettingsScreens.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Calendar screen matches the mockup; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-076 (Settings screens)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-099: Privacy & Consent redesign."),
+        ),
+    },
 ]
 
 
