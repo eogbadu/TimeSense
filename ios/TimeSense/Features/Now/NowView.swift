@@ -135,24 +135,24 @@ private struct AnalysisBanner: View {
     }
 }
 
-/// The signal categories TimeSense weighs, shown as calm chips.
+/// The signal categories TimeSense weighs — all five fit on screen at once (no scrolling); each
+/// chip takes an equal share of the row.
 private struct ContextChipsRow: View {
     private let chips = ["Calendar", "Routine", "Location", "Time", "Tasks"]
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DesignTokens.Spacing.sm) {
-                ForEach(chips, id: \.self) { chip in
-                    Text(chip)
-                        .font(DesignTokens.Typography.footnote.weight(.medium))
-                        .foregroundColor(DesignTokens.Color.textPrimary)
-                        .padding(.horizontal, DesignTokens.Spacing.md)
-                        .padding(.vertical, DesignTokens.Spacing.sm)
-                        .background(Capsule().fill(DesignTokens.Color.surface))
-                        .overlay(Capsule().stroke(DesignTokens.Color.textSecondary.opacity(0.18), lineWidth: 1))
-                }
+        HStack(spacing: DesignTokens.Spacing.xs) {
+            ForEach(chips, id: \.self) { chip in
+                Text(chip)
+                    .font(DesignTokens.Typography.caption.weight(.medium))
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DesignTokens.Spacing.sm)
+                    .background(Capsule().fill(DesignTokens.Color.surface))
+                    .overlay(Capsule().stroke(DesignTokens.Color.textSecondary.opacity(0.18), lineWidth: 1))
             }
-            .padding(.horizontal, 2)
         }
     }
 }
