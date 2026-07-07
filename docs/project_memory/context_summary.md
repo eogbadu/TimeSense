@@ -107,6 +107,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-090 (net-new) → Jira TIME-90 (Redesign Now page to approved mockup) — **Done (PR #84 merged 2026-07-06)**
 - TIME-089 (net-new) → Jira TIME-89 (Rich structured 'Why This Recommendation?' + pipeline) — **Done (PR #83 merged 2026-07-06)**
 - TIME-088 (net-new) → Jira TIME-88 (Rename to 'Why This Recommendation?') — **Done (PR #82 merged 2026-07-06)**
 - TIME-088 (net-new) → Jira TIME-88 (Rename Now 'Why this?' → 'Why This Recommendation?') — **Done (PR #82 merged 2026-07-06)**
