@@ -6578,6 +6578,61 @@ TICKETS = [
             h2("Next Ticket"), p("Location-informed recommendation server-side."),
         ),
     },
+
+    {
+        "summary": "TIME-108: Location shapes the recommendation (backend)",
+        "labels": ["ios", "backend", "location", "recommendations", "brain"],
+        "description": doc(
+            h2("Goal"),
+            p("Make the user's current place actually change the recommendation and show up as a live "
+              "signal — not just drive notifications."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend: user_location_states table (place_name nullable, is_home; one per user; "
+                "migration) storing only the derived place NAME — never raw coordinates; "
+                "UserLocationRepository (get_current with 6h staleness, upsert)",
+                "POST /api/v1/location/place {place_name|null, is_home} upserts the current place",
+                "Recommendation: /now (and /now/why) rerank — when out/away, errand/shopping/"
+                "appointment/travel tasks surface; when home, they drop (you'd have to leave). "
+                "Scorer order is the tiebreak",
+                "Explainer: the Location signal + context now reflect the real place ('You're "
+                "currently at Home' / 'out and about') instead of 'not connected'",
+                "iOS: LocationService posts the place on each geofence transition (place on enter, "
+                "null on exit) before fetching the best task",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No raw-coordinate storage (only the place name); no proximity-to-specific-errand "
+                "matching yet (category-based nudge)",
+                "Rerank is a deterministic +/-2 position nudge, not a full scorer rewrite",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend: models/user_location_state.py + migration + __init__, "
+                "repositories/user_location_repository.py, api/v1/location.py + __init__, "
+                "services/recommendation_explainer.py, api/v1/now.py, tests/test_location.py",
+                "ios: Core/Location/LocationService.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "POST /location/place stores the place; /now/why Location signal reflects it "
+                "(available=true)",
+                "Out and about -> an errand can outrank a focus task; at home it doesn't; full suite "
+                "passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && alembic upgrade head && pytest tests/test_location.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-103 (location/geofences), TIME-089 (explanation signals), the scorer."),
+            divider(),
+            h2("Next Ticket"), p("Proximity-to-errand matching; commute-window signals; APNs remote push."),
+        ),
+    },
 ]
 
 

@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] TIME-108: Location now shapes the recommendation — the app reports your current place (POST /location/place; only the name, never raw coords), and Now surfaces errands when you're out / de-prioritizes them at home. 'Why this recommendation?' Location signal shows your real place
 - [2026-07-07] TIME-107: Save any number of named places — replaced the fixed Home/Work buttons with a name field + quick-pick chips (Home/Work/Gym/School/Errands), up to iOS's 20-region limit
 - [2026-07-07] TIME-106: Geofence radius reduced 150->100m so departures are detected after less travel (100m is iOS's reliable floor; TIME-105 dedups any jitter)
 - [2026-07-07] TIME-105: More reliable arrival/departure notifications — verify the authoritative geofence state and dedup stale/out-of-order events (fixes 'you left home' showing on arrival); radius 130->150m

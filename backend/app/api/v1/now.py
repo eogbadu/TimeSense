@@ -14,10 +14,12 @@ from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.models.recommendation_event import RecommendationEvent
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
+from app.repositories.user_location_repository import UserLocationRepository
 from app.schemas.task import TaskResponse
 from app.services.recommendation_explainer import build_explanation, compute_confidence
 from app.services.recommendation_service import RecommendationService
 from app.services.scheduling_service import SchedulingService
+from app.services.task_duration import infer_category
 from app.services.task_scorer import TaskScorer
 from app.services.usable_time_service import UsableTimeService
 from app.services.user_service import UserService
@@ -114,7 +116,31 @@ async def _ranked_candidates(db: AsyncSession, user, now: datetime):
     candidates = [t for t in (pending + overdue + unscheduled) if t.id not in suppressed]
     if not candidates:
         return [], usable_minutes, today_tasks
-    return TaskScorer().rank(candidates, usable_minutes, now), usable_minutes, today_tasks
+    ranked = TaskScorer().rank(candidates, usable_minutes, now)
+    ranked = await _location_rerank(db, user, ranked, now)
+    return ranked, usable_minutes, today_tasks
+
+
+# Location-relevant categories — worth doing while you're out.
+_ERRAND_CATS = {"shopping", "errand", "appointment", "travel"}
+
+
+async def _location_rerank(db: AsyncSession, user, ranked: list, now: datetime) -> list:
+    """Nudge the order by the user's current place: when out and about, surface errands/location
+    tasks; when home, push them down (you'd have to leave). Keeps the scorer's order as the tiebreak."""
+    state = await UserLocationRepository(db).get_current(user.id, now)
+    if state is None:
+        return ranked
+    out = (state.place_name is None) or (not state.is_home)   # away, or at a non-home place
+    scored = []
+    for i, task in enumerate(ranked):
+        is_errand = infer_category(task.title) in _ERRAND_CATS
+        delta = 0
+        if is_errand:
+            delta = -2 if out else 2   # out → errands earlier; home → errands later
+        scored.append((i + delta, i, task))
+    scored.sort(key=lambda x: (x[0], x[1]))
+    return [t for _, _, t in scored]
 
 
 def _fmt_local(dt: datetime, tz_name: str) -> str:

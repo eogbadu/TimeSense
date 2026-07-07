@@ -109,9 +109,15 @@ async def _health(db: AsyncSession, user_id, now: datetime, tz_name: str):
     return wake_local.strftime("%-I:%M %p"), sleep_hours, energy
 
 
+async def _current_place(db: AsyncSession, user_id, now: datetime):
+    """The user's current derived place from the app (UserLocationState) — a row with place_name
+    (None = out and about) and is_home, or None if we have no recent signal."""
+    from app.repositories.user_location_repository import UserLocationRepository
+    return await UserLocationRepository(db).get_current(user_id, now)
+
+
 async def _location(db: AsyncSession, user_id, now: datetime):
-    """Recent commute → 'commuting' if a window is active near now, 'settled' if one earlier today,
-    else None (we have no reliable place signal)."""
+    """(Legacy) commute-derived location, kept for reference."""
     rows = (await db.execute(
         select(CommuteEvent)
         .where(CommuteEvent.user_id == user_id)
@@ -155,7 +161,7 @@ async def build_explanation(
     tod_label, tod_note = _time_of_day(local_now)
     next_event = _next_event(today_tasks, now, tz_name)
     health = await _health(db, user.id, now, tz_name)
-    location = await _location(db, user.id, now)
+    place = await _current_place(db, user.id, now)
 
     est = best.estimated_minutes or 0
     fits = est <= free_minutes if est else True
@@ -167,10 +173,11 @@ async def build_explanation(
     else:
         context_used.append(f"Calendar: {free_minutes} minutes free before the end of your day.")
     context_used.append(f"Time of day: it's {tod_label} — {tod_note}.")
-    if location == "commuting":
-        context_used.append("Location: you appear to be commuting right now.")
-    elif location == "settled":
-        context_used.append("Location: you're settled (no active commute).")
+    if place is not None:
+        if place.place_name:
+            context_used.append(f"Location: you're currently at {place.place_name}.")
+        else:
+            context_used.append("Location: you're out and about right now.")
     if health:
         wake_str, sleep_hours, energy = health
         slp = f" on {sleep_hours}h of sleep" if sleep_hours else ""
@@ -188,8 +195,8 @@ async def build_explanation(
     if health:
         energy = health[2]
         factors.append({"name": "Energy match", "rating": "Good" if energy in ("high", "moderate") else "Low"})
-    if location is not None:
-        factors.append({"name": "Location fit", "rating": "Good" if location == "settled" else "Limited"})
+    if place is not None:
+        factors.append({"name": "Location fit", "rating": "Good"})
     # Urgency from deadline
     if best.due_at is not None:
         due = _utc(best.due_at)
@@ -210,10 +217,10 @@ async def build_explanation(
            else f"You have {free_minutes} minutes free before the end of your day.")
     signals.append({"name": "Calendar", "detail": cal, "available": True})
     signals.append({"name": "Time of day", "detail": f"This is {tod_note} based on your routine.", "available": True})
-    if location == "commuting":
-        signals.append({"name": "Location", "detail": "You appear to be commuting right now.", "available": True})
-    elif location == "settled":
-        signals.append({"name": "Location", "detail": "You're settled — no active commute.", "available": True})
+    if place is not None and place.place_name:
+        signals.append({"name": "Location", "detail": f"You're currently at {place.place_name}.", "available": True})
+    elif place is not None:
+        signals.append({"name": "Location", "detail": "You're out and about right now — a good time for errands.", "available": True})
     else:
         signals.append({"name": "Location", "detail": "No location signal connected yet.", "available": False})
     signals.append({"name": "Priority", "detail": f"This task is marked {_priority_label(best.priority).lower()} priority.", "available": True})
