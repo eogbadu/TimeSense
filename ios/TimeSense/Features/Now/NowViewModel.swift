@@ -57,10 +57,15 @@ struct RecommendationExplanation: Decodable {
         var id: String { taskId }
         enum CodingKeys: String, CodingKey { case taskId = "task_id"; case title; case reasonNotSelected = "reason_not_selected" }
     }
+    struct Signal: Decodable, Identifiable {
+        let name: String; let detail: String; let available: Bool
+        var id: String { name }
+    }
     let recommendedAction: Action
     let confidence: Double
     let contextUsed: [String]
     let decisionFactors: [Factor]
+    let signals: [Signal]?
     let alternativesConsidered: [Alternative]
     let summary: String
 
@@ -69,6 +74,7 @@ struct RecommendationExplanation: Decodable {
         case confidence
         case contextUsed = "context_used"
         case decisionFactors = "decision_factors"
+        case signals
         case alternativesConsidered = "alternatives_considered"
         case summary
     }

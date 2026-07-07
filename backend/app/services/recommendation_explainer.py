@@ -203,6 +203,26 @@ async def build_explanation(
         urg = "Low"
     factors.append({"name": "Urgency", "rating": urg})
 
+    # ---- Signals analyzed (labeled rows for the "Why this recommendation?" screen) ----
+    # available=True → we actually have the signal (green check); False → not connected yet.
+    signals: list[dict] = []
+    cal = (f"You have a {free_minutes}-minute free block before {next_event}." if next_event
+           else f"You have {free_minutes} minutes free before the end of your day.")
+    signals.append({"name": "Calendar", "detail": cal, "available": True})
+    signals.append({"name": "Time of day", "detail": f"This is {tod_note} based on your routine.", "available": True})
+    if location == "commuting":
+        signals.append({"name": "Location", "detail": "You appear to be commuting right now.", "available": True})
+    elif location == "settled":
+        signals.append({"name": "Location", "detail": "You're settled — no active commute.", "available": True})
+    else:
+        signals.append({"name": "Location", "detail": "No location signal connected yet.", "available": False})
+    signals.append({"name": "Priority", "detail": f"This task is marked {_priority_label(best.priority).lower()} priority.", "available": True})
+    if health:
+        energy = health[2]
+        signals.append({"name": "Energy", "detail": f"{energy.capitalize()} energy — suitable for focused work.", "available": True})
+    else:
+        signals.append({"name": "Energy", "detail": "No sleep or wake signal connected yet.", "available": False})
+
     # ---- Confidence (heuristic, explainable — shared with /now) ----
     confidence = compute_confidence(best, free_minutes, len(alternatives), now)
 
@@ -231,6 +251,7 @@ async def build_explanation(
         "confidence": confidence,
         "context_used": context_used,
         "decision_factors": factors,
+        "signals": signals,
         "alternatives_considered": alts,
         "summary": summary,
     }

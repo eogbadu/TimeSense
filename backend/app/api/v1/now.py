@@ -204,12 +204,19 @@ class AlternativeConsidered(BaseModel):
     reason_not_selected: str
 
 
+class Signal(BaseModel):
+    name: str          # Calendar / Time of day / Location / Priority / Energy
+    detail: str
+    available: bool     # True → we have the signal (green check); False → not connected yet
+
+
 class WhyResponse(BaseModel):
     """Rich, structured 'Why This Recommendation?' explanation."""
     recommended_action: RecommendedAction
     confidence: float
     context_used: list[str]
     decision_factors: list[DecisionFactor]
+    signals: list[Signal] = []
     alternatives_considered: list[AlternativeConsidered]
     summary: str
     # Backward-compatible one-liner (older clients read `reason`).

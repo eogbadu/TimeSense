@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-06] TIME-093: Redesigned the 'Why this recommendation?' screen — a Recommended-action + confidence-ring header, 'Signals analyzed' (Calendar/Time of day/Location/Priority/Energy with checks), 'Alternatives considered', and a plain-English summary
 - [2026-07-06] TIME-092: Redesigned the Today page — date + progress header, an 'AI Recommended Now' card, and a 'Smart Plan' grouped into Morning/Afternoon/Evening with tap-to-complete rows
 - [2026-07-06] TIME-091: Now context chips (Calendar/Routine/Location/Time/Tasks) now all fit on one row — removed the horizontal scroll
 - [2026-07-06] TIME-090: Redesigned the Now page to the approved mockup — analysis banner, context chips, a richer Best Next Action card with an inline confidence bar and category icon, and an 'Other good options' list

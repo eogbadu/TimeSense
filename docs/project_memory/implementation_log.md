@@ -1,5 +1,17 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-093 (Jira TIME-93): 'Why this recommendation' screen redesign
+
+Redesigned the recommendation-explanation screen to the mockup (the key recruiter-facing view).
+Backend: build_explanation returns structured `signals` (name/detail/available) for Calendar, Time
+of day, Location, Priority, Energy — available=False when a signal isn't connected (Location/Energy);
+WhyResponse gains `signals`. iOS: RecommendationExplanation decodes signals; the sheet is rebuilt as
+a ScrollView — RecommendedActionHeaderCard (icon + title + "for N minutes" | Confidence ring),
+SignalsCard (icon + name + detail + green check), AlternativesCard (icon + title + reason + chevron),
+plain-English Summary, "Evaluated just now". New ConfidenceRing (circular %). Removed the old
+List-based sheet + BulletLabelStyle. Backend 330 passing; iOS BUILD SUCCEEDED. This starts the
+multi-screen redesign pass (user's notes for screens 3-12); remaining screens queued.
+
 ## 2026-07-06 — TIME-092 (Jira TIME-92): Redesign the Today page to the approved mockup
 
 Rebuilt Today to the mockup. TodayViewModel also fetches /now for the recommendation card + adds
