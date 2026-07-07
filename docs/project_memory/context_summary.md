@@ -107,6 +107,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-112..113 → Jira TIME-112..113 (**Deterministic recommendation engine** rebuild per recommendation-engine-build-spec.md — foundation: types/time/location/maps-wrapper/travel-feasibility/normalize; decision core: candidates/scoring/penalties/ranking/selection/feedback + engine orchestrator; NO LLM in selection) — **Done (PRs #106-107 merged 2026-07-07)**. NOT yet wired into /now (TIME-114 = integration; LLM explanation last). NullMapsProvider until a real maps API + coordinate plumbing land.
 - TIME-103..111 → Jira TIME-103..111 (Location-aware feature end-to-end: geofence arrival notifications, Settings deep-link, reliable state, radius tuning, multiple places, **location shapes the recommendation**, errands never lead while home; + delete tasks & swipe-to-reveal Done/Delete on Today) — **Done (PRs #97-105 merged 2026-07-07)**
 - TIME-103 (net-new) → Jira TIME-103 (Location-aware background arrival notifications — geofence + local notification; NEEDS ON-DEVICE TESTING) — **Done (PR #97 merged 2026-07-07)**
 - TIME-094..102 → Jira TIME-94..102 (App-wide screen redesign pass, screens 3,5-12) — **Done (PRs #88-96 merged 2026-07-06)**: Capture, Insights, Learned Patterns, Working Hours, Calendar, Privacy & Consent, Subscription, Settings home, Visual polish (contrast)
