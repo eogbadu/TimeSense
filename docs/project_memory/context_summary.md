@@ -107,6 +107,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- TIME-103 (net-new) → Jira TIME-103 (Location-aware background arrival notifications — geofence + local notification; NEEDS ON-DEVICE TESTING) — **Done (PR #97 merged 2026-07-07)**
 - TIME-094..102 → Jira TIME-94..102 (App-wide screen redesign pass, screens 3,5-12) — **Done (PRs #88-96 merged 2026-07-06)**: Capture, Insights, Learned Patterns, Working Hours, Calendar, Privacy & Consent, Subscription, Settings home, Visual polish (contrast)
 - TIME-093 (net-new) → Jira TIME-93 ('Why this recommendation' screen: Signals analyzed) — **Done (PR #87 merged 2026-07-06)**
 - TIME-092 (net-new) → Jira TIME-92 (Redesign Today page to approved mockup) — **Done (PR #86 merged 2026-07-06)**
