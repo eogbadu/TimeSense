@@ -6793,6 +6793,54 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-113: candidate generation + scoring + ranking/selection + tests."),
         ),
     },
+
+    {
+        "summary": "TIME-113: Recommendation engine — candidates, scoring, ranking/selection",
+        "labels": ["backend", "recommendations", "brain", "architecture"],
+        "description": doc(
+            h2("Goal"),
+            p("Phases 7-10 of the deterministic engine: generate candidate actions across domains, "
+              "score them with the spec formula + penalties + hard rules, rank, select the best, and "
+              "compute push eligibility. No LLM in selection."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "candidates/: calendar, task, location (maps+feasibility), health, routine, planning, "
+                "context_switch, fallback generators + generate_candidate_actions(context, maps)",
+                "scoring/: score_candidate (weighted formula, clamp 0-100), penalties (hard rules: "
+                "meeting-soon vs deep work, short/long free block, poor sleep, night errands, "
+                "trip-doesn't-fit, maps/location missing)",
+                "selection/: rank_candidates, notification_policy (score>=75 & conf>=0.75), "
+                "select_recommendation (best + alternatives + reason codes + confidence)",
+                "feedback/apply_feedback_adjustments (accept/reject summary, pure); engine.run_engine orchestrator",
+                "tests mapping the spec's required scenarios",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Not wired into /now yet (TIME-114); no LLM text; real maps provider still absent "
+                "(location candidates stay low-confidence via NullMapsProvider)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend/app/services/recommendation/{candidates,scoring,selection,feedback}/**, engine.py; tests/test_recommendation_engine_selection.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Multi-domain candidates; deterministic scores; consistent ranking; graceful missing data",
+                "Meeting-soon suppresses deep work; short block avoids deep work; long block + high-priority picks deep work",
+                "Poor sleep favors recovery; night favors wind-down; errand that can't be confirmed feasible never leads",
+                "Every recommendation has reason codes + confidence; push eligibility computed; tests pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_recommendation_engine_selection.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-112 (foundation)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-114: wire the engine into /now (deterministic); then the LLM explanation layer."),
+        ),
+    },
 ]
 
 
