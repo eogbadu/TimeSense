@@ -6222,6 +6222,45 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-099: Privacy & Consent redesign."),
         ),
     },
+
+    {
+        "summary": "TIME-099: Privacy & Consent redesign (signal rows + data controls)",
+        "labels": ["ios", "design", "privacy"],
+        "description": doc(
+            h2("Goal"),
+            p("Turn the static bullets into settings-style rows with status labels per the mockup, "
+              "making trust and permissions clear."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Banner: 'TimeSense only uses the data needed to plan your day. You're in control.'",
+                "'Connected signals' card: Calendar / Health / Location / Audio rows (icon + name + "
+                "subtitle + status). Statuses shown honestly as Off/Disabled until integrations exist",
+                "'Data controls' card: Delete my data (wired to DELETE /privacy/account + sign out) "
+                "and Export my data (coming-soon stub)",
+                "Encrypted/never-sold footer note",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Signal statuses are not yet live consent toggles (shown Off/Disabled honestly); "
+                "in-app data export is a stub",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Settings/SettingsScreens.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Signal rows + data controls render; Delete works; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-055 (privacy delete/export), TIME-076 (Settings)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-100: Subscription redesign."),
+        ),
+    },
 ]
 
 

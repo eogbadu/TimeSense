@@ -362,21 +362,124 @@ struct WorkingHoursSettingsView: View {
 // MARK: - Privacy & Consent
 
 struct PrivacyConsentView: View {
+    @EnvironmentObject private var authService: AuthService
+    @State private var showDeleteConfirm = false
+    @State private var deleting = false
+    @State private var showExportSoon = false
+
+    private struct Signal {
+        let icon: String; let color: Color; let name: String; let detail: String
+        let status: String; let statusColor: Color
+    }
+    private var signals: [Signal] {
+        [
+            Signal(icon: "calendar", color: .blue, name: "Calendar", detail: "See events and availability", status: "Off", statusColor: DesignTokens.Color.textSecondary),
+            Signal(icon: "heart.fill", color: .red, name: "Health / Wake Signals", detail: "Energy & routine estimation", status: "Off", statusColor: DesignTokens.Color.textSecondary),
+            Signal(icon: "location.fill", color: .blue, name: "Location", detail: "Commute & errand timing", status: "Off", statusColor: DesignTokens.Color.textSecondary),
+            Signal(icon: "mic.fill", color: DesignTokens.Color.accent, name: "Audio (Voice Capture)", detail: "Speech is processed securely", status: "Disabled", statusColor: DesignTokens.Color.textSecondary),
+        ]
+    }
+
     var body: some View {
-        Form {
-            Section {
-                Text("TimeSense stores only what it needs to plan your day — your tasks, schedule, and preferences. Sensitive integrations (calendar, health) are opt-in, and raw audio is never stored unless you explicitly turn it on.")
-                    .font(DesignTokens.Typography.subheadline)
-                    .foregroundColor(DesignTokens.Color.textSecondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+                banner("TimeSense only uses the data needed to plan your day. You're in control.")
+
+                sectionHeader("Connected signals")
+                VStack(spacing: 0) {
+                    ForEach(Array(signals.enumerated()), id: \.offset) { idx, s in
+                        HStack(spacing: DesignTokens.Spacing.md) {
+                            Image(systemName: s.icon).font(.title3).foregroundColor(s.color).frame(width: 30)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(s.name).font(DesignTokens.Typography.callout.weight(.semibold)).foregroundColor(DesignTokens.Color.textPrimary)
+                                Text(s.detail).font(DesignTokens.Typography.footnote).foregroundColor(DesignTokens.Color.textSecondary)
+                            }
+                            Spacer(minLength: DesignTokens.Spacing.sm)
+                            Text(s.status).font(DesignTokens.Typography.footnote.weight(.semibold)).foregroundColor(s.statusColor)
+                        }
+                        .padding(DesignTokens.Spacing.md)
+                        if idx < signals.count - 1 { Divider().padding(.leading, 54) }
+                    }
+                }
+                .cardStyle()
+
+                sectionHeader("Data controls")
+                VStack(spacing: 0) {
+                    controlRow(icon: "trash", title: "Delete my data", role: .destructive) { showDeleteConfirm = true }
+                    Divider().padding(.leading, 54)
+                    controlRow(icon: "square.and.arrow.up", title: "Export my data") { showExportSoon = true }
+                }
+                .cardStyle()
+
+                HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+                    Image(systemName: "checkmark.shield.fill").foregroundColor(DesignTokens.Color.textSecondary)
+                    Text("Your data is encrypted and never sold. Learn more in our Privacy Policy.")
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+                .padding(DesignTokens.Spacing.md)
+                .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous).fill(DesignTokens.Color.textSecondary.opacity(0.08)))
+
+                if deleting { ProgressView().frame(maxWidth: .infinity) }
             }
-            Section("Your data") {
-                Label("Data is scoped to your account only", systemImage: "lock.fill")
-                Label("Integration tokens are encrypted at rest", systemImage: "key.fill")
-                Label("Delete your account anytime (Settings ▸ Delete My Data)", systemImage: "trash")
-            }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.top, DesignTokens.Spacing.sm)
+            .padding(.bottom, DesignTokens.Spacing.xxl)
         }
+        .background(DesignTokens.Color.background)
         .navigationTitle("Privacy & Consent")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Delete your account?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete everything", role: .destructive) { Task { await deleteAccount() } }
+        } message: {
+            Text("This permanently erases your account and all your data. This cannot be undone.")
+        }
+        .alert("Data export is coming soon", isPresented: $showExportSoon) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("You'll be able to download a full copy of your data from here shortly.")
+        }
+    }
+
+    private func sectionHeader(_ text: String) -> some View {
+        Text(text).font(DesignTokens.Typography.headline).foregroundColor(DesignTokens.Color.accent)
+            .padding(.horizontal, DesignTokens.Spacing.xs)
+    }
+
+    private func banner(_ text: String) -> some View {
+        Text(text)
+            .font(DesignTokens.Typography.subheadline)
+            .foregroundColor(DesignTokens.Color.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DesignTokens.Spacing.lg)
+            .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous).fill(DesignTokens.Color.accent.opacity(0.10)))
+    }
+
+    private func controlRow(icon: String, title: String, role: ButtonRole? = nil, action: @escaping () -> Void) -> some View {
+        Button(role: role, action: action) {
+            HStack(spacing: DesignTokens.Spacing.md) {
+                Image(systemName: icon).font(.title3)
+                    .foregroundColor(role == .destructive ? DesignTokens.Color.destructive : DesignTokens.Color.textPrimary)
+                    .frame(width: 28)
+                Text(title).font(DesignTokens.Typography.body)
+                    .foregroundColor(role == .destructive ? DesignTokens.Color.destructive : DesignTokens.Color.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right").font(.footnote).foregroundColor(DesignTokens.Color.textSecondary)
+            }
+            .padding(DesignTokens.Spacing.md)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func deleteAccount() async {
+        deleting = true
+        defer { deleting = false }
+        try? await APIClient.shared.delete("/api/v1/privacy/account?confirm=true")
+        authService.signOut()
     }
 }
 

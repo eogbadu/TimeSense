@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-099 (Jira TIME-99): Privacy & Consent redesign
+
+Rebuilt PrivacyConsentView to the mockup: banner ('you're in control'); 'Connected signals' card (Calendar/Health/Location/Audio rows with icon+subtitle+status, shown honestly as Off/Disabled until integrations exist); 'Data controls' card (Delete my data wired to DELETE /privacy/account + signOut; Export my data = coming-soon stub); encrypted/never-sold footer. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-098 (Jira TIME-98): Calendar screen redesign
 
 Rebuilt CalendarSettingsView to the mockup: large calendar hero; 'Connect your calendar' + copy; 'Connect Calendar' button; 'Supported providers' card (Google/Apple rows); 'Learn more about calendar privacy' link. Connect actions = coming-soon alert with the privacy note (in-app OAuth is a follow-up). Removed the 'connect on web' text. iOS BUILD SUCCEEDED.
