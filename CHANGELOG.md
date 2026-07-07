@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] TIME-112: Deterministic recommendation engine — foundation (phases 1-6): typed engine package (no Any), centralized time & location services, maps-skill wrapper with a NullMapsProvider (degrades to low-confidence, never invents distances), travel-feasibility service, and context normalization. 15 new tests
 - [2026-07-07] TIME-111: Swipe a Today task left to reveal Done + Delete buttons (replaces the long-press menu)
 - [2026-07-07] TIME-110: Location is now always factored — an errand (e.g. 'Go to Walmart') can never be the top recommendation while you're home, and the app now syncs your current place even when you were already there. Errands still surface when you're out
 - [2026-07-07] TIME-109: Delete tasks from Today — long-press a task in the Smart Plan for 'Mark done' / 'Delete task'
