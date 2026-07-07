@@ -6055,6 +6055,49 @@ TICKETS = [
             p("TIME-095: Insights redesign."),
         ),
     },
+
+    {
+        "summary": "TIME-095: Redesign Insights locked state (preview cards)",
+        "labels": ["ios", "design", "premium"],
+        "description": doc(
+            h2("Goal"),
+            p("Replace the bare Insights paywall with a preview of the AI value per the mockup: a "
+              "'Your AI Insights' lock banner + sample preview cards + upgrade CTA."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "InsightsPremiumGate rebuilt: indigo lock banner (better copy); preview cards (Best "
+                "focus window / Pattern detected / Schedule balance / Routine consistency) with "
+                "small illustrative charts (line/bars/ring) under a subtle locked veil; 'Upgrade to "
+                "Premium' button + 'See all features'; crown nav icon",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Preview values are illustrative samples (not the user's real data); StoreKit "
+                "purchase is still a follow-up",
+                "Premium (unlocked) Insights body is unchanged",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Insights/InsightsView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Non-premium Insights shows preview cards + upgrade CTA; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("Insights (TIME-046), subscription gating."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-096: Learned Patterns rename + redesign."),
+        ),
+    },
 ]
 
 
@@ -6203,35 +6246,12 @@ def main():
             ok = update_ticket(matched_key, ticket)
             print(f"  {'✓ Updated' if ok else '✗ Failed'}: {matched_key}")
         else:
-            print(f"  Creating: {summary[:60
-    {
-        "summary": "TIME-095: Redesign Insights locked state (preview cards)",
-        "labels": ["ios", "design", "premium"],
-        "description": doc(
-            h2("Goal"),
-            p("Replace the bare Insights paywall with a preview of the AI value per the mockup: an "
-              "'Your AI Insights' banner + sample preview cards + upgrade CTA."),
-            h2("Scope"),
-            bullet_list([
-                "InsightsPremiumGate rebuilt: indigo lock banner (better copy); preview cards (Best "
-                "focus window / Pattern detected / Schedule balance / Routine consistency) with "
-                "small illustrative charts (line/bars/ring) under a subtle locked veil; 'Upgrade to "
-                "Premium' button + 'See all features'; crown nav icon",
-            ]),
-            h2("Non-Goals"),
-            bullet_list([
-                "Preview values are illustrative samples (not the user's real data); StoreKit "
-                "purchase still a follow-up",
-                "Premium (unlocked) Insights unchanged",
-            ]),
-            h2("Files Likely Changed"),
-            bullet_list(["ios/TimeSense/Features/Insights/InsightsView.swift"]),
-            h2("Acceptance Criteria"),
-            bullet_list(["Non-premium Insights shows preview cards + upgrade CTA; iOS build succeeds"]),
-            h2("Verification"),
-            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
-            h2("Dependencies"), p("Insights (TIME-046), subscription gating."),
-            h2("Next Ticket"), p("TIME-096: Learned Patterns rename + redesign."),
-        ),
-    },
-]
+            print(f"  Creating: {summary[:60]}...")
+            key = create_ticket(ticket)
+            print(f"  {'✓ Created' if key != 'ERROR' else '✗ Failed'}: {key}")
+
+    print("\nDone.")
+
+
+if __name__ == "__main__":
+    main()
