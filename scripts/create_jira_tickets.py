@@ -5841,6 +5841,50 @@ TICKETS = [
             p("Center '+' FAB tab bar; post-v1 backlog."),
         ),
     },
+
+    {
+        "summary": "TIME-091: Context chips fit on one row (no horizontal scroll)",
+        "labels": ["ios", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("The Now context chips (Calendar · Routine · Location · Time · Tasks) were in a "
+              "horizontal ScrollView; they should all be visible at once, no scrolling."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "ContextChipsRow: drop the horizontal ScrollView; lay the five chips in an HStack "
+                "where each takes an equal share (frame maxWidth .infinity), with lineLimit(1) + "
+                "minimumScaleFactor so labels never truncate on narrow screens",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Chips remain non-interactive (decorative signal labels) for now",
+                "No change to any other Now element",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Now/NowView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "All five chips are visible simultaneously on iPhone widths with no horizontal scroll",
+                "Labels don't truncate; iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-090 (Now redesign)."),
+            divider(),
+            h2("Next Ticket"),
+            p("Post-v1 backlog."),
+        ),
+    },
 ]
 
 

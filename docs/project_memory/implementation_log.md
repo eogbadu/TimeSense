@@ -1,5 +1,12 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-091 (Jira TIME-91): Context chips fit on one row (no scroll)
+
+Per user: the Now context chips (Calendar/Routine/Location/Time/Tasks) should all be visible at
+once. ContextChipsRow: removed the horizontal ScrollView; the five chips now share the row equally
+(frame maxWidth .infinity) with lineLimit(1) + minimumScaleFactor(0.75) so labels never truncate on
+narrow screens. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-090 (Jira TIME-90): Redesign the Now page to the approved mockup
 
 Rebuilt Now to match the user's mockup. Backend: exposed `confidence` (0–1) on /now via a shared
