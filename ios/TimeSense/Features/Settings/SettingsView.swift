@@ -27,6 +27,9 @@ struct SettingsView: View {
                     NavigationLink { CalendarSettingsView() } label: {
                         SettingsRowLabel(icon: "calendar", title: "Calendar", tint: .green)
                     }
+                    NavigationLink { PlacesSettingsView() } label: {
+                        SettingsRowLabel(icon: "location.fill", title: "Location & Places", tint: .blue)
+                    }
                     HealthConnectRow(healthService: healthService)
                 }
 

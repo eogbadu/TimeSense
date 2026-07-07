@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-103 (Jira TIME-103): Location-aware background arrival notifications
+
+Added the location subsystem. LocationService (CoreLocation): permission step-up (WhenInUse->Always), region monitoring of saved places, on enter/exit -> GET /now -> local notification; one-time fix for saving places. AppDelegate (@UIApplicationDelegateAdaptor) configures Firebase + inits LocationService on launch so geofence events are handled after background relaunch (moved Firebase.configure out of App.init). Info.plist: location usage strings + UIBackgroundModes location. PlacesSettingsView (Settings -> Integrations -> Location & Places): enable location, save Home/Work from current location, list/remove, shows real auth status. Notification permission requested. Privacy Location row now reflects the real permission. Only user-chosen place centers persisted (UserDefaults) — no raw track. NEEDS ON-DEVICE TESTING (permissions/background/geofence can't be verified headless). Recommendation not yet location-informed server-side (arrival surfaces the current best task) — follow-up. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-102 (Jira TIME-102): Visual polish (light-mode contrast)
 
 Final item of the screen-redesign pass. Darkened the TextSecondary token in light mode (#8A8A8E -> #5E5E66) for legible helper text; slightly brighter in dark mode. Global via the asset catalog. Verified on the sign-in screen (secondary text noticeably more legible). Chips/card-hierarchy/section-header items from note #12 were already delivered across TIME-090-101. iOS BUILD SUCCEEDED. Completes the redesign batch (screens 3-12).

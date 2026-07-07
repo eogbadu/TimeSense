@@ -21,6 +21,7 @@
 		6DE9467AEC6AECB4110CB3C0 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DesignTokens.swift */; };
 		6F341198DDE522BD07556E0F /* LearnedAssumptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */; };
 		728E116FA78F04E8313637A4 /* SnapshotProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */; };
+		89438A1E57EBE9F4974111C0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB3BCF8932A4D3E59E6DE68 /* AppDelegate.swift */; };
 		A1000001 /* TimeSenseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001 /* TimeSenseApp.swift */; };
 		A1000002 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002 /* AppState.swift */; };
 		A1000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003 /* ContentView.swift */; };
@@ -46,9 +47,11 @@
 		AB4928A79E2DF8D711F9C21C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF2C9C92FEC1E46674899DC /* Foundation.framework */; };
 		B222B5BA80D315FBD04DD843 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 10849A270EBDF154E79FD082 /* GoogleService-Info.plist */; };
 		B98E3891DFBAB8E368AEF84E /* TimeSenseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
+		C1277917BBEAE5DE7169E3AD /* PlacesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71DE2E87542D3359F2FEE460 /* PlacesSettingsView.swift */; };
 		C947A57452119252AB0CE31D /* TimeSenseShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */; };
 		DF73E27F96DC6091FCDB6F74 /* SettingsScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AC9046CC1824BBE8217F24B /* SettingsScreens.swift */; };
 		F0D2D149DB35C66A29073F3C /* TimeSenseAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27C9273247D83F087DBA4C0 /* TimeSenseAppIntents.swift */; };
+		F241C418D7E5B07832A1E7D5 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F16EB79605DB0C9B35633534 /* LocationService.swift */; };
 		F38816ECFDA6CE143C0C8729 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A27CCD58C9BAE9E0D039807B /* Assets.xcassets */; };
 		FAA7334EFCCDA29FF0B9667E /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */; };
 /* End PBXBuildFile section */
@@ -83,11 +86,13 @@
 		1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseShortcuts.swift; sourceTree = "<group>"; };
 		2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UsableTimeWidget.swift; sourceTree = "<group>"; };
 		3AF2C9C92FEC1E46674899DC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		3EB3BCF8932A4D3E59E6DE68 /* AppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
 		4AC9046CC1824BBE8217F24B /* SettingsScreens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsScreens.swift; sourceTree = "<group>"; };
 		53053C84F6BDAB4CB9AC5592 /* TimeSenseWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = TimeSenseWidget.entitlements; sourceTree = "<group>"; };
 		5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BestNextActionWidget.swift; sourceTree = "<group>"; };
 		6345B92D47288413957CE8BE /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		71DE2E87542D3359F2FEE460 /* PlacesSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlacesSettingsView.swift; sourceTree = "<group>"; };
 		7FAA2C64ED43B5EA57A49D6E /* TimeSense.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = TimeSense.entitlements; sourceTree = "<group>"; };
 		A2000001 /* TimeSenseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSenseApp.swift; sourceTree = "<group>"; };
 		A2000002 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
@@ -119,6 +124,7 @@
 		D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsView.swift; sourceTree = "<group>"; };
 		DEFDF748BAAB394AB39A6521 /* HealthService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthService.swift; sourceTree = "<group>"; };
 		E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseWidgetBundle.swift; sourceTree = "<group>"; };
+		F16EB79605DB0C9B35633534 /* LocationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LocationService.swift; path = Location/LocationService.swift; sourceTree = "<group>"; };
 		F22CD5D75BA658BEA67CA349 /* InsightsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InsightsViewModel.swift; sourceTree = "<group>"; };
 		FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimeSenseWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -232,6 +238,7 @@
 				A2000002 /* AppState.swift */,
 				A2000003 /* ContentView.swift */,
 				A2000004 /* MainTabView.swift */,
+				3EB3BCF8932A4D3E59E6DE68 /* AppDelegate.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -245,6 +252,7 @@
 				A5000024 /* Auth */,
 				2AE198C288EB427414A4A0BC /* Widgets */,
 				9D481B5AC5A997B047604EF2 /* Health */,
+				D98A6675BA65CD8C0C43AC2C /* Location */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -340,6 +348,7 @@
 				C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */,
 				D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */,
 				4AC9046CC1824BBE8217F24B /* SettingsScreens.swift */,
+				71DE2E87542D3359F2FEE460 /* PlacesSettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -359,6 +368,14 @@
 				A2000012 /* EmptyStateView.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		D98A6675BA65CD8C0C43AC2C /* Location */ = {
+			isa = PBXGroup;
+			children = (
+				F16EB79605DB0C9B35633534 /* LocationService.swift */,
+			);
+			name = Location;
 			sourceTree = "<group>";
 		};
 		E72265378D15A638603FE532 /* Intents */ = {
@@ -506,6 +523,9 @@
 				C947A57452119252AB0CE31D /* TimeSenseShortcuts.swift in Sources */,
 				139CC16BB770927E35C73A16 /* HealthService.swift in Sources */,
 				DF73E27F96DC6091FCDB6F74 /* SettingsScreens.swift in Sources */,
+				F241C418D7E5B07832A1E7D5 /* LocationService.swift in Sources */,
+				89438A1E57EBE9F4974111C0 /* AppDelegate.swift in Sources */,
+				C1277917BBEAE5DE7169E3AD /* PlacesSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
