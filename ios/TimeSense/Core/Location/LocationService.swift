@@ -156,7 +156,21 @@ final class LocationService: NSObject, ObservableObject {
 
     private func handleRegionEvent(_ identifier: String, entered: Bool) {
         let placeName = places.first { $0.id == identifier }?.name ?? "a saved place"
-        Task { await notifyBestTask(placeName: placeName, entered: entered) }
+        let isHome = entered && placeName.caseInsensitiveCompare("home") == .orderedSame
+        Task {
+            // Report the place first so the recommendation reflects where you are, then notify.
+            await postPlace(placeName: entered ? placeName : nil, isHome: isHome)
+            await notifyBestTask(placeName: placeName, entered: entered)
+        }
+    }
+
+    /// Tell the backend the user's current place (nil = away) so it can shape the recommendation.
+    private func postPlace(placeName: String?, isHome: Bool) async {
+        struct Body: Encodable { let place_name: String?; let is_home: Bool }
+        struct Resp: Decodable { let place_name: String? }
+        let _: Resp? = try? await APIClient.shared.post(
+            "/api/v1/location/place", body: Body(place_name: placeName, is_home: isHome)
+        )
     }
 
     private func notifyBestTask(placeName: String, entered: Bool) async {
