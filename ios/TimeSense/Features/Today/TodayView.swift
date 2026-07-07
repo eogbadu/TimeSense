@@ -48,7 +48,11 @@ struct TodayView: View {
                         .padding(DesignTokens.Spacing.lg)
                         .cardStyle()
                 } else {
-                    SmartPlanCard(tasks: tasks) { id in Task { await viewModel.markDone(taskId: id) } }
+                    SmartPlanCard(
+                        tasks: tasks,
+                        onToggle: { id in Task { await viewModel.markDone(taskId: id) } },
+                        onDelete: { id in Task { await viewModel.deleteTask(taskId: id) } }
+                    )
                 }
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
@@ -134,6 +138,7 @@ private struct AIRecommendedCard: View {
 private struct SmartPlanCard: View {
     let tasks: [TimelineTask]
     let onToggle: (String) -> Void
+    let onDelete: (String) -> Void
 
     private var groups: [(name: String, tasks: [TimelineTask])] {
         let order = ["Morning", "Afternoon", "Evening", "Anytime"]
@@ -172,6 +177,14 @@ private struct SmartPlanCard: View {
                 VStack(spacing: DesignTokens.Spacing.md) {
                     ForEach(group.tasks) { task in
                         SmartPlanRow(task: task, onToggle: { onToggle(task.id) })
+                            .contextMenu {
+                                if task.status != "done" {
+                                    Button { onToggle(task.id) } label: { Label("Mark done", systemImage: "checkmark.circle") }
+                                }
+                                Button(role: .destructive) { onDelete(task.id) } label: {
+                                    Label("Delete task", systemImage: "trash")
+                                }
+                            }
                     }
                 }
             }

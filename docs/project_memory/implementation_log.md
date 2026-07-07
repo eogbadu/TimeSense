@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-109 (Jira TIME-109): Delete tasks from Today
+
+User: needed to delete completed / no-longer-viable tasks. Added TodayViewModel.deleteTask -> DELETE /api/v1/tasks/{id} (existing soft-delete) -> reload; Smart Plan rows get a long-press context menu ('Mark done' if pending + 'Delete task'). Delete only on Today for now. iOS BUILD SUCCEEDED.
+
 ## 2026-07-07 — TIME-108 (Jira TIME-108): Location shapes the recommendation
 
 Wired location into the recommendation. Backend: user_location_states table (place_name nullable, is_home; one per user; migration v2w3x4y5z6a7) storing only the derived place NAME (no raw coords); UserLocationRepository (get_current w/ 6h staleness, upsert); POST /api/v1/location/place upserts. /now + /now/why rerank via _location_rerank: out/away -> errand/shopping/appointment/travel tasks surface (+/-2 position nudge, scorer order as tiebreak); home -> they drop. Explainer Location signal/context now reflect the real place ('at Home' / 'out and about') instead of 'not connected'. iOS LocationService posts the place on each geofence transition (place on enter, null on exit) before fetching the best task. 2 new tests (signal reflects place; errand outranks focus when out, not home). Suite 332; iOS BUILD SUCCEEDED. Backend tests: 332.
