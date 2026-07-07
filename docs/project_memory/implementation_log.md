@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-095 (Jira TIME-95): Insights locked-state redesign
+
+Rebuilt InsightsPremiumGate to preview the AI value (mockup): indigo 'Your AI Insights' lock banner with better copy; preview cards (Best focus window/Pattern detected/Schedule balance/Routine consistency) with small illustrative line/bar/ring charts under a subtle locked veil; 'Upgrade to Premium' + 'See all features'; crown nav icon. Preview values are illustrative samples. Premium body unchanged. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-094 (Jira TIME-94): Capture redesign (AI-native)
 
 Rebuilt CaptureView to the mockup: hero indigo circle + waveform icon; title "What's on your mind?"; new AI copy; input box with a mic button (voice = coming-soon alert stub); selectable quick chips (Task/Reminder/Schedule/Errand/Idea); full-width Capture button; "TimeSense can detect" row (Time/Priority/Task type/Schedule fit); sparkles nav icon. Capture behavior unchanged. iOS BUILD SUCCEEDED.
