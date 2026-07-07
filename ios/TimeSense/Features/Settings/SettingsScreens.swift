@@ -80,24 +80,85 @@ struct SubscriptionSettingsView: View {
         let is_premium: Bool
     }
 
+    private let basicFeatures = [
+        "Task capture & organization", "Daily task list", "Basic recommendations", "1 integration",
+    ]
+    private let premiumFeatures = [
+        "AI best-next-action recommendations", "Calendar, health & more integrations",
+        "Weekly AI insights & patterns", "Proactive notifications", "Unlimited integrations",
+    ]
+
     var body: some View {
-        Form {
-            Section("Current plan") {
-                LabeledContent("Plan", value: isPremium ? "Premium" : "Basic (Free)")
-                if let status { LabeledContent("Status", value: status.capitalized) }
-                if let plan { LabeledContent("Tier", value: plan.capitalized) }
-                if let trialEnd { LabeledContent("Trial ends", value: String(trialEnd.prefix(10))) }
+        ScrollView {
+            VStack(spacing: DesignTokens.Spacing.lg) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Current Plan")
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                        Text(isPremium ? "Premium" : "Basic (Free)")
+                            .font(DesignTokens.Typography.title2)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                    }
+                    Spacer()
+                    Image(systemName: isPremium ? "crown.fill" : "leaf.fill")
+                        .font(.title2)
+                        .foregroundColor(isPremium ? DesignTokens.Color.accent : .green)
+                }
+                .padding(DesignTokens.Spacing.lg)
+                .cardStyle()
+
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                    Text("Basic includes")
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundColor(DesignTokens.Color.accent)
+                    ForEach(basicFeatures, id: \.self) { f in
+                        HStack(spacing: DesignTokens.Spacing.md) {
+                            Image(systemName: "checkmark").foregroundColor(.green).font(.footnote.weight(.bold))
+                            Text(f).font(DesignTokens.Typography.callout).foregroundColor(DesignTokens.Color.textPrimary)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                }
+                .padding(DesignTokens.Spacing.lg)
+                .cardStyle()
+
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                    Text("Premium unlocks")
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundColor(.white)
+                    ForEach(premiumFeatures, id: \.self) { f in
+                        HStack(spacing: DesignTokens.Spacing.md) {
+                            Image(systemName: "sparkles").foregroundColor(.yellow).font(.footnote)
+                            Text(f).font(DesignTokens.Typography.callout).foregroundColor(.white)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                }
+                .padding(DesignTokens.Spacing.lg)
+                .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous).fill(DesignTokens.Color.accent))
+
+                if !isPremium {
+                    Button {
+                        /* StoreKit purchase — follow-up */
+                    } label: {
+                        Text("Upgrade to Premium")
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, DesignTokens.Spacing.md)
+                            .background(Capsule().fill(DesignTokens.Color.accent))
+                    }
+                    Text("Plans managed in the App Store")
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                }
             }
-            Section {
-                Text(isPremium
-                     ? "You have full access to Premium features."
-                     : "You're on Basic. Premium unlocks weekly insights, integrations, and more.")
-                    .font(DesignTokens.Typography.footnote)
-                    .foregroundColor(DesignTokens.Color.textSecondary)
-            } footer: {
-                Text("Plans and billing are managed through the App Store.")
-            }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.top, DesignTokens.Spacing.sm)
+            .padding(.bottom, DesignTokens.Spacing.xxl)
         }
+        .background(DesignTokens.Color.background)
         .navigationTitle("Subscription")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }

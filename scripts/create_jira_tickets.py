@@ -6261,6 +6261,39 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-100: Subscription redesign."),
         ),
     },
+
+    {
+        "summary": "TIME-100: Subscription redesign (Basic/Premium tiers)",
+        "labels": ["ios", "design", "premium"],
+        "description": doc(
+            h2("Goal"),
+            p("Make the subscription feel like a real product tier per the mockup, not a placeholder."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Current Plan card (Basic (Free) / Premium + icon); 'Basic includes' checklist; "
+                "indigo 'Premium unlocks' card (AI best-next-action, integrations, weekly insights, "
+                "proactive notifications, unlimited integrations); 'Upgrade to Premium' button; "
+                "'Plans managed in the App Store'",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["StoreKit purchase still a follow-up (Upgrade is a placeholder action)"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Settings/SettingsScreens.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Tiers render; is_premium reflected; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("Subscription status (TIME-076)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-101: Settings home grouping."),
+        ),
+    },
 ]
 
 

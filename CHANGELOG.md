@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-06] TIME-100: Subscription redesigned — Current Plan card, 'Basic includes' checklist, and an indigo 'Premium unlocks' card + Upgrade CTA
 - [2026-07-06] TIME-099: Privacy & Consent redesigned — signal rows with status labels (Calendar/Health/Location/Audio) + data controls (Delete/Export) + encrypted-never-sold note
 - [2026-07-06] TIME-098: Calendar screen redesigned — hero + 'Connect your calendar' + Connect CTA + supported providers (Google/Apple) + privacy note
 - [2026-07-06] TIME-097: Working Hours redesigned — an explainer banner ('why this matters'), Start/End rows, and a Repeat day selector (Mon-Fri)
