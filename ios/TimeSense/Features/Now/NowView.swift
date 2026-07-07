@@ -374,87 +374,194 @@ struct RecommendationExplanationSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section("Recommended action") {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(explanation.recommendedAction.title)
+            ScrollView {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+                    RecommendedActionHeaderCard(
+                        action: explanation.recommendedAction,
+                        confidence: explanation.confidence
+                    )
+
+                    header("Signals analyzed")
+                    SignalsCard(signals: explanation.signals ?? [])
+
+                    if !explanation.alternativesConsidered.isEmpty {
+                        header("Alternatives considered")
+                        AlternativesCard(alternatives: explanation.alternativesConsidered)
+                    }
+
+                    if !explanation.summary.isEmpty {
+                        header("Summary")
+                        Text(explanation.summary)
+                            .font(DesignTokens.Typography.subheadline)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(DesignTokens.Spacing.lg)
+                            .cardStyle()
+                    }
+
+                    Text("Evaluated just now")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .padding(.horizontal, DesignTokens.Spacing.lg)
+                .padding(.vertical, DesignTokens.Spacing.md)
+            }
+            .background(DesignTokens.Color.background)
+            .navigationTitle("Why this recommendation?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+    }
+
+    private func header(_ text: String) -> some View {
+        Text(text)
+            .font(DesignTokens.Typography.headline)
+            .foregroundColor(DesignTokens.Color.accent)
+            .padding(.horizontal, DesignTokens.Spacing.xs)
+            .padding(.top, DesignTokens.Spacing.xs)
+    }
+}
+
+private struct RecommendedActionHeaderCard: View {
+    let action: RecommendationExplanation.Action
+    let confidence: Double
+
+    var body: some View {
+        let style = taskCategoryStyle(for: action.title)
+        HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                Text("Recommended action")
+                    .font(DesignTokens.Typography.footnote)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                        .fill(style.color.opacity(0.16))
+                        .frame(width: 40, height: 40)
+                        .overlay(Image(systemName: style.icon).foregroundColor(style.color))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(action.title)
                             .font(DesignTokens.Typography.headline)
                             .foregroundColor(DesignTokens.Color.textPrimary)
-                        if let m = explanation.recommendedAction.recommendedDurationMinutes {
-                            Text("about \(m) minutes")
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let m = action.recommendedDurationMinutes {
+                            Text("for \(m) minutes")
                                 .font(DesignTokens.Typography.footnote)
                                 .foregroundColor(DesignTokens.Color.textSecondary)
                         }
                     }
                 }
-                Section("Confidence") {
-                    HStack(spacing: DesignTokens.Spacing.md) {
-                        Text("\(Int((explanation.confidence * 100).rounded()))%")
-                            .font(DesignTokens.Typography.title2)
-                            .foregroundColor(DesignTokens.Color.accent)
-                        ProgressView(value: explanation.confidence)
-                            .tint(DesignTokens.Color.accent)
-                    }
-                }
-                Section("Context used") {
-                    ForEach(explanation.contextUsed, id: \.self) { line in
-                        Label(line, systemImage: "circle.fill")
-                            .labelStyle(BulletLabelStyle())
-                            .font(DesignTokens.Typography.subheadline)
-                    }
-                }
-                Section("Decision factors") {
-                    ForEach(explanation.decisionFactors) { f in
-                        HStack {
-                            Text(f.name).foregroundColor(DesignTokens.Color.textPrimary)
-                            Spacer()
-                            Text(f.rating)
-                                .font(DesignTokens.Typography.footnote.weight(.semibold))
-                                .foregroundColor(DesignTokens.Color.textSecondary)
-                        }
-                    }
-                }
-                if !explanation.alternativesConsidered.isEmpty {
-                    Section("Other options considered") {
-                        ForEach(explanation.alternativesConsidered) { a in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(a.title)
-                                    .font(DesignTokens.Typography.subheadline)
-                                    .foregroundColor(DesignTokens.Color.textPrimary)
-                                Text(a.reasonNotSelected)
-                                    .font(DesignTokens.Typography.caption)
-                                    .foregroundColor(DesignTokens.Color.textSecondary)
-                            }
-                        }
-                    }
-                }
-                Section("Summary") {
-                    Text(explanation.summary)
-                        .font(DesignTokens.Typography.subheadline)
-                        .foregroundColor(DesignTokens.Color.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
-            .navigationTitle("Why This Recommendation?")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+            Spacer(minLength: 0)
+            VStack(spacing: DesignTokens.Spacing.xs) {
+                Text("Confidence")
+                    .font(DesignTokens.Typography.footnote)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                ConfidenceRing(value: confidence)
             }
+        }
+        .padding(DesignTokens.Spacing.lg)
+        .cardStyle()
+    }
+}
+
+struct ConfidenceRing: View {
+    let value: Double
+
+    var body: some View {
+        ZStack {
+            Circle().stroke(DesignTokens.Color.accent.opacity(0.15), lineWidth: 7)
+            Circle()
+                .trim(from: 0, to: value)
+                .stroke(DesignTokens.Color.accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            Text("\(Int((value * 100).rounded()))%")
+                .font(DesignTokens.Typography.headline)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+                .monospacedDigit()
+        }
+        .frame(width: 68, height: 68)
+    }
+}
+
+private struct SignalsCard: View {
+    let signals: [RecommendationExplanation.Signal]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(signals.enumerated()), id: \.element.id) { idx, signal in
+                let s = signalStyle(signal.name)
+                HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                        .fill(s.color.opacity(0.16))
+                        .frame(width: 38, height: 38)
+                        .overlay(Image(systemName: s.icon).foregroundColor(s.color))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(signal.name)
+                            .font(DesignTokens.Typography.callout.weight(.semibold))
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                        Text(signal.detail)
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: DesignTokens.Spacing.sm)
+                    Image(systemName: signal.available ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(signal.available ? .green : DesignTokens.Color.textSecondary.opacity(0.4))
+                }
+                .padding(DesignTokens.Spacing.md)
+                if idx < signals.count - 1 { Divider().padding(.leading, 62) }
+            }
+        }
+        .cardStyle()
+    }
+
+    private func signalStyle(_ name: String) -> (icon: String, color: Color) {
+        switch name {
+        case "Calendar":    return ("calendar", .blue)
+        case "Time of day": return ("sun.max.fill", .orange)
+        case "Location":    return ("house.fill", DesignTokens.Color.accent)
+        case "Priority":    return ("flag.fill", .red)
+        case "Energy":      return ("heart.fill", .pink)
+        default:            return ("circle.fill", DesignTokens.Color.accent)
         }
     }
 }
 
-/// Renders a tiny bullet before the text.
-struct BulletLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Spacing.sm) {
-            Image(systemName: "circle.fill")
-                .font(.system(size: 5))
-                .foregroundColor(DesignTokens.Color.accent)
-            configuration.title
+private struct AlternativesCard: View {
+    let alternatives: [RecommendationExplanation.Alternative]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(alternatives.enumerated()), id: \.element.id) { idx, alt in
+                let style = taskCategoryStyle(for: alt.title)
+                HStack(spacing: DesignTokens.Spacing.md) {
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                        .fill(style.color.opacity(0.16))
+                        .frame(width: 38, height: 38)
+                        .overlay(Image(systemName: style.icon).foregroundColor(style.color))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(alt.title)
+                            .font(DesignTokens.Typography.callout.weight(.semibold))
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                        Text(alt.reasonNotSelected)
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                }
+                .padding(DesignTokens.Spacing.md)
+                if idx < alternatives.count - 1 { Divider().padding(.leading, 62) }
+            }
         }
+        .cardStyle()
     }
 }
 

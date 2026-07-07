@@ -5946,6 +5946,66 @@ TICKETS = [
             p("Post-v1 backlog."),
         ),
     },
+
+    {
+        "summary": "TIME-093: 'Why this recommendation' screen — Signals analyzed + confidence ring",
+        "labels": ["ios", "backend", "design", "recommendations"],
+        "description": doc(
+            h2("Goal"),
+            p("Redesign the recommendation-explanation screen (the key recruiter-facing view) to the "
+              "approved mockup: a Recommended-action + confidence-ring header, a 'Signals analyzed' "
+              "list (Calendar / Time of day / Location / Priority / Energy, each with a green check "
+              "when available), and 'Alternatives considered'."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend: build_explanation returns structured `signals` (name/detail/available) for "
+                "Calendar, Time of day, Location, Priority, Energy — available=False (no check) when "
+                "a signal isn't connected (Location/Energy); WhyResponse gains `signals`",
+                "iOS: RecommendationExplanation decodes signals; RecommendationExplanationSheet "
+                "rebuilt — RecommendedActionHeaderCard (icon + title + 'for N minutes' | Confidence "
+                "ring), SignalsCard (icon + name + detail + check), AlternativesCard (icon + title + "
+                "reason + chevron), plain-English Summary, and an 'Evaluated just now' timestamp",
+                "New ConfidenceRing component (circular %)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Signals stay honest — Location/Energy show 'not connected yet' (no green check) "
+                "until those integrations exist",
+                "Alternative rows' chevron is presentational (no nested navigation yet)",
+                "Timestamp is client-side ('just now' on fetch)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/recommendation_explainer.py, app/api/v1/now.py",
+                "ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "/now/why returns signals (Calendar/Time of day/Location/Priority/Energy) with "
+                "availability",
+                "The sheet shows the confidence ring, Signals analyzed with checks, Alternatives, and "
+                "a summary; iOS build + suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest tests/test_now.py -q\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-089 (structured explanation), TIME-090 (Now redesign)."),
+            divider(),
+            h2("Next Ticket"),
+            p("Capture / Insights / Learned Patterns / Working Hours / Calendar / Privacy / "
+              "Subscription / Settings redesigns (screens 3,5-12)."),
+        ),
+    },
 ]
 
 
