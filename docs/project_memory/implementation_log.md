@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-098 (Jira TIME-98): Calendar screen redesign
+
+Rebuilt CalendarSettingsView to the mockup: large calendar hero; 'Connect your calendar' + copy; 'Connect Calendar' button; 'Supported providers' card (Google/Apple rows); 'Learn more about calendar privacy' link. Connect actions = coming-soon alert with the privacy note (in-app OAuth is a follow-up). Removed the 'connect on web' text. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-097 (Jira TIME-97): Working Hours redesign
 
 Rebuilt WorkingHoursSettingsView to the mockup: explainer banner (why hours matter); card with Start/End menu-picker rows + a Repeat day-of-week selector (Mon-Fri default, visual only) + Save; end<=start validation retained. Per-day hours not persisted yet (future premium). iOS BUILD SUCCEEDED.
