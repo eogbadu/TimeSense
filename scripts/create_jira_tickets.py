@@ -6150,6 +6150,43 @@ TICKETS = [
             p("TIME-097: Working Hours explainer."),
         ),
     },
+
+    {
+        "summary": "TIME-097: Working Hours redesign (explainer + repeat days)",
+        "labels": ["ios", "design", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Explain why working hours matter and match the mockup: an explainer banner, Start/End "
+              "rows, a Repeat day selector, and a Save button."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Explainer banner: 'TimeSense uses your working hours to decide when tasks are "
+                "appropriate and to protect your personal time.'",
+                "Card with Start/End menu-picker rows + a Repeat day-of-week selector (Mon-Fri "
+                "default) + Save button; end<=start validation retained",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Per-day hours not persisted yet — the Repeat selector is visual (single window "
+                "still applies); a future premium feature",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Settings/SettingsScreens.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Banner + Start/End + Repeat + Save render; saving still works; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-086 (working hours pref)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-098: Calendar screen redesign."),
+        ),
+    },
 ]
 
 

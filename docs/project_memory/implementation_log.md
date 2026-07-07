@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-097 (Jira TIME-97): Working Hours redesign
+
+Rebuilt WorkingHoursSettingsView to the mockup: explainer banner (why hours matter); card with Start/End menu-picker rows + a Repeat day-of-week selector (Mon-Fri default, visual only) + Save; end<=start validation retained. Per-day hours not persisted yet (future premium). iOS BUILD SUCCEEDED.
 ## 2026-07-06 — TIME-096 (Jira TIME-96): Learned Patterns rename + redesign
 
 Renamed 'Learned Assumptions' -> 'Learned Patterns' (screen title + Settings row). Redesigned to the mockup: explainer banner; icon rows (Sleep/Breakfast/Lunch/Morning/Evening) with name + time range + confidence line + chevron (tap to edit); 'Add manual pattern' button (coming-soon stub). Confidence derived honestly client-side (customized -> High/Set by you, else Medium/Default pattern; no fabricated day counts). Edit sheet unchanged. iOS BUILD SUCCEEDED.
