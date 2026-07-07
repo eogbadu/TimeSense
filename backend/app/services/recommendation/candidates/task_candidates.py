@@ -50,15 +50,10 @@ def generate_task_candidates(ctx: UserContext, now: datetime) -> list[CandidateA
     free = ctx.calendar_context.free_block_minutes
     user_energy = ctx.health_context.energy_estimate if ctx.health_context else None
 
-    active = {t.id: t for t in
-              tc.overdue_tasks + tc.due_today_tasks + tc.high_priority_tasks
-              + tc.quick_tasks + tc.deep_work_tasks}
-    # include anything else that slipped through (e.g. medium admin tasks)
-    for t in tc.overdue_tasks + tc.due_today_tasks:
-        active.setdefault(t.id, t)
-
+    # Every active task gets a candidate (a low-priority task with no due date/estimate must still
+    # be rankable), except location-linked tasks which the location generator handles.
     candidates: list[CandidateAction] = []
-    for task in active.values():
+    for task in tc.all_tasks:
         if task.location_intent is not None:
             continue  # handled by the location generator
         action_type, codes = _classify(task, now)

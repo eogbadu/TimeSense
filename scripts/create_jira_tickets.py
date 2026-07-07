@@ -6841,6 +6841,57 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-114: wire the engine into /now (deterministic); then the LLM explanation layer."),
         ),
     },
+
+    {
+        "summary": "TIME-114: Integrate the deterministic engine into /now",
+        "labels": ["backend", "recommendations", "brain", "integration"],
+        "description": doc(
+            h2("Goal"),
+            p("Make the deterministic engine drive /now: build a real UserContext from the DB, run "
+              "generate -> score -> rank -> select, and use the engine's ordering for best_task + "
+              "alternatives. Replaces TaskScorer + _location_rerank."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "context_builder.build_user_context(db, user, tasks, now, usable) -> (UserContext, "
+                "task_map): maps DB Task->TaskItem (priority/status/estimate/due + location-intent "
+                "detection), time snapshot (work hours), location snapshot, health from latest "
+                "sleep, prefs; free block from UsableTimeService",
+                "maps factory get_maps_provider() -> NullMapsProvider (real provider in TIME-115)",
+                "now.py _ranked_candidates now runs the engine and maps ranked task/location "
+                "candidates back to Tasks (order preserved; safety-appends any unsurfaced task)",
+                "Keep suppression (snooze/not-now), done-exclusion, wind-down moment, feasibility, "
+                "greeting; /now/why unchanged (LLM explanation layer is the last phase)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No real maps provider yet (TIME-115); calendar events not wired (no integration) so "
+                "meeting candidates stay dormant; /now/why still uses the existing explainer",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/recommendation/context_builder.py + maps/factory.py (new), "
+                "app/api/v1/now.py; tests/test_now_engine.py",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Existing /now tests still pass (highest priority, overdue, done-excluded, "
+                "unscheduled surfaces, not-now excluded, wind-down)",
+                "best_task ordering now comes from the engine; an at-home errand with no travel data "
+                "doesn't outrank a doable task; full suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_now.py tests/test_now_engine.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-112/113 (engine)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-115: real maps provider + coordinate plumbing; then LLM explanation."),
+        ),
+    },
 ]
 
 
