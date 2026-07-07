@@ -6006,6 +6006,55 @@ TICKETS = [
               "Subscription / Settings redesigns (screens 3,5-12)."),
         ),
     },
+
+    {
+        "summary": "TIME-094: Redesign the Capture screen (AI-native)",
+        "labels": ["ios", "design", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Make Capture feel AI-native per the approved mockup — a hero capture icon, clearer "
+              "AI copy, quick type chips, a voice affordance, and a 'TimeSense can detect' row."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Hero: large indigo circle with a waveform icon; title 'What's on your mind?'; copy "
+                "'Speak or type naturally. TimeSense uses AI to turn it into tasks, reminders, and "
+                "plans.'",
+                "Input box with a mic button (voice = 'coming soon' alert stub for now)",
+                "Quick chips (Task/Reminder/Schedule/Errand/Idea) — selectable hints",
+                "Full-width Capture button; 'TimeSense can detect' row (Time / Priority / Task type / "
+                "Schedule fit); sparkles nav icon",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Voice-to-text not implemented yet (mic shows a coming-soon alert) — real Speech "
+                "framework is a follow-up feature ticket",
+                "Chips are visual hints (not yet wired to the parse); capture behavior unchanged",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Capture/CaptureView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Capture matches the mockup (hero, copy, input+mic, chips, button, detect row)",
+                "Capturing still creates a task; iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("Capture flow (TIME-031), the design tokens."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-095: Insights redesign."),
+        ),
+    },
 ]
 
 

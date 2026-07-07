@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-094 (Jira TIME-94): Capture redesign (AI-native)
+
+Rebuilt CaptureView to the mockup: hero indigo circle + waveform icon; title "What's on your mind?"; new AI copy; input box with a mic button (voice = coming-soon alert stub); selectable quick chips (Task/Reminder/Schedule/Errand/Idea); full-width Capture button; "TimeSense can detect" row (Time/Priority/Task type/Schedule fit); sparkles nav icon. Capture behavior unchanged. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-093 (Jira TIME-93): 'Why this recommendation' screen redesign
 
 Redesigned the recommendation-explanation screen to the mockup (the key recruiter-facing view).
