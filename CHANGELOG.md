@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-06] TIME-103: Location-aware arrival notifications — with Always location, TimeSense monitors geofences around your saved places (Home/Work) and, on arrival/departure, fires a local notification with your best next task. Settings ▸ Location & Places. Raw location is never stored (needs on-device testing)
 - [2026-07-06] TIME-102: Visual polish — darkened light-mode secondary text for better contrast/legibility (chips, card hierarchy, and section headers were delivered across the screen redesigns)
 - [2026-07-06] TIME-101: Settings home regrouped into AI Planning / Integrations / Privacy / Account for a more structured, mature feel
 - [2026-07-06] TIME-100: Subscription redesigned — Current Plan card, 'Basic includes' checklist, and an indigo 'Premium unlocks' card + Upgrade CTA

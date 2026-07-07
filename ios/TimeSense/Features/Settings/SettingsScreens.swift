@@ -424,6 +424,7 @@ struct WorkingHoursSettingsView: View {
 
 struct PrivacyConsentView: View {
     @EnvironmentObject private var authService: AuthService
+    @ObservedObject private var location = LocationService.shared
     @State private var showDeleteConfirm = false
     @State private var deleting = false
     @State private var showExportSoon = false
@@ -432,11 +433,18 @@ struct PrivacyConsentView: View {
         let icon: String; let color: Color; let name: String; let detail: String
         let status: String; let statusColor: Color
     }
+    private var locationStatus: (String, Color) {
+        switch location.authorizationStatus {
+        case .authorizedAlways: return ("Always", .green)
+        case .authorizedWhenInUse: return ("While Using", .green)
+        default: return ("Off", DesignTokens.Color.textSecondary)
+        }
+    }
     private var signals: [Signal] {
         [
             Signal(icon: "calendar", color: .blue, name: "Calendar", detail: "See events and availability", status: "Off", statusColor: DesignTokens.Color.textSecondary),
             Signal(icon: "heart.fill", color: .red, name: "Health / Wake Signals", detail: "Energy & routine estimation", status: "Off", statusColor: DesignTokens.Color.textSecondary),
-            Signal(icon: "location.fill", color: .blue, name: "Location", detail: "Commute & errand timing", status: "Off", statusColor: DesignTokens.Color.textSecondary),
+            Signal(icon: "location.fill", color: .blue, name: "Location", detail: "Commute & errand timing", status: locationStatus.0, statusColor: locationStatus.1),
             Signal(icon: "mic.fill", color: DesignTokens.Color.accent, name: "Audio (Voice Capture)", detail: "Speech is processed securely", status: "Disabled", statusColor: DesignTokens.Color.textSecondary),
         ]
     }

@@ -6368,6 +6368,75 @@ TICKETS = [
             h2("Next Ticket"), p("Screen redesign pass complete; back to the post-v1 backlog."),
         ),
     },
+
+    {
+        "summary": "TIME-103: Location-aware background arrival notifications",
+        "labels": ["ios", "location", "notifications", "feature"],
+        "description": doc(
+            h2("Goal"),
+            p("Make TimeSense location-aware: with 'Always' location it monitors geofences around "
+              "the user's saved places and, when they arrive or leave, wakes in the background, "
+              "fetches the best next task, and fires a local notification."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "LocationService (CoreLocation): permission step-up (WhenInUse -> Always), region "
+                "monitoring of saved places, on enter/exit -> GET /now -> local notification; "
+                "one-time fix for saving places",
+                "AppDelegate (@UIApplicationDelegateAdaptor): Firebase configure + LocationService "
+                "init on launch so geofence events are handled after background relaunch",
+                "Info.plist: NSLocationWhenInUse / AlwaysAndWhenInUse usage strings + UIBackgroundModes "
+                "location",
+                "PlacesSettingsView (Settings -> Integrations -> Location & Places): enable location, "
+                "save current location as Home/Work, list/remove places, shows real auth status",
+                "Notification permission request; Privacy & Consent Location row reflects the real "
+                "permission (While Using / Always / Off)",
+                "Privacy: only user-chosen place centers are persisted (UserDefaults) — never a raw "
+                "location track",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "The recommendation itself isn't yet location-informed server-side (arrival "
+                "notification surfaces the current best task); sending place/commute signals to the "
+                "backend is a follow-up",
+                "No remote push / APNs (local notifications only); no home-location learning (user "
+                "sets places)",
+                "NEEDS ON-DEVICE TESTING — permissions, background wake, and geofencing can't be "
+                "verified in the simulator/headless",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Core/Location/LocationService.swift (new), App/AppDelegate.swift (new), "
+                "Features/Settings/PlacesSettingsView.swift (new)",
+                "ios/TimeSense/App/TimeSenseApp.swift, Info.plist, Features/Settings/SettingsView.swift, "
+                "SettingsScreens.swift; TimeSense.xcodeproj",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Location & Places screen requests permission and saves Home/Work geofences",
+                "On geofence enter/exit the app fires a local notification with the best next task",
+                "Privacy Location status reflects the real permission; iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO
+"
+                "# on device: enable Always, save Home, leave/return the radius -> notification"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-087 (Info.plist/device), the /now endpoint, AuthService background token."),
+            divider(),
+            h2("Next Ticket"),
+            p("Send place/commute signals to the backend so the recommendation is location-informed; "
+              "APNs remote push; home-location learning."),
+        ),
+    },
 ]
 
 

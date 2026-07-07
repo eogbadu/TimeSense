@@ -5,15 +5,12 @@ import FirebaseCore
 
 @main
 struct TimeSenseApp: App {
+    // Handles Firebase configure + LocationService init on launch (incl. background relaunch from a
+    // geofence event).
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var authService = AuthService()
     @AppStorage("appTheme") private var appTheme = "system"
-
-    init() {
-        #if canImport(FirebaseCore)
-        FirebaseApp.configure()
-        #endif
-    }
 
     var body: some Scene {
         WindowGroup {
