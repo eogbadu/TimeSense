@@ -10,13 +10,17 @@ from datetime import datetime, time, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task
+from app.models.user_place import UserPlace
 from app.repositories.sleep_wake_repository import SleepWakeRepository
+from app.repositories.user_place_repository import UserPlaceRepository
 from app.services.recommendation.location_service import get_user_location_snapshot
 from app.services.recommendation.normalize_context import RawContextInputs, normalize_context
 from app.services.recommendation.time_service import get_time_snapshot
 from app.services.recommendation.types import (
+    Coordinates,
     HealthContext,
     LocationIntent,
+    Place,
     PlaceType,
     Priority,
     TaskItem,
@@ -101,6 +105,21 @@ async def _health(db: AsyncSession, user_id, now: datetime) -> HealthContext | N
     return HealthContext(sleep_hours=sleep_hours, sleep_quality=quality, energy_estimate=energy)
 
 
+_VALID_PLACE_TYPES = {
+    "grocery_store", "pharmacy", "gym", "school", "office", "restaurant", "store",
+    "gas_station", "walmart", "target", "costco", "custom",
+}
+
+
+def _to_place(row: UserPlace) -> Place:
+    ptype = row.place_type if row.place_type in _VALID_PLACE_TYPES else "custom"
+    return Place(
+        id=str(row.id), name=row.name, type=ptype,  # type: ignore[arg-type]
+        coordinates=Coordinates(latitude=row.latitude, longitude=row.longitude),
+        source="user_saved", confidence=1.0, is_preferred=row.is_preferred,
+    )
+
+
 async def build_user_context(
     db: AsyncSession, user, candidate_tasks: list[Task], now: datetime, usable_minutes: int
 ) -> tuple[UserContext, dict[str, Task]]:
@@ -118,11 +137,25 @@ async def build_user_context(
     location = await get_user_location_snapshot(db, user.id, now)
     health = await _health(db, user.id, now)
 
+    saved_rows = await UserPlaceRepository(db).list_for_user(user.id)
+    preferred_places = [_to_place(r) for r in saved_rows]
+
+    # Origin for travel = the coordinates of the saved place the user is currently at (we don't store
+    # live GPS). If the current place isn't a saved place, we have no origin → errands stay unconfirmed.
+    if location.place_name and location.coordinates is None:
+        match = next((r for r in saved_rows
+                      if r.name.casefold() == location.place_name.casefold()), None)
+        if match is not None:
+            location = dataclasses.replace(
+                location, coordinates=Coordinates(latitude=match.latitude, longitude=match.longitude)
+            )
+
     raw = RawContextInputs(
         now=now, timezone=tz, time_snapshot=snapshot,
         preferences=EngPreferences(
             work_hours=WorkHours(f"{work_start:02d}:00", f"{work_end:02d}:00"),
             default_travel_mode="driving",
+            preferred_places=preferred_places,
         ),
         tasks=task_items, calendar_events=[], location_snapshot=location, health=health,
     )

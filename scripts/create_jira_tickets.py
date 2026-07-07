@@ -6892,6 +6892,59 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-115: real maps provider + coordinate plumbing; then LLM explanation."),
         ),
     },
+
+    {
+        "summary": "TIME-115: Real maps provider + coordinate plumbing (light up location)",
+        "labels": ["backend", "recommendations", "location", "maps"],
+        "description": doc(
+            h2("Goal"),
+            p("Make the engine's location features real (not dormant): a Google maps provider behind "
+              "the factory (gated by API key), and privacy-clean coordinate plumbing so travel "
+              "feasibility can actually be computed."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "user_places table (name/place_type/lat/lng/is_preferred; per user) + repo + "
+                "GET/PUT /api/v1/places to sync the app's saved places WITH coordinates — these are "
+                "deliberate, user-named places (not a location trail)",
+                "GoogleMapsProvider (httpx async: geocode, nearby search, distance/travel), gated by "
+                "settings.google_maps_api_key; never raises; factory returns it when a key is set, "
+                "else NullMapsProvider",
+                "context_builder: preferred_places from user_places; travel ORIGIN = the saved "
+                "place's coordinates when the user is currently at one (no live-coordinate storage)",
+                "tests: places sync; context plumbing; engine end-to-end with a stub provider "
+                "(preferred errand resolves + feasibility + leads when it fits / rejected when not)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No live raw-GPS storage (origin comes from a saved place); iOS place-sync is TIME-116; "
+                "real Google calls need a key (tests use a stub); LLM explanation still later",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend: models/user_place.py + migration + __init__, repositories/user_place_repository.py, "
+                "api/v1/places.py + __init__, services/recommendation/maps/google_provider.py + factory.py, "
+                "context_builder.py, core/config.py; tests/test_places.py, test_maps_provider.py",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "PUT /places stores places w/ coords; GET returns them; context_builder exposes them "
+                "as preferred_places + sets origin from the current saved place",
+                "With a (stub) provider, a preferred errand that fits the free block leads; one that "
+                "doesn't is rejected; no key → NullMapsProvider (unchanged behavior); suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && alembic upgrade head && pytest tests/test_places.py tests/test_maps_provider.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-112/113/114 (engine + integration)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-116: iOS syncs saved places (with coords) to /places; then LLM explanation."),
+        ),
+    },
 ]
 
 
