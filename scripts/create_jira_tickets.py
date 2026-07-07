@@ -5779,6 +5779,68 @@ TICKETS = [
             p("Post-v1 backlog."),
         ),
     },
+
+    {
+        "summary": "TIME-090: Redesign the Now page to the approved mockup",
+        "labels": ["ios", "design", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Rebuild the Now page to match the approved mockup: an analysis banner, context chips, "
+              "a richer Best Next Action card with an inline confidence bar, and an 'Other good "
+              "options' list."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend: expose `confidence` (0–1) on /now for the best task, computed by a shared "
+                "compute_confidence() (extracted from the explainer) so the card and the "
+                "explanation sheet agree",
+                "iOS NowView: inline 'Now' title + sparkles; AnalysisBanner ('TimeSense analyzed "
+                "your day · Re-evaluated N min ago' from lastLoaded); ContextChipsRow (Calendar/"
+                "Routine/Location/Time/Tasks); BestNextActionCard (header + 'AI Recommended' badge, "
+                "category icon, title + 'for N minutes', meta line, inline Confidence bar, divider, "
+                "'Why this recommendation?' → sheet, plus Done/Snooze/Not-now); OtherOptionsSection "
+                "list (category icon, title, 'N min · descriptor', chevron → the task's explanation)",
+                "Client-side taskCategoryStyle(title) → icon/colour/descriptor for the task tiles",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "The center '+' FAB tab bar in the mockup is a separate navigation change (follow-up), "
+                "not in this ticket",
+                "Category styling is client-side keyword inference (no backend category field on the "
+                "task response)",
+                "Kept Done/Snooze/Not-now on the card (essential for the learning loop) though the "
+                "mockup omits them",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend/app/services/recommendation_explainer.py, app/api/v1/now.py",
+                "ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "/now returns confidence matching the explanation sheet",
+                "Now shows the analysis banner, context chips, the redesigned best-action card with "
+                "an inline confidence bar, and 'Other good options'",
+                "iOS build + backend suite pass",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "cd backend && pytest -q\n"
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-089 (structured why + confidence), TIME-077 (alternatives), the design tokens."),
+            divider(),
+            h2("Next Ticket"),
+            p("Center '+' FAB tab bar; post-v1 backlog."),
+        ),
+    },
 ]
 
 
