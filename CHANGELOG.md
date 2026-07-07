@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] TIME-113: Recommendation engine decision core — multi-domain candidate generation (calendar/task/location/health/routine/planning/context-switch/fallback), deterministic weighted scoring + hard-rule penalties, ranking, selection, and push-eligibility. Errands that can't be confirmed feasible never win; meeting-soon suppresses deep work; night suppresses errands; poor sleep favors recovery. 17 new tests
 - [2026-07-07] TIME-112: Deterministic recommendation engine — foundation (phases 1-6): typed engine package (no Any), centralized time & location services, maps-skill wrapper with a NullMapsProvider (degrades to low-confidence, never invents distances), travel-feasibility service, and context normalization. 15 new tests
 - [2026-07-07] TIME-111: Swipe a Today task left to reveal Done + Delete buttons (replaces the long-press menu)
 - [2026-07-07] TIME-110: Location is now always factored — an errand (e.g. 'Go to Walmart') can never be the top recommendation while you're home, and the app now syncs your current place even when you were already there. Errands still surface when you're out
