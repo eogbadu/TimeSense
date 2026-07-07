@@ -32,9 +32,26 @@ private func minuteOfDay(from date: Date) -> Int {
     return (components.hour ?? 0) * 60 + (components.minute ?? 0)
 }
 
+private func routineStyle(_ routineType: String) -> (icon: String, color: Color) {
+    switch routineType {
+    case "sleep":            return ("moon.fill", DesignTokens.Color.accent)
+    case "breakfast":        return ("cup.and.saucer.fill", .orange)
+    case "lunch":            return ("fork.knife", .green)
+    case "dinner":           return ("fork.knife", .green)
+    case "morning_hygiene":  return ("sun.max.fill", .yellow)
+    case "evening_hygiene":  return ("moon.stars.fill", DesignTokens.Color.accent)
+    default:                 return ("clock.fill", DesignTokens.Color.accent)
+    }
+}
+
+private func confidenceLine(_ routine: RoutineAssumption) -> String {
+    routine.isCustomized ? "High confidence  ·  Set by you" : "Medium confidence  ·  Default pattern"
+}
+
 struct LearnedAssumptionsView: View {
     @StateObject private var viewModel = LearnedAssumptionsViewModel()
     @State private var editingRoutine: RoutineAssumption?
+    @State private var showAddComingSoon = false
 
     var body: some View {
         Group {
@@ -44,29 +61,61 @@ struct LearnedAssumptionsView: View {
             case .error(let message):
                 EmptyStateView(icon: "exclamationmark.circle", title: "Couldn't load", message: message)
             case .loaded(let routines):
-                List(sorted(routines)) { routine in
-                    Button {
-                        editingRoutine = routine
-                    } label: {
-                        RoutineRow(routine: routine)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .scrollContentBackground(.hidden)
+                loaded(sorted(routines))
             }
         }
         .background(DesignTokens.Color.background)
-        .navigationTitle("Learned Assumptions")
+        .navigationTitle("Learned Patterns")
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.load() }
         .sheet(item: $editingRoutine) { routine in
             EditRoutineSheet(routine: routine) { startMinute, endMinute in
-                await viewModel.update(
-                    routineType: routine.routineType,
-                    startMinute: startMinute,
-                    endMinute: endMinute
-                )
+                await viewModel.update(routineType: routine.routineType, startMinute: startMinute, endMinute: endMinute)
             }
+        }
+        .alert("Manual patterns coming soon", isPresented: $showAddComingSoon) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("For now, TimeSense learns your patterns automatically — tap any to fine-tune it.")
+        }
+    }
+
+    private func loaded(_ routines: [RoutineAssumption]) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+                Text("TimeSense learns from your behavior to make smarter recommendations. You can edit or delete any pattern.")
+                    .font(DesignTokens.Typography.subheadline)
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DesignTokens.Spacing.lg)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
+                            .fill(DesignTokens.Color.accent.opacity(0.10))
+                    )
+
+                VStack(spacing: 0) {
+                    ForEach(Array(routines.enumerated()), id: \.element.id) { idx, routine in
+                        Button { editingRoutine = routine } label: { PatternRow(routine: routine) }
+                            .buttonStyle(.plain)
+                        if idx < routines.count - 1 { Divider().padding(.leading, 62) }
+                    }
+                }
+                .cardStyle()
+
+                Button { showAddComingSoon = true } label: {
+                    Label("Add manual pattern", systemImage: "plus")
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DesignTokens.Spacing.md)
+                        .background(Capsule().fill(DesignTokens.Color.accent))
+                }
+                .padding(.top, DesignTokens.Spacing.sm)
+            }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.top, DesignTokens.Spacing.sm)
+            .padding(.bottom, DesignTokens.Spacing.xxl)
         }
     }
 
@@ -78,35 +127,33 @@ struct LearnedAssumptionsView: View {
     }
 }
 
-private struct RoutineRow: View {
+private struct PatternRow: View {
     let routine: RoutineAssumption
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                HStack(spacing: DesignTokens.Spacing.xs) {
-                    Text(routineLabel(routine.routineType))
-                        .font(DesignTokens.Typography.body)
-                        .foregroundColor(DesignTokens.Color.textPrimary)
-                    if routine.isCustomized {
-                        Text("Edited")
-                            .font(DesignTokens.Typography.caption.weight(.semibold))
-                            .foregroundColor(DesignTokens.Color.accent)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(DesignTokens.Color.accent.opacity(0.12))
-                            .cornerRadius(DesignTokens.Radius.sm)
-                    }
-                }
+        let style = routineStyle(routine.routineType)
+        HStack(spacing: DesignTokens.Spacing.md) {
+            Image(systemName: style.icon)
+                .font(.title2)
+                .foregroundColor(style.color)
+                .frame(width: 40, height: 40)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(routineLabel(routine.routineType))
+                    .font(DesignTokens.Typography.callout.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.textPrimary)
                 Text("\(timeString(minuteOfDay: routine.startMinute)) – \(timeString(minuteOfDay: routine.endMinute))")
                     .font(DesignTokens.Typography.footnote)
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                Text(confidenceLine(routine))
+                    .font(DesignTokens.Typography.caption)
                     .foregroundColor(DesignTokens.Color.textSecondary)
             }
-            Spacer()
+            Spacer(minLength: 0)
             Image(systemName: "chevron.right")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundColor(DesignTokens.Color.textSecondary)
         }
+        .padding(DesignTokens.Spacing.md)
         .contentShape(Rectangle())
     }
 }

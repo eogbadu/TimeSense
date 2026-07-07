@@ -34,7 +34,7 @@ struct SettingsView: View {
                         SettingsRowLabel(icon: "clock.fill", title: "Working Hours", tint: .indigo)
                     }
                     NavigationLink(destination: LearnedAssumptionsView()) {
-                        SettingsRowLabel(icon: "brain.head.profile", title: "Learned Assumptions", tint: .teal)
+                        SettingsRowLabel(icon: "brain.head.profile", title: "Learned Patterns", tint: .teal)
                     }
                     HealthConnectRow(healthService: healthService)
                 }

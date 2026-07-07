@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-096 (Jira TIME-96): Learned Patterns rename + redesign
+
+Renamed 'Learned Assumptions' -> 'Learned Patterns' (screen title + Settings row). Redesigned to the mockup: explainer banner; icon rows (Sleep/Breakfast/Lunch/Morning/Evening) with name + time range + confidence line + chevron (tap to edit); 'Add manual pattern' button (coming-soon stub). Confidence derived honestly client-side (customized -> High/Set by you, else Medium/Default pattern; no fabricated day counts). Edit sheet unchanged. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-095 (Jira TIME-95): Insights locked-state redesign
 
 Rebuilt InsightsPremiumGate to preview the AI value (mockup): indigo 'Your AI Insights' lock banner with better copy; preview cards (Best focus window/Pattern detected/Schedule balance/Routine consistency) with small illustrative line/bar/ring charts under a subtle locked veil; 'Upgrade to Premium' + 'See all features'; crown nav icon. Preview values are illustrative samples. Premium body unchanged. iOS BUILD SUCCEEDED.

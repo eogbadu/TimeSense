@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-06] TIME-096: Renamed 'Learned Assumptions' to 'Learned Patterns' and redesigned it — explainer banner + icon rows with confidence/source + an add button
 - [2026-07-06] TIME-095: Insights locked state now previews the AI value — a 'Your AI Insights' banner + sample preview cards (best focus window, patterns, schedule balance, routine consistency) instead of a bare paywall
 - [2026-07-06] TIME-094: Redesigned Capture to feel AI-native — hero capture icon, clearer AI copy, quick type chips, a voice affordance, and a 'TimeSense can detect' row
 - [2026-07-06] TIME-093: Redesigned the 'Why this recommendation?' screen — a Recommended-action + confidence-ring header, 'Signals analyzed' (Calendar/Time of day/Location/Priority/Energy with checks), 'Alternatives considered', and a plain-English summary
