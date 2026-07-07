@@ -22,6 +22,7 @@ target (TestFlight beta vs. public release).
 - [ ] Sentry / monitoring DSN configured (TIME-054)
 - [ ] Rate limiting + security headers enabled (TIME-056)
 - [ ] Real OpenAI key with billing (fallbacks work without it, but the LLM is the good path)
+- [ ] `GOOGLE_MAPS_API_KEY` set (Geocoding + Places + Distance Matrix enabled, key restricted) to turn on location-aware travel-time recommendations; without it the engine safely runs location candidates at low confidence and never invents distances
 
 ## Auth & data
 - [x] Real Firebase project wired (iOS `GoogleService-Info.plist`, Android `google-services.json`, web env)
