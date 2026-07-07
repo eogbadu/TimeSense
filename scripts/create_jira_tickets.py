@@ -5885,6 +5885,67 @@ TICKETS = [
             p("Post-v1 backlog."),
         ),
     },
+
+    {
+        "summary": "TIME-092: Redesign the Today page to the approved mockup",
+        "labels": ["ios", "design", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Rebuild the Today page to match the approved mockup: a date + progress header, an 'AI "
+              "Recommended Now' card (the same best-next-action as Now), and a 'Smart Plan' grouped "
+              "into Morning / Afternoon / Evening (and Anytime)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "TodayViewModel: also fetch /now for the recommendation card; add fetchExplanation "
+                "and markDone(taskId)",
+                "iOS NowTask: decode due_at (for 'before 6:00 PM'); TaskCategoryStyle gains "
+                "locationAware (Errand/Appointment) for the 'Location-aware' tag",
+                "TodayView: DateSummaryRow ('July 6, 2026' + 'N of M complete' + calendar icon); "
+                "'AI Recommended Now' card (category icon, title + 'before <due>', meta line, 'Why "
+                "this recommendation?' → shared sheet); 'Smart Plan' card grouping tasks by "
+                "Morning/Afternoon/Evening/Anytime with tap-to-complete rows (category icon, title, "
+                "'time · duration')",
+                "Reuse the shared WhyThis / RecommendationExplanationSheet / taskCategoryStyle "
+                "(made internal) from the Now redesign",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Tab bar unchanged (per prior instruction — no '+' FAB)",
+                "Dropped the visible 'Scheduled by TimeSense · Undo' on the row for the clean mockup "
+                "look (unschedule still exists in the VM) — can re-add as a swipe/subtle control",
+                "No timeline connector thread between rows (possible refinement); completion on "
+                "Today doesn't trigger the duration-learning prompt yet",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Features/Today/TodayView.swift, TodayViewModel.swift",
+                "ios/TimeSense/Features/Now/NowView.swift (shared helpers internal), NowViewModel.swift (NowTask due_at)",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Today shows the date + 'N of M complete', an AI Recommended card when there's a "
+                "best task, and the Smart Plan grouped by time of day",
+                "Tapping a plan row marks it done; 'Why this recommendation?' opens the explanation "
+                "sheet; iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("TIME-090/089 (Now redesign + explanation), TIME-071/085 (Today tasks + scheduling)."),
+            divider(),
+            h2("Next Ticket"),
+            p("Post-v1 backlog."),
+        ),
+    },
 ]
 
 

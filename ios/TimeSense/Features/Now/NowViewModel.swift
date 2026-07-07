@@ -34,10 +34,12 @@ struct NowTask: Decodable, Identifiable {
     let status: String
     let estimatedMinutes: Int?
     let priority: Int
+    let dueAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id, title, status, priority
         case estimatedMinutes = "estimated_minutes"
+        case dueAt = "due_at"
     }
 }
 
