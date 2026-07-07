@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-102 (Jira TIME-102): Visual polish (light-mode contrast)
+
+Final item of the screen-redesign pass. Darkened the TextSecondary token in light mode (#8A8A8E -> #5E5E66) for legible helper text; slightly brighter in dark mode. Global via the asset catalog. Verified on the sign-in screen (secondary text noticeably more legible). Chips/card-hierarchy/section-header items from note #12 were already delivered across TIME-090-101. iOS BUILD SUCCEEDED. Completes the redesign batch (screens 3-12).
+
 ## 2026-07-06 — TIME-101 (Jira TIME-101): Settings home grouping
 
 Regrouped SettingsView into AI Planning (Learned Patterns, Working Hours, Notification Timing) / Integrations (Calendar, Health) / Privacy (Privacy & Consent, Delete My Data) / Account (Profile, Subscription, Appearance, About, Version). Sign Out stays at the bottom. Skipped non-existent rows (Recommendation Preferences, Notion, Location, separate Export) to avoid dead stubs. iOS BUILD SUCCEEDED.

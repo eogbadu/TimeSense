@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-06] TIME-102: Visual polish — darkened light-mode secondary text for better contrast/legibility (chips, card hierarchy, and section headers were delivered across the screen redesigns)
 - [2026-07-06] TIME-101: Settings home regrouped into AI Planning / Integrations / Privacy / Account for a more structured, mature feel
 - [2026-07-06] TIME-100: Subscription redesigned — Current Plan card, 'Basic includes' checklist, and an indigo 'Premium unlocks' card + Upgrade CTA
 - [2026-07-06] TIME-099: Privacy & Consent redesigned — signal rows with status labels (Calendar/Health/Location/Audio) + data controls (Delete/Export) + encrypted-never-sold note
