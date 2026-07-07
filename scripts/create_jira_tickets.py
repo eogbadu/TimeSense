@@ -6743,6 +6743,56 @@ TICKETS = [
             h2("Next Ticket"), p("Undo toast; swipe on Now cards."),
         ),
     },
+
+    {
+        "summary": "TIME-112: Deterministic recommendation engine — foundation (types + services)",
+        "labels": ["backend", "recommendations", "brain", "architecture"],
+        "description": doc(
+            h2("Goal"),
+            p("Rebuild the recommendation engine as a deterministic, scored decision system per "
+              "recommendation-engine-build-spec.md. This ticket is phases 1-6 (foundation): types, "
+              "time service, location service, maps skill wrapper, travel feasibility, context "
+              "normalization. The LLM is NOT involved in selection (explanation comes later)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "app/services/recommendation/ package (Python port of the TS spec; no Any — full type hints)",
+                "types.py: ActionType/ReasonCode/domains + Coordinates/TimeSnapshot/Place/TaskItem/"
+                "CalendarEvent/HealthContext/UserContext/CandidateAction/Recommendation dataclasses",
+                "time_service.get_time_snapshot(timezone, now=None) — tz-aware, testable",
+                "location_service.get_user_location_snapshot(db, user) — from UserLocationState; safe when missing",
+                "maps/: MapsProvider Protocol + NullMapsProvider (no API key) + MapsSkillService wrapper "
+                "(geocode/search/resolve/travel) — returns None -> low-confidence, never invents",
+                "travel_feasibility_service.calculate_travel_feasibility(...) with the spec formula + buffers",
+                "normalize_context.normalize_context(raw) -> UserContext",
+                "tests for each service + normalization",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No candidate generation/scoring/selection yet (TIME-113); no LLM; no real maps "
+                "provider or coordinate storage (NullMapsProvider only); not wired into /now yet",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend/app/services/recommendation/** (new), backend/tests/test_recommendation_engine_foundation.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "get_time_snapshot returns tz-aware part-of-day/work-hours/weekend; deterministic with injected now",
+                "NullMapsProvider yields None and the wrapper degrades gracefully (no invented distances)",
+                "travel feasibility applies totalRequired = travel+onsite+after+buffer and fitsInFreeBlock",
+                "normalize_context builds a typed UserContext from raw inputs; full suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_recommendation_engine_foundation.py -v"),
+            divider(),
+            h2("Dependencies"), p("Reuses usable_time/scheduling/task_duration/feedback/location repos."),
+            divider(),
+            h2("Next Ticket"), p("TIME-113: candidate generation + scoring + ranking/selection + tests."),
+        ),
+    },
 ]
 
 

@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-112 (Jira TIME-112): Recommendation engine foundation (phases 1-6)
+
+Began rebuilding the recommendation engine per recommendation-engine-build-spec.md as a deterministic, scored decision system (LLM only explains later, never selects). New package app/services/recommendation/ (Python port of the TS spec; no Any). Phases: (1) types.py — ActionType/ReasonCode/domains + Coordinates/TimeSnapshot/Place/TaskItem/CalendarEvent/HealthContext/UserContext/CandidateAction/Recommendation dataclasses. (2) time_service.get_time_snapshot (tz-aware, injectable now). (3) location_service.get_user_location_snapshot (from UserLocationState; safe when missing). (4) maps/ — MapsProvider Protocol + NullMapsProvider + MapsSkillService wrapper (preferred-first resolution; returns None → low-confidence, never invents). (5) travel_feasibility_service.calculate_travel_feasibility (total=travel+onsite+after+buffer; None without maps). (6) normalize_context — derives calendar/task context (buckets, free block, deadlines) from raw inputs, pure/testable. 15 new tests; suite 348. INSPECTION: TaskScorer→refactor to one input; now.py _ranked/_location_rerank→replace; usable_time/scheduling/task_duration/feedback/location repos→reuse; LLM removed from selection. No maps API/coords configured → NullMapsProvider (real provider + coordinate plumbing later). NOT yet wired into /now (integration in a later phase).
+
 ## 2026-07-07 — TIME-111 (Jira TIME-111): Swipe-to-reveal Done + Delete on Today
 
 User: wanted swipe-to-delete showing Delete + Mark done buttons. Added SwipeableRow (custom DragGesture — Smart Plan is a card, not a List, so .swipeActions isn't available) revealing green Done (hidden if already done) + red Delete; highPriorityGesture with horizontal-intent guard so vertical scroll still works; snaps open/closed; tapping a button runs markDone/deleteTask and closes. Replaced the long-press context menu. iOS BUILD SUCCEEDED.
