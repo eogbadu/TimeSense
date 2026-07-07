@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-06 — TIME-100 (Jira TIME-100): Subscription redesign
+
+Rebuilt SubscriptionSettingsView to the mockup: Current Plan card (Basic (Free)/Premium + leaf/crown icon); 'Basic includes' checklist; indigo 'Premium unlocks' card (AI best-next-action, integrations, weekly insights, proactive notifications, unlimited integrations); 'Upgrade to Premium' button + 'Plans managed in the App Store'. is_premium hides the upgrade CTA. StoreKit purchase still a follow-up. iOS BUILD SUCCEEDED.
+
 ## 2026-07-06 — TIME-099 (Jira TIME-99): Privacy & Consent redesign
 
 Rebuilt PrivacyConsentView to the mockup: banner ('you're in control'); 'Connected signals' card (Calendar/Health/Location/Audio rows with icon+subtitle+status, shown honestly as Off/Disabled until integrations exist); 'Data controls' card (Delete my data wired to DELETE /privacy/account + signOut; Export my data = coming-soon stub); encrypted/never-sold footer. iOS BUILD SUCCEEDED.
