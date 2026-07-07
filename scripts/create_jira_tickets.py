@@ -6098,6 +6098,58 @@ TICKETS = [
             p("TIME-096: Learned Patterns rename + redesign."),
         ),
     },
+
+    {
+        "summary": "TIME-096: Rename Learned Assumptions to Learned Patterns + redesign",
+        "labels": ["ios", "design", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Rename 'Learned Assumptions' to 'Learned Patterns' and redesign to the mockup: an "
+              "explainer banner + icon rows with confidence/source + an add button."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Rename the screen title + the Settings row to 'Learned Patterns'",
+                "Banner: 'TimeSense learns from your behavior to make smarter recommendations. You "
+                "can edit or delete any pattern.'",
+                "Rows: routine icon (Sleep moon / Breakfast cup / Lunch fork.knife / Morning sun / "
+                "Evening moon.stars) + name + time range + confidence line + chevron (tap to edit)",
+                "Confidence derived honestly client-side: customized -> 'High - Set by you', else "
+                "'Medium - Default pattern' (no fabricated day counts)",
+                "'Add manual pattern' button (coming-soon stub — backend routines are a fixed set)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No real confidence/observation-count backend field yet (routines are seeded + "
+                "user-edited)",
+                "Manual pattern creation not supported yet (stub)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "ios/TimeSense/Features/Settings/LearnedAssumptionsView.swift, SettingsView.swift",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Title + Settings row read 'Learned Patterns'; rows show icon/time/confidence; edit "
+                "still works; iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block(
+                "xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense "
+                "-destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"
+            ),
+            divider(),
+            h2("Dependencies"),
+            p("Routines (TIME-039/047)."),
+            divider(),
+            h2("Next Ticket"),
+            p("TIME-097: Working Hours explainer."),
+        ),
+    },
 ]
 
 
