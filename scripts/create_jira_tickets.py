@@ -6331,6 +6331,43 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-102: Visual polish (contrast, chips, section headers)."),
         ),
     },
+
+    {
+        "summary": "TIME-102: Visual polish — light-mode contrast",
+        "labels": ["ios", "design", "accessibility"],
+        "description": doc(
+            h2("Goal"),
+            p("Improve light-mode contrast per the notes — some gray helper text was too washed "
+              "out. (Card hierarchy, chips, and section headers were already addressed across the "
+              "screen redesigns TIME-090-101.)"),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Darkened the TextSecondary token in light mode (#8A8A8E -> #5E5E66) for legible "
+                "helper text; slightly brighter in dark mode (#98989D -> #A0A0A8). Global via the "
+                "asset catalog",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Chips / card hierarchy / section-header wording were delivered in the per-screen "
+                "redesigns (Now/Capture/Privacy/etc.)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Assets.xcassets/TextSecondary.colorset"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Secondary text is more legible in light mode; iOS build succeeds; verified via sign-in screenshot"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-073 (design tokens)."),
+            divider(),
+            h2("Next Ticket"), p("Screen redesign pass complete; back to the post-v1 backlog."),
+        ),
+    },
 ]
 
 
