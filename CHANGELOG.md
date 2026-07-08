@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-129: Notifications now appear even when the app is open (foreground) — previously iOS suppressed them, which looked like the push hadn't arrived. Verified APNs push works end-to-end on device
 - [2026-07-08] TIME-128: Push token never arrived because FirebaseAuth's app-delegate swizzling was swallowing the APNs registration callback — disabled it via FirebaseAppDelegateProxyEnabled=NO so our delegate receives the device token
 - [2026-07-08] TIME-127: Added loud launch + push-registration console markers to confirm a fresh build is running (diagnostic for the on-device push setup)
 - [2026-07-08] TIME-126: The app now registers for APNs push on every launch regardless of notification permission (previously it only registered if you'd granted permission, so the device token was never obtained). Logs the token to the Xcode console for debugging

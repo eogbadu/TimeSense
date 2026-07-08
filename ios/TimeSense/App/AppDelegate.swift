@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // permission separately (for showing the banners).
         print("📡 Calling registerForRemoteNotifications()…")
         application.registerForRemoteNotifications()
+        UNUserNotificationCenter.current().delegate = self
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             print("🔔 Notification permission granted=\(granted) error=\(String(describing: error))")
         }
@@ -50,5 +51,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     ) {
         // Almost always means the "Push Notifications" capability isn't on the provisioning profile.
         print("❌ Remote notification registration FAILED: \(error.localizedDescription)")
+    }
+}
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    /// Show notifications (banner + sound) even when the app is in the foreground — otherwise iOS
+    /// silently suppresses them, which looks like "the push never arrived" while testing.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        print("🔔 Notification presented in foreground: \(notification.request.content.title)")
+        completionHandler([.banner, .sound, .badge])
     }
 }
