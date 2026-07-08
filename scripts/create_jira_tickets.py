@@ -7857,6 +7857,43 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-140: capture date-parsing reliability."),
         ),
     },
+
+    {
+        "summary": "TIME-140: Capture parses specific times into scheduled_start",
+        "labels": ["backend", "capture", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("Captured tasks with a specific clock time ('today at 5pm') lost their slot — the LLM "
+              "prompt + rule-based parser only produced due_at. Extract a time as scheduled_start, "
+              "and run the deterministic parser alongside the LLM to fill gaps."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "parse_datetime -> (scheduled_start, due_at, title): specific time -> scheduled_start "
+                "(given/today date), date-only -> due_at (end of day)",
+                "capture_service: LLM prompt gains scheduled_start with clear time-vs-date rules; the "
+                "deterministic parser always runs and fills any field the LLM leaves null; set "
+                "scheduled_end = start + estimated (or 30 min)",
+                "updated parser tests to the 3-tuple + scheduled_start assertions",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No recurring-event parsing; capture endpoint auto-schedule for untimed tasks unchanged"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend: services/capture_date_parser.py, services/capture_service.py; tests/test_capture_date_parser.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["'Go to Walmart today at 5pm' -> scheduled_start 17:00 local + a block; date-only -> due_at; suite passes"]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_capture_date_parser.py tests/test_capture.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-072 (parser), TIME-139 (real tz makes local times correct)."),
+            divider(),
+            h2("Next Ticket"), p("Recurring/relative phrases (in 2 hours, every Monday); on-device capture verification."),
+        ),
+    },
 ]
 
 

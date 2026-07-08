@@ -93,15 +93,30 @@ def _clean_title(raw: str) -> str:
     return title[:1].upper() + title[1:] if title else raw
 
 
-def parse_datetime(raw_input: str, user_timezone: str = "UTC") -> tuple[datetime | None, str]:
+def parse_datetime(
+    raw_input: str, user_timezone: str = "UTC"
+) -> tuple[datetime | None, datetime | None, str]:
+    """Extract scheduling from raw text → (scheduled_start_utc, due_at_utc, cleaned_title).
+
+    A specific clock time ("at 5pm", "9:30am") means "do it then" → scheduled_start (on the given
+    date, or today). A date without a time ("today", "July 5th", "Monday") is a deadline → due_at at
+    end of that day. Either may be None.
+    """
     tz = _tz(user_timezone)
     now_local = datetime.now(tz)
     text = raw_input.lower()
+    title = _clean_title(raw_input)
 
-    due_date = _extract_date(text, now_local)
-    if due_date is None:
-        return None, _clean_title(raw_input)
+    tod = _extract_time(text)
+    the_date = _extract_date(text, now_local)
 
-    tod = _extract_time(text) or time(17, 0)  # default to 5pm local when only a date is given
-    due_local = datetime.combine(due_date, tod).replace(tzinfo=tz)
-    return due_local.astimezone(timezone.utc), _clean_title(raw_input)
+    if tod is not None:
+        day = the_date or now_local.date()
+        start_local = datetime.combine(day, tod).replace(tzinfo=tz)
+        return start_local.astimezone(timezone.utc), None, title
+
+    if the_date is not None:
+        due_local = datetime.combine(the_date, time(23, 59)).replace(tzinfo=tz)
+        return None, due_local.astimezone(timezone.utc), title
+
+    return None, None, title

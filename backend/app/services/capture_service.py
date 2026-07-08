@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.llm.base import LLMRequest
 from app.llm.gateway import LLMGateway
@@ -24,14 +24,18 @@ JSON schema:
 {
   "title": "<concise action title, max 120 chars>",
   "estimated_minutes": <integer or null>,
-  "due_at": "<ISO 8601 UTC datetime string or null>",
+  "scheduled_start": "<ISO 8601 UTC datetime or null>",
+  "due_at": "<ISO 8601 UTC datetime or null>",
   "priority": <1 to 5 integer, 3 if unclear>
 }
 
 Rules:
 - title must be a short, actionable phrase (not the full raw text)
 - estimated_minutes: derive from hints like "30 min", "an hour", "quick"; null if not mentioned
-- due_at: convert relative dates like "tomorrow 2pm" to absolute UTC; null if not mentioned
+- scheduled_start: set ONLY when the user gives a SPECIFIC clock time to do it
+  (e.g. "today at 5pm", "tomorrow 2pm", "9:30am Monday"). Convert to absolute UTC.
+- due_at: a deadline/date WITHOUT a specific do-time (e.g. "by Friday", "July 5th", "due tomorrow").
+  Convert to absolute UTC. If a specific time is given, prefer scheduled_start and leave due_at null.
 - priority: 1=critical, 2=high, 3=normal, 4=low, 5=someday
 - Respond with raw JSON only — no code fences, no explanation
 """
@@ -42,6 +46,10 @@ class CaptureService:
         self._gateway = gateway
 
     async def parse(self, raw_input: str, user_timezone: str = "UTC") -> TaskCreate:
+        # Deterministic extraction runs regardless — it reliably handles the common phrasings
+        # ("today at 5pm", "July 5th") that the LLM sometimes drops, and fills any gaps below.
+        rb_start, rb_due, rb_title = parse_datetime(raw_input, user_timezone=user_timezone)
+
         prompt = (
             f"Today's UTC date and time: {datetime.now(timezone.utc).isoformat()}\n"
             f"User timezone: {user_timezone}\n\n"
@@ -49,36 +57,40 @@ class CaptureService:
         )
         try:
             raw_json = await self._gateway.complete_simple(
-                prompt=prompt,
-                system=_PARSE_SYSTEM,
-                max_tokens=256,
+                prompt=prompt, system=_PARSE_SYSTEM, max_tokens=256,
             )
             parsed = json.loads(raw_json.strip())
-            due_at: datetime | None = None
-            if parsed.get("due_at"):
-                try:
-                    due_at = datetime.fromisoformat(parsed["due_at"].replace("Z", "+00:00"))
-                except (ValueError, AttributeError):
-                    due_at = None
-            return TaskCreate(
-                title=str(parsed.get("title") or raw_input)[:500],
-                estimated_minutes=_safe_int(parsed.get("estimated_minutes")),
-                due_at=due_at,
-                priority=_clamp(int(parsed.get("priority", 3)), 1, 5),
-                source="capture",
-                raw_input=raw_input,
-            )
+            # LLM values win when present; the deterministic parser fills the gaps.
+            scheduled_start = _parse_iso(parsed.get("scheduled_start")) or rb_start
+            due_at = _parse_iso(parsed.get("due_at")) or rb_due
+            estimated = _safe_int(parsed.get("estimated_minutes"))
+            title = str(parsed.get("title") or rb_title)[:500]
+            priority = _clamp(int(parsed.get("priority", 3)), 1, 5)
         except Exception as exc:
             logger.warning("Capture parse failed, using rule-based fallback: %s", exc)
-            # Rule-based fallback so tasks still get a due date/time (and a lightly cleaned title)
-            # when the LLM is unavailable (e.g. OpenAI quota/rate limits).
-            due_at, title = parse_datetime(raw_input, user_timezone=user_timezone)
-            return TaskCreate(
-                title=title[:500],
-                due_at=due_at,
-                source="capture",
-                raw_input=raw_input,
+            scheduled_start, due_at, estimated, title, priority = (
+                rb_start, rb_due, None, rb_title[:500], 3
             )
+
+        # A "do it at 5pm" gets a concrete block; give it a length so it lands on the timeline.
+        scheduled_end = (
+            scheduled_start + timedelta(minutes=estimated or 30)
+            if scheduled_start is not None else None
+        )
+        return TaskCreate(
+            title=title, estimated_minutes=estimated,
+            scheduled_start=scheduled_start, scheduled_end=scheduled_end,
+            due_at=due_at, priority=priority, source="capture", raw_input=raw_input,
+        )
+
+
+def _parse_iso(value) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (ValueError, AttributeError, TypeError):
+        return None
 
 
 def _safe_int(value) -> int | None:
