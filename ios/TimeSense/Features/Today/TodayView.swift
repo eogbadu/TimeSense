@@ -4,6 +4,7 @@ struct TodayView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = TodayViewModel()
     @ObservedObject private var calendar = CalendarSyncService.shared
+    @State private var schedulingTask: TimelineTask?
 
     /// Today's timed calendar events (all-day excluded), sorted by start time.
     private var todaysEvents: [CalendarSyncService.CalEvent] {
@@ -27,6 +28,9 @@ struct TodayView: View {
             .background(DesignTokens.Color.background)
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
+            .sheet(item: $schedulingTask) { task in
+                eventEditorSheet(for: task)
+            }
         }
         .task {
             await viewModel.load()
@@ -70,7 +74,10 @@ struct TodayView: View {
                     SmartPlanCard(
                         tasks: tasks,
                         onToggle: { id in Task { await viewModel.markDone(taskId: id) } },
-                        onDelete: { id in Task { await viewModel.deleteTask(taskId: id) } }
+                        onDelete: { id in Task { await viewModel.deleteTask(taskId: id) } },
+                        onSchedule: { task in
+                            Task { if await calendar.ensureWriteAccess() { schedulingTask = task } }
+                        }
                     )
                 }
             }
@@ -79,6 +86,21 @@ struct TodayView: View {
             .padding(.bottom, DesignTokens.Spacing.xxl)
         }
         .refreshable { await viewModel.load() }
+    }
+
+    /// Native "add event" editor pre-filled from the task, for the user to review and confirm.
+    @ViewBuilder
+    private func eventEditorSheet(for task: TimelineTask) -> some View {
+        let start = task.scheduledStart ?? Date()
+        let end = start.addingTimeInterval(TimeInterval((task.estimatedMinutes ?? 30) * 60))
+        EventEditorView(
+            event: calendar.makeDraftEvent(title: task.title, start: start, end: end),
+            eventStore: calendar.eventStore
+        ) { saved in
+            schedulingTask = nil
+            if saved { Task { await calendar.syncIfAuthorized() } }
+        }
+        .ignoresSafeArea()
     }
 
     private func sectionHeader(_ text: String) -> some View {
@@ -198,6 +220,7 @@ private struct SmartPlanCard: View {
     let tasks: [TimelineTask]
     let onToggle: (String) -> Void
     let onDelete: (String) -> Void
+    let onSchedule: (TimelineTask) -> Void
 
     private var groups: [(name: String, tasks: [TimelineTask])] {
         let order = ["Morning", "Afternoon", "Evening", "Anytime"]
@@ -240,6 +263,11 @@ private struct SmartPlanCard: View {
                             onDelete: { onDelete(task.id) }
                         ) {
                             SmartPlanRow(task: task, onToggle: { onToggle(task.id) })
+                                .contextMenu {
+                                    Button { onSchedule(task) } label: {
+                                        Label("Add to Calendar", systemImage: "calendar.badge.plus")
+                                    }
+                                }
                         }
                     }
                 }

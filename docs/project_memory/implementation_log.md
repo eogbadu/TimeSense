@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-08 — TIME-134 (Jira TIME-134): Calendar write-back (add task to calendar w/ approval)
+
+Write half of read+write. CalendarSyncService: ensureWriteAccess() (requests full access if needed), makeDraftEvent(title,start,end) -> unsaved EKEvent on defaultCalendarForNewEvents, eventStore accessor. EventEditorView (UIViewControllerRepresentable wrapping EKEventEditViewController + EKEventEditViewDelegate; EventKitUI) = Apple's native review/confirm editor — the approval step per the product rule. TodayView: @State schedulingTask; SmartPlanCard gains onSchedule + a '.contextMenu Add to Calendar' (calendar.badge.plus); tapping ensures write access then presents the editor via .sheet(item:), pre-filled from the task (scheduledStart or now, +estimatedMinutes/30 duration); on save -> syncIfAuthorized so the new event reflects back. Registered EventEditorView.swift. iOS BUILD SUCCEEDED. Completes the Apple Calendar read+write MVP (TIME-131..134).
 ## 2026-07-08 — TIME-133 (Jira TIME-133): Show calendar events on Today
 
 CalendarSyncService now @Published var events: [CalEvent] (id/title/start/end/location/allDay), populated in sync() from the EKEvents (alongside the backend payload). TodayView: @ObservedObject calendar; todaysEvents = events filtered to today + not all-day, sorted by start; new read-only 'On your calendar' CalendarEventsCard (calendar glyph + title + 'start – end · location'), shown above Smart Plan when non-empty; Today .task/onChange now also calls calendar.syncIfAuthorized() so events refresh on tab appear. iOS BUILD SUCCEEDED. Write-back (add events w/ approval) = TIME-134.

@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-134: Add a task to your calendar — long-press a task on Today ▸ 'Add to Calendar' opens Apple's native event editor pre-filled with the task; you review and tap Add (calendar writes always require your approval). The new event then syncs back
 - [2026-07-08] TIME-133: Your connected calendar now shows on the Today screen — an 'On your calendar' section lists today's events (time, title, location), read-only
 - [2026-07-08] TIME-132: Connect Apple Calendar (Settings ▸ Calendar) — grants calendar access, reads your upcoming events, and syncs them so recommendations factor your schedule (meeting prep, free-block timing). Re-syncs on launch. Reads any calendars added to iOS, including Google
 - [2026-07-08] TIME-131: Apple Calendar (backend) — synced-events store + PUT/GET /api/v1/calendar/synced so the app can push the events it reads from EventKit; the recommendation engine now factors your real calendar (meeting prep/join/leave, free-block from the next event). All-day events are ignored for meeting logic
