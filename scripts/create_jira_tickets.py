@@ -7645,6 +7645,40 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-134: write events to the calendar with approval (EventKit)."),
         ),
     },
+
+    {
+        "summary": "TIME-134: Calendar write-back — add a task to the calendar (with approval)",
+        "labels": ["ios", "calendar", "eventkit"],
+        "description": doc(
+            h2("Goal"),
+            p("Let TimeSense schedule a task onto the calendar, honoring the 'calendar writes require "
+              "user approval' rule via Apple's native event editor."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "CalendarSyncService: ensureWriteAccess() + makeDraftEvent + expose eventStore",
+                "EventEditorView (EKEventEditViewController wrapper) — the native review/confirm UI",
+                "Today: long-press a task -> 'Add to Calendar' -> pre-filled editor (title, "
+                "task's scheduled time or now, estimated duration); on save, re-sync",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No auto-scheduling/free-slot picking (user confirms the time in the editor); no engine-initiated event creation yet"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/Calendar/{CalendarSyncService,EventEditorView}.swift, Features/Today/TodayView.swift; TimeSense.xcodeproj"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Long-press a Today task -> Add to Calendar -> native editor pre-filled -> Add creates the event and re-syncs; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-131/132/133 (calendar read + sync + display)."),
+            divider(),
+            h2("Next Ticket"), p("Engine-suggested time blocks; auto-schedule into free slots (with approval)."),
+        ),
+    },
 ]
 
 

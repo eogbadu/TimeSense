@@ -62,6 +62,38 @@ final class CalendarSyncService: ObservableObject {
         status = .connected
     }
 
+    // MARK: - Write-back (create events, with the user approving in the native editor)
+
+    /// The store the native event editor writes to.
+    var eventStore: EKEventStore { store }
+
+    /// Ensure we can write to the calendar, requesting access if needed. Returns whether granted.
+    func ensureWriteAccess() async -> Bool {
+        if isAuthorized { return true }
+        do {
+            let granted: Bool
+            if #available(iOS 17.0, *) {
+                granted = try await store.requestFullAccessToEvents()
+            } else {
+                granted = try await store.requestAccess(to: .event)
+            }
+            if granted { status = .connected }
+            return granted
+        } catch {
+            return false
+        }
+    }
+
+    /// A draft event (unsaved) the native editor will present for the user to review + confirm.
+    func makeDraftEvent(title: String, start: Date, end: Date) -> EKEvent {
+        let event = EKEvent(eventStore: store)
+        event.title = title
+        event.startDate = start
+        event.endDate = end
+        event.calendar = store.defaultCalendarForNewEvents
+        return event
+    }
+
     func disconnect() async {
         // Clear the backend's copy. (Revoking the OS permission itself is done in iOS Settings.)
         let _: SyncResponse? = try? await APIClient.shared.put(
