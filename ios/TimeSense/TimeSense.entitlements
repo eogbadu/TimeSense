@@ -10,5 +10,9 @@
 	<true/>
 	<key>com.apple.developer.healthkit.access</key>
 	<array/>
+	<!-- Remote push. 'development' for dev/TestFlight; Xcode/Apple flips it to 'production' for
+	     App Store distribution. -->
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>
