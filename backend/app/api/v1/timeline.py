@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, Query
@@ -30,13 +30,17 @@ async def get_today_timeline(
     user_svc = UserService(db)
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
 
-    today = datetime.now(timezone.utc).date()
-    for_date = target_date or today
+    utc_today = datetime.now(timezone.utc).date()
+    for_date = target_date or utc_today
 
     repo = TaskRepository(db)
     tasks = await repo.list_by_user(user_id=user.id, for_date=for_date, limit=200)
 
-    if for_date == today:
+    # Include untimed pending to-dos (just-captured tasks with no time) when the user is viewing
+    # "today". The client sends its LOCAL date, which can be a day off from the server's UTC date near
+    # midnight, so accept any date within a day of UTC-today (the client only ever asks for its own
+    # current date). Without this, late-evening users saw an empty "your day is open" screen.
+    if abs((for_date - utc_today).days) <= 1:
         scheduled_ids = {t.id for t in tasks}
         all_pending = await repo.list_by_user(user_id=user.id, status="pending", limit=200)
         untimed = [t for t in all_pending if t.scheduled_start is None and t.id not in scheduled_ids]

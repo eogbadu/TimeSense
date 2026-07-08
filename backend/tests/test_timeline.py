@@ -154,3 +154,23 @@ async def test_today_includes_untimed_pending_tasks(client, db_session):
     assert r.status_code == 200
     titles = [t["title"] for t in r.json()]
     assert "Buy milk" in titles
+
+
+@pytest.mark.anyio
+async def test_today_includes_untimed_tasks_across_utc_boundary(client, db_session):
+    """Regression: a late-evening user's LOCAL date lags UTC, so the client sends yesterday's date.
+    Untimed pending tasks must still show (this caused the empty 'your day is open' screen)."""
+    from datetime import datetime, timedelta, timezone
+    from app.services.user_service import UserService
+    from app.models.task import Task
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    db_session.add(Task(user_id=user.id, title="Go to Walmart", status="pending", priority=3))
+    await db_session.flush()
+
+    # The client's local date is one day behind the server's UTC date.
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+    with _mock_verify(MOCK_USER):
+        r = await client.get(f"/api/v1/timeline/today?date={yesterday}", headers=_auth_headers())
+    assert r.status_code == 200
+    assert "Go to Walmart" in [t["title"] for t in r.json()]

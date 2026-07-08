@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-125: Fixed two on-device bugs — (1) location posting / device registration / place sync were 500-ing on Postgres because four migrations were missing the created_at/updated_at defaults (added a migration to fix them); (2) the Today page showed an empty 'your day is open' in the evening because untimed tasks were only included when the client date matched the server's UTC date — now tolerant of the local/UTC date boundary
 - [2026-07-07] TIME-124: Fixed the Capture screen trapping you with the keyboard up — added a 'Done' keyboard button and swipe-down-to-dismiss (the multi-line field made Return add a newline, and there was previously no way to close the keyboard)
 - [2026-07-07] TIME-123: Added a Celery beat service to docker-compose (fires the schedules incl. the 30-min proactive-push scan) and POST /api/v1/devices/test-push — sends a push to your own devices immediately (engine text or a {title, body} override), bypassing eligibility/cooldown, for verifying the APNs chain
 - [2026-07-07] TIME-122: iOS registers for APNs remote push and syncs its device token to /api/v1/devices — enabling the backend's proactive push (needs Apple APNs creds on the server + a push-enabled provisioning profile to deliver)
