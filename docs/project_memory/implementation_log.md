@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-08 — TIME-129 (Jira TIME-129): Foreground notification presentation + PUSH VERIFIED
+
+PUSH NOW WORKS END-TO-END ON DEVICE. After TIME-128 (Firebase proxy disabled) the token registered (device_tokens=1, PUT /devices 200); a server-side send_test via the real ApnsPushSender returned delivered=1 and APNs returned HTTP/2 200 + apns-id — confirmed on the user's phone. The FIRST push seemed to not arrive because iOS suppresses banners for foreground apps. Fix: AppDelegate conforms to UNUserNotificationCenterDelegate + set as center.delegate; willPresent returns [.banner,.sound,.badge] so pushes AND local geofence notifications show even with the app open. iOS BUILD SUCCEEDED. Full push chain: engine -> LLM text -> JWT/HTTP2 -> sandbox APNs -> device. For automatic proactive push, run celery worker+beat.
 ## 2026-07-08 — TIME-128 (Jira TIME-128): Disable Firebase delegate swizzling for APNs
 
 Root cause of 'no push token' nailed via console: fresh build ran (🚀 TIME-127), registerForRemoteNotifications() called (📡), notification permission granted=true — but NEITHER didRegisterForRemoteNotificationsWithDeviceToken (✅) NOR didFailToRegister (❌) fired. Classic FirebaseAuth UIApplicationDelegate method swizzling intercepting the APNs registration callback and not chaining to our @UIApplicationDelegateAdaptor delegate. Fix: Info.plist FirebaseAppDelegateProxyEnabled=NO (we use neither FCM nor phone-auth, so safe). Verified the key merges into the built Info.plist. Now the delegate should fire ✅/❌ on device. iOS BUILD SUCCEEDED.

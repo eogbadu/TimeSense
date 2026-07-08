@@ -7460,6 +7460,39 @@ TICKETS = [
             h2("Next Ticket"), p("Confirm backend receives the token + fire a test push."),
         ),
     },
+
+    {
+        "summary": "TIME-129: Show notifications while the app is in the foreground",
+        "labels": ["ios", "notifications", "push", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("iOS suppresses banners for foreground apps unless the app presents them, which looked "
+              "like 'the push never arrived' during testing. Present them explicitly."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "AppDelegate conforms to UNUserNotificationCenterDelegate; set as the center delegate",
+                "willPresent returns [.banner, .sound, .badge] so pushes + local (geofence) "
+                "notifications show even with the app open",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No tap-handling / deep-link routing yet"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/App/AppDelegate.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["A push received while the app is foregrounded shows a banner; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-128 (push delivery working)."),
+            divider(),
+            h2("Next Ticket"), p("Gate debug prints behind #if DEBUG; notification tap deep-links."),
+        ),
+    },
 ]
 
 
