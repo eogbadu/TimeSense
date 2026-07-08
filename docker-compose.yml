@@ -70,5 +70,25 @@ services:
       redis:
         condition: service_healthy
 
+  # Scheduler — fires the beat_schedule (morning/evening check-ins, weekly insights, and the
+  # every-30-min proactive-push scan). One beat process; the worker(s) above execute the tasks.
+  beat:
+    build:
+      context: ./backend
+      target: production
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://timesense:timesense@postgres:5432/timesense
+      - DATABASE_URL_SYNC=postgresql://timesense:timesense@postgres:5432/timesense
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:

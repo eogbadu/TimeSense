@@ -7238,6 +7238,49 @@ TICKETS = [
             h2("Next Ticket"), p("End-to-end push test on device once Apple creds are set."),
         ),
     },
+
+    {
+        "summary": "TIME-123: Celery beat service + 'send test push now' endpoint",
+        "labels": ["backend", "notifications", "push", "devx"],
+        "description": doc(
+            h2("Goal"),
+            p("Make the proactive-push chain runnable and verifiable: a docker-compose beat service "
+              "(the scheduler) and an authenticated endpoint that pushes to the caller's own devices "
+              "immediately, bypassing the eligibility/cooldown gates."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "docker-compose: add a 'beat' service (celery ... beat) alongside the worker",
+                "ProactivePushService.send_test: send to the user's device tokens NOW — engine text "
+                "or a canned {title, body} override — bypassing eligible_for_push + cooldown; record it",
+                "POST /api/v1/devices/test-push (current user): returns apns_available + delivered + "
+                "the title/body sent (or reason=no_device)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Still needs real APNs creds + a device token to actually deliver; test-push only "
+                "targets the caller's own devices (no cross-user)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["docker-compose.yml; backend: services/push/push_service.py, api/v1/devices.py; tests/test_push_service.py, test_devices.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "beat service defined; send_test delivers via a stub sender even for a non-eligible "
+                "recommendation and honors title/body override; endpoint returns apns_available/"
+                "delivered; no device → reason; suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_push_service.py tests/test_devices.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-121/122 (push backend + iOS registration)."),
+            divider(),
+            h2("Next Ticket"), p("End-to-end on-device verification once APNS_* + a push provisioning profile are set."),
+        ),
+    },
 ]
 
 

@@ -99,6 +99,42 @@ async def test_pushes_after_cooldown_elapses(db_session):
     assert sender.sent[0][3] == rec.action_type  # collapse id = action type
 
 
+async def test_send_test_bypasses_eligibility_and_cooldown(db_session):
+    """test-push must deliver even for a non-eligible recommendation and inside cooldown."""
+    from app.models.task import Task
+    from app.repositories.push_notification_repository import PushNotificationRepository
+    user = await _user(db_session)
+    await _register(db_session, user)
+    # low-priority, no deadline → NOT push-eligible normally
+    db_session.add(Task(user_id=user.id, title="Someday idea", status="pending", priority=4))
+    now = datetime.now(timezone.utc)
+    await PushNotificationRepository(db_session).record(  # a recent push (would trigger cooldown)
+        user_id=user.id, action_type="deadline_task", title="x", body="y",
+        sent_at=now - timedelta(minutes=5), delivered_count=1)
+    await db_session.flush()
+
+    sender = _StubSender()
+    result = await ProactivePushService(db_session).send_test(user, sender, now=now)
+    assert result["delivered"] == 1 and result["apns_available"] is True
+    assert len(sender.sent) == 1
+
+
+async def test_send_test_honors_title_body_override(db_session):
+    user = await _user(db_session)
+    await _register(db_session, user)
+    sender = _StubSender()
+    result = await ProactivePushService(db_session).send_test(
+        user, sender, title="Ping", body="It works.")
+    assert result["title"] == "Ping" and result["body"] == "It works."
+    assert sender.sent[0][1] == "Ping" and sender.sent[0][2] == "It works."
+
+
+async def test_send_test_no_device(db_session):
+    user = await _user(db_session)
+    result = await ProactivePushService(db_session).send_test(user, _StubSender(), title="a", body="b")
+    assert result["delivered"] == 0 and result["reason"] == "no_device"
+
+
 async def test_null_sender_records_nothing_delivered(db_session):
     """With no APNs configured, the decision still runs but nothing is delivered."""
     user = await _user(db_session)

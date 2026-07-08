@@ -79,3 +79,35 @@ class ProactivePushService:
         )
         await self.db.commit()
         return rec
+
+    async def send_test(
+        self, user, sender: PushSender, gateway: LLMGateway | None = None,
+        title: str | None = None, body: str | None = None, now: datetime | None = None,
+    ) -> dict:
+        """Push to the user's own devices immediately, bypassing eligibility + cooldown — for
+        verifying the APNs chain. Uses a {title, body} override if given, else the engine's pick."""
+        now = now or datetime.now(timezone.utc)
+        tokens = await DeviceTokenRepository(self.db).list_tokens(user.id)
+        if not tokens:
+            return {"apns_available": sender.available, "delivered": 0, "reason": "no_device"}
+
+        if title and body:
+            out_title, out_body, action = title, body, "test"
+        else:
+            candidates, usable, _ = await gather_candidate_tasks(self.db, user, now)
+            ctx, _ = await build_user_context(self.db, user, candidates, now, usable)
+            maps = MapsSkillService(get_maps_provider())
+            rec = await run_engine(ctx, maps=maps, now=now, gateway=gateway)
+            out_title, out_body, action = rec.title, rec.message, rec.action_type
+
+        delivered = 0
+        for token in tokens:
+            if await sender.send(token, out_title, out_body, collapse_id=action):
+                delivered += 1
+        await PushNotificationRepository(self.db).record(
+            user_id=user.id, action_type=action, title=out_title, body=out_body,
+            sent_at=now, delivered_count=delivered,
+        )
+        await self.db.commit()
+        return {"apns_available": sender.available, "delivered": delivered,
+                "title": out_title, "body": out_body, "action_type": action}
