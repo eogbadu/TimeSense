@@ -335,7 +335,10 @@ class CandidateAction:
     context_fit: float = 0.0
     time_fit: float = 0.0
     energy_fit: float = 0.0
-    location_fit: float = 0.0
+    # Neutral by default: for an action that doesn't depend on location, where you are neither helps
+    # nor hurts. Location-dependent candidates (errands) set this explicitly (low until a feasible
+    # trip is confirmed, high when it fits).
+    location_fit: float = 0.5
     routine_fit: float = 0.0
     user_preference_fit: float = 0.0
     confidence: float = 0.5

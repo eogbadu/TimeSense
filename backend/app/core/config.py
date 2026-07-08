@@ -60,6 +60,13 @@ class Settings(BaseSettings):
     google_play_package_name: str = "com.timesense.app"
     google_play_service_account_json: str = "{}"
 
+    # APNs (Apple Push Notification service). Token-based (JWT) auth. Empty key → push disabled.
+    apns_key_id: str = ""
+    apns_team_id: str = ""
+    apns_private_key: str = ""          # contents of the .p8 (PEM), or with literal \n escapes
+    apns_bundle_id: str = "com.timesense.app"
+    apns_use_sandbox: bool = True       # sandbox for dev/TestFlight; set False for production
+
     # Maps (server-side geocoding / places / travel time). Empty → NullMapsProvider (location
     # candidates stay low-confidence and never invent distances).
     google_maps_api_key: str = ""

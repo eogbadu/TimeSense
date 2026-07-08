@@ -4,6 +4,7 @@ pydantic[email]==2.10.3
 pydantic-settings==2.6.1
 python-dotenv==1.0.1
 httpx==0.28.1
+h2==4.1.0
 
 # Database
 sqlalchemy[asyncio]==2.0.36

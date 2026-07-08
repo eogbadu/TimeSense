@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] TIME-121: APNs remote push backend — device-token registration (PUT/DELETE /api/v1/devices), a gated Google-style APNs sender (ES256 JWT over HTTP/2; no-op without credentials), and a ProactivePushService that pushes the engine's LLM-phrased text only when eligible_for_push and outside a 45-min cooldown (same-type suppressed; high-urgency overrides), driven by a Celery task every 30 min. Also: location_fit now defaults to neutral (0.5) for location-independent actions so strong tasks can reach the push threshold
 - [2026-07-07] TIME-120: Arrival/departure notifications now use the engine's LLM-phrased recommendation text (via /now/recommendation) instead of a plain 'Best next: X' line — and stay quiet (light acknowledgement) when there's nothing worthwhile to suggest
 - [2026-07-07] chore(config): consolidated to a SINGLE root .env — migrated the 13 backend-only keys (incl. GOOGLE_MAPS_API_KEY) into the canonical root .env.example, deleted the redundant backend/.env.example, and simplified config to load only the root .env. Fixes the confusion of two drifting env templates
 - [2026-07-07] TIME-119: The Now screen now surfaces the engine's full cross-domain recommendation (wind-down, prep-for-meeting, nearby errand…) as a 'TimeSense suggests' card with the LLM explanation, confidence, and travel info — via /now/recommendation. Task picks keep the existing best-action card

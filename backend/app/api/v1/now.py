@@ -15,6 +15,7 @@ from app.models.recommendation_event import RecommendationEvent
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
+from app.services.recommendation.candidate_gather import gather_candidate_tasks
 from app.services.recommendation.candidates.generate import generate_candidate_actions
 from app.services.recommendation.context_builder import build_user_context
 from app.services.recommendation.engine import run_engine
@@ -94,30 +95,8 @@ def _moment(local_now: datetime, ranked, now: datetime) -> str | None:
 
 
 async def _gather_candidate_tasks(db: AsyncSession, user, now: datetime):
-    """Collect the eligible candidate Tasks (pending today + overdue + unscheduled, minus suppressed)
-    and the usable-minutes window. Shared by /now and /now/recommendation."""
-    repo = TaskRepository(db)
-    today = now.date()
-
-    today_tasks = await repo.list_by_user(user_id=user.id, for_date=today, limit=200)
-    pending = [t for t in today_tasks if t.status in ("pending", "in_progress")]
-
-    all_pending = await repo.list_by_user(user_id=user.id, status="pending", limit=200)
-    already = {p.id for p in pending}
-
-    overdue = [
-        t for t in all_pending
-        if t.due_at and t.due_at.replace(tzinfo=timezone.utc) < now and t.id not in already
-    ]
-    already |= {t.id for t in overdue}
-    unscheduled = [t for t in all_pending if t.scheduled_start is None and t.id not in already]
-
-    user_tz = user.profile.timezone if user.profile else "UTC"
-    usable_minutes = UsableTimeService().calculate(today_tasks, anchor=now, user_timezone=user_tz)
-
-    suppressed = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
-    candidates = [t for t in (pending + overdue + unscheduled) if t.id not in suppressed]
-    return candidates, usable_minutes, today_tasks
+    """Shared candidate gathering (also used by the proactive-push service)."""
+    return await gather_candidate_tasks(db, user, now)
 
 
 async def _ranked_candidates(db: AsyncSession, user, now: datetime):

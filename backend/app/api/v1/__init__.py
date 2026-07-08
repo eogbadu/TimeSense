@@ -6,6 +6,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.calendar import router as calendar_router
 from app.api.v1.commutes import router as commutes_router
 from app.api.v1.consent import router as consent_router
+from app.api.v1.devices import router as devices_router
 from app.api.v1.health import router as health_router
 from app.api.v1.insights import router as insights_router
 from app.api.v1.invites import router as invites_router
@@ -58,3 +59,4 @@ api_router.include_router(notion_router)
 api_router.include_router(capture_router)
 api_router.include_router(location_router)
 api_router.include_router(places_router)
+api_router.include_router(devices_router)
