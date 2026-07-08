@@ -78,11 +78,17 @@ struct CaptureView: View {
             Circle()
                 .fill(DesignTokens.Color.accent)
                 .frame(width: 110, height: 110)
-                .shadow(color: DesignTokens.Color.accent.opacity(0.35), radius: 20, y: 8)
-            Image(systemName: "waveform")
-                .font(.system(size: 40, weight: .semibold))
-                .foregroundColor(.white)
+                .shadow(color: DesignTokens.Color.accent.opacity(voice.isRecording ? 0.5 : 0.35),
+                        radius: voice.isRecording ? 28 : 20, y: 8)
+            if voice.isRecording {
+                WaveformView(level: voice.level, color: .white)
+            } else {
+                Image(systemName: "waveform")
+                    .font(.system(size: 40, weight: .semibold))
+                    .foregroundColor(.white)
+            }
         }
+        .animation(.easeInOut(duration: 0.25), value: voice.isRecording)
     }
 
     private var inputBox: some View {
@@ -222,5 +228,42 @@ struct CaptureView: View {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             viewModel.reset()
         }
+    }
+}
+
+/// An audio-reactive waveform shown while recording. Bar heights scale with the live mic level and
+/// jitter per-bar for a lively look; collapses to a flat line in silence.
+private struct WaveformView: View {
+    let level: CGFloat        // 0…1 from VoiceCaptureService
+    var color: Color = .white
+
+    private let barCount = 7
+    private let maxHeight: CGFloat = 46
+    private let minHeight: CGFloat = 6
+    @State private var jitter: [CGFloat] = Array(repeating: 0.6, count: 7)
+    private let ticker = Timer.publish(every: 0.11, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(0..<barCount, id: \.self) { i in
+                Capsule()
+                    .fill(color)
+                    .frame(width: 5, height: barHeight(i))
+            }
+        }
+        .frame(height: maxHeight)
+        .animation(.easeInOut(duration: 0.11), value: level)
+        .animation(.easeInOut(duration: 0.11), value: jitter)
+        .onReceive(ticker) { _ in
+            jitter = (0..<barCount).map { _ in CGFloat.random(in: 0.35...1.0) }
+        }
+    }
+
+    private func barHeight(_ i: CGFloat) -> CGFloat { barHeight(Int(i)) }
+    private func barHeight(_ i: Int) -> CGFloat {
+        // A gentle idle pulse so it never looks dead, plus the live level shaped per bar.
+        let idle: CGFloat = 0.12
+        let amount = min(1.0, idle + level * jitter[i])
+        return max(minHeight, maxHeight * amount)
     }
 }

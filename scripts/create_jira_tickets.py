@@ -8035,6 +8035,39 @@ TICKETS = [
             h2("Next Ticket"), p("Optional raw-audio opt-in for review; multi-language."),
         ),
     },
+
+    {
+        "summary": "TIME-145: Audio-reactive waveform while voice-capturing",
+        "labels": ["ios", "capture", "voice", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Show a live waveform in the Capture hero while recording, reacting to mic loudness, so "
+              "voice capture feels alive and gives clear 'I'm listening' feedback."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "VoiceCaptureService: publish a normalized RMS level (0..1) from the audio tap; reset on stop",
+                "CaptureView: WaveformView (7 bars, heights scale with level + per-bar jitter, idle pulse); "
+                "hero shows the waveform while recording, static icon otherwise",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No FFT/frequency bars; no waveform when idle"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/Capture/VoiceCaptureService.swift, Features/Capture/CaptureView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["While recording, the hero shows a waveform that visibly reacts to speaking volume; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-144 (voice capture)."),
+            divider(),
+            h2("Next Ticket"), p("Optional auto-submit on stop; raw-audio opt-in review."),
+        ),
+    },
 ]
 
 
