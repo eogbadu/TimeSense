@@ -11,6 +11,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // Loud launch marker — if you DON'T see this in the console, you're running a stale binary
+        // (clean build + run from Xcode). Bump the tag when verifying a fresh build is installed.
+        print("🚀🚀🚀 TimeSense launched — push-registration build TIME-127 🚀🚀🚀")
         #if canImport(FirebaseCore)
         FirebaseApp.configure()
         #endif
@@ -18,8 +21,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // Register for remote push UNCONDITIONALLY to obtain the APNs token — the token is separate
         // from alert permission, so we shouldn't gate it on the permission prompt. We request alert
         // permission separately (for showing the banners).
+        print("📡 Calling registerForRemoteNotifications()…")
         application.registerForRemoteNotifications()
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            print("🔔 Notification permission granted=\(granted) error=\(String(describing: error))")
+        }
         return true
     }
 

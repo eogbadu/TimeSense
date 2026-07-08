@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-08 — TIME-127 (Jira TIME-127): Launch/registration markers
+
+Push still not registering on device; console showed no ✅/❌ despite HEAD at TIME-126 → likely stale binary or detached console. Added AppDelegate.didFinishLaunching prints: '🚀 build TIME-127' marker, '📡 Calling registerForRemoteNotifications()', and the notification-permission result. Pure diagnostics — if the 🚀 line doesn't appear, the installed app is stale (clean build + run from Xcode). iOS BUILD SUCCEEDED.
 ## 2026-07-08 — TIME-126 (Jira TIME-126): Unconditional APNs registration
 
 Diagnosis (from DB + logs): device_tokens=0, push_notifications=0, ZERO PUT /devices requests ever — the app never registered. APNs creds valid (JWT signs), bundle id matches (com.aetheranalytics.timesense), sandbox=true. Two causes: (1) the created_at migration bug 500'd PUT /devices until TIME-125; (2) AppDelegate gated registerForRemoteNotifications() behind the notification-permission grant, so no-permission -> no token. Fix: register unconditionally on launch (token is independent of alert permission); request alert permission separately; log the token on success + a clear failure message. Remaining external requirement: Push Notifications capability must be on the provisioning profile (Xcode Signing & Capabilities / Apple App ID) or didFailToRegister fires; and Celery worker+beat must run for the auto-scan (test-push works without it). iOS BUILD SUCCEEDED.
