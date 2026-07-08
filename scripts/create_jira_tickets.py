@@ -7359,6 +7359,40 @@ TICKETS = [
             h2("Next Ticket"), p("Send the device's real timezone; capture date-parsing reliability."),
         ),
     },
+
+    {
+        "summary": "TIME-126: Register for APNs unconditionally (token was never obtained)",
+        "labels": ["ios", "notifications", "push", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("Diagnosis showed the app never called PUT /devices — it gated registerForRemote"
+              "Notifications behind the notification-permission grant, so no permission meant no "
+              "token, ever. Register unconditionally (the token is separate from alert permission)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "AppDelegate: call registerForRemoteNotifications() unconditionally on launch; "
+                "request alert permission separately",
+                "Log the token on success + a clear failure message (visible in Xcode console)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Getting a token still requires the Push Notifications capability on the provisioning profile (Apple/Xcode-side)"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/App/AppDelegate.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["App calls registerForRemoteNotifications on every launch regardless of permission; on token receipt it PUTs to /devices and logs it; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-121/122/125."),
+            divider(),
+            h2("Next Ticket"), p("End-to-end on-device push once the Push capability is provisioned + Celery runs."),
+        ),
+    },
 ]
 
 
