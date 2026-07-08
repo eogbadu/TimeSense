@@ -1,13 +1,15 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.entitlements import PremiumUser
 from app.core.security import CurrentUser
 from app.integrations.calendar_base import CalendarEventCreate
+from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.schemas.calendar import (
     CalendarConnectIn,
     CalendarEventCreateIn,
@@ -21,10 +23,62 @@ from app.services.user_service import UserService
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
 
+# ── Synced events (Apple Calendar / EventKit — device-read, no OAuth) ──────────
+
+
+class SyncedEventIn(BaseModel):
+    external_id: str = Field(max_length=256)
+    title: str = Field(max_length=256)
+    starts_at: datetime
+    ends_at: datetime
+    location: str | None = Field(default=None, max_length=256)
+    all_day: bool = False
+
+
+class CalendarSyncIn(BaseModel):
+    source: str = Field(default="apple", max_length=16)
+    events: list[SyncedEventIn] = []
+
+
+class CalendarSyncOut(BaseModel):
+    synced: int
+
+
 async def _get_user_id(current_user: CurrentUser, db: AsyncSession) -> uuid.UUID:
     svc = UserService(db)
     user, _ = await svc.get_or_create_user(current_user.uid, current_user.email or "")
     return user.id
+
+
+@router.put("/synced", response_model=CalendarSyncOut)
+async def sync_calendar(
+    body: CalendarSyncIn, current_user: CurrentUser, db: AsyncSession = Depends(get_db)
+) -> CalendarSyncOut:
+    """The app pushes the events it read from the device (EventKit) so the engine can factor the
+    user's schedule. Replaces the user's synced events for that source. No OAuth — device permission
+    lives on the client."""
+    user_id = await _get_user_id(current_user, db)
+    n = await SyncedCalendarEventRepository(db).replace_for_source(
+        user_id, body.source, [e.model_dump() for e in body.events]
+    )
+    await db.commit()
+    return CalendarSyncOut(synced=n)
+
+
+@router.get("/synced/today", response_model=list[SyncedEventIn])
+async def synced_today(
+    current_user: CurrentUser, db: AsyncSession = Depends(get_db)
+) -> list[SyncedEventIn]:
+    user_id = await _get_user_id(current_user, db)
+    now = datetime.now(timezone.utc)
+    rows = await SyncedCalendarEventRepository(db).list_window(
+        user_id, now - timedelta(hours=12), now + timedelta(hours=36)
+    )
+    return [
+        SyncedEventIn(external_id=r.external_id, title=r.title, starts_at=r.starts_at,
+                      ends_at=r.ends_at, location=r.location, all_day=r.all_day)
+        for r in rows
+    ]
 
 
 # ── Integration management ────────────────────────────────────────────────────

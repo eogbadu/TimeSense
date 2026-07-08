@@ -25,3 +25,4 @@ from app.models.user_location_state import UserLocationState  # noqa: F401
 from app.models.user_place import UserPlace  # noqa: F401
 from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.push_notification import PushNotification  # noqa: F401
+from app.models.synced_calendar_event import SyncedCalendarEvent  # noqa: F401

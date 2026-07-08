@@ -7526,6 +7526,56 @@ TICKETS = [
             h2("Next Ticket"), p("Notification tap deep-linking; per-user push timing preferences."),
         ),
     },
+
+    {
+        "summary": "TIME-131: Apple Calendar (EventKit) — synced-events store + engine wiring",
+        "labels": ["backend", "calendar", "recommendations"],
+        "description": doc(
+            h2("Goal"),
+            p("Backend half of the Apple Calendar feature: a place to store the events the iOS app "
+              "reads from EventKit, an endpoint to sync them, and wiring so the engine factors them "
+              "(meeting prep/join/leave, free-block from real events)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "synced_calendar_events table (user_id, source, external_id, title, starts_at, "
+                "ends_at, location, all_day; unique per user+source+external_id) + migration WITH "
+                "created_at/updated_at server_default (per the TIME-125 lesson)",
+                "SyncedCalendarEventRepository (replace_for_source, list_window)",
+                "PUT /api/v1/calendar/synced — the app pushes its EventKit events (replace-all for the "
+                "source); GET /api/v1/calendar/synced/today",
+                "context_builder feeds synced events into the engine's calendar_context (current/next "
+                "event, minutes-until, free block, meeting density) so calendar candidates fire",
+                "tests: sync + engine produces a prepare_for_meeting when a meeting is imminent",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "iOS EventKit read/permission/sync (TIME-132); showing events as blocks on Today + "
+                "the write-back path (TIME-133); Google server-side OAuth stays untouched",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend: models/synced_calendar_event.py + migration + __init__, "
+                "repositories/synced_calendar_event_repository.py, api/v1/calendar.py, "
+                "services/recommendation/context_builder.py; tests/test_calendar_sync.py",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "PUT /calendar/synced stores events; context_builder exposes them; with an imminent "
+                "meeting the engine recommends prepare_for_meeting; suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && alembic upgrade head && pytest tests/test_calendar_sync.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-112..114 (engine), TIME-125 (migration-defaults lesson)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-132: iOS EventKit read + permission + sync to /calendar/synced."),
+        ),
+    },
 ]
 
 
