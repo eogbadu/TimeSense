@@ -21,6 +21,7 @@
 		6DE9467AEC6AECB4110CB3C0 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DesignTokens.swift */; };
 		6F341198DDE522BD07556E0F /* LearnedAssumptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */; };
 		728E116FA78F04E8313637A4 /* SnapshotProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */; };
+		73B564A40003B89455820778 /* VoiceCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 048537E8FE790591EDC1B6DE /* VoiceCaptureService.swift */; };
 		89438A1E57EBE9F4974111C0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB3BCF8932A4D3E59E6DE68 /* AppDelegate.swift */; };
 		8E3B31883FEA8B41E2E76E41 /* EventEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63E29C3626EF863D669F96BA /* EventEditorView.swift */; };
 		A1000001 /* TimeSenseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001 /* TimeSenseApp.swift */; };
@@ -84,6 +85,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		048537E8FE790591EDC1B6DE /* VoiceCaptureService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = VoiceCaptureService.swift; path = Capture/VoiceCaptureService.swift; sourceTree = "<group>"; };
 		0735A76942000F597C1CACE5 /* NextEventWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextEventWidget.swift; sourceTree = "<group>"; };
 		10849A270EBDF154E79FD082 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		157401B5592BA83C136A5804 /* DeepLinkRouter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
@@ -270,6 +272,7 @@
 				9D481B5AC5A997B047604EF2 /* Health */,
 				D98A6675BA65CD8C0C43AC2C /* Location */,
 				6D419B0395F5137C0595C7AD /* Calendar */,
+				AA81278CA3208B7E66CB62F1 /* Capture */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -385,6 +388,14 @@
 				A2000012 /* EmptyStateView.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		AA81278CA3208B7E66CB62F1 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				048537E8FE790591EDC1B6DE /* VoiceCaptureService.swift */,
+			);
+			name = Capture;
 			sourceTree = "<group>";
 		};
 		D98A6675BA65CD8C0C43AC2C /* Location */ = {
@@ -546,6 +557,7 @@
 				A2D6914E19DA19A024906F18 /* CalendarSyncService.swift in Sources */,
 				8E3B31883FEA8B41E2E76E41 /* EventEditorView.swift in Sources */,
 				AC5C8D839246AAA1FAD6F1A8 /* DeepLinkRouter.swift in Sources */,
+				73B564A40003B89455820778 /* VoiceCaptureService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

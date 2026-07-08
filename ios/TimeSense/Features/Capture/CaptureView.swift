@@ -2,9 +2,9 @@ import SwiftUI
 
 struct CaptureView: View {
     @StateObject private var viewModel = CaptureViewModel()
+    @StateObject private var voice = VoiceCaptureService()
     @State private var captureText: String = ""
     @State private var selectedChip: String?
-    @State private var showVoiceComingSoon = false
     @FocusState private var isInputFocused: Bool
 
     private let chips = ["Task", "Reminder", "Schedule", "Errand", "Idea"]
@@ -58,10 +58,17 @@ struct CaptureView: View {
                         .fontWeight(.semibold)
                 }
             }
-            .alert("Voice capture is coming soon", isPresented: $showVoiceComingSoon) {
+            .alert("Voice capture", isPresented: Binding(
+                get: { voice.errorMessage != nil },
+                set: { if !$0 { voice.errorMessage = nil } }
+            )) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("For now, type your thought and TimeSense will structure it.")
+                Text(voice.errorMessage ?? "")
+            }
+            // Live transcription streams into the input field while recording.
+            .onChange(of: voice.transcript) { _, text in
+                if voice.isRecording { captureText = text }
             }
         }
     }
@@ -85,10 +92,16 @@ struct CaptureView: View {
                 .lineLimit(1...5)
                 .focused($isInputFocused)
                 .disabled(viewModel.uiState == .loading)
-            Button { showVoiceComingSoon = true } label: {
-                Image(systemName: "mic.fill")
-                    .foregroundColor(DesignTokens.Color.accent)
+            Button {
+                isInputFocused = false
+                Task { await voice.toggle() }
+            } label: {
+                Image(systemName: voice.isRecording ? "stop.circle.fill" : "mic.fill")
+                    .font(voice.isRecording ? .title2 : .body)
+                    .foregroundColor(voice.isRecording ? DesignTokens.Color.destructive : DesignTokens.Color.accent)
+                    .symbolEffect(.pulse, isActive: voice.isRecording)
             }
+            .accessibilityLabel(voice.isRecording ? "Stop recording" : "Record voice")
         }
         .padding(DesignTokens.Spacing.md)
         .background(

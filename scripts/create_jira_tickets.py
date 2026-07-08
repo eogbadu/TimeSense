@@ -7999,6 +7999,42 @@ TICKETS = [
             h2("Next Ticket"), p("Give the engine tasks scheduled_start awareness; travel-time-based leave timing via maps."),
         ),
     },
+
+    {
+        "summary": "TIME-144: Voice capture (on-device speech-to-text)",
+        "labels": ["ios", "capture", "voice"],
+        "description": doc(
+            h2("Goal"),
+            p("Let the user speak a task on the Capture screen. Transcribe on-device (Speech "
+              "framework) into the existing capture text field — no backend change, and no raw audio "
+              "stored (honors the raw-audio-opt-in rule)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "VoiceCaptureService (Speech + AVAudioEngine): request mic + speech permission; live "
+                "partial transcription; on-device recognition when supported; start/stop",
+                "CaptureView: mic button toggles recording (pulsing/stop state); live transcript fills "
+                "the input field; error/permission messaging. Replaces the coming-soon stub",
+                "Info.plist: NSMicrophoneUsageDescription + NSSpeechRecognitionUsageDescription",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No raw-audio storage or upload; no wake word / background listening; transcript still goes through the normal capture parse (POST /capture)"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/Capture/VoiceCaptureService.swift (new), Features/Capture/CaptureView.swift, Info.plist; TimeSense.xcodeproj"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Tapping the mic requests permission, records, live-transcribes into the field, and stops; the text captures normally; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-094 (Capture redesign)."),
+            divider(),
+            h2("Next Ticket"), p("Optional raw-audio opt-in for review; multi-language."),
+        ),
+    },
 ]
 
 
