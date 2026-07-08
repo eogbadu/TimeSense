@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-08 — TIME-146 (Jira TIME-146): Fix voice capture (continuous dictation + live waveform)
+
+User: no waveform animation while speaking; pausing then continuing wiped the text. Root cause: SFSpeechRecognizer sends isFinal after a pause; the old code called cleanup() on isFinal -> recording stopped (waveform view disappeared -> 'no animation') and the next tap started a fresh session with transcript='' (wipe). Rewrote VoiceCaptureService for CONTINUOUS dictation: startAudio() installs the tap + runs the engine for the whole session (separate from recognition); startRecognition() creates a request/task; on isFinal (or a segment-end error) we commit the segment to `committed` and restartRecognition() seamlessly (engine/tap keep running); published transcript = join(committed, currentPartial) so pausing never clears. stop() sets isRecording=false + teardown(). RMS scaling 12->18. WaveformView.barHeight now = idle shimmer (0.16*jitter) + level*(0.45+0.55*jitter) so it always animates while recording and reacts strongly to volume. iOS BUILD SUCCEEDED.
 ## 2026-07-08 — TIME-145 (Jira TIME-145): Audio-reactive waveform while listening
 
 VoiceCaptureService: @Published level: CGFloat (0..1) computed from each audio-tap buffer via rmsLevel (RMS of float channel * 12, clamped); dispatched to @MainActor; reset to 0 on stop()/cleanup(). CaptureView: WaveformView (private) — 7 Capsule bars whose heights = maxHeight * min(1, idle 0.12 + level * jitter[i]); a 0.11s Timer re-rolls per-bar jitter (0.35..1.0) for liveliness; easeInOut animations on level + jitter. heroIcon shows WaveformView(level: voice.level, .white) while recording (with a stronger shadow), the static waveform icon otherwise, cross-faded. iOS BUILD SUCCEEDED.

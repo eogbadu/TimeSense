@@ -259,11 +259,12 @@ private struct WaveformView: View {
         }
     }
 
-    private func barHeight(_ i: CGFloat) -> CGFloat { barHeight(Int(i)) }
     private func barHeight(_ i: Int) -> CGFloat {
-        // A gentle idle pulse so it never looks dead, plus the live level shaped per bar.
-        let idle: CGFloat = 0.12
-        let amount = min(1.0, idle + level * jitter[i])
+        // A gentle idle shimmer so it always looks alive while recording, plus a strong per-bar
+        // reaction to how loudly you're speaking.
+        let idle = 0.16 * jitter[i]
+        let voice = level * (0.45 + 0.55 * jitter[i])
+        let amount = min(1.0, idle + voice)
         return max(minHeight, maxHeight * amount)
     }
 }
