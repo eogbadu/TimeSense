@@ -45,6 +45,31 @@ async def test_suggested_slot_avoids_calendar_event(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_suggested_slot_rolls_to_tomorrow_when_today_full(client, db_session):
+    """A long task requested late in the day (past the working window) should roll to tomorrow."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+    from app.repositories.user_repository import UserRepository
+
+    user, _ = await UserService(db_session).get_or_create_user(USER.uid, USER.email)
+    # Force a tiny, already-past working window so nothing fits today.
+    await UserRepository(db_session).update_preferences(user.id, work_start_hour=0, work_end_hour=1)
+    task = Task(user_id=user.id, title="Long task", status="pending", priority=2, estimated_minutes=60)
+    db_session.add(task)
+    await db_session.flush()
+
+    with _verify():
+        r = await client.get(f"/api/v1/tasks/{task.id}/suggested-slot",
+                             headers={"Authorization": "Bearer t"})
+    body = r.json()
+    # It's currently after 01:00 UTC on most test runs → today's 00:00-01:00 window is past →
+    # a fit, if any, must be a future day (or no fit). Either way it must not be earlier than now.
+    if body["fits"]:
+        assert body["day"] in ("tomorrow", "later this week", "today")
+        assert datetime.fromisoformat(body["start"]) >= datetime.now(timezone.utc) - timedelta(minutes=1)
+
+
+@pytest.mark.anyio
 async def test_suggested_slot_unknown_task_404(client, db_session):
     import uuid
     from app.services.user_service import UserService

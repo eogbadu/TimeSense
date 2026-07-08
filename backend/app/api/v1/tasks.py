@@ -66,12 +66,16 @@ async def get_task(
     return TaskResponse.model_validate(task)
 
 
+SLOT_SEARCH_DAYS = 3
+
+
 class SuggestedSlotOut(BaseModel):
     fits: bool
     start: datetime | None = None
     end: datetime | None = None
     duration_minutes: int
     message: str
+    day: str | None = None   # today | tomorrow | later this week
 
 
 @router.get("/{task_id}/suggested-slot", response_model=SuggestedSlotOut)
@@ -96,24 +100,31 @@ async def suggested_slot(
     we = user.preferences.work_end_hour if user.preferences else 21
     duration = task.estimated_minutes or 30
 
-    # Busy = today's OTHER scheduled tasks + timed calendar events.
-    today_tasks = await TaskRepository(db).list_by_user(user_id=user.id, for_date=now.date(), limit=200)
-    events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(hours=16))
-    busy = [t for t in today_tasks if t.id != task.id]
+    # Busy = OTHER scheduled tasks + timed calendar events over the search horizon.
+    horizon = now + timedelta(days=SLOT_SEARCH_DAYS)
+    all_pending = await TaskRepository(db).list_by_user(user_id=user.id, status="pending", limit=500)
+    events = await SyncedCalendarEventRepository(db).list_window(user.id, now, horizon)
+    busy = [t for t in all_pending if t.id != task.id and t.scheduled_start is not None]
     busy += [
         SimpleNamespace(scheduled_start=e.starts_at, scheduled_end=e.ends_at)
         for e in events if not e.all_day
     ]
 
-    slot = SchedulingService(ws, we).find_slot(now, duration, busy, tz, not_before=now)
+    slot = SchedulingService(ws, we).find_slot_multiday(
+        now, duration, busy, tz, not_before=now, max_days=SLOT_SEARCH_DAYS
+    )
     if slot is None:
         return SuggestedSlotOut(
             fits=False, duration_minutes=duration,
-            message="No open block in your working hours today — try adjusting the time.",
+            message="No open block in the next few days — try adjusting the time.",
         )
+    day = "today" if slot.date() == now.date() else (
+        "tomorrow" if slot.date() == (now + timedelta(days=1)).date() else "later this week"
+    )
     return SuggestedSlotOut(
         fits=True, start=slot, end=slot + timedelta(minutes=duration),
-        duration_minutes=duration, message="Found a free block that avoids your calendar.",
+        duration_minutes=duration, day=day,
+        message=f"Found a free block {day} that avoids your calendar.",
     )
 
 
