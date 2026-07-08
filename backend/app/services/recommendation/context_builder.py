@@ -5,18 +5,20 @@ sleep-derived health, and preferences. Free-block minutes come from the caller (
 from __future__ import annotations
 
 import dataclasses
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task
 from app.models.user_place import UserPlace
 from app.repositories.sleep_wake_repository import SleepWakeRepository
+from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.user_place_repository import UserPlaceRepository
 from app.services.recommendation.location_service import get_user_location_snapshot
 from app.services.recommendation.normalize_context import RawContextInputs, normalize_context
 from app.services.recommendation.time_service import get_time_snapshot
 from app.services.recommendation.types import (
+    CalendarEvent,
     Coordinates,
     HealthContext,
     LocationIntent,
@@ -150,6 +152,21 @@ async def build_user_context(
                 location, coordinates=Coordinates(latitude=match.latitude, longitude=match.longitude)
             )
 
+    # Real calendar events synced from the device (EventKit). Timed events only — all-day events
+    # aren't meetings to prep for or leave for, and would distort the free-block/next-event logic.
+    event_rows = await SyncedCalendarEventRepository(db).list_window(
+        user.id, now - timedelta(hours=1), now + timedelta(hours=24)
+    )
+    calendar_events = [
+        CalendarEvent(
+            id=e.external_id, title=e.title,
+            start_time=(e.starts_at if e.starts_at.tzinfo else e.starts_at.replace(tzinfo=timezone.utc)).isoformat(),
+            end_time=(e.ends_at if e.ends_at.tzinfo else e.ends_at.replace(tzinfo=timezone.utc)).isoformat(),
+            location=e.location,
+        )
+        for e in event_rows if not e.all_day
+    ]
+
     raw = RawContextInputs(
         now=now, timezone=tz, time_snapshot=snapshot,
         preferences=EngPreferences(
@@ -157,14 +174,16 @@ async def build_user_context(
             default_travel_mode="driving",
             preferred_places=preferred_places,
         ),
-        tasks=task_items, calendar_events=[], location_snapshot=location, health=health,
+        tasks=task_items, calendar_events=calendar_events, location_snapshot=location, health=health,
     )
     ctx = normalize_context(raw)
-    # No calendar integration yet → use the real usable window as the free block.
-    ctx = dataclasses.replace(
-        ctx,
-        calendar_context=dataclasses.replace(
-            ctx.calendar_context, free_block_minutes=usable_minutes, minutes_until_next_event=None
-        ),
-    )
+    # With no upcoming event, the free block is the usable-time window; otherwise keep the
+    # event-derived free block (minutes until the next event).
+    if ctx.calendar_context.next_event is None:
+        ctx = dataclasses.replace(
+            ctx,
+            calendar_context=dataclasses.replace(
+                ctx.calendar_context, free_block_minutes=usable_minutes
+            ),
+        )
     return ctx, task_map
