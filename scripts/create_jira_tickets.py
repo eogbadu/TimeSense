@@ -7200,6 +7200,44 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-122: iOS registers for remote push + sends the device token."),
         ),
     },
+
+    {
+        "summary": "TIME-122: iOS registers for APNs remote push + sends device token",
+        "labels": ["ios", "notifications", "push"],
+        "description": doc(
+            h2("Goal"),
+            p("Wire the app for remote push so the TIME-121 backend can reach it: register, receive "
+              "the APNs device token, and sync it to /api/v1/devices."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Info.plist: add 'remote-notification' to UIBackgroundModes",
+                "Push Notifications entitlement (aps-environment) + CODE_SIGN_ENTITLEMENTS",
+                "AppDelegate: registerForRemoteNotifications on launch; "
+                "didRegisterForRemoteNotificationsWithDeviceToken -> hex token -> PUT /api/v1/devices; "
+                "didFailToRegister logs",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Real delivery needs the backend APNs creds (TIME-121) + a push-enabled provisioning "
+                "profile; can't be verified in the simulator",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/App/AppDelegate.swift, Info.plist, TimeSense.entitlements (new); TimeSense.xcodeproj"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["App registers for remote notifications and PUTs the hex token to /devices on receipt; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-121 (/devices + push backend)."),
+            divider(),
+            h2("Next Ticket"), p("End-to-end push test on device once Apple creds are set."),
+        ),
+    },
 ]
 
 

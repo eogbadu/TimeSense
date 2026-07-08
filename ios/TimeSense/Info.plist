@@ -18,10 +18,12 @@
 	<string>TimeSense uses your location to recommend the right task for where you are. Your location is never stored.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>With Always access, TimeSense can notify you about your best next task when you arrive at or leave a saved place (like Home or Work). Raw location is never stored.</string>
-	<!-- Region monitoring wakes the app in the background on geofence events. -->
+	<!-- Region monitoring wakes the app in the background on geofence events; remote-notification
+	     lets APNs pushes wake the app. -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>
