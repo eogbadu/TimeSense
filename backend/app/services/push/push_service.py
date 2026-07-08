@@ -12,12 +12,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.llm.gateway import LLMGateway
 from app.repositories.device_token_repository import DeviceTokenRepository
 from app.repositories.push_notification_repository import PushNotificationRepository
+from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+from app.repositories.task_repository import TaskRepository
 from app.services.push.sender import PushSender
 from app.services.recommendation.candidate_gather import gather_candidate_tasks
 from app.services.recommendation.context_builder import build_user_context
@@ -25,8 +29,14 @@ from app.services.recommendation.engine import run_engine
 from app.services.recommendation.maps.factory import get_maps_provider
 from app.services.recommendation.maps.maps_skill_service import MapsSkillService
 from app.services.recommendation.types import Recommendation
+from app.services.scheduling_service import SchedulingService
 
 COOLDOWN = timedelta(minutes=45)
+OFFER_HORIZON_DAYS = 3
+
+
+def _utc(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 class ProactivePushService:
@@ -79,6 +89,79 @@ class ProactivePushService:
         )
         await self.db.commit()
         return rec
+
+    async def offer_time_block_for_user(
+        self, user, sender: PushSender, now: datetime | None = None, respect_cooldown: bool = True
+    ) -> dict | None:
+        """Proactively offer to block a free slot for a high-priority or overdue UNSCHEDULED task.
+        Respects the shared cooldown (unless ``respect_cooldown`` is False, for test firing). Returns
+        the offer if pushed, else None."""
+        now = now or datetime.now(timezone.utc)
+
+        tokens = await DeviceTokenRepository(self.db).list_tokens(user.id)
+        if not tokens:
+            return None
+
+        if respect_cooldown:
+            last = await PushNotificationRepository(self.db).latest_for_user(user.id)
+            if last is not None and now - _utc(last.sent_at) < COOLDOWN:
+                return None
+
+        pending = await TaskRepository(self.db).list_by_user(user.id, status="pending", limit=200)
+        unscheduled = [t for t in pending if t.scheduled_start is None]
+
+        def _overdue(t) -> bool:
+            return t.due_at is not None and _utc(t.due_at) < now
+
+        candidates = [t for t in unscheduled if _overdue(t) or t.priority <= 2]
+        if not candidates:
+            return None
+        candidates.sort(key=lambda t: (0 if _overdue(t) else 1, t.priority))
+        task = candidates[0]
+
+        tz = user.profile.timezone if user.profile else "UTC"
+        ws = user.preferences.work_start_hour if user.preferences else 8
+        we = user.preferences.work_end_hour if user.preferences else 21
+        duration = task.estimated_minutes or 30
+
+        horizon = now + timedelta(days=OFFER_HORIZON_DAYS)
+        events = await SyncedCalendarEventRepository(self.db).list_window(user.id, now, horizon)
+        busy = [t for t in pending if t.id != task.id and t.scheduled_start is not None]
+        busy += [
+            SimpleNamespace(scheduled_start=e.starts_at, scheduled_end=e.ends_at)
+            for e in events if not e.all_day
+        ]
+        slot = SchedulingService(ws, we).find_slot_multiday(
+            now, duration, busy, tz, not_before=now, max_days=OFFER_HORIZON_DAYS
+        )
+        if slot is None:
+            return None
+
+        try:
+            local = slot.astimezone(ZoneInfo(tz))
+        except Exception:
+            local = slot
+        when = local.strftime("%-I:%M %p")
+        if slot.date() == now.date():
+            day = "today"
+        elif slot.date() == (now + timedelta(days=1)).date():
+            day = "tomorrow"
+        else:
+            day = local.strftime("%A")
+        title = f"Block time for “{task.title}”?"
+        body = f"You have a free {duration}-min slot {day} at {when}. Want to schedule it?"
+
+        delivered = 0
+        for token in tokens:
+            if await sender.send(token, title, body, collapse_id="offer_time_block"):
+                delivered += 1
+        await PushNotificationRepository(self.db).record(
+            user_id=user.id, action_type="offer_time_block", title=title, body=body,
+            sent_at=now, delivered_count=delivered,
+        )
+        await self.db.commit()
+        return {"task_id": str(task.id), "slot": slot.isoformat(), "delivered": delivered,
+                "title": title, "body": body}
 
     async def send_test(
         self, user, sender: PushSender, gateway: LLMGateway | None = None,

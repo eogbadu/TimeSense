@@ -74,3 +74,26 @@ async def test_push(
         user, get_push_sender(), gateway=gateway, title=body.title, body=body.body
     )
     return TestPushOut(**result)
+
+
+class OfferOut(BaseModel):
+    offered: bool
+    title: str | None = None
+    body: str | None = None
+    delivered: int = 0
+
+
+@router.post("/test-offer", response_model=OfferOut)
+async def test_offer(
+    current_user: CurrentUser, db: AsyncSession = Depends(get_db)
+) -> OfferOut:
+    """Fire a 'block time for a high-priority task' offer to your own devices now, bypassing the
+    cooldown — to verify the proactive offer. Returns offered=false if there's no suitable task/slot."""
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+    result = await ProactivePushService(db).offer_time_block_for_user(
+        user, get_push_sender(), respect_cooldown=False
+    )
+    if result is None:
+        return OfferOut(offered=False)
+    return OfferOut(offered=True, title=result["title"], body=result["body"],
+                    delivered=result["delivered"])

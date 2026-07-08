@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-137: TimeSense now proactively offers to block time for high-priority/overdue unscheduled tasks — a push ('Block time for X? You have a free slot tomorrow at 2pm') when the engine has no more urgent recommendation, using a calendar-aware free slot. POST /api/v1/devices/test-offer fires one on demand
 - [2026-07-08] TIME-136: 'Find a time' now rolls to the next few days when today is full — the suggested slot searches today through +3 days (respecting each day's working hours + your calendar) and tells you which day
 - [2026-07-08] TIME-135: Engine-suggested time blocks — 'Find a time & add to calendar' (long-press a Today task) now asks the engine for the earliest free slot that avoids your meetings and scheduled tasks and respects working hours, then pre-fills the native editor with it for approval
 - [2026-07-08] TIME-134: Add a task to your calendar — long-press a task on Today ▸ 'Add to Calendar' opens Apple's native event editor pre-filled with the task; you review and tap Add (calendar writes always require your approval). The new event then syncs back
