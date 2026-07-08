@@ -49,6 +49,12 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
         if c.type in _WORKISH and not urgent:
             penalty += 40
 
+    # Don't start an errand/trip right before a calendar commitment — you'd be cutting it close or
+    # arrive late, and prepping/heading to the commitment matters more than the errand.
+    if (c.domain == "location" and cal.next_event is not None
+            and cal.minutes_until_next_event is not None and cal.minutes_until_next_event <= 60):
+        penalty += 40
+
     # At home, an errand is only doable if we've confirmed a feasible trip — otherwise it must not
     # lead (you'd have to leave, and we can't verify it fits). Restores the TIME-110 guarantee.
     loc = ctx.location_context

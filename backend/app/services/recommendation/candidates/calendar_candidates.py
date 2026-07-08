@@ -14,7 +14,8 @@ def generate_calendar_candidates(ctx: UserContext, now: datetime) -> list[Candid
     nxt = cal.next_event
     mins = cal.minutes_until_next_event
 
-    if nxt is not None and mins is not None and mins <= 15:
+    located = bool(nxt.location) if nxt is not None else False
+    if nxt is not None and mins is not None and mins >= 0:
         if mins <= 2:
             out.append(CandidateAction(
                 id=f"cal:join:{nxt.id}", type="join_meeting", domain="calendar",
@@ -23,27 +24,38 @@ def generate_calendar_candidates(ctx: UserContext, now: datetime) -> list[Candid
                 time_fit=1.0, energy_fit=0.8, confidence=0.9, interruption_level="high",
                 reason_codes=["MEETING_STARTING_NOW"], related_entity_ids=[nxt.id],
             ))
-        else:
+        elif mins <= 20 or (located and mins <= 30):
+            # Prep now (or head out for a nearby event).
+            leaving = located and mins <= 30
             out.append(CandidateAction(
-                id=f"cal:prep:{nxt.id}", type="prepare_for_meeting", domain="calendar",
-                title=f"Prep for “{nxt.title}”", description=f"Starts in {mins} min — get ready.",
-                estimated_minutes=min(mins, 15), urgency=0.9, importance=0.8, context_fit=0.9,
-                time_fit=1.0, energy_fit=0.8, confidence=0.85, interruption_level="medium",
-                reason_codes=["NEXT_MEETING_SOON"], related_entity_ids=[nxt.id],
+                id=f"cal:prep:{nxt.id}",
+                type="leave_for_event" if leaving else "prepare_for_meeting",
+                domain="calendar",
+                title=(f"Leave for “{nxt.title}”" if leaving else f"Prep for “{nxt.title}”"),
+                description=(f"It's at {nxt.location}." if leaving else f"Starts in {mins} min — get ready."),
+                estimated_minutes=min(mins, 20), urgency=0.9, importance=0.85, context_fit=0.9,
+                time_fit=1.0, energy_fit=0.8, location_fit=0.7 if leaving else 0.5,
+                confidence=0.85, interruption_level="medium", requires_location=leaving,
+                reason_codes=(["EVENT_HAS_LOCATION", "TRAVEL_TIME_REQUIRED"] if leaving else ["NEXT_MEETING_SOON"]),
+                related_entity_ids=[nxt.id],
             ))
-
-    # Event with a physical location and little lead time → leave now (travel data may be absent).
-    if nxt is not None and nxt.location and mins is not None and 0 < mins <= 30:
-        out.append(CandidateAction(
-            id=f"cal:leave:{nxt.id}", type="leave_for_event", domain="calendar",
-            title=f"Leave for “{nxt.title}”", description=f"It's at {nxt.location}.",
-            estimated_minutes=mins, urgency=0.95, importance=0.85, context_fit=0.85,
-            time_fit=0.9, energy_fit=0.8, location_fit=0.7,
-            confidence=0.6 if nxt.coordinates is None else 0.85, interruption_level="high",
-            requires_location=True,
-            reason_codes=["EVENT_HAS_LOCATION", "TRAVEL_TIME_REQUIRED"],
-            related_entity_ids=[nxt.id],
-        ))
+        elif mins <= (60 if located else 75):
+            # Coming up within the hour — surface it as the salient next thing so it isn't buried
+            # under routine tasks (and located events need lead time to travel).
+            out.append(CandidateAction(
+                id=f"cal:next:{nxt.id}",
+                type="leave_for_event" if located else "prepare_for_meeting",
+                domain="calendar",
+                title=(f"Head out soon for “{nxt.title}”" if located else f"Coming up: “{nxt.title}”"),
+                description=(f"In {mins} min at {nxt.location}." if located else f"In {mins} min."),
+                estimated_minutes=min(mins, 30),
+                urgency=round(max(0.6, 1.0 - mins / 90.0), 2),
+                importance=0.85, context_fit=0.9, time_fit=1.0, energy_fit=0.8,
+                location_fit=0.7 if located else 0.5, confidence=0.75, interruption_level="medium",
+                requires_location=located,
+                reason_codes=(["EVENT_HAS_LOCATION", "TRAVEL_TIME_REQUIRED"] if located else ["NEXT_MEETING_SOON"]),
+                related_entity_ids=[nxt.id],
+            ))
 
     # Long free block + high-priority work → protect a focus block.
     free = cal.free_block_minutes or 0

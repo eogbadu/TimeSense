@@ -108,6 +108,30 @@ async def test_why_calendar_signal_reflects_real_free_time(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_appointment_within_the_hour_is_surfaced_over_tasks(client, db_session):
+    """An appointment ~45 min out should be the top recommendation (surfaced), not buried under a
+    routine task — the reported 'gym over acupuncture' bug."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+
+    user, _ = await UserService(db_session).get_or_create_user(USER.uid, USER.email)
+    db_session.add(Task(user_id=user.id, title="Buy new pants", status="pending", priority=3))
+    await db_session.flush()
+    now = datetime.now(timezone.utc)
+
+    with _verify():
+        await client.put("/api/v1/calendar/synced", headers={"Authorization": "Bearer t"}, json={
+            "source": "apple",
+            "events": [{"external_id": "appt", "title": "Acupuncture",
+                        "starts_at": _iso(now + timedelta(minutes=45)),
+                        "ends_at": _iso(now + timedelta(minutes=105))}]})
+        r = await client.get("/api/v1/now/recommendation", headers={"Authorization": "Bearer t"})
+    body = r.json()
+    assert body["domain"] == "calendar"
+    assert "Acupuncture" in body["title"]
+
+
+@pytest.mark.anyio
 async def test_all_day_events_do_not_drive_meeting_candidates(client, db_session):
     """An all-day event isn't a meeting — it shouldn't trigger prep/leave or shrink the free block."""
     from app.services.user_service import UserService
