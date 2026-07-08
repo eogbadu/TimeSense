@@ -7493,6 +7493,39 @@ TICKETS = [
             h2("Next Ticket"), p("Gate debug prints behind #if DEBUG; notification tap deep-links."),
         ),
     },
+
+    {
+        "summary": "TIME-130: Gate push debug logs behind #if DEBUG",
+        "labels": ["ios", "cleanup", "notifications"],
+        "description": doc(
+            h2("Goal"),
+            p("The launch/registration/token diagnostics were invaluable but shouldn't log in "
+              "production. Route them through a debug-only helper."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Add debugLog(_:) — an @autoclosure helper that compiles to a no-op in release (#if DEBUG)",
+                "Replace the raw print() calls in AppDelegate (launch marker, register, permission, "
+                "token, fail, foreground-present) with debugLog",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No behavior change; the device token is still PUT to the backend regardless of logging"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/App/AppDelegate.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Diagnostics print in Debug builds and are absent in Release; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-127/128/129."),
+            divider(),
+            h2("Next Ticket"), p("Notification tap deep-linking; per-user push timing preferences."),
+        ),
+    },
 ]
 
 

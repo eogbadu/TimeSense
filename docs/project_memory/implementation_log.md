@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-08 — TIME-130 (Jira TIME-130): Gate push debug logs behind #if DEBUG
+
+Added debugLog(_ message: @autoclosure () -> String) that only prints under #if DEBUG (the autoclosure isn't evaluated in release). Replaced all AppDelegate print() calls (launch marker, register, permission result, ✅ token, ❌ fail, foreground presentation) with debugLog — so no console noise or device-token logging ships to production. The token is still PUT to the backend regardless. iOS BUILD SUCCEEDED.
 ## 2026-07-08 — TIME-129 (Jira TIME-129): Foreground notification presentation + PUSH VERIFIED
 
 PUSH NOW WORKS END-TO-END ON DEVICE. After TIME-128 (Firebase proxy disabled) the token registered (device_tokens=1, PUT /devices 200); a server-side send_test via the real ApnsPushSender returned delivered=1 and APNs returned HTTP/2 200 + apns-id — confirmed on the user's phone. The FIRST push seemed to not arrive because iOS suppresses banners for foreground apps. Fix: AppDelegate conforms to UNUserNotificationCenterDelegate + set as center.delegate; willPresent returns [.banner,.sound,.badge] so pushes AND local geofence notifications show even with the app open. iOS BUILD SUCCEEDED. Full push chain: engine -> LLM text -> JWT/HTTP2 -> sandbox APNs -> device. For automatic proactive push, run celery worker+beat.

@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-130: Push diagnostics (launch marker, registration, device token, foreground-present) now log only in Debug builds via a debugLog helper — no console noise or token logging in production
 - [2026-07-08] TIME-129: Notifications now appear even when the app is open (foreground) — previously iOS suppressed them, which looked like the push hadn't arrived. Verified APNs push works end-to-end on device
 - [2026-07-08] TIME-128: Push token never arrived because FirebaseAuth's app-delegate swizzling was swallowing the APNs registration callback — disabled it via FirebaseAppDelegateProxyEnabled=NO so our delegate receives the device token
 - [2026-07-08] TIME-127: Added loud launch + push-registration console markers to confirm a fresh build is running (diagnostic for the on-device push setup)
