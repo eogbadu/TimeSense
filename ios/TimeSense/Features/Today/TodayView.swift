@@ -4,6 +4,7 @@ struct TodayView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = TodayViewModel()
     @ObservedObject private var calendar = CalendarSyncService.shared
+    @ObservedObject private var router = DeepLinkRouter.shared
     @State private var scheduleDraft: ScheduleDraft?
 
     /// Today's timed calendar events (all-day excluded), sorted by start time.
@@ -40,6 +41,17 @@ struct TodayView: View {
             if tab == .today {
                 Task { await viewModel.load() }
                 Task { await calendar.syncIfAuthorized() }
+            }
+        }
+        // A tapped "block time" offer routes here → open the scheduler pre-filled for that task.
+        .onChange(of: router.route) { _, route in
+            if case let .scheduleTask(taskId, title) = route {
+                Task {
+                    router.route = nil
+                    guard await calendar.ensureWriteAccess() else { return }
+                    let slot = await viewModel.suggestedSlot(taskId: taskId, estimatedMinutes: nil)
+                    scheduleDraft = ScheduleDraft(id: taskId, title: title, start: slot.start, end: slot.end)
+                }
             }
         }
     }

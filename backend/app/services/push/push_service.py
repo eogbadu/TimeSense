@@ -78,9 +78,12 @@ class ProactivePushService:
         if self._in_cooldown(last, rec, now):
             return None
 
+        data = {"type": "recommendation"}
+        if rec.related_entity_ids:
+            data["task_id"] = rec.related_entity_ids[0]
         delivered = 0
         for token in tokens:
-            if await sender.send(token, rec.title, rec.message, collapse_id=rec.action_type):
+            if await sender.send(token, rec.title, rec.message, collapse_id=rec.action_type, data=data):
                 delivered += 1
 
         await push_repo.record(
@@ -151,9 +154,10 @@ class ProactivePushService:
         title = f"Block time for “{task.title}”?"
         body = f"You have a free {duration}-min slot {day} at {when}. Want to schedule it?"
 
+        data = {"type": "offer_time_block", "task_id": str(task.id), "task_title": task.title}
         delivered = 0
         for token in tokens:
-            if await sender.send(token, title, body, collapse_id="offer_time_block"):
+            if await sender.send(token, title, body, collapse_id="offer_time_block", data=data):
                 delivered += 1
         await PushNotificationRepository(self.db).record(
             user_id=user.id, action_type="offer_time_block", title=title, body=body,

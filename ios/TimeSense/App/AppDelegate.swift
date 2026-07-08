@@ -76,4 +76,26 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         debugLog("🔔 Notification presented in foreground: \(notification.request.content.title)")
         completionHandler([.banner, .sound, .badge])
     }
+
+    /// The user tapped a notification → route them to the relevant screen/action.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let info = response.notification.request.content.userInfo
+        let type = info["type"] as? String
+        Task { @MainActor in
+            switch type {
+            case "offer_time_block":
+                if let taskId = info["task_id"] as? String {
+                    let title = (info["task_title"] as? String) ?? "Task"
+                    DeepLinkRouter.shared.route = .scheduleTask(taskId: taskId, title: title)
+                }
+            default:
+                DeepLinkRouter.shared.route = .now
+            }
+            completionHandler()
+        }
+    }
 }

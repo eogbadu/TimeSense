@@ -17,7 +17,7 @@ class _StubSender:
     def __init__(self): self.sent = []
     @property
     def available(self): return True
-    async def send(self, token, title, body, collapse_id=None):
+    async def send(self, token, title, body, collapse_id=None, data=None):
         self.sent.append((token, title, body, collapse_id))
         return True
 

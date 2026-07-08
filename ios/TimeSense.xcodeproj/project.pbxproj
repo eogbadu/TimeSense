@@ -47,6 +47,7 @@
 		A1000033 /* NowViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000033 /* NowViewModel.swift */; };
 		A2D6914E19DA19A024906F18 /* CalendarSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3905AA6E1DC3584DC4579947 /* CalendarSyncService.swift */; };
 		AB4928A79E2DF8D711F9C21C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF2C9C92FEC1E46674899DC /* Foundation.framework */; };
+		AC5C8D839246AAA1FAD6F1A8 /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157401B5592BA83C136A5804 /* DeepLinkRouter.swift */; };
 		B222B5BA80D315FBD04DD843 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 10849A270EBDF154E79FD082 /* GoogleService-Info.plist */; };
 		B98E3891DFBAB8E368AEF84E /* TimeSenseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		C1277917BBEAE5DE7169E3AD /* PlacesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71DE2E87542D3359F2FEE460 /* PlacesSettingsView.swift */; };
@@ -85,6 +86,7 @@
 /* Begin PBXFileReference section */
 		0735A76942000F597C1CACE5 /* NextEventWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextEventWidget.swift; sourceTree = "<group>"; };
 		10849A270EBDF154E79FD082 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		157401B5592BA83C136A5804 /* DeepLinkRouter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
 		1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseShortcuts.swift; sourceTree = "<group>"; };
 		2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UsableTimeWidget.swift; sourceTree = "<group>"; };
 		3905AA6E1DC3584DC4579947 /* CalendarSyncService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CalendarSyncService.swift; path = Calendar/CalendarSyncService.swift; sourceTree = "<group>"; };
@@ -252,6 +254,7 @@
 				A2000003 /* ContentView.swift */,
 				A2000004 /* MainTabView.swift */,
 				3EB3BCF8932A4D3E59E6DE68 /* AppDelegate.swift */,
+				157401B5592BA83C136A5804 /* DeepLinkRouter.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -542,6 +545,7 @@
 				C1277917BBEAE5DE7169E3AD /* PlacesSettingsView.swift in Sources */,
 				A2D6914E19DA19A024906F18 /* CalendarSyncService.swift in Sources */,
 				8E3B31883FEA8B41E2E76E41 /* EventEditorView.swift in Sources */,
+				AC5C8D839246AAA1FAD6F1A8 /* DeepLinkRouter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

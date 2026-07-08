@@ -19,7 +19,10 @@ except ImportError:  # pragma: no cover
 class PushSender(Protocol):
     @property
     def available(self) -> bool: ...
-    async def send(self, token: str, title: str, body: str, collapse_id: str | None = None) -> bool: ...
+    async def send(
+        self, token: str, title: str, body: str, collapse_id: str | None = None,
+        data: dict | None = None,
+    ) -> bool: ...
 
 
 class NullPushSender:
@@ -27,7 +30,10 @@ class NullPushSender:
     def available(self) -> bool:
         return False
 
-    async def send(self, token: str, title: str, body: str, collapse_id: str | None = None) -> bool:
+    async def send(
+        self, token: str, title: str, body: str, collapse_id: str | None = None,
+        data: dict | None = None,
+    ) -> bool:
         return False
 
 
@@ -59,7 +65,10 @@ class ApnsPushSender:
             self._jwt_iat = now
         return self._jwt
 
-    async def send(self, token: str, title: str, body: str, collapse_id: str | None = None) -> bool:
+    async def send(
+        self, token: str, title: str, body: str, collapse_id: str | None = None,
+        data: dict | None = None,
+    ) -> bool:
         if not self.available:
             return False
         headers = {
@@ -69,7 +78,10 @@ class ApnsPushSender:
         }
         if collapse_id:
             headers["apns-collapse-id"] = collapse_id[:64]
+        # Custom keys (type/task_id/…) ride alongside `aps` so the app can deep-link on tap.
         payload = {"aps": {"alert": {"title": title, "body": body}, "sound": "default"}}
+        if data:
+            payload.update(data)
         try:
             async with httpx.AsyncClient(http2=True, timeout=self._timeout) as client:
                 resp = await client.post(

@@ -7789,6 +7789,41 @@ TICKETS = [
             h2("Next Ticket"), p("Notification-tap deep-linking to schedule; profile timezone; capture date-parsing."),
         ),
     },
+
+    {
+        "summary": "TIME-138: Notification-tap deep-linking",
+        "labels": ["ios", "backend", "notifications", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Tapping a notification routes the user to the relevant action instead of just opening "
+              "the app — an 'offer_time_block' push opens the pre-filled scheduler; others open Now."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend: push sender accepts a data dict merged into the APNs payload; offer push "
+                "carries {type: offer_time_block, task_id, task_title}; recommendation push carries "
+                "{type: recommendation, task_id?}",
+                "iOS: DeepLinkRouter + AppDelegate didReceive (tap) -> route; MainTabView switches "
+                "tab; TodayView on .scheduleTask presents the pre-filled scheduler",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Geofence local notifications route to Now (default); no per-notification action buttons"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend: services/push/{sender,push_service}.py; ios: App/{DeepLinkRouter,AppDelegate,MainTabView}.swift, Features/Today/TodayView.swift; TimeSense.xcodeproj; tests updated"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Tapping the offer push opens Today with the scheduler pre-filled for that task; push data flows through the sender; suite + iOS build pass"]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_push_service.py -v ; xcodebuild build ..."),
+            divider(),
+            h2("Dependencies"), p("TIME-135/137 (scheduler + offer push)."),
+            divider(),
+            h2("Next Ticket"), p("Profile timezone; capture date-parsing."),
+        ),
+    },
 ]
 
 
