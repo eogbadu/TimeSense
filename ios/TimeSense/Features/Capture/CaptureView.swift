@@ -42,11 +42,20 @@ struct CaptureView: View {
                 .padding(.bottom, DesignTokens.Spacing.xxl)
             }
             .background(DesignTokens.Color.background)
+            // Let the user swipe the keyboard down (the field is multi-line, so Return adds a
+            // newline rather than dismissing).
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Capture")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Image(systemName: "sparkles").foregroundColor(DesignTokens.Color.accent)
+                }
+                // A clear way to dismiss the keyboard so the Capture button + tab bar are reachable.
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { isInputFocused = false }
+                        .fontWeight(.semibold)
                 }
             }
             .alert("Voice capture is coming soon", isPresented: $showVoiceComingSoon) {

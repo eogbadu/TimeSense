@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] TIME-124: Fixed the Capture screen trapping you with the keyboard up — added a 'Done' keyboard button and swipe-down-to-dismiss (the multi-line field made Return add a newline, and there was previously no way to close the keyboard)
 - [2026-07-07] TIME-123: Added a Celery beat service to docker-compose (fires the schedules incl. the 30-min proactive-push scan) and POST /api/v1/devices/test-push — sends a push to your own devices immediately (engine text or a {title, body} override), bypassing eligibility/cooldown, for verifying the APNs chain
 - [2026-07-07] TIME-122: iOS registers for APNs remote push and syncs its device token to /api/v1/devices — enabling the backend's proactive push (needs Apple APNs creds on the server + a push-enabled provisioning profile to deliver)
 - [2026-07-07] TIME-121: APNs remote push backend — device-token registration (PUT/DELETE /api/v1/devices), a gated Google-style APNs sender (ES256 JWT over HTTP/2; no-op without credentials), and a ProactivePushService that pushes the engine's LLM-phrased text only when eligible_for_push and outside a 45-min cooldown (same-type suppressed; high-urgency overrides), driven by a Celery task every 30 min. Also: location_fit now defaults to neutral (0.5) for location-independent actions so strong tasks can reach the push threshold

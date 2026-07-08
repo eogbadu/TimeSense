@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-124 (Jira TIME-124): Capture keyboard dismissal bug
+
+User report: typing on Capture left the keyboard up with no way to close it, hiding the Capture button + tab bar (app felt stuck). Cause: the TextField uses axis: .vertical (multi-line) so Return inserts a newline, and there was no Done/tap/swipe dismissal. Fix: added a keyboard ToolbarItemGroup 'Done' button (isInputFocused=false) + ScrollView.scrollDismissesKeyboard(.interactively) for swipe-to-dismiss. Kept the multi-line field. iOS BUILD SUCCEEDED.
 ## 2026-07-07 — TIME-123 (Jira TIME-123): Celery beat service + test-push endpoint
 
 docker-compose: added a 'beat' service (celery -A app.workers.celery_app beat) alongside the worker so the beat_schedule actually fires (check-ins, weekly insights, 30-min scan-and-push). ProactivePushService.send_test(user, sender, gateway, title, body): pushes to the user's device tokens NOW, bypassing eligible_for_push + cooldown; uses a {title,body} override if given else the engine's pick; records the PushNotification; returns {apns_available, delivered, title, body, action_type} or {reason: no_device}. POST /api/v1/devices/test-push (current user, own devices only) exposes it. 5 new tests (send_test bypasses eligibility+cooldown; title/body override; no_device; endpoint apns_available=false w/o creds via patched sender; endpoint no_device). Suite 400. Note: this machine's .env already resolves to ApnsPushSender (creds present) — so the endpoint can deliver once a real device token + valid provisioning are in place.
