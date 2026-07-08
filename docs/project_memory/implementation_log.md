@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-08 — TIME-133 (Jira TIME-133): Show calendar events on Today
+
+CalendarSyncService now @Published var events: [CalEvent] (id/title/start/end/location/allDay), populated in sync() from the EKEvents (alongside the backend payload). TodayView: @ObservedObject calendar; todaysEvents = events filtered to today + not all-day, sorted by start; new read-only 'On your calendar' CalendarEventsCard (calendar glyph + title + 'start – end · location'), shown above Smart Plan when non-empty; Today .task/onChange now also calls calendar.syncIfAuthorized() so events refresh on tab appear. iOS BUILD SUCCEEDED. Write-back (add events w/ approval) = TIME-134.
 ## 2026-07-08 — TIME-132 (Jira TIME-132): iOS Apple Calendar (EventKit) connect + sync
 
 CalendarSyncService (EventKit, @MainActor, shared): requestFullAccessToEvents (iOS17+) / requestAccess(.event) fallback; reads events now-12h..now+36h via predicateForEvents; maps EKEvent -> {external_id=eventIdentifier, title, starts_at/ends_at ISO8601, location, all_day}; PUT /api/v1/calendar/synced; syncIfAuthorized (launch/foreground); disconnect clears the backend copy; @Published status/lastSyncedCount. CalendarSettingsView rewired to real states (Connect Apple Calendar / connecting spinner / connected + N events + Sync now + Disconnect / denied -> Open iOS Settings) + '.task syncIfAuthorized'. Info.plist NSCalendarsFullAccessUsageDescription + NSCalendarsUsageDescription. AppDelegate re-syncs on launch. Registered CalendarSyncService.swift in the target; added UIKit import to SettingsScreens. iOS BUILD SUCCEEDED. Needs on-device test for the permission prompt. NEXT: TIME-133 show events on Today + write-back.

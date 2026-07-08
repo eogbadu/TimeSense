@@ -7612,6 +7612,39 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-133: show calendar events on Today; write events to the calendar with approval."),
         ),
     },
+
+    {
+        "summary": "TIME-133: Show synced calendar events on Today",
+        "labels": ["ios", "calendar", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Make the connected calendar visible: today's events appear on the Today screen "
+              "(read-only), not just feeding the engine."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "CalendarSyncService exposes @Published events (CalEvent) populated on sync",
+                "TodayView 'On your calendar' section: read-only event rows (title, time range, "
+                "location) for today's timed events; syncs when the tab appears",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Write-back (add events to the calendar with approval) is TIME-134; no interleaving events into the task groups (separate section)"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/Calendar/CalendarSyncService.swift, Features/Today/TodayView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Today shows an 'On your calendar' card with today's timed events when connected; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-131/132 (calendar sync)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-134: write events to the calendar with approval (EventKit)."),
+        ),
+    },
 ]
 
 

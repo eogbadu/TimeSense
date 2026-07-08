@@ -15,6 +15,17 @@ final class CalendarSyncService: ObservableObject {
 
     @Published private(set) var status: Status = .unknown
     @Published private(set) var lastSyncedCount: Int = 0
+    /// The fetched events (sync window), for on-screen display (e.g. the Today timeline).
+    @Published private(set) var events: [CalEvent] = []
+
+    struct CalEvent: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let start: Date
+        let end: Date
+        let location: String?
+        let allDay: Bool
+    }
 
     init() {
         status = isAuthorized ? .connected : .notConnected
@@ -64,17 +75,26 @@ final class CalendarSyncService: ObservableObject {
         let start = Date().addingTimeInterval(-12 * 3600)
         let end = Date().addingTimeInterval(36 * 3600)
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
-        let events: [SyncEvent] = store.events(matching: predicate).compactMap { ev in
+        let ekEvents = store.events(matching: predicate).compactMap { ev -> (EKEvent, String, String)? in
             guard let id = ev.eventIdentifier, let title = ev.title, !title.isEmpty,
-                  let s = ev.startDate, let e = ev.endDate else { return nil }
-            return SyncEvent(external_id: id, title: title,
-                             starts_at: iso.string(from: s), ends_at: iso.string(from: e),
-                             location: ev.location, all_day: ev.isAllDay)
+                  ev.startDate != nil, ev.endDate != nil else { return nil }
+            return (ev, id, title)
+        }
+        // For display (Today timeline).
+        events = ekEvents.map { ev, id, title in
+            CalEvent(id: id, title: title, start: ev.startDate, end: ev.endDate,
+                     location: ev.location, allDay: ev.isAllDay)
+        }
+        // For the backend/engine.
+        let payload: [SyncEvent] = ekEvents.map { ev, id, title in
+            SyncEvent(external_id: id, title: title,
+                      starts_at: iso.string(from: ev.startDate), ends_at: iso.string(from: ev.endDate),
+                      location: ev.location, all_day: ev.isAllDay)
         }
         let resp: SyncResponse? = try? await APIClient.shared.put(
-            "/api/v1/calendar/synced", body: SyncPayload(source: "apple", events: events)
+            "/api/v1/calendar/synced", body: SyncPayload(source: "apple", events: payload)
         )
-        lastSyncedCount = resp?.synced ?? events.count
+        lastSyncedCount = resp?.synced ?? payload.count
     }
 }
 
