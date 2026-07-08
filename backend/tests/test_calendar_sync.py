@@ -83,6 +83,31 @@ async def test_imminent_meeting_drives_prepare_recommendation(client, db_session
 
 
 @pytest.mark.anyio
+async def test_why_calendar_signal_reflects_real_free_time(client, db_session):
+    """The 'Why this recommendation?' Calendar signal must reflect real free time until the next
+    meeting — not the old hard-capped 240-minute estimate."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+
+    user, _ = await UserService(db_session).get_or_create_user(USER.uid, USER.email)
+    task = Task(user_id=user.id, title="Draft doc", status="pending", priority=2, estimated_minutes=30)
+    db_session.add(task)
+    await db_session.flush()
+    now = datetime.now(timezone.utc)
+
+    with _verify():
+        await client.put("/api/v1/calendar/synced", headers={"Authorization": "Bearer t"}, json={
+            "source": "apple",
+            "events": [{"external_id": "mtg", "title": "Design review",
+                        "starts_at": _iso(now + timedelta(minutes=40)),
+                        "ends_at": _iso(now + timedelta(minutes=70))}]})
+        w = await client.get(f"/api/v1/now/why?task_id={task.id}", headers={"Authorization": "Bearer t"})
+    cal = next(s for s in w.json()["signals"] if s["name"] == "Calendar")
+    assert "Design review" in cal["detail"]        # names the real next meeting
+    assert "240" not in cal["detail"]              # not the hard-coded cap
+
+
+@pytest.mark.anyio
 async def test_all_day_events_do_not_drive_meeting_candidates(client, db_session):
     """An all-day event isn't a meeting — it shouldn't trigger prep/leave or shrink the free block."""
     from app.services.user_service import UserService

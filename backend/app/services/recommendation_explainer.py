@@ -11,6 +11,7 @@ if there's a sleep signal; location only if there's a recent commute. We never f
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Sequence
 from zoneinfo import ZoneInfo
 
@@ -19,7 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.commute import CommuteEvent
 from app.models.sleep_wake import SleepWakeEvent
-from app.services.usable_time_service import UsableTimeService
+from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+from app.services.scheduling_service import SchedulingService
 
 _SUMMARY_SYSTEM = (
     "You are a calm personal time assistant. In 2–3 sentences, summarise why the chosen task is the "
@@ -135,15 +137,47 @@ async def _location(db: AsyncSession, user_id, now: datetime):
     return None
 
 
-def _next_event(today_tasks: Sequence, now: datetime, tz_name: str):
-    upcoming = [
-        t for t in today_tasks
-        if t.scheduled_start is not None and _utc(t.scheduled_start) > now and t.status != "done"
+async def _free_and_next(db, user, today_tasks: Sequence, now: datetime, tz_name: str):
+    """Real free time until the next commitment, or the end of the working day — accounting for BOTH
+    scheduled tasks AND the user's calendar events, inside working hours. Returns (free_minutes,
+    next_event_label | None). Replaces the old tasks-only, 240-capped-to-midnight estimate."""
+    prefs = user.preferences
+    sched = SchedulingService(
+        work_start_hour=prefs.work_start_hour if prefs else 8,
+        work_end_hour=prefs.work_end_hour if prefs else 21,
+    )
+    _, window_end = sched._window(now, tz_name)
+
+    events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(hours=24))
+
+    # Busy blocks = scheduled tasks + timed calendar events.
+    busy: list = [t for t in today_tasks if t.scheduled_start and t.scheduled_end]
+    busy += [
+        SimpleNamespace(scheduled_start=e.starts_at, scheduled_end=e.ends_at)
+        for e in events if not e.all_day
     ]
-    if not upcoming:
-        return None
-    nxt = min(upcoming, key=lambda t: _utc(t.scheduled_start))
-    return f"{nxt.title} at {_local(_utc(nxt.scheduled_start), tz_name).strftime('%-I:%M %p')}"
+
+    # The next commitment (task or meeting) starting after now, within the working window.
+    starts: list[tuple[datetime, str]] = []
+    for t in today_tasks:
+        if t.scheduled_start and t.status != "done":
+            s = _utc(t.scheduled_start)
+            if now < s <= window_end:
+                starts.append((s, t.title))
+    for e in events:
+        if not e.all_day:
+            s = _utc(e.starts_at)
+            if now < s <= window_end:
+                starts.append((s, e.title))
+
+    if starts:
+        next_start, next_title = min(starts, key=lambda x: x[0])
+        free = sched.free_minutes_before(next_start, now, busy, tz_name)
+        label = f"{next_title} at {_local(next_start, tz_name).strftime('%-I:%M %p')}"
+    else:
+        free = sched.free_minutes_before(window_end, now, busy, tz_name)
+        label = None
+    return free, label
 
 
 async def build_explanation(
@@ -156,10 +190,9 @@ async def build_explanation(
     tz_name: str,
     gateway,
 ) -> dict:
-    free_minutes = UsableTimeService().calculate(list(today_tasks), anchor=now, user_timezone=tz_name)
+    free_minutes, next_event = await _free_and_next(db, user, today_tasks, now, tz_name)
     local_now = _local(now, tz_name)
     tod_label, tod_note = _time_of_day(local_now)
-    next_event = _next_event(today_tasks, now, tz_name)
     health = await _health(db, user.id, now, tz_name)
     place = await _current_place(db, user.id, now)
 
@@ -171,7 +204,7 @@ async def build_explanation(
     if next_event:
         context_used.append(f"Calendar: {free_minutes} minutes free before {next_event}.")
     else:
-        context_used.append(f"Calendar: {free_minutes} minutes free before the end of your day.")
+        context_used.append(f"Calendar: {free_minutes} minutes free before your workday ends.")
     context_used.append(f"Time of day: it's {tod_label} — {tod_note}.")
     if place is not None:
         if place.place_name:
@@ -214,7 +247,7 @@ async def build_explanation(
     # available=True → we actually have the signal (green check); False → not connected yet.
     signals: list[dict] = []
     cal = (f"You have a {free_minutes}-minute free block before {next_event}." if next_event
-           else f"You have {free_minutes} minutes free before the end of your day.")
+           else f"You have {free_minutes} minutes free before your workday ends.")
     signals.append({"name": "Calendar", "detail": cal, "available": True})
     signals.append({"name": "Time of day", "detail": f"This is {tod_note} based on your routine.", "available": True})
     if place is not None and place.place_name:
