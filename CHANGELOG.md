@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-144: Voice capture — tap the mic on Capture and speak; TimeSense transcribes on-device (live) into the field and turns it into a task. Raw audio is never stored
 - [2026-07-08] TIME-143: The engine now surfaces upcoming appointments — an appointment within ~an hour becomes the top recommendation ('Coming up: …' / 'Head out soon for …') instead of being buried, and it no longer recommends squeezing an errand into the time right before a commitment
 - [2026-07-08] TIME-142: The Now 'analyzed your day' banner now counts up over time ('just now' → '2 min ago') instead of appearing frozen — it wasn't hard-coded, it just lacked a timer
 - [2026-07-08] TIME-141: The 'Why this recommendation' Calendar signal now shows your REAL free time — until your next meeting/task or the end of your working day, accounting for your calendar and scheduled tasks — instead of the misleading hard-capped '240 minutes'
