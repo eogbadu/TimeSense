@@ -44,6 +44,7 @@
 		A1000031 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000031 /* TodayViewModel.swift */; };
 		A1000032 /* TimelineCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000032 /* TimelineCard.swift */; };
 		A1000033 /* NowViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000033 /* NowViewModel.swift */; };
+		A2D6914E19DA19A024906F18 /* CalendarSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3905AA6E1DC3584DC4579947 /* CalendarSyncService.swift */; };
 		AB4928A79E2DF8D711F9C21C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF2C9C92FEC1E46674899DC /* Foundation.framework */; };
 		B222B5BA80D315FBD04DD843 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 10849A270EBDF154E79FD082 /* GoogleService-Info.plist */; };
 		B98E3891DFBAB8E368AEF84E /* TimeSenseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
@@ -85,6 +86,7 @@
 		10849A270EBDF154E79FD082 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseShortcuts.swift; sourceTree = "<group>"; };
 		2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UsableTimeWidget.swift; sourceTree = "<group>"; };
+		3905AA6E1DC3584DC4579947 /* CalendarSyncService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CalendarSyncService.swift; path = Calendar/CalendarSyncService.swift; sourceTree = "<group>"; };
 		3AF2C9C92FEC1E46674899DC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3EB3BCF8932A4D3E59E6DE68 /* AppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
@@ -181,6 +183,14 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		6D419B0395F5137C0595C7AD /* Calendar */ = {
+			isa = PBXGroup;
+			children = (
+				3905AA6E1DC3584DC4579947 /* CalendarSyncService.swift */,
+			);
+			name = Calendar;
+			sourceTree = "<group>";
+		};
 		8BE9FE69B2254F6BC940D880 /* iOS */ = {
 			isa = PBXGroup;
 			children = (
@@ -253,6 +263,7 @@
 				2AE198C288EB427414A4A0BC /* Widgets */,
 				9D481B5AC5A997B047604EF2 /* Health */,
 				D98A6675BA65CD8C0C43AC2C /* Location */,
+				6D419B0395F5137C0595C7AD /* Calendar */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -526,6 +537,7 @@
 				F241C418D7E5B07832A1E7D5 /* LocationService.swift in Sources */,
 				89438A1E57EBE9F4974111C0 /* AppDelegate.swift in Sources */,
 				C1277917BBEAE5DE7169E3AD /* PlacesSettingsView.swift in Sources */,
+				A2D6914E19DA19A024906F18 /* CalendarSyncService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

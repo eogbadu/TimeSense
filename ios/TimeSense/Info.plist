@@ -18,6 +18,12 @@
 	<!-- iOS 14+ requires a purpose string before the app makes local-network connections. -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>TimeSense connects to your development server on the local network.</string>
+	<!-- Calendar (EventKit): read event times/locations to find free blocks and time recommendations,
+	     and (with your approval) add events. Covers any calendars added to iOS, including Google. -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>TimeSense reads your calendar to find free blocks and recommend the right task at the right time, and can add events you approve.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>TimeSense reads your calendar to find free blocks and recommend the right task at the right time.</string>
 	<!-- Location: used to recommend the right task at the right place and (with Always) notify you
 	     when you arrive at or leave a saved place. Raw location points are never stored. -->
 	<key>NSLocationWhenInUseUsageDescription</key>

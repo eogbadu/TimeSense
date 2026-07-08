@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Profile
 
@@ -555,7 +556,7 @@ struct PrivacyConsentView: View {
 // MARK: - Calendar
 
 struct CalendarSettingsView: View {
-    @State private var showComingSoon = false
+    @ObservedObject private var calendar = CalendarSyncService.shared
 
     var body: some View {
         ScrollView {
@@ -564,14 +565,14 @@ struct CalendarSettingsView: View {
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
                         .fill(DesignTokens.Color.accent.opacity(0.10))
                         .frame(width: 150, height: 150)
-                    Image(systemName: "calendar")
+                    Image(systemName: calendar.status == .connected ? "calendar.badge.checkmark" : "calendar")
                         .font(.system(size: 64, weight: .regular))
                         .foregroundColor(DesignTokens.Color.accent)
                 }
                 .padding(.top, DesignTokens.Spacing.lg)
 
                 VStack(spacing: DesignTokens.Spacing.sm) {
-                    Text("Connect your calendar")
+                    Text(calendar.status == .connected ? "Calendar connected" : "Connect your calendar")
                         .font(DesignTokens.Typography.title)
                         .foregroundColor(DesignTokens.Color.textPrimary)
                     Text("Let TimeSense avoid conflicts, find open focus blocks, and recommend the right task at the right time.")
@@ -581,30 +582,47 @@ struct CalendarSettingsView: View {
                         .padding(.horizontal, DesignTokens.Spacing.md)
                 }
 
-                Button { showComingSoon = true } label: {
-                    Text("Connect Calendar")
-                        .font(DesignTokens.Typography.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, DesignTokens.Spacing.md)
-                        .background(Capsule().fill(DesignTokens.Color.accent))
+                switch calendar.status {
+                case .connected:
+                    if calendar.lastSyncedCount > 0 {
+                        Text("\(calendar.lastSyncedCount) event\(calendar.lastSyncedCount == 1 ? "" : "s") in view")
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                    }
+                    primaryButton("Sync now") { Task { await calendar.syncIfAuthorized() } }
+                    Button("Disconnect", role: .destructive) { Task { await calendar.disconnect() } }
+                        .font(DesignTokens.Typography.subheadline)
+                case .connecting:
+                    ProgressView().padding(.vertical, DesignTokens.Spacing.md)
+                case .denied:
+                    Text("Calendar access is off. Enable it in Settings ▸ TimeSense ▸ Calendars.")
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                        .multilineTextAlignment(.center)
+                    primaryButton("Open iOS Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    }
+                default:
+                    primaryButton("Connect Apple Calendar") { Task { await calendar.connect() } }
                 }
 
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                    Text("Supported providers")
+                    Text("What TimeSense reads")
                         .font(DesignTokens.Typography.footnote)
                         .foregroundColor(DesignTokens.Color.textSecondary)
                     VStack(spacing: 0) {
-                        providerRow(icon: "calendar.circle.fill", name: "Google Calendar")
+                        infoRow(icon: "clock", text: "Event times, to find your free blocks")
                         Divider().padding(.leading, 56)
-                        providerRow(icon: "applelogo", name: "Apple Calendar")
+                        infoRow(icon: "mappin.and.ellipse", text: "Locations, so it can tell you when to leave")
                     }
                     .cardStyle()
                 }
 
-                Text("Learn more about calendar privacy")
-                    .font(DesignTokens.Typography.subheadline.weight(.semibold))
-                    .foregroundColor(DesignTokens.Color.accent)
+                Text("Reads whatever calendars you've added to iOS — including Google. Event details never leave your control.")
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, DesignTokens.Spacing.md)
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
             .padding(.bottom, DesignTokens.Spacing.xxl)
@@ -612,32 +630,29 @@ struct CalendarSettingsView: View {
         .background(DesignTokens.Color.background)
         .navigationTitle("Calendar")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Calendar connection is coming soon", isPresented: $showComingSoon) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("TimeSense reads only event timing and availability. Sensitive calendar access is opt-in.")
+        .task { await calendar.syncIfAuthorized() }
+    }
+
+    private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(DesignTokens.Typography.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DesignTokens.Spacing.md)
+                .background(Capsule().fill(DesignTokens.Color.accent))
         }
     }
 
-    private func providerRow(icon: String, name: String) -> some View {
-        Button { showComingSoon = true } label: {
-            HStack(spacing: DesignTokens.Spacing.md) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(DesignTokens.Color.accent)
-                    .frame(width: 28)
-                Text(name)
-                    .font(DesignTokens.Typography.body)
-                    .foregroundColor(DesignTokens.Color.textPrimary)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.footnote)
-                    .foregroundColor(DesignTokens.Color.textSecondary)
-            }
-            .padding(DesignTokens.Spacing.md)
+    private func infoRow(icon: String, text: String) -> some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            Image(systemName: icon).font(.title3).foregroundColor(DesignTokens.Color.accent).frame(width: 28)
+            Text(text).font(DesignTokens.Typography.subheadline).foregroundColor(DesignTokens.Color.textPrimary)
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
+        .padding(DesignTokens.Spacing.md)
     }
+
 }
 
 // MARK: - About

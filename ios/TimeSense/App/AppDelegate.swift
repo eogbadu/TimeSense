@@ -27,6 +27,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         FirebaseApp.configure()
         #endif
         LocationService.shared.start()
+        // Keep the backend's calendar mirror fresh (no-op unless calendar access was granted).
+        Task { await CalendarSyncService.shared.syncIfAuthorized() }
         // Register for remote push UNCONDITIONALLY to obtain the APNs token — the token is separate
         // from alert permission, so we shouldn't gate it on the permission prompt. We request alert
         // permission separately (for showing the banners).
