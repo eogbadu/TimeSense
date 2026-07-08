@@ -7930,6 +7930,38 @@ TICKETS = [
             h2("Next Ticket"), p("Make /now usable_minutes calendar-aware too; routine-aware time-of-day."),
         ),
     },
+
+    {
+        "summary": "TIME-142: Now 'analyzed your day' banner ticks (not frozen at 'just now')",
+        "labels": ["ios", "now", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("The 'Re-evaluated just now' text never appeared to change (no timer; and lastLoaded "
+              "resets each visit). Make it tick so elapsed time counts up while viewing."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "AnalysisBanner: 15s Timer updates a @State now; reevaluated computes from lastLoaded "
+                "to now; reset the clock on new load (onChange lastLoaded)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Re-fetch cadence unchanged (opening Now still re-evaluates → resets to 'just now')"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Now/NowView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["The banner counts up over time while the Now screen stays open; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-090 (Now redesign)."),
+            divider(),
+            h2("Next Ticket"), p("Engine: surface imminent calendar appointments over stale tasks."),
+        ),
+    },
 ]
 
 
