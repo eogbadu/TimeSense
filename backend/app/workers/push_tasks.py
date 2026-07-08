@@ -26,7 +26,12 @@ async def _scan_and_push() -> int:
             user = await UserRepository(db).get_by_id(uid)
             if user is None:
                 continue
-            if await ProactivePushService(db).push_for_user(user, sender, gateway=gateway) is not None:
+            svc = ProactivePushService(db)
+            # Prefer a genuinely push-worthy recommendation; if there isn't one, offer to block time
+            # for a high-priority/overdue unscheduled task. Both honor the shared cooldown.
+            if await svc.push_for_user(user, sender, gateway=gateway) is not None:
+                pushed += 1
+            elif await svc.offer_time_block_for_user(user, sender) is not None:
                 pushed += 1
     return pushed
 

@@ -135,6 +135,51 @@ async def test_send_test_no_device(db_session):
     assert result["delivered"] == 0 and result["reason"] == "no_device"
 
 
+async def test_offer_time_block_for_high_priority_unscheduled(db_session):
+    """A high-priority unscheduled task with a free slot → a 'block time' offer is pushed."""
+    from app.models.task import Task
+    user = await _user(db_session)
+    await _register(db_session, user)
+    db_session.add(Task(user_id=user.id, title="Finish the grant", status="pending", priority=1,
+                        estimated_minutes=60))  # unscheduled, high priority
+    await db_session.flush()
+
+    sender = _StubSender()
+    # 09:00 UTC so there's working-hours room today
+    now = datetime.now(timezone.utc).replace(hour=9, minute=0, second=0, microsecond=0)
+    offer = await ProactivePushService(db_session).offer_time_block_for_user(user, sender, now=now)
+    assert offer is not None and offer["delivered"] == 1
+    assert "Finish the grant" in offer["title"]
+    assert sender.sent and sender.sent[0][3] == "offer_time_block"
+
+
+async def test_no_offer_when_no_high_priority_unscheduled(db_session):
+    from app.models.task import Task
+    user = await _user(db_session)
+    await _register(db_session, user)
+    # low priority, no deadline → not offer-worthy
+    db_session.add(Task(user_id=user.id, title="Someday", status="pending", priority=4))
+    await db_session.flush()
+    offer = await ProactivePushService(db_session).offer_time_block_for_user(user, _StubSender())
+    assert offer is None
+
+
+async def test_offer_respects_cooldown(db_session):
+    from app.models.task import Task
+    from app.repositories.push_notification_repository import PushNotificationRepository
+    user = await _user(db_session)
+    await _register(db_session, user)
+    db_session.add(Task(user_id=user.id, title="Urgent thing", status="pending", priority=1,
+                        estimated_minutes=30))
+    now = datetime.now(timezone.utc).replace(hour=9)
+    await PushNotificationRepository(db_session).record(
+        user_id=user.id, action_type="deadline_task", title="x", body="y",
+        sent_at=now - timedelta(minutes=10), delivered_count=1)
+    await db_session.flush()
+    offer = await ProactivePushService(db_session).offer_time_block_for_user(user, _StubSender(), now=now)
+    assert offer is None  # inside the shared cooldown
+
+
 async def test_null_sender_records_nothing_delivered(db_session):
     """With no APNs configured, the decision still runs but nothing is delivered."""
     user = await _user(db_session)

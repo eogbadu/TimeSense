@@ -7750,6 +7750,45 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-137: proactively offer to block time for high-priority tasks (push)."),
         ),
     },
+
+    {
+        "summary": "TIME-137: Proactively offer to block time for high-priority tasks",
+        "labels": ["backend", "notifications", "push", "scheduling"],
+        "description": doc(
+            h2("Goal"),
+            p("When a high-priority or overdue task is unscheduled, proactively push an offer to block "
+              "the next free slot for it (avoiding the user's calendar), so nothing important slips."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "ProactivePushService.offer_time_block_for_user: pick the top high-priority/overdue "
+                "UNSCHEDULED task, find a free slot (multiday, avoids calendar + scheduled tasks), "
+                "push 'Block time for X? Free <day> at <time>', honoring the shared 45-min cooldown; "
+                "record as action_type offer_time_block",
+                "Celery scan: if no eligible recommendation, try the time-block offer",
+                "POST /api/v1/devices/test-offer to fire one on demand (bypasses cooldown)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Tapping the push doesn't yet deep-link into the schedule editor; offer is one per cooldown window"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend: services/push/push_service.py, workers/push_tasks.py, api/v1/devices.py; tests/test_push_service.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "High-priority unscheduled task + free slot -> offer pushed (collapse_id offer_time_block); "
+                "no suitable task -> no offer; cooldown honored; test-offer works; suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_push_service.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-121 (push), TIME-135/136 (suggested slots)."),
+            divider(),
+            h2("Next Ticket"), p("Notification-tap deep-linking to schedule; profile timezone; capture date-parsing."),
+        ),
+    },
 ]
 
 
