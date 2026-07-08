@@ -7148,6 +7148,58 @@ TICKETS = [
             h2("Next Ticket"), p("Backend APNs remote push using eligible_for_push + LLM text."),
         ),
     },
+
+    {
+        "summary": "TIME-121: APNs remote push — backend (device tokens, sender, decision service)",
+        "labels": ["backend", "notifications", "push", "recommendations", "infra"],
+        "description": doc(
+            h2("Goal"),
+            p("Backend for proactive push: store device tokens, send via APNs (token/JWT auth, "
+              "gated by credentials), and a decision service that pushes the engine's LLM text only "
+              "when eligible_for_push and outside cooldown. iOS registration is TIME-122."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "config: apns_key_id/team_id/private_key(.p8)/bundle_id/use_sandbox (empty → disabled)",
+                "models: device_tokens (user_id, token unique, platform) + push_notifications "
+                "(action_type, title, body, sent_at — cooldown + audit) + migration",
+                "repos + PUT/DELETE /api/v1/devices to register/unregister a token",
+                "push sender: PushSender Protocol + NullPushSender + ApnsPushSender (ES256 JWT, "
+                "HTTP/2, gated on creds + h2) + factory",
+                "ProactivePushService.push_for_user: engine (with gateway) → require eligible_for_push "
+                "→ 45-min cooldown (same action_type suppressed; high-urgency override) → send LLM "
+                "title/body to each device → record",
+                "Celery task scan_and_push over users with device tokens + beat schedule; add h2 dep",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "iOS registration/entitlement is TIME-122; real sending needs Apple creds + a valid "
+                "token (tests use a stub sender); no rich payloads/actions yet",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list([
+                "backend: core/config.py; models/{device_token,push_notification}.py + migration + "
+                "__init__; repositories/*; api/v1/devices.py + __init__; services/push/**; "
+                "workers/push_tasks.py + celery_app.py; requirements; tests/test_push*.py",
+            ]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "PUT /devices stores a token; push service sends via a stub sender ONLY when "
+                "eligible_for_push and not in cooldown; same-type within 45 min suppressed; "
+                "high-urgency overrides; no creds → NullPushSender (no-op); suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && alembic upgrade head && pytest tests/test_devices.py tests/test_push_service.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-112..118 (engine + /now/recommendation), TIME-117 (LLM text)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-122: iOS registers for remote push + sends the device token."),
+        ),
+    },
 ]
 
 

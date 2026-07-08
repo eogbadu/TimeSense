@@ -23,3 +23,5 @@ from app.models.task_duration import TaskDurationEstimate  # noqa: F401
 from app.models.user import User, UserPreferences, UserProfile  # noqa: F401
 from app.models.user_location_state import UserLocationState  # noqa: F401
 from app.models.user_place import UserPlace  # noqa: F401
+from app.models.device_token import DeviceToken  # noqa: F401
+from app.models.push_notification import PushNotification  # noqa: F401
