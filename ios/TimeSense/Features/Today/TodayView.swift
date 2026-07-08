@@ -4,7 +4,7 @@ struct TodayView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = TodayViewModel()
     @ObservedObject private var calendar = CalendarSyncService.shared
-    @State private var schedulingTask: TimelineTask?
+    @State private var scheduleDraft: ScheduleDraft?
 
     /// Today's timed calendar events (all-day excluded), sorted by start time.
     private var todaysEvents: [CalendarSyncService.CalEvent] {
@@ -28,8 +28,8 @@ struct TodayView: View {
             .background(DesignTokens.Color.background)
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
-            .sheet(item: $schedulingTask) { task in
-                eventEditorSheet(for: task)
+            .sheet(item: $scheduleDraft) { draft in
+                eventEditorSheet(for: draft)
             }
         }
         .task {
@@ -76,7 +76,15 @@ struct TodayView: View {
                         onToggle: { id in Task { await viewModel.markDone(taskId: id) } },
                         onDelete: { id in Task { await viewModel.deleteTask(taskId: id) } },
                         onSchedule: { task in
-                            Task { if await calendar.ensureWriteAccess() { schedulingTask = task } }
+                            Task {
+                                guard await calendar.ensureWriteAccess() else { return }
+                                let slot = await viewModel.suggestedSlot(
+                                    taskId: task.id, estimatedMinutes: task.estimatedMinutes
+                                )
+                                scheduleDraft = ScheduleDraft(
+                                    id: task.id, title: task.title, start: slot.start, end: slot.end
+                                )
+                            }
                         }
                     )
                 }
@@ -88,16 +96,15 @@ struct TodayView: View {
         .refreshable { await viewModel.load() }
     }
 
-    /// Native "add event" editor pre-filled from the task, for the user to review and confirm.
+    /// Native "add event" editor pre-filled with the engine-suggested block, for the user to review
+    /// and confirm.
     @ViewBuilder
-    private func eventEditorSheet(for task: TimelineTask) -> some View {
-        let start = task.scheduledStart ?? Date()
-        let end = start.addingTimeInterval(TimeInterval((task.estimatedMinutes ?? 30) * 60))
+    private func eventEditorSheet(for draft: ScheduleDraft) -> some View {
         EventEditorView(
-            event: calendar.makeDraftEvent(title: task.title, start: start, end: end),
+            event: calendar.makeDraftEvent(title: draft.title, start: draft.start, end: draft.end),
             eventStore: calendar.eventStore
         ) { saved in
-            schedulingTask = nil
+            scheduleDraft = nil
             if saved { Task { await calendar.syncIfAuthorized() } }
         }
         .ignoresSafeArea()
@@ -109,6 +116,14 @@ struct TodayView: View {
             .foregroundColor(DesignTokens.Color.accent)
             .padding(.horizontal, DesignTokens.Spacing.xs)
     }
+}
+
+/// A task + the engine-suggested time block to schedule it into (drives the approval editor sheet).
+private struct ScheduleDraft: Identifiable {
+    let id: String
+    let title: String
+    let start: Date
+    let end: Date
 }
 
 /// Read-only view of today's calendar events (from EventKit). Not actionable — these live in the
@@ -265,7 +280,7 @@ private struct SmartPlanCard: View {
                             SmartPlanRow(task: task, onToggle: { onToggle(task.id) })
                                 .contextMenu {
                                     Button { onSchedule(task) } label: {
-                                        Label("Add to Calendar", systemImage: "calendar.badge.plus")
+                                        Label("Find a time & add to calendar", systemImage: "calendar.badge.plus")
                                     }
                                 }
                         }

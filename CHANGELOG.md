@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-135: Engine-suggested time blocks — 'Find a time & add to calendar' (long-press a Today task) now asks the engine for the earliest free slot that avoids your meetings and scheduled tasks and respects working hours, then pre-fills the native editor with it for approval
 - [2026-07-08] TIME-134: Add a task to your calendar — long-press a task on Today ▸ 'Add to Calendar' opens Apple's native event editor pre-filled with the task; you review and tap Add (calendar writes always require your approval). The new event then syncs back
 - [2026-07-08] TIME-133: Your connected calendar now shows on the Today screen — an 'On your calendar' section lists today's events (time, title, location), read-only
 - [2026-07-08] TIME-132: Connect Apple Calendar (Settings ▸ Calendar) — grants calendar access, reads your upcoming events, and syncs them so recommendations factor your schedule (meeting prep, free-block timing). Re-syncs on launch. Reads any calendars added to iOS, including Google
