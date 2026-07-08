@@ -7679,6 +7679,42 @@ TICKETS = [
             h2("Next Ticket"), p("Engine-suggested time blocks; auto-schedule into free slots (with approval)."),
         ),
     },
+
+    {
+        "summary": "TIME-135: Engine-suggested time blocks (find a free slot, approve)",
+        "labels": ["backend", "ios", "calendar", "scheduling"],
+        "description": doc(
+            h2("Goal"),
+            p("When adding a task to the calendar, the engine proposes the earliest free block that "
+              "avoids the user's meetings and scheduled tasks and respects working hours; the user "
+              "approves the time in the native editor."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend GET /api/v1/tasks/{id}/suggested-slot: SchedulingService.find_slot over busy "
+                "= other scheduled tasks + timed synced calendar events; returns fits/start/end/"
+                "duration/message",
+                "iOS: TodayViewModel.suggestedSlot; the Today 'Find a time & add to calendar' action "
+                "fetches the slot and pre-fills the EKEventEditViewController with it (falls back to now)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Today-only window (no roll to tomorrow yet); no automatic scheduling without the approval editor"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend: api/v1/tasks.py; tests/test_suggested_slot.py; ios: Features/Today/{TodayView,TodayViewModel}.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Suggested slot starts at/after a blocking meeting; unknown task -> 404; Add-to-Calendar pre-fills the suggested time; suite + iOS build pass"]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_suggested_slot.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-084 (SchedulingService), TIME-131 (calendar events), TIME-134 (editor)."),
+            divider(),
+            h2("Next Ticket"), p("Roll suggestions to tomorrow; engine proactively offers to block time for high-priority tasks."),
+        ),
+    },
 ]
 
 

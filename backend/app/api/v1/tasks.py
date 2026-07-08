@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -7,7 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import CurrentUser
+from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
+from app.services.scheduling_service import SchedulingService
 from app.services.task_duration_service import TaskDurationEstimator
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
@@ -60,6 +64,57 @@ async def get_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
     return TaskResponse.model_validate(task)
+
+
+class SuggestedSlotOut(BaseModel):
+    fits: bool
+    start: datetime | None = None
+    end: datetime | None = None
+    duration_minutes: int
+    message: str
+
+
+@router.get("/{task_id}/suggested-slot", response_model=SuggestedSlotOut)
+async def suggested_slot(
+    task_id: UUID,
+    current_user: CurrentUser,
+    task_svc: TaskService = Depends(get_task_service),
+    user_svc: UserService = Depends(get_user_service),
+    db: AsyncSession = Depends(get_db),
+) -> SuggestedSlotOut:
+    """Propose the earliest free block for this task today — inside working hours and around both
+    scheduled tasks AND the user's calendar events — so a suggested time never lands on a meeting.
+    The user still approves the actual time in the native editor."""
+    user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
+    task = await task_svc.get_task(task_id, user.id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+
+    now = datetime.now(timezone.utc)
+    tz = user.profile.timezone if user.profile else "UTC"
+    ws = user.preferences.work_start_hour if user.preferences else 8
+    we = user.preferences.work_end_hour if user.preferences else 21
+    duration = task.estimated_minutes or 30
+
+    # Busy = today's OTHER scheduled tasks + timed calendar events.
+    today_tasks = await TaskRepository(db).list_by_user(user_id=user.id, for_date=now.date(), limit=200)
+    events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(hours=16))
+    busy = [t for t in today_tasks if t.id != task.id]
+    busy += [
+        SimpleNamespace(scheduled_start=e.starts_at, scheduled_end=e.ends_at)
+        for e in events if not e.all_day
+    ]
+
+    slot = SchedulingService(ws, we).find_slot(now, duration, busy, tz, not_before=now)
+    if slot is None:
+        return SuggestedSlotOut(
+            fits=False, duration_minutes=duration,
+            message="No open block in your working hours today — try adjusting the time.",
+        )
+    return SuggestedSlotOut(
+        fits=True, start=slot, end=slot + timedelta(minutes=duration),
+        duration_minutes=duration, message="Found a free block that avoids your calendar.",
+    )
 
 
 @router.post("/{task_id}/unschedule", response_model=TaskResponse)

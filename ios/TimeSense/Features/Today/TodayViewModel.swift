@@ -60,6 +60,18 @@ final class TodayViewModel: ObservableObject {
         await load()
     }
 
+    /// Ask the engine for the earliest free block (avoiding calendar events + scheduled tasks). Falls
+    /// back to "now + duration" if nothing fits today.
+    func suggestedSlot(taskId: String, estimatedMinutes: Int?) async -> (start: Date, end: Date) {
+        struct Resp: Decodable { let fits: Bool; let start: Date?; let end: Date? }
+        let resp: Resp? = try? await APIClient.shared.get("/api/v1/tasks/\(taskId)/suggested-slot")
+        if let resp, resp.fits, let s = resp.start, let e = resp.end {
+            return (s, e)
+        }
+        let start = Date()
+        return (start, start.addingTimeInterval(TimeInterval((estimatedMinutes ?? 30) * 60)))
+    }
+
     /// Undo an auto-placed time — the task becomes untimed again.
     func unschedule(taskId: String) async {
         struct Empty: Encodable {}
