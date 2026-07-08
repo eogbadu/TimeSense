@@ -15,12 +15,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         FirebaseApp.configure()
         #endif
         LocationService.shared.start()
-        // Request notification permission (idempotent) then register for remote push. The token
-        // arrives in didRegisterForRemoteNotificationsWithDeviceToken.
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            guard granted else { return }
-            DispatchQueue.main.async { application.registerForRemoteNotifications() }
-        }
+        // Register for remote push UNCONDITIONALLY to obtain the APNs token — the token is separate
+        // from alert permission, so we shouldn't gate it on the permission prompt. We request alert
+        // permission separately (for showing the banners).
+        application.registerForRemoteNotifications()
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
         return true
     }
 
@@ -29,6 +28,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
         let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+        print("✅ APNs device token: \(token)")   // visible in the Xcode console for debugging
         Task {
             struct Body: Encodable { let token: String; let platform: String }
             struct Ack: Decodable { let ok: Bool }
@@ -42,7 +42,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        // Non-fatal — the app still works without remote push (local notifications continue).
-        print("Remote notification registration failed: \(error.localizedDescription)")
+        // Almost always means the "Push Notifications" capability isn't on the provisioning profile.
+        print("❌ Remote notification registration FAILED: \(error.localizedDescription)")
     }
 }
