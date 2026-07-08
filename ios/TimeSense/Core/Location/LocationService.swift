@@ -197,19 +197,22 @@ final class LocationService: NSObject, ObservableObject {
     }
 
     private func notifyBestTask(placeName: String, entered: Bool) async {
-        struct Ctx: Decodable {
-            let best_task: BestTask?
-            struct BestTask: Decodable { let title: String }
+        // Ask the full engine for its recommendation here (the app already posted the current place),
+        // and use its LLM-phrased notification text. Deterministic fallback is built into the endpoint.
+        struct Rec: Decodable {
+            let title: String
+            let message: String
+            let domain: String
         }
-        let verb = entered ? "You're at" : "You left"
-        let ctx: Ctx? = try? await APIClient.shared.get("/api/v1/now")
-        let body: String
-        if let title = ctx?.best_task?.title {
-            body = "\(verb) \(placeName). Best next: \(title)."
+        let rec: Rec? = try? await APIClient.shared.get("/api/v1/now/recommendation")
+        if let rec, rec.domain != "fallback" {
+            // A real, worthwhile recommendation → lead with the LLM text.
+            fireNotification(title: rec.title, body: rec.message)
         } else {
-            body = "\(verb) \(placeName). Open TimeSense for your best next task."
+            // Nothing pressing → a light acknowledgement rather than a nagging task push.
+            let verb = entered ? "You're at" : "You left"
+            fireNotification(title: "TimeSense", body: "\(verb) \(placeName).")
         }
-        fireNotification(title: "TimeSense", body: body)
     }
 
     private func fireNotification(title: String, body: String) {
