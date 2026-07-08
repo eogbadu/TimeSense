@@ -7894,6 +7894,42 @@ TICKETS = [
             h2("Next Ticket"), p("Recurring/relative phrases (in 2 hours, every Monday); on-device capture verification."),
         ),
     },
+
+    {
+        "summary": "TIME-141: 'Why this recommendation' Calendar signal — real free time (not the 240 cap)",
+        "labels": ["backend", "recommendations", "calendar", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("The Calendar signal almost always said '240 minutes free before the end of your day' — "
+              "the UsableTimeService 4-hour cap, measured to midnight, ignoring the user's calendar. "
+              "Make free time genuinely reflect calendar events + scheduled tasks within working hours."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "recommendation_explainer._free_and_next: free time until the next commitment (task OR "
+                "calendar event) or the end of the WORKING day, with busy = scheduled tasks + timed "
+                "calendar events, via SchedulingService (working-hours + tz aware)",
+                "Replaces UsableTimeService(240-cap, tasks-only, to-midnight) in the explainer; "
+                "phrasing 'before your workday ends'; confidence uses the real free time",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["/now usable_minutes path unchanged; location + time-of-day signals already derived; no all-day event handling change"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend: services/recommendation_explainer.py; tests/test_calendar_sync.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["With a meeting in 40 min the Calendar signal names it and shows ~40 min free, not 240; suite passes"]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_calendar_sync.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-131 (calendar events), TIME-084 (SchedulingService)."),
+            divider(),
+            h2("Next Ticket"), p("Make /now usable_minutes calendar-aware too; routine-aware time-of-day."),
+        ),
+    },
 ]
 
 
