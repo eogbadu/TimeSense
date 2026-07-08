@@ -9,6 +9,7 @@ import Speech
 final class VoiceCaptureService: ObservableObject {
     @Published private(set) var transcript = ""
     @Published private(set) var isRecording = false
+    @Published private(set) var level: CGFloat = 0   // 0…1 mic loudness, drives the waveform
     @Published var errorMessage: String?
 
     private let recognizer = SFSpeechRecognizer(locale: Locale.current)
@@ -47,6 +48,7 @@ final class VoiceCaptureService: ObservableObject {
         }
         request?.endAudio()
         isRecording = false
+        level = 0
     }
 
     private func beginRecording(with recognizer: SFSpeechRecognizer) throws {
@@ -65,6 +67,8 @@ final class VoiceCaptureService: ObservableObject {
         let format = input.outputFormat(forBus: 0)
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             self?.request?.append(buffer)
+            let lvl = Self.rmsLevel(buffer)
+            Task { @MainActor in self?.level = lvl }
         }
         audioEngine.prepare()
         try audioEngine.start()
@@ -90,7 +94,20 @@ final class VoiceCaptureService: ObservableObject {
         request = nil
         task = nil
         isRecording = false
+        level = 0
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    /// Normalized loudness (0…1) of a capture buffer, for the waveform.
+    private static func rmsLevel(_ buffer: AVAudioPCMBuffer) -> CGFloat {
+        guard let channel = buffer.floatChannelData?[0] else { return 0 }
+        let n = Int(buffer.frameLength)
+        guard n > 0 else { return 0 }
+        var sum: Float = 0
+        for i in 0..<n { let s = channel[i]; sum += s * s }
+        let rms = sqrt(sum / Float(n))
+        // Speech RMS sits around 0…0.2; scale up with headroom and clamp.
+        return CGFloat(min(1.0, max(0.0, rms * 12)))
     }
 
     private func requestPermissions() async -> Bool {
