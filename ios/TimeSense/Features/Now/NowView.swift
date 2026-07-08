@@ -105,8 +105,12 @@ struct NowView: View {
 }
 
 /// "TimeSense analyzed your day · Re-evaluated N min ago" — reassures the user the pick is fresh.
+/// Ticks over time (every 15s) so the elapsed time actually counts up while the screen is open,
+/// instead of appearing frozen at "just now".
 private struct AnalysisBanner: View {
     let lastLoaded: Date?
+    @State private var now = Date()
+    private let ticker = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.md) {
@@ -128,11 +132,14 @@ private struct AnalysisBanner: View {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
                 .fill(DesignTokens.Color.accent.opacity(0.10))
         )
+        .onReceive(ticker) { now = $0 }
+        // Reset the clock when a fresh recommendation is loaded.
+        .onChange(of: lastLoaded) { _, _ in now = Date() }
     }
 
     private var reevaluated: String {
-        guard let lastLoaded else { return "Just now" }
-        let mins = Int(Date().timeIntervalSince(lastLoaded) / 60)
+        guard let lastLoaded else { return "Analyzing your day…" }
+        let mins = Int(now.timeIntervalSince(lastLoaded) / 60)
         if mins <= 0 { return "Re-evaluated just now" }
         if mins == 1 { return "Re-evaluated 1 min ago" }
         return "Re-evaluated \(mins) min ago"

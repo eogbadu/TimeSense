@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-142: The Now 'analyzed your day' banner now counts up over time ('just now' → '2 min ago') instead of appearing frozen — it wasn't hard-coded, it just lacked a timer
 - [2026-07-08] TIME-141: The 'Why this recommendation' Calendar signal now shows your REAL free time — until your next meeting/task or the end of your working day, accounting for your calendar and scheduled tasks — instead of the misleading hard-capped '240 minutes'
 - [2026-07-08] TIME-140: Capturing 'Go to Walmart today at 5pm' now actually schedules it at 5pm (a specific time becomes a real time block); a date without a time becomes a due date. The deterministic parser runs alongside the LLM and fills whatever it misses, so times stop getting dropped
 - [2026-07-08] TIME-139: The app now sends your device's timezone to the backend on launch (it was stuck on UTC) — so greetings, 'today', working hours, and scheduling all use your real local time
