@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-08 — TIME-128 (Jira TIME-128): Disable Firebase delegate swizzling for APNs
+
+Root cause of 'no push token' nailed via console: fresh build ran (🚀 TIME-127), registerForRemoteNotifications() called (📡), notification permission granted=true — but NEITHER didRegisterForRemoteNotificationsWithDeviceToken (✅) NOR didFailToRegister (❌) fired. Classic FirebaseAuth UIApplicationDelegate method swizzling intercepting the APNs registration callback and not chaining to our @UIApplicationDelegateAdaptor delegate. Fix: Info.plist FirebaseAppDelegateProxyEnabled=NO (we use neither FCM nor phone-auth, so safe). Verified the key merges into the built Info.plist. Now the delegate should fire ✅/❌ on device. iOS BUILD SUCCEEDED.
 ## 2026-07-08 — TIME-127 (Jira TIME-127): Launch/registration markers
 
 Push still not registering on device; console showed no ✅/❌ despite HEAD at TIME-126 → likely stale binary or detached console. Added AppDelegate.didFinishLaunching prints: '🚀 build TIME-127' marker, '📡 Calling registerForRemoteNotifications()', and the notification-permission result. Pure diagnostics — if the 🚀 line doesn't appear, the installed app is stale (clean build + run from Xcode). iOS BUILD SUCCEEDED.

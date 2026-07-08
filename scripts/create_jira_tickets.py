@@ -7426,6 +7426,40 @@ TICKETS = [
             h2("Next Ticket"), p("Once the token registers: confirm backend receipt + fire a test push."),
         ),
     },
+
+    {
+        "summary": "TIME-128: Disable Firebase delegate swizzling so APNs token callback fires",
+        "labels": ["ios", "notifications", "push", "firebase", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("Console proved registration is called on a fresh build (🚀/📡/granted=true) but neither "
+              "didRegister nor didFail fired — FirebaseAuth's UIApplicationDelegate swizzling was "
+              "intercepting didRegisterForRemoteNotificationsWithDeviceToken and not forwarding it to "
+              "our @UIApplicationDelegateAdaptor delegate."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Info.plist: FirebaseAppDelegateProxyEnabled = NO (we use neither FCM nor phone-auth, "
+                "so disabling the proxy is safe and lets our delegate receive the APNs token)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Getting a token still requires the Push capability on the provisioning profile (paid Apple account)"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Info.plist"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["After a fresh build, didRegisterForRemoteNotificationsWithDeviceToken fires (✅ token) or didFail fires (❌); key present in the built Info.plist; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-122/126/127."),
+            divider(),
+            h2("Next Ticket"), p("Confirm backend receives the token + fire a test push."),
+        ),
+    },
 ]
 
 

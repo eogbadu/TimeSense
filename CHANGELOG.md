@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-128: Push token never arrived because FirebaseAuth's app-delegate swizzling was swallowing the APNs registration callback — disabled it via FirebaseAppDelegateProxyEnabled=NO so our delegate receives the device token
 - [2026-07-08] TIME-127: Added loud launch + push-registration console markers to confirm a fresh build is running (diagnostic for the on-device push setup)
 - [2026-07-08] TIME-126: The app now registers for APNs push on every launch regardless of notification permission (previously it only registered if you'd granted permission, so the device token was never obtained). Logs the token to the Xcode console for debugging
 - [2026-07-08] TIME-125: Fixed two on-device bugs — (1) location posting / device registration / place sync were 500-ing on Postgres because four migrations were missing the created_at/updated_at defaults (added a migration to fix them); (2) the Today page showed an empty 'your day is open' in the evening because untimed tasks were only included when the client date matched the server's UTC date — now tolerant of the local/UTC date boundary
