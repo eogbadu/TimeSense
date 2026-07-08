@@ -7576,6 +7576,42 @@ TICKETS = [
             h2("Next Ticket"), p("TIME-132: iOS EventKit read + permission + sync to /calendar/synced."),
         ),
     },
+
+    {
+        "summary": "TIME-132: iOS Apple Calendar (EventKit) connect + sync",
+        "labels": ["ios", "calendar", "eventkit"],
+        "description": doc(
+            h2("Goal"),
+            p("iOS half: request calendar access (EventKit), read upcoming events, and sync them to "
+              "the backend so the engine factors the schedule. Native permission — no OAuth."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "CalendarSyncService (EventKit): requestFullAccessToEvents (iOS17+) / requestAccess; "
+                "read now-12h..now+36h; PUT /api/v1/calendar/synced; syncIfAuthorized + disconnect",
+                "CalendarSettingsView rewired: Connect Apple Calendar -> permission -> sync; shows "
+                "connected + event count, Sync now, Disconnect, and Open-Settings when denied",
+                "Info.plist: NSCalendarsFullAccessUsageDescription + NSCalendarsUsageDescription",
+                "Re-sync on app launch (AppDelegate) when authorized",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Showing events as blocks on Today + write-back to the calendar (TIME-133); needs on-device test for the permission prompt"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/Calendar/CalendarSyncService.swift (new), Features/Settings/SettingsScreens.swift, App/AppDelegate.swift, Info.plist; TimeSense.xcodeproj"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Connect requests calendar access and syncs events; status/counts shown; re-syncs on launch; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-131 (/calendar/synced + engine wiring)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-133: show calendar events on Today; write events to the calendar with approval."),
+        ),
+    },
 ]
 
 

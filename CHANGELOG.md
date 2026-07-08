@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-132: Connect Apple Calendar (Settings ▸ Calendar) — grants calendar access, reads your upcoming events, and syncs them so recommendations factor your schedule (meeting prep, free-block timing). Re-syncs on launch. Reads any calendars added to iOS, including Google
 - [2026-07-08] TIME-131: Apple Calendar (backend) — synced-events store + PUT/GET /api/v1/calendar/synced so the app can push the events it reads from EventKit; the recommendation engine now factors your real calendar (meeting prep/join/leave, free-block from the next event). All-day events are ignored for meeting logic
 - [2026-07-08] TIME-130: Push diagnostics (launch marker, registration, device token, foreground-present) now log only in Debug builds via a debugLog helper — no console noise or token logging in production
 - [2026-07-08] TIME-129: Notifications now appear even when the app is open (foreground) — previously iOS suppressed them, which looked like the push hadn't arrived. Verified APNs push works end-to-end on device
