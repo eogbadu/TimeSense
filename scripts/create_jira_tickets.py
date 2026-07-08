@@ -7962,6 +7962,43 @@ TICKETS = [
             h2("Next Ticket"), p("Engine: surface imminent calendar appointments over stale tasks."),
         ),
     },
+
+    {
+        "summary": "TIME-143: Surface upcoming appointments; don't recommend errands right before one",
+        "labels": ["backend", "recommendations", "calendar", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("Reported: at 1:53pm the top pick was a gym task scheduled for 8am, while a 2:40pm "
+              "acupuncture appointment sat on the calendar. Cause: calendar candidates only fired "
+              "<=15 min out (so a 45-min appointment was never surfaced), and a maps-resolved gym "
+              "errand that 'fit' the 45-min pre-appointment block scored top."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "calendar_candidates: surface the next event within ~an hour — join(<=2), prep(<=20), "
+                "leave-for-located(<=30), and a 'Coming up' candidate up to 60min (located)/75min "
+                "with urgency scaled by proximity",
+                "penalties: a location errand with a commitment <=60 min away is penalized (don't "
+                "start a trip right before an appointment)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No maps travel-time-based leave timing yet; engine doesn't yet know a task's scheduled_start (the gym's 8am slot is invisible to it)"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend: services/recommendation/candidates/calendar_candidates.py, scoring/penalties.py; tests/test_calendar_sync.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["An appointment ~45 min out is the top recommendation (calendar domain), not an errand; suite passes"]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_calendar_sync.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-131 (calendar events in the engine)."),
+            divider(),
+            h2("Next Ticket"), p("Give the engine tasks scheduled_start awareness; travel-time-based leave timing via maps."),
+        ),
+    },
 ]
 
 
