@@ -380,6 +380,7 @@ class Recommendation:
     explanation: str
     alternatives: list[CandidateAction]
     eligible_for_push: bool
+    related_entity_ids: list[str] = field(default_factory=list)
     suggested_start_time: Optional[str] = None
     expires_at: Optional[str] = None
     destination_place: Optional[Place] = None

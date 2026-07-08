@@ -40,11 +40,13 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
         if (poor or low) and (c.type in _DEEP or c.required_energy == "high"):
             penalty += 30
 
-    # Night → suppress errands and normal work unless urgent (overdue).
+    # Night → suppress errands and normal work unless it's urgent (overdue, or due very soon so
+    # urgency is high). We still don't send the user out on an errand at night unless it's overdue.
     if tod == "night":
+        urgent = overdue or c.urgency >= 0.8
         if c.domain == "location" and not overdue:
             penalty += 55
-        if c.type in _WORKISH and not overdue:
+        if c.type in _WORKISH and not urgent:
             penalty += 40
 
     # At home, an errand is only doable if we've confirmed a feasible trip — otherwise it must not

@@ -89,6 +89,7 @@ def select_recommendation(
         explanation=explanation,
         alternatives=alternatives,
         eligible_for_push=eligible_for_push(best.score, c.confidence),
+        related_entity_ids=c.related_entity_ids,
         destination_place=c.destination_place,
         travel_estimate=c.travel_estimate,
         travel_feasibility=c.travel_feasibility,

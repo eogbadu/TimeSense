@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] TIME-118: New GET /api/v1/now/recommendation — returns the FULL engine decision (any domain: task, health, routine, planning, location, calendar…) with LLM-phrased text, reason codes, confidence, score, push eligibility, related_task_id (when task-backed), destination/travel (when present), and alternatives. Also: a task due very soon is no longer night-suppressed (only non-urgent work is)
 - [2026-07-07] TIME-117: LLM explanation layer — the engine can now phrase its already-selected recommendation via the LLM (friendly title/body/explanation), with strict guardrails (never changes the action, never invents distances/times) and deterministic fallback on any failure. Documented GOOGLE_MAPS_API_KEY in .env.example + release checklist
 - [2026-07-07] TIME-116: The app now syncs your saved places (with coordinates) to the backend, so the recommendation engine can resolve errands and compute real travel time (needs a maps API key set on the server)
 - [2026-07-07] TIME-115: Real maps provider — added a Google Maps provider (geocode/nearby/travel-time) gated by GOOGLE_MAPS_API_KEY, a user_places store + GET/PUT /api/v1/places to sync saved places with coordinates, and context plumbing (preferred destinations + travel origin from the current saved place). With a key + synced places, the engine computes real driving time and errands lead only when the trip actually fits

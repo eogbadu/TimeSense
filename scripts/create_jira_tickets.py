@@ -7028,6 +7028,47 @@ TICKETS = [
             h2("Next Ticket"), p("Optional: expose a full-engine /now/recommendation endpoint; adopt LLM text for push."),
         ),
     },
+
+    {
+        "summary": "TIME-118: /now/recommendation — full engine recommendation endpoint",
+        "labels": ["backend", "recommendations", "api"],
+        "description": doc(
+            h2("Goal"),
+            p("Expose the complete engine decision (any domain — not just the best task) with LLM "
+              "text, so the app can surface cross-domain actions like prep-for-meeting / wind-down."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "GET /api/v1/now/recommendation: gather candidate tasks -> build_user_context -> "
+                "run_engine (maps provider + LLM gateway) -> typed Recommendation response",
+                "Recommendation carries related_entity_ids so a task-backed action exposes related_task_id",
+                "Response: action_type/domain/title/message/explanation/confidence/score/urgency/"
+                "estimated_minutes/reason_codes/eligible_for_push + destination_place/travel_estimate "
+                "(when present) + alternatives + related_task_id",
+                "Extract _gather_candidate_tasks shared with /now; store a RecommendationEvent audit",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No iOS adoption yet; /now unchanged (fast, task-centric); no push wiring"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend/app/api/v1/now.py, services/recommendation/{types.py,selection/select.py}; tests/test_now_recommendation.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "Endpoint returns a full recommendation with reason codes + confidence + push "
+                "eligibility; a task-backed pick includes related_task_id; a non-task pick (e.g. "
+                "wind_down at night) is returned with no task id; suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_now_recommendation.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-112..117 (engine + LLM layer)."),
+            divider(),
+            h2("Next Ticket"), p("iOS adoption of /now/recommendation; LLM text for push."),
+        ),
+    },
 ]
 
 

@@ -17,6 +17,7 @@ from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.recommendation.candidates.generate import generate_candidate_actions
 from app.services.recommendation.context_builder import build_user_context
+from app.services.recommendation.engine import run_engine
 from app.services.recommendation.maps.factory import get_maps_provider
 from app.services.recommendation.maps.maps_skill_service import MapsSkillService
 from app.services.recommendation.selection.rank import rank_candidates
@@ -92,8 +93,9 @@ def _moment(local_now: datetime, ranked, now: datetime) -> str | None:
     )
 
 
-async def _ranked_candidates(db: AsyncSession, user, now: datetime):
-    """Shared Now ranking: returns (ranked_tasks, usable_minutes, today_scheduled_tasks)."""
+async def _gather_candidate_tasks(db: AsyncSession, user, now: datetime):
+    """Collect the eligible candidate Tasks (pending today + overdue + unscheduled, minus suppressed)
+    and the usable-minutes window. Shared by /now and /now/recommendation."""
     repo = TaskRepository(db)
     today = now.date()
 
@@ -113,9 +115,14 @@ async def _ranked_candidates(db: AsyncSession, user, now: datetime):
     user_tz = user.profile.timezone if user.profile else "UTC"
     usable_minutes = UsableTimeService().calculate(today_tasks, anchor=now, user_timezone=user_tz)
 
-    # Respect recommendation feedback: hide snoozed (active) / "not now" (cooldown) tasks.
     suppressed = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
     candidates = [t for t in (pending + overdue + unscheduled) if t.id not in suppressed]
+    return candidates, usable_minutes, today_tasks
+
+
+async def _ranked_candidates(db: AsyncSession, user, now: datetime):
+    """Shared Now ranking: returns (ranked_tasks, usable_minutes, today_scheduled_tasks)."""
+    candidates, usable_minutes, today_tasks = await _gather_candidate_tasks(db, user, now)
     if not candidates:
         return [], usable_minutes, today_tasks
     ranked = await _engine_rank_tasks(db, user, candidates, now, usable_minutes)
@@ -294,3 +301,120 @@ async def get_now_why(
         await db.rollback()
 
     return WhyResponse(reason=explanation["summary"], **explanation)
+
+
+# --- Full engine recommendation (any domain, with LLM text) ------------------------------------
+
+
+class PlaceOut(BaseModel):
+    name: str
+    type: str
+    address: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    open_now: bool | None = None
+
+
+class TravelOut(BaseModel):
+    distance_miles: float
+    duration_minutes: float
+    mode: str
+    total_required_minutes: float | None = None
+    fits_free_block: bool | None = None
+
+
+class AlternativeOut(BaseModel):
+    title: str
+    action_type: str
+    domain: str
+    reason_codes: list[str]
+    related_task_id: uuid.UUID | None = None
+
+
+class NowRecommendationResponse(BaseModel):
+    """The complete engine decision — any domain (task, health, routine, planning, location, …),
+    with LLM-phrased text. `related_task_id` is set when the pick is backed by a real task."""
+    id: str
+    timestamp: str
+    title: str
+    message: str
+    explanation: str
+    action_type: str
+    domain: str
+    confidence: float
+    score: float
+    urgency: str
+    estimated_minutes: int
+    reason_codes: list[str]
+    eligible_for_push: bool
+    related_task_id: uuid.UUID | None = None
+    destination_place: PlaceOut | None = None
+    travel: TravelOut | None = None
+    alternatives: list[AlternativeOut] = []
+
+
+def _task_id_in(entity_ids: list[str], task_map: dict) -> uuid.UUID | None:
+    for tid in entity_ids:
+        if tid in task_map:
+            return task_map[tid].id
+    return None
+
+
+@router.get("/recommendation", response_model=NowRecommendationResponse)
+async def get_now_recommendation(
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    gateway: LLMGateway = Depends(get_llm_gateway),
+) -> NowRecommendationResponse:
+    """Run the full deterministic engine (all domains) and phrase the result with the LLM. Unlike
+    /now (task-centric, fast, no LLM), this can recommend cross-domain actions like prep-for-meeting
+    or wind-down. The LLM only writes the text — it never changes the chosen action."""
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+    now = datetime.now(timezone.utc)
+
+    candidates, usable_minutes, _ = await _gather_candidate_tasks(db, user, now)
+    ctx, task_map = await build_user_context(db, user, candidates, now, usable_minutes)
+    maps = MapsSkillService(get_maps_provider())
+    rec = await run_engine(ctx, maps=maps, now=now, gateway=gateway)
+
+    place = None
+    if rec.destination_place is not None:
+        p = rec.destination_place
+        place = PlaceOut(name=p.name, type=p.type, address=p.address,
+                         latitude=p.coordinates.latitude, longitude=p.coordinates.longitude,
+                         open_now=p.open_now)
+    travel = None
+    if rec.travel_estimate is not None:
+        te = rec.travel_estimate
+        feas = rec.travel_feasibility
+        travel = TravelOut(distance_miles=te.distance_miles, duration_minutes=te.duration_minutes,
+                           mode=te.mode,
+                           total_required_minutes=feas.total_required_minutes if feas else None,
+                           fits_free_block=feas.fits_in_current_free_block if feas else None)
+
+    alternatives = [
+        AlternativeOut(title=a.title, action_type=a.type, domain=a.domain,
+                       reason_codes=list(a.reason_codes),
+                       related_task_id=_task_id_in(a.related_entity_ids, task_map))
+        for a in rec.alternatives
+    ]
+
+    related_task_id = _task_id_in(rec.related_entity_ids, task_map)
+
+    # Audit only task-backed picks (the audit model requires a task_id).
+    if related_task_id is not None:
+        db.add(RecommendationEvent(
+            user_id=user.id, task_id=related_task_id, confidence=rec.confidence,
+            explanation={"action_type": rec.action_type, "domain": rec.domain,
+                         "score": rec.score, "reason_codes": list(rec.reason_codes)},
+        ))
+        await db.commit()
+
+    return NowRecommendationResponse(
+        id=rec.id, timestamp=rec.timestamp, title=rec.title, message=rec.message,
+        explanation=rec.explanation, action_type=rec.action_type, domain=rec.domain,
+        confidence=rec.confidence, score=rec.score, urgency=rec.urgency,
+        estimated_minutes=rec.estimated_minutes, reason_codes=list(rec.reason_codes),
+        eligible_for_push=rec.eligible_for_push, related_task_id=related_task_id,
+        destination_place=place, travel=travel, alternatives=alternatives,
+    )
