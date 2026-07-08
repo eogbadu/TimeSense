@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-08 — TIME-140 (Jira TIME-140): Capture parses specific times into scheduled_start
+
+Root cause of captured tasks losing their time: both the LLM prompt and rule-based parser only produced due_at, so 'today at 5pm' never became a scheduled slot (and the LLM was inconsistent). Fix: capture_date_parser.parse_datetime now returns (scheduled_start, due_at, title) — a specific clock time -> scheduled_start on the given/today date; a date without a time -> due_at at end of day. capture_service: added scheduled_start to the LLM JSON schema/rules (time -> scheduled_start, date -> due_at, prefer scheduled_start); the deterministic parser ALWAYS runs and fills any field the LLM leaves null (LLM wins when present); scheduled_end = start + (estimated||30). Verified end-to-end: 'Go to Walmart today at 5pm' -> scheduled 21:00Z (5pm EDT) + 30-min block; 'Buy new pants today' -> due today 23:59; 'Buy milk' -> neither. Updated parser tests to the 3-tuple. Suite 412. Completes the deep-linking + timezone + capture batch.
 ## 2026-07-08 — TIME-139 (Jira TIME-139): App sends the device timezone
 
 Root fix for the profile-timezone='UTC' issue (deeper cause of the TIME-125 Today bug + wrong greetings). MainTabView.task -> syncDeviceTimezone(): PATCH /api/v1/users/me/profile {timezone: TimeZone.current.identifier} on launch (endpoint + UserProfileUpdate already support timezone). Now greetings (_greeting), 'today' boundaries, working-hours windows, and scheduling all use the real local tz. Timeline ±1-day tolerance (TIME-125) kept as a safety net. iOS BUILD SUCCEEDED.

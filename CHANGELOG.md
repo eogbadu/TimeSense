@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-08] TIME-140: Capturing 'Go to Walmart today at 5pm' now actually schedules it at 5pm (a specific time becomes a real time block); a date without a time becomes a due date. The deterministic parser runs alongside the LLM and fills whatever it misses, so times stop getting dropped
 - [2026-07-08] TIME-139: The app now sends your device's timezone to the backend on launch (it was stuck on UTC) — so greetings, 'today', working hours, and scheduling all use your real local time
 - [2026-07-08] TIME-138: Tapping a notification now takes you somewhere useful — a 'block time for X' push opens Today with the scheduler pre-filled for that task; other notifications open Now
 - [2026-07-08] TIME-137: TimeSense now proactively offers to block time for high-priority/overdue unscheduled tasks — a push ('Block time for X? You have a free slot tomorrow at 2pm') when the engine has no more urgent recommendation, using a calendar-aware free slot. POST /api/v1/devices/test-offer fires one on demand
