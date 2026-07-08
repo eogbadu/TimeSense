@@ -53,6 +53,20 @@ class SchedulingService:
                 merged.append((s, e))
         return merged
 
+    def _earliest_in_window(
+        self, cursor: datetime, window_end: datetime, dur: timedelta, busy: Sequence
+    ) -> datetime | None:
+        """Earliest start in [cursor, window_end] where `dur` fits around the busy blocks."""
+        if cursor + dur > window_end:
+            return None
+        for s, e in self._busy(busy, cursor, window_end):
+            if s - cursor >= dur:
+                return cursor
+            cursor = max(cursor, e)
+            if cursor + dur > window_end:
+                return None
+        return cursor if cursor + dur <= window_end else None
+
     def find_slot(
         self,
         now: datetime,
@@ -67,16 +81,35 @@ class SchedulingService:
         cursor = max(now, window_start)
         if not_before is not None:
             cursor = max(cursor, _utc(not_before))
+        return self._earliest_in_window(
+            cursor, window_end, timedelta(minutes=max(1, duration_min)), scheduled_tasks
+        )
+
+    def find_slot_multiday(
+        self,
+        now: datetime,
+        duration_min: int,
+        busy: Sequence,
+        tz_name: str = "UTC",
+        not_before: datetime | None = None,
+        max_days: int = 3,
+    ) -> datetime | None:
+        """Earliest free slot across today and the next few days — rolls forward when today is full.
+        `busy` may span multiple days (scheduled tasks + calendar events); each day's search is
+        clamped to that day's working window."""
         dur = timedelta(minutes=max(1, duration_min))
-        if cursor + dur > window_end:
-            return None
-        for s, e in self._busy(scheduled_tasks, cursor, window_end):
-            if s - cursor >= dur:
-                return cursor
-            cursor = max(cursor, e)
-            if cursor + dur > window_end:
-                return None
-        return cursor if cursor + dur <= window_end else None
+        for offset in range(max(1, max_days)):
+            anchor = now + timedelta(days=offset)
+            window_start, window_end = self._window(anchor, tz_name)
+            cursor = max(window_start, now) if offset == 0 else window_start
+            if not_before is not None:
+                cursor = max(cursor, _utc(not_before))
+            if cursor >= window_end:
+                continue
+            slot = self._earliest_in_window(cursor, window_end, dur, busy)
+            if slot is not None:
+                return slot
+        return None
 
     def free_minutes_before(
         self,

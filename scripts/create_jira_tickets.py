@@ -7715,6 +7715,41 @@ TICKETS = [
             h2("Next Ticket"), p("Roll suggestions to tomorrow; engine proactively offers to block time for high-priority tasks."),
         ),
     },
+
+    {
+        "summary": "TIME-136: Roll suggested time blocks to the next few days when today is full",
+        "labels": ["backend", "scheduling", "calendar"],
+        "description": doc(
+            h2("Goal"),
+            p("When no free slot fits today, the suggested-slot search rolls forward to the next few "
+              "days (respecting each day's working window + calendar) and reports which day."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "SchedulingService: _earliest_in_window helper; find_slot_multiday(now, duration, "
+                "busy, tz, not_before, max_days) that searches today..+N days",
+                "/tasks/{id}/suggested-slot uses find_slot_multiday over a 3-day horizon (busy = "
+                "other scheduled tasks + timed calendar events across the horizon) and returns a "
+                "'day' label (today/tomorrow/later this week)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["iOS unchanged (uses start/end; native editor shows the date); horizon fixed at 3 days"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend: services/scheduling_service.py, api/v1/tasks.py; tests/test_suggested_slot.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["When today's window is full/past, a suggestion rolls to a later day with a day label; suite passes"]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_suggested_slot.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-135 (suggested-slot)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-137: proactively offer to block time for high-priority tasks (push)."),
+        ),
+    },
 ]
 
 
