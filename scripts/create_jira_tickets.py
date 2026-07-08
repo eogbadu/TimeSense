@@ -7393,6 +7393,39 @@ TICKETS = [
             h2("Next Ticket"), p("End-to-end on-device push once the Push capability is provisioned + Celery runs."),
         ),
     },
+
+    {
+        "summary": "TIME-127: Loud launch + registration markers to confirm fresh build",
+        "labels": ["ios", "notifications", "push", "devx"],
+        "description": doc(
+            h2("Goal"),
+            p("Diagnostic: the phone never registers for push and the console shows no ✅/❌, which "
+              "means a stale binary or a detached console. Add unmissable launch/registration prints "
+              "so the running build is unambiguous."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "AppDelegate.didFinishLaunching logs a loud '🚀 build TIME-127' marker",
+                "Logs before registerForRemoteNotifications() and the notification-permission result",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No behavior change; pure logging to disambiguate stale-build vs registration failure"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/App/AppDelegate.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["On launch from Xcode the console prints the 🚀 marker, the registerForRemoteNotifications log, and then ✅/❌; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-126."),
+            divider(),
+            h2("Next Ticket"), p("Once the token registers: confirm backend receipt + fire a test push."),
+        ),
+    },
 ]
 
 
