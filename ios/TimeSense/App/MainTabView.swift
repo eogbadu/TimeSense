@@ -37,6 +37,9 @@ struct MainTabView: View {
                 .tag(AppState.Tab.settings)
         }
         .tint(DesignTokens.Color.accent)
+        // Keep the backend's stored timezone in sync with the device — drives greetings, "today"
+        // boundaries, working-hours windows, and scheduling.
+        .task { await syncDeviceTimezone() }
         // Route notification taps to the right tab. Today clears .scheduleTask after presenting the
         // scheduler; we clear .now here.
         .onChange(of: router.route) { _, route in
@@ -50,5 +53,13 @@ struct MainTabView: View {
                 break
             }
         }
+    }
+
+    private func syncDeviceTimezone() async {
+        struct Body: Encodable { let timezone: String }
+        struct Resp: Decodable { let timezone: String? }
+        let _: Resp? = try? await APIClient.shared.patch(
+            "/api/v1/users/me/profile", body: Body(timezone: TimeZone.current.identifier)
+        )
     }
 }
