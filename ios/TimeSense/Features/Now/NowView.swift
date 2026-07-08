@@ -57,7 +57,11 @@ struct NowView: View {
                 AnalysisBanner(lastLoaded: viewModel.lastLoaded)
                 ContextChipsRow()
 
-                if let moment = ctx.moment, !moment.isEmpty {
+                // A full cross-domain engine suggestion (wind-down, prep-for-meeting, nearby errand…)
+                // supersedes the simpler local wind-down nudge when available.
+                if let suggestion = viewModel.suggestion, suggestion.isCrossDomainAction {
+                    SuggestionCard(suggestion: suggestion)
+                } else if let moment = ctx.moment, !moment.isEmpty {
                     MomentCard(text: moment)
                 }
 
@@ -181,6 +185,66 @@ private struct FeasibilityCard: View {
 }
 
 /// A calm, local-time-aware nudge (e.g. a gentle wind-down when it's late and nothing is urgent).
+/// A prominent card for the engine's full cross-domain recommendation (from /now/recommendation).
+private struct SuggestionCard: View {
+    let suggestion: EngineRecommendation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: icon).font(.subheadline).foregroundColor(DesignTokens.Color.accent)
+                Text("TimeSense suggests")
+                    .font(DesignTokens.Typography.footnote.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.accent)
+                Spacer(minLength: 0)
+                Text("\(Int((suggestion.confidence * 100).rounded()))% match")
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+            }
+            Text(suggestion.title)
+                .font(DesignTokens.Typography.title2)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(suggestion.message)
+                .font(DesignTokens.Typography.subheadline)
+                .foregroundColor(DesignTokens.Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let travel = suggestion.travel {
+                HStack(spacing: DesignTokens.Spacing.xs) {
+                    Image(systemName: "car.fill").font(.caption2)
+                    Text(travelLine(travel)).font(DesignTokens.Typography.footnote)
+                }
+                .foregroundColor(DesignTokens.Color.textSecondary)
+            }
+        }
+        .padding(DesignTokens.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
+            .fill(DesignTokens.Color.accent.opacity(0.08)))
+        .overlay(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
+            .stroke(DesignTokens.Color.accent.opacity(0.18), lineWidth: 1))
+    }
+
+    private var icon: String {
+        switch suggestion.domain {
+        case "health": return "heart.fill"
+        case "calendar": return "calendar"
+        case "location": return "mappin.circle.fill"
+        case "routine": return "repeat"
+        case "planning": return "list.bullet.clipboard"
+        case "context_switch": return "arrow.triangle.2.circlepath"
+        default: return "sparkles"
+        }
+    }
+
+    private func travelLine(_ t: EngineRecommendation.Travel) -> String {
+        let place = suggestion.destinationPlace?.name ?? "There"
+        var line = "\(place) · \(Int(t.durationMinutes.rounded())) min away"
+        if t.fitsFreeBlock == true { line += " · fits your window" }
+        return line
+    }
+}
+
 private struct MomentCard: View {
     let text: String
 
