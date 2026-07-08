@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Disable Firebase's UIApplicationDelegate method swizzling. FirebaseAuth otherwise intercepts
+	     didRegisterForRemoteNotificationsWithDeviceToken and doesn't forward it to our
+	     @UIApplicationDelegateAdaptor delegate, so our APNs token callback never fires. We don't use
+	     FCM or phone-auth, so turning the proxy off is safe and lets our delegate receive the token. -->
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
 	<!-- Allow plain-HTTP connections to the local network (e.g. the dev backend on the Mac reached
 	     via its .local Bonjour name) while keeping App Transport Security on for everything else. -->
 	<key>NSAppTransportSecurity</key>
