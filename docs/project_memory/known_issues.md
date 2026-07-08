@@ -1,5 +1,8 @@
 # Known Issues
 
+## Migration/model drift risk (found TIME-125)
+Hand-written Alembic migrations must include server_default=now() on created_at/updated_at to match TimestampMixin. Unit tests use Base.metadata.create_all (from models), so they DON'T catch a migration missing the default — it only fails on Postgres at runtime. Four tables (user_location_states/user_places/device_tokens/push_notifications) hit this; fixed by migration y5z6a7b8c9d0. Future hand-written migrations: copy created_at/updated_at with sa.text('now()') server_default.
+
 ## Lesson: iOS visual verification must confirm the UI renders, not just that the app launches (2026-07-05)
 - During TIME-052/060 I verified iOS work with "BUILD SUCCEEDED + app installs + launches to its
   sign-in screen" and treated that as success. But the app's UI was actually almost entirely

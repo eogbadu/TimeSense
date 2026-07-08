@@ -7314,6 +7314,51 @@ TICKETS = [
             h2("Next Ticket"), p("None."),
         ),
     },
+
+    {
+        "summary": "TIME-125: Fix on-device regressions (location/push 500s + empty Today at night)",
+        "labels": ["backend", "bug", "migrations", "timeline"],
+        "description": doc(
+            h2("Goal"),
+            p("Two production-only bugs found via on-device testing (both invisible to the SQLite "
+              "create_all test setup)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "BUG 1: the hand-written migrations for user_location_states/user_places/"
+                "device_tokens/push_notifications omitted the created_at/updated_at server_default "
+                "the TimestampMixin expects, so every INSERT 500'd on Postgres (NotNullViolation) — "
+                "blocking location posting, device registration, and place sync. Fix: migration "
+                "y5z6a7b8c9d0 adds SET DEFAULT now() on all four tables",
+                "BUG 2: /timeline/today only included untimed pending tasks when the requested date "
+                "== server UTC date; a late-evening user's client sends its LOCAL date (a day behind "
+                "UTC), so the branch was skipped -> empty 'your day is open'. Fix: include untimed "
+                "when the date is within a day of UTC-today",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "Profile timezone is still 'UTC' (app doesn't send the real tz) — separate follow-up; "
+                "capture date-parsing (why 'Walmart today at 5pm' wasn't scheduled) — separate",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend: migrations/versions/y5z6a7b8c9d0_*.py, api/v1/timeline.py; tests/test_timeline.py"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "INSERTs into the four tables succeed on Postgres; /timeline/today returns untimed "
+                "pending tasks even when the client date lags UTC; suite passes",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && alembic upgrade head && pytest tests/test_timeline.py -v"),
+            divider(),
+            h2("Dependencies"), p("TIME-108/115/121 (the tables); TIME-092 (Today)."),
+            divider(),
+            h2("Next Ticket"), p("Send the device's real timezone; capture date-parsing reliability."),
+        ),
+    },
 ]
 
 
