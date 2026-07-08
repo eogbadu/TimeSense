@@ -87,11 +87,50 @@ enum NowUiState {
     case error(String)
 }
 
+/// The full cross-domain engine recommendation from /now/recommendation (any domain, LLM-phrased).
+struct EngineRecommendation: Decodable {
+    let actionType: String
+    let domain: String
+    let title: String
+    let message: String
+    let explanation: String
+    let confidence: Double
+    let reasonCodes: [String]
+    let eligibleForPush: Bool
+    let relatedTaskId: String?
+    let travel: Travel?
+    let destinationPlace: Place?
+
+    struct Travel: Decodable {
+        let distanceMiles: Double
+        let durationMinutes: Double
+        let fitsFreeBlock: Bool?
+        enum CodingKeys: String, CodingKey {
+            case distanceMiles = "distance_miles"
+            case durationMinutes = "duration_minutes"
+            case fitsFreeBlock = "fits_free_block"
+        }
+    }
+    struct Place: Decodable { let name: String }
+
+    enum CodingKeys: String, CodingKey {
+        case actionType = "action_type", domain, title, message, explanation, confidence
+        case reasonCodes = "reason_codes", eligibleForPush = "eligible_for_push"
+        case relatedTaskId = "related_task_id", travel, destinationPlace = "destination_place"
+    }
+
+    /// A pure cross-domain nudge (wind-down, prep-for-meeting, errand…) — i.e. not the task the
+    /// best-action card already shows. Worth surfacing separately.
+    var isCrossDomainAction: Bool { relatedTaskId == nil }
+}
+
 @MainActor
 final class NowViewModel: ObservableObject {
     @Published var uiState: NowUiState = .idle
     /// When the recommendation was last (re-)computed — drives the "Re-evaluated X min ago" banner.
     @Published var lastLoaded: Date?
+    /// The full engine recommendation (fetched lazily after the fast /now payload).
+    @Published var suggestion: EngineRecommendation?
 
     var context: NowContext? {
         if case .loaded(let c) = uiState { return c }
@@ -107,7 +146,11 @@ final class NowViewModel: ObservableObject {
             updateWidgetSnapshot(with: ctx)
         } catch {
             uiState = .error(error.localizedDescription)
+            return
         }
+        // Lazily fetch the full cross-domain engine recommendation (LLM-backed, slower) so the fast
+        // /now payload renders first.
+        suggestion = try? await APIClient.shared.get("/api/v1/now/recommendation")
     }
 
     /// Updates only the fields this endpoint knows about, preserving whatever TodayViewModel
