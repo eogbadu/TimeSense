@@ -113,3 +113,6 @@ coverage.xml
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# Agent/dev sandbox container config (environment-specific, not project config)
+.devcontainer/

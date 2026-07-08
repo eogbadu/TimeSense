@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-07] chore(config): consolidated to a SINGLE root .env — migrated the 13 backend-only keys (incl. GOOGLE_MAPS_API_KEY) into the canonical root .env.example, deleted the redundant backend/.env.example, and simplified config to load only the root .env. Fixes the confusion of two drifting env templates
 - [2026-07-07] TIME-119: The Now screen now surfaces the engine's full cross-domain recommendation (wind-down, prep-for-meeting, nearby errand…) as a 'TimeSense suggests' card with the LLM explanation, confidence, and travel info — via /now/recommendation. Task picks keep the existing best-action card
 - [2026-07-07] TIME-118: New GET /api/v1/now/recommendation — returns the FULL engine decision (any domain: task, health, routine, planning, location, calendar…) with LLM-phrased text, reason codes, confidence, score, push eligibility, related_task_id (when task-backed), destination/travel (when present), and alternatives. Also: a task due very soon is no longer night-suppressed (only non-urgent work is)
 - [2026-07-07] TIME-117: LLM explanation layer — the engine can now phrase its already-selected recommendation via the LLM (friendly title/body/explanation), with strict guardrails (never changes the action, never invents distances/times) and deterministic fallback on any failure. Documented GOOGLE_MAPS_API_KEY in .env.example + release checklist
