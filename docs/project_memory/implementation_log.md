@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-08 — TIME-139 (Jira TIME-139): App sends the device timezone
+
+Root fix for the profile-timezone='UTC' issue (deeper cause of the TIME-125 Today bug + wrong greetings). MainTabView.task -> syncDeviceTimezone(): PATCH /api/v1/users/me/profile {timezone: TimeZone.current.identifier} on launch (endpoint + UserProfileUpdate already support timezone). Now greetings (_greeting), 'today' boundaries, working-hours windows, and scheduling all use the real local tz. Timeline ±1-day tolerance (TIME-125) kept as a safety net. iOS BUILD SUCCEEDED.
 ## 2026-07-08 — TIME-138 (Jira TIME-138): Notification-tap deep-linking
 
 Backend: PushSender.send gains data: dict; ApnsPushSender merges it into the APNs payload alongside aps (so custom keys ride along). push_for_user sends data={type:recommendation, task_id?}; offer_time_block sends data={type:offer_time_block, task_id, task_title}. iOS: DeepLinkRouter.shared (@Published route: DeepRoute?{now, scheduleTask(taskId,title)}); AppDelegate.userNotificationCenter(didReceive:) reads userInfo type/task_id/task_title on tap -> sets route (offer_time_block -> scheduleTask, else now). MainTabView observes router -> switches tab (Today for scheduleTask, Now for now; clears .now). TodayView .onChange(router.route): on .scheduleTask -> clear route, ensureWriteAccess, suggestedSlot, present pre-filled EKEventEditViewController. Updated test stub sender to accept data. iOS BUILD SUCCEEDED; suite 411.

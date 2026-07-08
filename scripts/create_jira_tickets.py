@@ -7824,6 +7824,39 @@ TICKETS = [
             h2("Next Ticket"), p("Profile timezone; capture date-parsing."),
         ),
     },
+
+    {
+        "summary": "TIME-139: App sends the device timezone (fix UTC-stuck profile)",
+        "labels": ["ios", "bug", "timezone"],
+        "description": doc(
+            h2("Goal"),
+            p("The profile timezone was stuck on UTC because the app never sent it — degrading "
+              "greetings, 'today' boundaries, working-hours windows, and scheduling. Auto-sync the "
+              "device timezone."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "MainTabView: on launch PATCH /api/v1/users/me/profile with TimeZone.current.identifier "
+                "(endpoint + schema already support timezone)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No manual timezone picker; timeline ±1-day tolerance (TIME-125) stays as a safety net"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/App/MainTabView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["On launch the app updates the profile timezone to the device's; greetings/scheduling use it; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("PATCH /users/me/profile (existing)."),
+            divider(),
+            h2("Next Ticket"), p("TIME-140: capture date-parsing reliability."),
+        ),
+    },
 ]
 
 
