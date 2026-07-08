@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-07 — TIME-120 (Jira TIME-120): LLM text for arrival push notifications
+
+LocationService.notifyBestTask now calls /now/recommendation (which returns LLM notification title/body with deterministic fallback) after posting the current place, and fires the local notification with the engine's LLM-phrased text when there's a real recommendation (domain != fallback); otherwise a light 'You're at <place>' acknowledgement so we don't nag when nothing's pressing. Replaces the previous plain 'Best next: <task>' string. APNs remote push still not wired (backend follow-up). iOS BUILD SUCCEEDED.
 ## 2026-07-07 — TIME-119 (Jira TIME-119): iOS surfaces cross-domain engine recommendation
 
 Adopted /now/recommendation on the Now screen. NowViewModel: EngineRecommendation model (action_type/domain/title/message/explanation/confidence/reason_codes/eligible_for_push/related_task_id/travel/destination_place) + lazy fetch after the fast /now payload (@Published suggestion). NowView: SuggestionCard (domain icon, 'TimeSense suggests', title, LLM message, NN% match, travel line 'Place · N min away · fits your window' when present) rendered when suggestion.isCrossDomainAction (related_task_id == nil); supersedes the plain wind-down MomentCard. Task-backed picks unchanged (best-action card). Used title2/caption tokens (no title3/caption2 in the token set). iOS BUILD SUCCEEDED.

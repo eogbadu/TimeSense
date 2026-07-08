@@ -7107,6 +7107,47 @@ TICKETS = [
             h2("Next Ticket"), p("Actions on the suggestion card; LLM text for push notifications."),
         ),
     },
+
+    {
+        "summary": "TIME-120: LLM-phrased text for arrival push notifications",
+        "labels": ["ios", "notifications", "recommendations", "llm"],
+        "description": doc(
+            h2("Goal"),
+            p("Use the engine's LLM-phrased recommendation text for geofence arrival/departure "
+              "notifications instead of the plain 'Best next: X' string — the concrete push surface "
+              "that reaches users today (APNs not wired yet)."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "LocationService.notifyBestTask now calls /now/recommendation (LLM title/body, "
+                "deterministic fallback baked in) after posting the current place",
+                "Real recommendation (domain != fallback) -> notification title = LLM title, body = "
+                "LLM message; otherwise a light 'You're at <place>' acknowledgement (no task-nagging)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list([
+                "No backend APNs remote push yet; backend scheduled check-ins unchanged; no new endpoint "
+                "(reuses /now/recommendation)",
+            ]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/Location/LocationService.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list([
+                "On geofence enter/exit the local notification uses the engine's LLM text; when there's "
+                "nothing worthwhile it shows a light acknowledgement; iOS build succeeds",
+            ]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-117 (LLM layer), TIME-118 (/now/recommendation), TIME-103/105 (geofence notifications)."),
+            divider(),
+            h2("Next Ticket"), p("Backend APNs remote push using eligible_for_push + LLM text."),
+        ),
+    },
 ]
 
 
