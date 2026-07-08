@@ -7281,6 +7281,39 @@ TICKETS = [
             h2("Next Ticket"), p("End-to-end on-device verification once APNS_* + a push provisioning profile are set."),
         ),
     },
+
+    {
+        "summary": "TIME-124: Capture keyboard can't be dismissed (traps the user)",
+        "labels": ["ios", "bug", "capture", "ux"],
+        "description": doc(
+            h2("Goal"),
+            p("Fix a trap on Capture: the multi-line TextField (axis: .vertical) makes Return insert "
+              "a newline, and there was no Done button / tap / swipe to dismiss — so the keyboard "
+              "covered the Capture button and tab bar with no way out."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Keyboard toolbar 'Done' button (sets isInputFocused=false)",
+                "ScrollView.scrollDismissesKeyboard(.interactively) so swiping down dismisses it",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Keep the multi-line field (Return stays a newline); no submit-on-return change"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Features/Capture/CaptureView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["The keyboard can be dismissed via Done or a downward swipe; Capture button + tabs reachable again; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-094 (Capture redesign)."),
+            divider(),
+            h2("Next Ticket"), p("None."),
+        ),
+    },
 ]
 
 
