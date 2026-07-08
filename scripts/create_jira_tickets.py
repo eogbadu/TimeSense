@@ -8068,6 +8068,42 @@ TICKETS = [
             h2("Next Ticket"), p("Optional auto-submit on stop; raw-audio opt-in review."),
         ),
     },
+
+    {
+        "summary": "TIME-146: Fix voice capture — continuous dictation (no wipe) + live waveform",
+        "labels": ["ios", "capture", "voice", "bug"],
+        "description": doc(
+            h2("Goal"),
+            p("Reported: no waveform animation while speaking, and pausing then continuing wiped the "
+              "text. Root cause: the recognizer's isFinal (after a pause) was treated as stop — "
+              "recording ended (waveform vanished) and the next segment reset transcript to empty."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "VoiceCaptureService: keep the audio engine running for the whole session; on isFinal "
+                "(or segment-end error) commit the text and seamlessly restart recognition; accumulate "
+                "committed + current partial so pausing never wipes; stronger RMS scaling",
+                "WaveformView: idle shimmer + stronger per-bar level reaction so it always animates "
+                "while recording and clearly responds to volume",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No FFT bars; single-language (device locale)"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios/TimeSense/Core/Capture/VoiceCaptureService.swift, Features/Capture/CaptureView.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Speaking animates the waveform; pausing and continuing appends (never clears) the transcript; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-144/145 (voice capture + waveform)."),
+            divider(),
+            h2("Next Ticket"), p("Optional auto-submit on stop; tune RMS scaling on device."),
+        ),
+    },
 ]
 
 
