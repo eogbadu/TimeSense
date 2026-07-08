@@ -3,6 +3,14 @@ import SwiftUI
 struct TodayView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = TodayViewModel()
+    @ObservedObject private var calendar = CalendarSyncService.shared
+
+    /// Today's timed calendar events (all-day excluded), sorted by start time.
+    private var todaysEvents: [CalendarSyncService.CalEvent] {
+        calendar.events
+            .filter { !$0.allDay && Calendar.current.isDateInToday($0.start) }
+            .sorted { $0.start < $1.start }
+    }
 
     var body: some View {
         NavigationStack {
@@ -20,9 +28,15 @@ struct TodayView: View {
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
         }
-        .task { await viewModel.load() }
+        .task {
+            await viewModel.load()
+            await calendar.syncIfAuthorized()
+        }
         .onChange(of: appState.selectedTab) { _, tab in
-            if tab == .today { Task { await viewModel.load() } }
+            if tab == .today {
+                Task { await viewModel.load() }
+                Task { await calendar.syncIfAuthorized() }
+            }
         }
     }
 
@@ -37,6 +51,11 @@ struct TodayView: View {
                         task: best,
                         load: { await viewModel.fetchExplanation(taskId: best.id) }
                     )
+                }
+
+                if !todaysEvents.isEmpty {
+                    sectionHeader("On your calendar")
+                    CalendarEventsCard(events: todaysEvents)
                 }
 
                 sectionHeader("Smart Plan")
@@ -67,6 +86,46 @@ struct TodayView: View {
             .font(DesignTokens.Typography.headline)
             .foregroundColor(DesignTokens.Color.accent)
             .padding(.horizontal, DesignTokens.Spacing.xs)
+    }
+}
+
+/// Read-only view of today's calendar events (from EventKit). Not actionable — these live in the
+/// user's calendar; TimeSense just reflects them.
+private struct CalendarEventsCard: View {
+    let events: [CalendarSyncService.CalEvent]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(events.enumerated()), id: \.element.id) { idx, event in
+                HStack(spacing: DesignTokens.Spacing.md) {
+                    Image(systemName: "calendar")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundColor(DesignTokens.Color.accent)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(event.title)
+                            .font(DesignTokens.Typography.callout.weight(.semibold))
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                            .lineLimit(1)
+                        Text(timeRange(event))
+                            .font(DesignTokens.Typography.caption)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(DesignTokens.Spacing.md)
+                if idx < events.count - 1 { Divider().padding(.leading, 52) }
+            }
+        }
+        .cardStyle()
+    }
+
+    private func timeRange(_ event: CalendarSyncService.CalEvent) -> String {
+        let start = event.start.formatted(date: .omitted, time: .shortened)
+        let end = event.end.formatted(date: .omitted, time: .shortened)
+        var line = "\(start) – \(end)"
+        if let loc = event.location, !loc.isEmpty { line += "  ·  \(loc)" }
+        return line
     }
 }
 
