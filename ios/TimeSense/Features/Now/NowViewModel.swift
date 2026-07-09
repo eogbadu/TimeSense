@@ -10,6 +10,7 @@ struct NowContext: Decodable {
     let confidence: Double?
     let moment: String?
     let feasibility: Feasibility?
+    let context: NowContextCards?
 
     enum CodingKeys: String, CodingKey {
         case greeting
@@ -20,6 +21,30 @@ struct NowContext: Decodable {
         case confidence
         case moment
         case feasibility
+        case context
+    }
+}
+
+/// Glanceable dashboard signals for the Now screen (calendar / tasks / energy / nearby).
+struct NowContextCards: Decodable {
+    let nextEventTitle: String?
+    let nextEventAt: Date?
+    let nextEventInMinutes: Int?
+    let tasksDueToday: Int
+    let tasksCompletedToday: Int
+    let energyLevel: String?
+    let sleepHours: Double?
+    let currentPlace: String?
+
+    enum CodingKeys: String, CodingKey {
+        case nextEventTitle = "next_event_title"
+        case nextEventAt = "next_event_at"
+        case nextEventInMinutes = "next_event_in_minutes"
+        case tasksDueToday = "tasks_due_today"
+        case tasksCompletedToday = "tasks_completed_today"
+        case energyLevel = "energy_level"
+        case sleepHours = "sleep_hours"
+        case currentPlace = "current_place"
     }
 }
 

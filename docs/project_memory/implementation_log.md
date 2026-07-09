@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-09 — TIME-151 (Jira TIME-151): Now dashboard context cards
+
+Backend: NowResponse gains context: NowContextCards (next_event_title/at/in_minutes, tasks_due_today, tasks_completed_today, energy_level, sleep_hours, current_place). _context_cards() populates from real sources: SyncedCalendarEventRepository.list_window (first upcoming timed event), TaskRepository (pending due/scheduled today + count_completed_in_range), SleepWakeRepository.get_latest_today (sleep hours -> energy high/mod/low), UserLocationRepository.get_current (place_name). Nulls when absent. iOS: NowContextCards Decodable + NowContext.context; ContextGrid (2x2 LazyVGrid) + ContextCard (glass, uppercase label+icon, big tinted value, subtitle); Calendar shown if next event, Energy if sleep, Nearby if place, Tasks always; placed under the hero. Suite passing; iOS BUILD SUCCEEDED. Honest: no steps/activity (would need HealthKit extension).
 ## 2026-07-09 — TIME-150 (Jira TIME-150): Cosmic pass across all tabs
 
 cardStyle() (CardModifier) updated to the glass look: surface fill + Color.hairline (white .08) 1px stroke + soft black .22/16/8 shadow — propagates to every card app-wide. Swapped .background(Color.background) -> .background(CosmicBackground()) on Today, Capture, Insights, Settings (Settings already had scrollContentBackground(.hidden)). iOS BUILD SUCCEEDED. Sim login screen confirms cosmic theme; authed screens require device login to view.
