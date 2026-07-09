@@ -5,6 +5,12 @@ struct CaptureView: View {
     @StateObject private var voice = VoiceCaptureService()
     @State private var captureText: String = ""
     @State private var selectedChip: String?
+    // Contextual inputs revealed by the Reminder / Schedule / Errand chips.
+    @State private var pickedDate = Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
+    @State private var includeTime = false
+    @State private var locationQuery = ""
+    @State private var pickedLocation: PlaceSearchResult?
+    @State private var placeSearchTask: Task<Void, Never>?
     @FocusState private var isInputFocused: Bool
 
     private let chips: [(label: String, icon: String, color: Color)] = [
@@ -40,6 +46,7 @@ struct CaptureView: View {
 
                     inputBox
                     chipsRow
+                    if let chip = selectedChip { contextualInput(for: chip) }
                     captureButton
                     statusView
                     detectSection
@@ -76,7 +83,97 @@ struct CaptureView: View {
             .onChange(of: voice.transcript) { _, text in
                 if voice.isRecording { captureText = text }
             }
+            // When the type changes, default a sensible input and clear the previous one.
+            .onChange(of: selectedChip) { _, chip in
+                includeTime = (chip == "Reminder")
+                pickedLocation = nil
+                locationQuery = ""
+                viewModel.placeResults = []
+            }
+            .animation(DesignTokens.Animation.standard, value: selectedChip)
         }
+    }
+
+    @ViewBuilder
+    private func contextualInput(for chip: String) -> some View {
+        switch chip {
+        case "Reminder", "Schedule": dateTimeInput
+        case "Errand":               errandInput
+        default:                     EmptyView()
+        }
+    }
+
+    // Reminder / Schedule → a date, with an optional time (never a required form).
+    private var dateTimeInput: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: "calendar").foregroundColor(Cosmic.violet)
+                DatePicker("", selection: $pickedDate,
+                           displayedComponents: includeTime ? [.date, .hourAndMinute] : [.date])
+                    .labelsHidden()
+                Spacer(minLength: 0)
+            }
+            Toggle(isOn: $includeTime) {
+                Text("Add a time")
+                    .font(DesignTokens.Typography.footnote)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+            }
+            .tint(Cosmic.violet)
+        }
+        .padding(DesignTokens.Spacing.md)
+        .cardStyle()
+    }
+
+    // Errand → a location, autocompleting from saved places + maps.
+    private var errandInput: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: "mappin.and.ellipse").foregroundColor(Cosmic.cyan)
+                TextField("Where? e.g. Walmart", text: $locationQuery)
+                    .onChange(of: locationQuery) { _, q in
+                        if pickedLocation?.name != q { pickedLocation = nil }
+                        placeSearchTask?.cancel()
+                        placeSearchTask = Task {
+                            try? await Task.sleep(nanoseconds: 300_000_000)
+                            if Task.isCancelled { return }
+                            let near = LocationService.shared.currentLocation.map {
+                                (lat: $0.coordinate.latitude, lng: $0.coordinate.longitude)
+                            }
+                            await viewModel.searchPlaces(q, near: near)
+                        }
+                    }
+                if pickedLocation != nil {
+                    Image(systemName: "checkmark.circle.fill").foregroundColor(Cosmic.green)
+                }
+            }
+            if pickedLocation == nil {
+                ForEach(viewModel.placeResults) { r in
+                    Button {
+                        pickedLocation = r; locationQuery = r.name; viewModel.placeResults = []
+                        isInputFocused = false
+                    } label: {
+                        HStack(spacing: DesignTokens.Spacing.sm) {
+                            Image(systemName: r.source == "saved" ? "star.fill" : "mappin")
+                                .font(.caption)
+                                .foregroundColor(r.source == "saved" ? Cosmic.amber : Cosmic.cyan)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(r.name).font(DesignTokens.Typography.callout)
+                                    .foregroundColor(DesignTokens.Color.textPrimary)
+                                if let a = r.address {
+                                    Text(a).font(DesignTokens.Typography.caption)
+                                        .foregroundColor(DesignTokens.Color.textSecondary).lineLimit(1)
+                                }
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(DesignTokens.Spacing.md)
+        .cardStyle()
     }
 
     private var heroIcon: some View {
@@ -230,10 +327,23 @@ struct CaptureView: View {
 
     private func submitCapture() async {
         let text = captureText
-        await viewModel.submit(rawInput: text, typeHint: selectedChip)
+        // Explicit inputs win over the parse. Reminder/Schedule → time or date-only; Errand → place.
+        var scheduledAt: Date?
+        var dueAt: Date?
+        if selectedChip == "Reminder" || selectedChip == "Schedule" {
+            if includeTime { scheduledAt = pickedDate }
+            else { dueAt = Calendar.current.startOfDay(for: pickedDate) }
+        }
+        await viewModel.submit(
+            rawInput: text, typeHint: selectedChip,
+            scheduledAt: scheduledAt, dueAt: dueAt, location: pickedLocation
+        )
         if case .success = viewModel.uiState {
             captureText = ""
             selectedChip = nil
+            pickedLocation = nil
+            locationQuery = ""
+            includeTime = false
             isInputFocused = false
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             viewModel.reset()
