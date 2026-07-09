@@ -225,6 +225,9 @@ class LocationIntent:
     place_type: Optional[PlaceType] = None
     preferred_place_id: Optional[str] = None
     estimated_on_site_minutes: Optional[int] = None
+    # An exact place the user attached to the task (Capture errand) — used directly instead of
+    # searching for a place by the task title.
+    coordinates: Optional[Coordinates] = None
 
 
 @dataclass(frozen=True)

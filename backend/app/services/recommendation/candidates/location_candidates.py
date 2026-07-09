@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from app.services.recommendation.candidates.common import deadline_urgency, priority_importance
-from app.services.recommendation.maps.maps_skill_service import MapsSkillService
+from app.services.recommendation.maps.maps_skill_service import MapsSkillService, haversine_meters
 from app.services.recommendation.travel_feasibility_service import (
     TravelFeasibilityRequest,
     calculate_travel_feasibility,
@@ -16,12 +16,32 @@ from app.services.recommendation.travel_feasibility_service import (
 from app.services.recommendation.types import (
     ActionType,
     CandidateAction,
+    Coordinates,
+    Place,
     PlaceLookupRequest,
     PlaceType,
     ReasonCode,
     TaskItem,
     UserContext,
 )
+
+
+def _estimate_from_straight_line(base, origin: Coordinates, place: Place, on_site: float, ctx) -> list[str]:
+    """When we know the destination but have no maps for exact drive time, estimate travel from the
+    straight-line distance (~35 km/h incl. stops) so a saved-location errand is still usable."""
+    meters = haversine_meters(origin, place.coordinates)
+    drive_min = max(3.0, meters / 1000.0 / 35.0 * 60.0)
+    total = drive_min * 2 + on_site
+    free = ctx.calendar_context.free_block_minutes or 10_000
+    base.destination_place = place
+    base.distance_minutes = drive_min
+    base.total_required_minutes = total
+    base.fits_in_current_free_block = total <= free
+    if total <= free:
+        base.location_fit, base.time_fit, base.context_fit, base.confidence = 0.8, 0.75, 0.75, 0.6
+        return ["DRIVING_TIME_CALCULATED", "TRIP_FITS_FREE_BLOCK"]
+    base.location_fit, base.time_fit, base.confidence = 0.1, 0.1, 0.4
+    return ["DRIVING_TIME_CALCULATED", "TRIP_DOES_NOT_FIT_FREE_BLOCK"]
 
 _TYPE_TO_ACTION: dict[PlaceType, ActionType] = {
     "grocery_store": "stop_at_grocery_store",
@@ -70,25 +90,36 @@ async def _one(task: TaskItem, ctx: UserContext, maps: MapsSkillService, now: da
     if origin is None:
         base.reason_codes = codes + ["LOCATION_DATA_MISSING"]
         return base
-    if not maps.available:
-        base.reason_codes = codes + ["MAPS_API_UNAVAILABLE"]
-        return base
 
-    place = await maps.resolve_relevant_place(PlaceLookupRequest(
-        query=intent.query,
-        place_type=intent.place_type,
-        user_location=origin,
-        preferred_places=ctx.user_preferences.preferred_places,
-    ))
-    if place is None:
-        base.reason_codes = codes + ["MAPS_API_UNAVAILABLE"]
-        return base
-
-    codes.append("PREFERRED_PLACE_FOUND" if place.source == "user_saved" else "CLOSEST_PLACE_FOUND")
-    if place.open_now is True:
-        codes.append("PLACE_OPEN_NOW")
-    elif place.open_now is False:
-        codes.append("PLACE_CLOSED_NOW")
+    if intent.coordinates is not None:
+        # The user attached this exact place at capture — use it directly, no title search.
+        place = Place(
+            id=f"task:{task.id}", name=intent.query, type=intent.place_type or "custom",
+            coordinates=intent.coordinates, source="user_saved", confidence=0.9,
+        )
+        codes.append("PREFERRED_PLACE_FOUND")
+        # Without maps we can't get exact drive time, but we know where it is — estimate it.
+        if not maps.available:
+            base.reason_codes = codes + _estimate_from_straight_line(base, origin, place, on_site, ctx)
+            return base
+    else:
+        if not maps.available:
+            base.reason_codes = codes + ["MAPS_API_UNAVAILABLE"]
+            return base
+        place = await maps.resolve_relevant_place(PlaceLookupRequest(
+            query=intent.query,
+            place_type=intent.place_type,
+            user_location=origin,
+            preferred_places=ctx.user_preferences.preferred_places,
+        ))
+        if place is None:
+            base.reason_codes = codes + ["MAPS_API_UNAVAILABLE"]
+            return base
+        codes.append("PREFERRED_PLACE_FOUND" if place.source == "user_saved" else "CLOSEST_PLACE_FOUND")
+        if place.open_now is True:
+            codes.append("PLACE_OPEN_NOW")
+        elif place.open_now is False:
+            codes.append("PLACE_CLOSED_NOW")
 
     feas = await calculate_travel_feasibility(
         TravelFeasibilityRequest(
