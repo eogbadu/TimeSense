@@ -8175,6 +8175,42 @@ TICKETS = [
             h2("Next Ticket"), p("Domain-adaptive hero card on Now using Gradient.hero + Glow."),
         ),
     },
+
+    {
+        "summary": "TIME-149: Domain-adaptive hero card + cosmic Now screen",
+        "labels": ["ios", "design", "now"],
+        "description": doc(
+            h2("Goal"),
+            p("Apply the cosmic theme visibly: a gradient 'Best Next Action' hero card with a glowing "
+              "domain icon + signal pills, on a cosmic Now background. This is where the palette "
+              "foundation becomes visible."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "CosmicComponents: CosmicBackground (navy + corner auras), HeroPill, HeroGlyph, heroGradient(end:)",
+                "BestNextActionCard: gradient header (label, big title, glyph, pills) + surface footer "
+                "(confidence, Why, actions); glow shadow; gradient end color adapts to task category",
+                "SuggestionCard (cross-domain): same gradient hero treatment; end color per domain",
+                "Now screen background -> CosmicBackground",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Today/Insights/Capture cosmic pass (later); context/dashboard cards (later)"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios: Core/Design/CosmicComponents.swift (new), Features/Now/NowView.swift; TimeSense.xcodeproj"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Now shows a gradient, glowing, domain-adaptive hero card on a cosmic background; iOS build succeeds; sim renders the cosmic theme"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-148 (palette + tokens)."),
+            divider(),
+            h2("Next Ticket"), p("Cosmic pass on Today + context/dashboard cards."),
+        ),
+    },
 ]
 
 

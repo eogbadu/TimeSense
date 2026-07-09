@@ -22,6 +22,7 @@
 		6F341198DDE522BD07556E0F /* LearnedAssumptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */; };
 		728E116FA78F04E8313637A4 /* SnapshotProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */; };
 		73B564A40003B89455820778 /* VoiceCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 048537E8FE790591EDC1B6DE /* VoiceCaptureService.swift */; };
+		7A42349EEC511C5FEE58F16E /* CosmicComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A0A340B8AD0769B3767167 /* CosmicComponents.swift */; };
 		89438A1E57EBE9F4974111C0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB3BCF8932A4D3E59E6DE68 /* AppDelegate.swift */; };
 		8E3B31883FEA8B41E2E76E41 /* EventEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63E29C3626EF863D669F96BA /* EventEditorView.swift */; };
 		A1000001 /* TimeSenseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001 /* TimeSenseApp.swift */; };
@@ -127,6 +128,7 @@
 		A27CCD58C9BAE9E0D039807B /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A3000001 /* TimeSense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeSense.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B27C9273247D83F087DBA4C0 /* TimeSenseAppIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseAppIntents.swift; sourceTree = "<group>"; };
+		C7A0A340B8AD0769B3767167 /* CosmicComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CosmicComponents.swift; sourceTree = "<group>"; };
 		C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsViewModel.swift; sourceTree = "<group>"; };
 		D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotProvider.swift; sourceTree = "<group>"; };
 		D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsView.swift; sourceTree = "<group>"; };
@@ -282,6 +284,7 @@
 			children = (
 				A2000005 /* DesignTokens.swift */,
 				A2000006 /* ViewModifiers.swift */,
+				C7A0A340B8AD0769B3767167 /* CosmicComponents.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
@@ -558,6 +561,7 @@
 				8E3B31883FEA8B41E2E76E41 /* EventEditorView.swift in Sources */,
 				AC5C8D839246AAA1FAD6F1A8 /* DeepLinkRouter.swift in Sources */,
 				73B564A40003B89455820778 /* VoiceCaptureService.swift in Sources */,
+				7A42349EEC511C5FEE58F16E /* CosmicComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
