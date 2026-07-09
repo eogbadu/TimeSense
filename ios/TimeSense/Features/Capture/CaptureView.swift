@@ -129,29 +129,29 @@ struct CaptureView: View {
         )
     }
 
+    // A fixed, fully-visible chip row (wraps to 2 rows). Tapping one tags the capture with a type
+    // hint that biases how TimeSense parses it.
     private var chipsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DesignTokens.Spacing.sm) {
-                ForEach(chips, id: \.label) { chip in
-                    let selected = selectedChip == chip.label
-                    Button {
-                        selectedChip = selected ? nil : chip.label
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: chip.icon).font(.caption2.weight(.semibold))
-                            Text(chip.label).font(DesignTokens.Typography.footnote.weight(.medium))
-                        }
-                        .foregroundColor(selected ? .white : chip.color)
-                        .padding(.horizontal, DesignTokens.Spacing.md)
-                        .padding(.vertical, DesignTokens.Spacing.sm)
-                        .background(Capsule().fill(selected ? chip.color : chip.color.opacity(0.14)))
-                        .overlay(Capsule().stroke(chip.color.opacity(selected ? 0 : 0.5), lineWidth: 1))
+        FlowLayout(spacing: DesignTokens.Spacing.sm) {
+            ForEach(chips, id: \.label) { chip in
+                let selected = selectedChip == chip.label
+                Button {
+                    selectedChip = selected ? nil : chip.label
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: chip.icon).font(.caption2.weight(.semibold))
+                        Text(chip.label).font(DesignTokens.Typography.footnote.weight(.medium))
                     }
-                    .buttonStyle(.plain)
+                    .foregroundColor(selected ? .white : chip.color)
+                    .padding(.horizontal, DesignTokens.Spacing.md)
+                    .padding(.vertical, DesignTokens.Spacing.sm)
+                    .background(Capsule().fill(selected ? chip.color : chip.color.opacity(0.14)))
+                    .overlay(Capsule().stroke(chip.color.opacity(selected ? 0 : 0.5), lineWidth: 1))
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 2)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var captureButton: some View {
@@ -230,7 +230,7 @@ struct CaptureView: View {
 
     private func submitCapture() async {
         let text = captureText
-        await viewModel.submit(rawInput: text)
+        await viewModel.submit(rawInput: text, typeHint: selectedChip)
         if case .success = viewModel.uiState {
             captureText = ""
             selectedChip = nil

@@ -8495,6 +8495,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("6.9\" screenshots; App Store Connect upload."),
         ),
     },
+
+    {
+        "summary": "TIME-163: Capture chips — functional type hints + fixed wrapping bar",
+        "labels": ["ios", "backend", "capture", "ux"],
+        "description": doc(
+            h2("Goal"), p("The Capture chips (Task/Reminder/Schedule/Errand/Idea) did nothing and scrolled off-screen. Make them functional (bias the parse) and fully visible (no horizontal scroll)."),
+            divider(), h2("Scope"), bullet_list([
+                "Backend: /capture accepts optional type_hint; CaptureService.parse injects it into the LLM prompt (per-type guidance) and forces Idea -> priority 5, no schedule",
+                "iOS: CaptureRequest/submit carry typeHint (the selected chip); chips row uses a FlowLayout (wraps to 2 rows, fully visible) instead of a horizontal scroll",
+                "New FlowLayout (Layout protocol) in CosmicComponents",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No multi-select; hint is a soft bias, not a hard override"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend: api/v1/capture.py, services/capture_service.py; ios: Features/Capture/CaptureView.swift, CaptureViewModel.swift, Core/Design/CosmicComponents.swift; tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Selecting a chip changes the parse (Idea -> low priority); all 5 chips visible without scrolling; suite + iOS build pass"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_capture_hint.py -v"),
+            divider(), h2("Dependencies"), p("TIME-162 (coloured chips)."),
+            divider(), h2("Next Ticket"), p("6.9\" screenshots; App Store Connect upload."),
+        ),
+    },
 ]
 
 

@@ -129,3 +129,32 @@ extension View {
         modifier(HeroCardChrome(glow: glow))
     }
 }
+
+/// A simple flowing layout that wraps its subviews onto new rows — keeps a chip row fully visible
+/// (no horizontal scroll) instead of clipping items off-screen.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Void) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0
+        for sv in subviews {
+            let s = sv.sizeThatFits(.unspecified)
+            if x + s.width > maxWidth && x > 0 { x = 0; y += rowHeight + spacing; rowHeight = 0 }
+            x += s.width + spacing
+            rowHeight = max(rowHeight, s.height)
+        }
+        return CGSize(width: maxWidth == .infinity ? x : maxWidth, height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Void) {
+        var x = bounds.minX, y = bounds.minY, rowHeight: CGFloat = 0
+        for sv in subviews {
+            let s = sv.sizeThatFits(.unspecified)
+            if x + s.width > bounds.maxX && x > bounds.minX { x = bounds.minX; y += rowHeight + spacing; rowHeight = 0 }
+            sv.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(s))
+            x += s.width + spacing
+            rowHeight = max(rowHeight, s.height)
+        }
+    }
+}
