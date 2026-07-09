@@ -361,12 +361,7 @@ private struct BestNextActionCard: View {
         }
         .padding(DesignTokens.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            ZStack {
-                Cosmic.bgNavy.opacity(0.72)
-                Rectangle().fill(.ultraThinMaterial).opacity(0.25)
-            }
-        )
+        .background(Cosmic.surface)
     }
 }
 
@@ -507,7 +502,7 @@ struct RecommendationExplanationSheet: View {
                 .padding(.horizontal, DesignTokens.Spacing.lg)
                 .padding(.vertical, DesignTokens.Spacing.md)
             }
-            .background(DesignTokens.Color.background)
+            .background(CosmicBackground())
             .navigationTitle("Why this recommendation?")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -6,26 +6,26 @@ struct CardModifier: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
         content
-            // Glassmorphism: frosted blur of the atmospheric background, tinted with a translucent
-            // navy so content stays legible, then a soft top-light gradient for the "glass" edge.
+            // Dark slate card (matches the reference) with a faint glass sheen + top-light edge,
+            // and a subtle hairline — legible and consistent over the near-black background.
             .background(
                 ZStack {
-                    shape.fill(.ultraThinMaterial)
-                    shape.fill(DesignTokens.Color.surface.opacity(0.45))
+                    shape.fill(DesignTokens.Color.surface)
+                    shape.fill(.ultraThinMaterial).opacity(0.10)
                     shape.fill(
-                        LinearGradient(colors: [Color.white.opacity(0.05), .clear],
+                        LinearGradient(colors: [Color.white.opacity(0.04), .clear],
                                        startPoint: .top, endPoint: .bottom)
                     )
                 }
             )
             .overlay(
                 shape.stroke(
-                    LinearGradient(colors: [Color.white.opacity(0.22), Color.white.opacity(0.05)],
+                    LinearGradient(colors: [Color.white.opacity(0.14), Color.white.opacity(0.04)],
                                    startPoint: .top, endPoint: .bottom),
                     lineWidth: 1
                 )
             )
-            .shadow(color: .black.opacity(0.30), radius: 18, x: 0, y: 10)
+            .shadow(color: .black.opacity(0.30), radius: 16, x: 0, y: 8)
     }
 }
 

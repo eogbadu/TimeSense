@@ -1,43 +1,44 @@
 import SwiftUI
 
-// Premium cosmic palette (muted, elegant — not harsh/saturated).
+// Premium cosmic palette — matched to the reference: a near-black NEUTRAL navy base (not purple),
+// dark slate cards, and muted blue→violet hero gradients.
 enum Cosmic {
-    static let bgNear   = Color(red: 0.039, green: 0.043, blue: 0.078)  // #0A0B14 near-black navy
-    static let bgNavy    = Color(red: 0.043, green: 0.063, blue: 0.145) // #0B1025 deep navy
-    static let bgIndigo  = Color(red: 0.078, green: 0.043, blue: 0.157) // #140B28 midnight indigo
+    // Single base navy — must equal the `Background` colour asset so flat and cosmic screens match.
+    static let base    = Color(red: 0.031, green: 0.043, blue: 0.078)  // #080B14 near-black navy
+    static let deep    = Color(red: 0.020, green: 0.027, blue: 0.055)  // #05070E darkest (bottom)
+    static let surface = Color(red: 0.067, green: 0.078, blue: 0.122)  // #11141F dark slate card
 
-    static let heroBlue   = Color(red: 0.239, green: 0.400, blue: 0.945) // #3D66F1
-    static let heroIndigo = Color(red: 0.416, green: 0.337, blue: 0.902) // #6A56E6
-    static let heroViolet = Color(red: 0.600, green: 0.361, blue: 0.949) // #995CF2
+    static let heroBlue   = Color(red: 0.227, green: 0.353, blue: 0.878) // #3A5AE0
+    static let heroIndigo = Color(red: 0.369, green: 0.282, blue: 0.800) // #5E48CC
+    static let heroViolet = Color(red: 0.541, green: 0.329, blue: 0.863) // #8A54DC
 
-    static let glowBlue   = Color(red: 0.30, green: 0.55, blue: 1.00)
-    static let glowViolet = Color(red: 0.62, green: 0.40, blue: 1.00)
+    static let glowBlue   = Color(red: 0.18, green: 0.39, blue: 1.00)
+    static let glowViolet = Color(red: 0.48, green: 0.30, blue: 0.95)
 }
 
-/// The cosmic screen backdrop — deep navy→indigo→violet with soft blue/violet glows, echoing the icon.
+/// The cosmic screen backdrop — a near-black neutral navy with only faint blue/violet corner glows
+/// (matching the reference), not a heavy purple wash.
 struct CosmicBackground: View {
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Cosmic.bgNear, Cosmic.bgNavy, Cosmic.bgIndigo],
+            LinearGradient(colors: [Cosmic.base, Cosmic.deep],
                            startPoint: .top, endPoint: .bottom)
-            RadialGradient(colors: [Cosmic.glowViolet.opacity(0.22), .clear],
-                           center: .topTrailing, startRadius: 0, endRadius: 520)
-            RadialGradient(colors: [Cosmic.glowBlue.opacity(0.18), .clear],
-                           center: .topLeading, startRadius: 0, endRadius: 460)
-            RadialGradient(colors: [Cosmic.heroIndigo.opacity(0.14), .clear],
-                           center: .bottom, startRadius: 0, endRadius: 520)
+            RadialGradient(colors: [Cosmic.glowBlue.opacity(0.10), .clear],
+                           center: .topLeading, startRadius: 0, endRadius: 440)
+            RadialGradient(colors: [Cosmic.glowViolet.opacity(0.10), .clear],
+                           center: .topTrailing, startRadius: 0, endRadius: 440)
         }
         .ignoresSafeArea()
     }
 }
 
-/// The signature soft blue→indigo→violet hero gradient (primary recommendation cards).
-/// `end` optionally warms the tail (e.g. energy green for health); nil keeps the pure blue→violet.
+/// The muted blue→indigo→violet hero gradient (primary recommendation cards).
+/// `end` optionally warms the tail (energy green for health); nil keeps the pure blue→violet.
 func heroGradient(end: Color? = nil) -> LinearGradient {
     LinearGradient(
         stops: [
             .init(color: Cosmic.heroBlue, location: 0.0),
-            .init(color: Cosmic.heroIndigo, location: 0.5),
+            .init(color: Cosmic.heroIndigo, location: 0.55),
             .init(color: end ?? Cosmic.heroViolet, location: 1.0),
         ],
         startPoint: .topLeading, endPoint: .bottomTrailing
