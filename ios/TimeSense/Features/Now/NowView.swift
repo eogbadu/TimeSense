@@ -522,55 +522,57 @@ private struct RecommendedActionHeaderCard: View {
 
     var body: some View {
         let style = taskCategoryStyle(for: action.title)
-        HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+        let accent = heroAccent(style.descriptor)
+        HStack(alignment: .center, spacing: DesignTokens.Spacing.md) {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                Text("Recommended action")
-                    .font(DesignTokens.Typography.footnote)
-                    .foregroundColor(DesignTokens.Color.textSecondary)
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles").font(.caption).foregroundStyle(accent)
+                    Text("Recommended action")
+                        .font(DesignTokens.Typography.footnote.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                }
                 HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
-                        .fill(style.color.opacity(0.16))
-                        .frame(width: 40, height: 40)
-                        .overlay(Image(systemName: style.icon).foregroundColor(style.color))
+                    Image(systemName: style.icon)
+                        .font(.title2).foregroundStyle(accent)
+                        .shadow(color: accent.opacity(0.6), radius: 8)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(action.title)
                             .font(DesignTokens.Typography.headline)
-                            .foregroundColor(DesignTokens.Color.textPrimary)
+                            .foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)
                         if let m = action.recommendedDurationMinutes {
                             Text("for \(m) minutes")
                                 .font(DesignTokens.Typography.footnote)
-                                .foregroundColor(DesignTokens.Color.textSecondary)
+                                .foregroundStyle(.white.opacity(0.8))
                         }
                     }
                 }
             }
             Spacer(minLength: 0)
-            VStack(spacing: DesignTokens.Spacing.xs) {
-                Text("Confidence")
-                    .font(DesignTokens.Typography.footnote)
-                    .foregroundColor(DesignTokens.Color.textSecondary)
-                ConfidenceRing(value: confidence)
-            }
+            ConfidenceRing(value: confidence, tint: accent, onDark: true)
         }
         .padding(DesignTokens.Spacing.lg)
-        .cardStyle()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HeroBackground(accent: accent))
+        .heroCardChrome(glow: accent)
     }
 }
 
 struct ConfidenceRing: View {
     let value: Double
+    var tint: Color = DesignTokens.Color.accent
+    var onDark: Bool = false
 
     var body: some View {
         ZStack {
-            Circle().stroke(DesignTokens.Color.accent.opacity(0.15), lineWidth: 7)
+            Circle().stroke(tint.opacity(0.2), lineWidth: 7)
             Circle()
                 .trim(from: 0, to: value)
-                .stroke(DesignTokens.Color.accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                .stroke(tint, style: StrokeStyle(lineWidth: 7, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text("\(Int((value * 100).rounded()))%")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(DesignTokens.Color.textPrimary)
+                .foregroundStyle(onDark ? .white : DesignTokens.Color.textPrimary)
                 .monospacedDigit()
         }
         .frame(width: 68, height: 68)
@@ -600,7 +602,7 @@ private struct SignalsCard: View {
                     }
                     Spacer(minLength: DesignTokens.Spacing.sm)
                     Image(systemName: signal.available ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(signal.available ? .green : DesignTokens.Color.textSecondary.opacity(0.4))
+                        .foregroundColor(signal.available ? Cosmic.green : DesignTokens.Color.textSecondary.opacity(0.4))
                 }
                 .padding(DesignTokens.Spacing.md)
                 if idx < signals.count - 1 { Divider().padding(.leading, 62) }
@@ -611,12 +613,12 @@ private struct SignalsCard: View {
 
     private func signalStyle(_ name: String) -> (icon: String, color: Color) {
         switch name {
-        case "Calendar":    return ("calendar", .blue)
-        case "Time of day": return ("sun.max.fill", .orange)
-        case "Location":    return ("house.fill", DesignTokens.Color.accent)
-        case "Priority":    return ("flag.fill", .red)
-        case "Energy":      return ("heart.fill", .pink)
-        default:            return ("circle.fill", DesignTokens.Color.accent)
+        case "Calendar":    return ("calendar", Cosmic.blue)
+        case "Time of day": return ("sun.max.fill", Cosmic.amber)
+        case "Location":    return ("mappin.circle.fill", Cosmic.cyan)
+        case "Priority":    return ("flag.fill", Cosmic.violet)
+        case "Energy":      return ("bolt.fill", Cosmic.green)
+        default:            return ("circle.fill", Cosmic.blue)
         }
     }
 }
