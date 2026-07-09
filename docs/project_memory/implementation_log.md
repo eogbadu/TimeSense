@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-09 — TIME-163 (Jira TIME-163): Capture chips functional + fixed wrap
+
+The chips previously set selectedChip but it was never sent (decorative). Now functional + fixed. Backend: CaptureRequest.type_hint (optional, <=20); capture endpoint passes it; CaptureService.parse(type_hint) injects _HINT_GUIDANCE[hint] into the prompt (task/reminder/schedule/errand/idea guidance) and forces Idea -> priority 5 + scheduled_start None. iOS: CaptureRequest/submit carry typeHint; submitCapture passes selectedChip; chipsRow -> FlowLayout (new Layout in CosmicComponents: sizeThatFits/placeSubviews wrap rows) so all 5 chips wrap to 2 rows fully visible (was ScrollView(.horizontal) that clipped Errand/Idea). Tests: test_capture_hint (Idea->prio5,no schedule). Suite 421. Regenerated 03_capture App Store frame (2-row chips). iOS BUILD SUCCEEDED; verified via screenshot.
 ## 2026-07-09 — TIME-162 (Jira TIME-162): Multi-colour Capture + Insights
 
 User: Capture + Insights were basically purple + white on dark. Capture: chips array -> (label, icon, color) with Task=blue, Reminder=amber, Schedule=violet, Errand=cyan, Idea=green (icon + colour, selected fills colour); detectors -> (icon,label,color) rendered as tinted rounded icon tiles (Time blue, Priority amber, Task type violet, Schedule fit green). Insights gate: InsightPreviewCard gains tint (title colour); LinePreview/BarsPreview/RingPreview gain a color param (glowing charts, bar gradient); the 4 cards -> blue line / amber bars / green ring / violet ring; lockBanner -> LinearGradient(blue->violet) + lock in a white .18 circle chip + violet glow (was flat purple). Regenerated App Store frames 03_capture + 05_insights. Verified via sim screenshots (multi-colour). iOS BUILD SUCCEEDED.

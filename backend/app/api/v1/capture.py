@@ -23,6 +23,7 @@ router = APIRouter(prefix="/capture", tags=["capture"])
 class CaptureRequest(BaseModel):
     raw_input: str = Field(..., min_length=1, max_length=2000)
     user_timezone: str = Field(default="UTC", max_length=64)
+    type_hint: str | None = Field(default=None, max_length=20)
 
 
 @router.post(
@@ -41,7 +42,7 @@ async def capture(
         current_user.uid, current_user.email or ""
     )
     parser = CaptureService(gateway)
-    task_create = await parser.parse(body.raw_input, user_timezone=body.user_timezone)
+    task_create = await parser.parse(body.raw_input, user_timezone=body.user_timezone, type_hint=body.type_hint)
 
     # Every task gets a realistic duration: the LLM's explicit estimate wins; otherwise fall back to
     # the duration lookup table (seed defaults, refined by what we've learned about this user).

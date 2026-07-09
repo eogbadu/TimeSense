@@ -18,10 +18,12 @@ struct CapturedTask: Decodable {
 private struct CaptureRequest: Encodable {
     let rawInput: String
     let userTimezone: String
+    let typeHint: String?
 
     enum CodingKeys: String, CodingKey {
         case rawInput = "raw_input"
         case userTimezone = "user_timezone"
+        case typeHint = "type_hint"
     }
 }
 
@@ -38,14 +40,14 @@ final class CaptureViewModel: ObservableObject {
 
     private let api = APIClient.shared
 
-    func submit(rawInput: String) async {
+    func submit(rawInput: String, typeHint: String? = nil) async {
         guard !rawInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         uiState = .loading
         let timezone = TimeZone.current.identifier
         do {
             let task: CapturedTask = try await api.post(
                 "/api/v1/capture",
-                body: CaptureRequest(rawInput: rawInput, userTimezone: timezone)
+                body: CaptureRequest(rawInput: rawInput, userTimezone: timezone, typeHint: typeHint)
             )
             uiState = .success(title: task.title)
         } catch let error as APIError {

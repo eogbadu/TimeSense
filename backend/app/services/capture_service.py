@@ -41,18 +41,33 @@ Rules:
 """
 
 
+# Optional per-capture type hints from the Capture chips — bias the parse toward the user's intent.
+_HINT_GUIDANCE = {
+    "task": "Treat it as a concrete to-do.",
+    "reminder": "Treat it as a time-sensitive reminder; capture any time as scheduled_start.",
+    "schedule": "Treat it as a calendar event; set scheduled_start when a time is given.",
+    "errand": "Treat it as a location-based errand (something done at a place).",
+    "idea": "Treat it as a low-priority someday idea — no deadline or scheduled time.",
+}
+
+
 class CaptureService:
     def __init__(self, gateway: LLMGateway) -> None:
         self._gateway = gateway
 
-    async def parse(self, raw_input: str, user_timezone: str = "UTC") -> TaskCreate:
+    async def parse(
+        self, raw_input: str, user_timezone: str = "UTC", type_hint: str | None = None
+    ) -> TaskCreate:
         # Deterministic extraction runs regardless — it reliably handles the common phrasings
         # ("today at 5pm", "July 5th") that the LLM sometimes drops, and fills any gaps below.
         rb_start, rb_due, rb_title = parse_datetime(raw_input, user_timezone=user_timezone)
 
+        hint = _HINT_GUIDANCE.get((type_hint or "").lower())
+        hint_line = f"\nThe user tagged this as a {type_hint}. {hint}\n" if hint else ""
         prompt = (
             f"Today's UTC date and time: {datetime.now(timezone.utc).isoformat()}\n"
-            f"User timezone: {user_timezone}\n\n"
+            f"User timezone: {user_timezone}\n"
+            f"{hint_line}\n"
             f"Raw input: {raw_input}"
         )
         try:
@@ -71,6 +86,11 @@ class CaptureService:
             scheduled_start, due_at, estimated, title, priority = (
                 rb_start, rb_due, None, rb_title[:500], 3
             )
+
+        # An "Idea" is a someday capture — never urgent, never auto-scheduled.
+        if (type_hint or "").lower() == "idea":
+            priority = 5
+            scheduled_start = None
 
         # A "do it at 5pm" gets a concrete block; give it a length so it lands on the timeline.
         scheduled_end = (
