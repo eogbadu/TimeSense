@@ -19,6 +19,9 @@ class TaskCreate(BaseModel):
     due_at: datetime | None = None
     source: TaskSource = "manual"
     raw_input: str | None = None
+    location_name: str | None = Field(default=None, max_length=160)
+    location_lat: float | None = None
+    location_lng: float | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -46,6 +49,9 @@ class TaskResponse(BaseModel):
     source: str
     auto_scheduled: bool = False
     raw_input: str | None
+    location_name: str | None = None
+    location_lat: float | None = None
+    location_lng: float | None = None
     created_at: datetime
     updated_at: datetime
 

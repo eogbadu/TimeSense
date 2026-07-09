@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-164: Capture can now take an explicit time, date, or location that overrides what the text parsed — tasks store a real location (name + coordinates), and a new places search (your saved places + maps) powers errand autocomplete
 - [2026-07-09] TIME-163: The Capture chips now do something — tapping one (Task/Reminder/Schedule/Errand/Idea) tags your capture so TimeSense parses it that way (e.g. Idea = low-priority, no deadline). They're also fully visible now (wrap to two rows) instead of scrolling off-screen
 - [2026-07-09] TIME-162: Capture and Insights are no longer mono-purple — Capture chips and detectors now use distinct colours + icons (blue/amber/violet/cyan/green), and each Insights card has its own accent with a glowing chart
 - [2026-07-09] TIME-161: Added App Store marketing screenshots (5 frames, 1290×2796) — real cosmic-themed app screens with Didot serif headlines, plus a reproducible build script

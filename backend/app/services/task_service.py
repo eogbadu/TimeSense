@@ -29,6 +29,9 @@ class TaskService:
             source=body.source,
             auto_scheduled=auto_scheduled,
             raw_input=body.raw_input,
+            location_name=body.location_name,
+            location_lat=body.location_lat,
+            location_lng=body.location_lng,
         )
 
     async def get_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
