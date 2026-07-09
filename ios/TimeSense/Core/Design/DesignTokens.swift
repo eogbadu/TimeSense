@@ -7,9 +7,11 @@ enum DesignTokens {
     // MARK: – Colour
 
     enum Color {
-        /// Primary brand accent (deep indigo)
+        /// Primary brand accent (violet-indigo — the "Sense" hue / ring's warm end)
         static let accent = SwiftUI.Color("AccentColor")
-        /// Background
+        /// Secondary accent (azure — the ring's cool end; time values, links, selected states)
+        static let accentBlue = SwiftUI.Color("AccentBlue")
+        /// Background (near-black cosmic navy in dark)
         static let background = SwiftUI.Color("Background")
         /// Secondary background / card surface
         static let surface = SwiftUI.Color("Surface")
@@ -21,6 +23,32 @@ enum DesignTokens {
         static let destructive = SwiftUI.Color("Destructive")
         /// Success confirmation
         static let success = SwiftUI.Color("Success")
+        /// Semantic energy/health (same green as success)
+        static let energy = SwiftUI.Color("Success")
+        /// Hairline border on translucent cards
+        static let hairline = SwiftUI.Color.white.opacity(0.08)
+    }
+
+    // MARK: – Gradients & glow (the cosmic brand, sampled from the app icon)
+
+    enum Gradient {
+        /// The signature blue→violet sweep (the ring). Used for the hero recommendation card.
+        static let hero = LinearGradient(
+            colors: [Color.accentBlue, Color.accent],
+            startPoint: .topLeading, endPoint: .bottomTrailing
+        )
+        /// A soft cosmic wash for screen backgrounds — near-black navy deepening downward.
+        static let screen = LinearGradient(
+            colors: [SwiftUI.Color(red: 0.05, green: 0.06, blue: 0.12),
+                     SwiftUI.Color(red: 0.03, green: 0.03, blue: 0.07)],
+            startPoint: .top, endPoint: .bottom
+        )
+    }
+
+    enum Glow {
+        /// Accent halo for the hero card / active elements.
+        static let accent = (color: DesignTokens.Color.accent.opacity(0.45), radius: 28.0, y: 10.0)
+        static let subtle = (color: DesignTokens.Color.accentBlue.opacity(0.30), radius: 18.0, y: 6.0)
     }
 
     // MARK: – Typography

@@ -10,7 +10,8 @@ struct TimeSenseApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var authService = AuthService()
-    @AppStorage("appTheme") private var appTheme = "system"
+    // Default to the cosmic dark theme (the brand look); users can still switch in Settings.
+    @AppStorage("appTheme") private var appTheme = "dark"
 
     var body: some Scene {
         WindowGroup {
