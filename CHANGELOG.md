@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-160: TimeSense now senses when you've been sitting a while (inferred from your step activity) and nudges a short walk — 'You've been sitting for 82 min, a short walk will reset your focus' — with the sitting time also shown on the Energy card
 - [2026-07-09] TIME-159: TimeSense now reads your steps and activity from Apple Health (in addition to sleep) and shows a real Steps card on Now. Read-only; TimeSense never writes to Health
 - [2026-07-09] TIME-158: Backend now stores daily HealthKit activity (steps, active energy, exercise minutes) and surfaces steps/activity in the Now dashboard payload — groundwork for the real Steps/Activity cards
 - [2026-07-09] TIME-157: The 'Why this recommendation' screen now matches the theme — its header is a domain-colored hero with a matching confidence ring, and the signals use colored icon chips with green checks

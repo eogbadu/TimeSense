@@ -39,6 +39,7 @@ struct NowContextCards: Decodable {
     let stepsGoal: Int?
     let activeEnergyKcal: Int?
     let exerciseMinutes: Int?
+    let inactiveMinutes: Int?
 
     enum CodingKeys: String, CodingKey {
         case nextEventTitle = "next_event_title"
@@ -53,6 +54,7 @@ struct NowContextCards: Decodable {
         case stepsGoal = "steps_goal"
         case activeEnergyKcal = "active_energy_kcal"
         case exerciseMinutes = "exercise_minutes"
+        case inactiveMinutes = "inactive_minutes"
     }
 }
 

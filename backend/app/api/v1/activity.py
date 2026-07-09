@@ -20,6 +20,7 @@ class DailyActivityIn(BaseModel):
     steps: int = Field(ge=0, default=0)
     active_energy_kcal: int | None = Field(default=None, ge=0)
     exercise_minutes: int | None = Field(default=None, ge=0)
+    inactive_minutes: int | None = Field(default=None, ge=0)
     day: date | None = None   # defaults to the user's local today
 
 
@@ -28,6 +29,7 @@ class DailyActivityOut(BaseModel):
     steps: int
     active_energy_kcal: int | None = None
     exercise_minutes: int | None = None
+    inactive_minutes: int | None = None
 
 
 def _local_today(user_tz: str) -> date:
@@ -50,11 +52,13 @@ async def sync_activity(
     row = await DailyActivityRepository(db).upsert(
         user_id=user.id, day=day, steps=body.steps,
         active_energy_kcal=body.active_energy_kcal, exercise_minutes=body.exercise_minutes,
+        inactive_minutes=body.inactive_minutes,
     )
     await db.commit()
     return DailyActivityOut(
         day=row.day, steps=row.steps,
         active_energy_kcal=row.active_energy_kcal, exercise_minutes=row.exercise_minutes,
+        inactive_minutes=row.inactive_minutes,
     )
 
 
@@ -71,4 +75,5 @@ async def get_today_activity(
     return DailyActivityOut(
         day=row.day, steps=row.steps,
         active_energy_kcal=row.active_energy_kcal, exercise_minutes=row.exercise_minutes,
+        inactive_minutes=row.inactive_minutes,
     )
