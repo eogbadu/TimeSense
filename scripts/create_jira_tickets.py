@@ -8553,6 +8553,21 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Engine use of task.location for errand candidates; 6.9\" screenshots."),
         ),
     },
+
+    {
+        "summary": "TIME-166: Refresh Capture App Store screenshot (final 2-row chips)",
+        "labels": ["marketing", "design"],
+        "description": doc(
+            h2("Goal"), p("The Capture App Store frame predated the 2-row chip layout + contextual inputs. Recapture from main and regenerate the frame + preview gallery."),
+            divider(), h2("Scope"), bullet_list(["Recapture Capture on current main (2-row coloured chips); regenerate 03_capture.png; redeploy the gallery artifact"]),
+            divider(), h2("Non-Goals"), bullet_list(["No app code change; other frames unchanged"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["docs/marketing/appstore/03_capture.png"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["03_capture.png shows the final Capture screen (2-row chips)"]),
+            divider(), h2("Verification"), code_block("open docs/marketing/appstore/03_capture.png"),
+            divider(), h2("Dependencies"), p("TIME-163/165 (chips + inputs)."),
+            divider(), h2("Next Ticket"), p("Engine use of task.location; 6.9\" screenshot set."),
+        ),
+    },
 ]
 
 
