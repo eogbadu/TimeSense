@@ -8336,6 +8336,27 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Optional per-tab hero elements; App Store screenshots."),
         ),
     },
+
+    {
+        "summary": "TIME-155: Domain-coloured hero (dark card + domain glow) + multi-colour accents",
+        "labels": ["ios", "design"],
+        "description": doc(
+            h2("Goal"), p("Match the reference: the recommendation card is a DARK navy card with a domain-COLOURED glow (green for a walk, blue for focus, cyan for errand, violet for meeting) — not a fixed bright blue->violet gradient — and the screen uses multiple semantic accent colours."),
+            divider(), h2("Scope"), bullet_list([
+                "Cosmic accents: green/blue/cyan/violet/amber; heroAccent(descriptor) + domainAccent(domain) maps",
+                "HeroBackground: dark navy base + top-right RadialGradient in the domain accent (behind the glyph)",
+                "HeroGlyph tinted to the accent (glow); HeroPill dark translucent with a coloured icon",
+                "BestNextActionCard + SuggestionCard use domain accent for bg/glyph/pills/edge-glow",
+                "Dashboard cards: Calendar=blue, Tasks=violet, Energy=green, Nearby=cyan; amber for High priority",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No new content; other tabs unchanged"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios: Core/Design/CosmicComponents.swift; Features/Now/NowView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Health rec -> dark card with green glow + green walker; other domains use their colour; multi-colour dashboard; iOS build succeeds (verified via mock screenshot matching the reference walk card)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-154 (unified palette)."),
+            divider(), h2("Next Ticket"), p("Carry domain-colour treatment to Today; App Store screenshots."),
+        ),
+    },
 ]
 
 

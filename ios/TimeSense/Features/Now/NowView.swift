@@ -202,16 +202,18 @@ private struct SuggestionCard: View {
     let suggestion: EngineRecommendation
 
     var body: some View {
+        let accent = domainAccent(suggestion.domain)
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack(spacing: 6) {
-                Image(systemName: "sparkles").font(.footnote)
+                Image(systemName: "sparkles").font(.footnote).foregroundStyle(accent)
                 Text("TimeSense suggests")
                     .font(DesignTokens.Typography.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.9))
                 Spacer(minLength: 0)
                 Text("\(Int((suggestion.confidence * 100).rounded()))% match")
                     .font(DesignTokens.Typography.caption.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.9))
             }
-            .foregroundStyle(.white.opacity(0.9))
 
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -221,25 +223,21 @@ private struct SuggestionCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Text(suggestion.message)
                         .font(DesignTokens.Typography.subheadline)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(.white.opacity(0.82))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: DesignTokens.Spacing.sm)
-                HeroGlyph(systemName: icon)
+                HeroGlyph(systemName: icon, tint: accent)
             }
 
             if let travel = suggestion.travel {
-                HeroPill(icon: "car.fill", text: travelLine(travel))
+                HeroPill(icon: "car.fill", text: travelLine(travel), tint: accent)
             }
         }
         .padding(DesignTokens.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(heroGradient(end: domainEnd))
-        .heroCardChrome()
-    }
-
-    private var domainEnd: Color? {
-        suggestion.domain == "health" ? DesignTokens.Color.energy : nil
+        .background(HeroBackground(accent: accent))
+        .heroCardChrome(glow: accent)
     }
 
     private var icon: String {
@@ -291,27 +289,29 @@ private struct BestNextActionCard: View {
 
     var body: some View {
         let style = taskCategoryStyle(for: task.title)
+        let accent = heroAccent(style.descriptor)
         VStack(spacing: 0) {
-            heroHeader(style: style)
+            heroHeader(style: style, accent: accent)
             footer
         }
-        .heroCardChrome()
+        .heroCardChrome(glow: accent)
     }
 
-    // Gradient top: label, big action, and the glowing domain glyph + signal pills.
-    private func heroHeader(style: TaskCategoryStyle) -> some View {
+    // Dark hero with a domain-coloured glow + glowing tinted glyph + dark signal pills.
+    private func heroHeader(style: TaskCategoryStyle, accent: Color) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack(spacing: 6) {
-                Image(systemName: "sparkles").font(.footnote)
+                Image(systemName: "sparkles").font(.footnote).foregroundStyle(accent)
                 Text("Best Next Action")
                     .font(DesignTokens.Typography.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.9))
                 Spacer(minLength: 0)
                 Text("AI Recommended")
                     .font(DesignTokens.Typography.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.9))
                     .padding(.horizontal, DesignTokens.Spacing.sm).padding(.vertical, 4)
-                    .background(Capsule().fill(Color.white.opacity(0.16)))
+                    .background(Capsule().fill(Color.white.opacity(0.10)))
             }
-            .foregroundStyle(.white.opacity(0.9))
 
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -322,22 +322,22 @@ private struct BestNextActionCard: View {
                     if let mins = task.estimatedMinutes {
                         Text("for \(mins) minutes")
                             .font(DesignTokens.Typography.title2.weight(.regular))
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(.white.opacity(0.82))
                     }
                 }
                 Spacer(minLength: DesignTokens.Spacing.sm)
-                HeroGlyph(systemName: style.icon)
+                HeroGlyph(systemName: style.icon, tint: accent)
             }
 
             HStack(spacing: DesignTokens.Spacing.sm) {
-                HeroPill(icon: style.icon, text: style.descriptor)
-                if task.priority <= 2 { HeroPill(icon: "flag.fill", text: "High priority") }
-                if let mins = task.estimatedMinutes { HeroPill(icon: "clock", text: "\(mins) min") }
+                HeroPill(icon: style.icon, text: style.descriptor, tint: accent)
+                if task.priority <= 2 { HeroPill(icon: "flag.fill", text: "High priority", tint: Cosmic.amber) }
+                if let mins = task.estimatedMinutes { HeroPill(icon: "clock", text: "\(mins) min", tint: .white.opacity(0.8)) }
             }
         }
         .padding(DesignTokens.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(heroGradient(end: heroEnd(style.descriptor)))
+        .background(HeroBackground(accent: accent))
     }
 
     // Surface bottom: confidence + Why + quick actions stay readable on a solid card.
@@ -365,10 +365,6 @@ private struct BestNextActionCard: View {
     }
 }
 
-/// Warms the hero gradient's tail for health (green); everything else keeps the pure blue→violet.
-func heroEnd(_ descriptor: String) -> Color? {
-    descriptor == "Health break" ? DesignTokens.Color.energy : nil
-}
 
 private func priorityLabel(_ p: Int) -> String {
     p <= 2 ? "High" : (p == 3 ? "Medium" : "Low")
@@ -801,17 +797,17 @@ private struct ContextGrid: View {
     var body: some View {
         LazyVGrid(columns: cols, spacing: DesignTokens.Spacing.md) {
             if let title = cards.nextEventTitle {
-                ContextCard(label: "Calendar", icon: "calendar", tint: DesignTokens.Color.accentBlue,
+                ContextCard(label: "Calendar", icon: "calendar", tint: Cosmic.blue,
                             value: eventTime, sub: eventSub(title))
             }
-            ContextCard(label: "Tasks", icon: "checkmark.circle.fill", tint: DesignTokens.Color.accent,
+            ContextCard(label: "Tasks", icon: "checkmark.circle.fill", tint: Cosmic.violet,
                         value: "\(cards.tasksDueToday)", sub: taskSub)
             if let energy = cards.energyLevel {
-                ContextCard(label: "Energy", icon: "bolt.fill", tint: DesignTokens.Color.energy,
+                ContextCard(label: "Energy", icon: "bolt.fill", tint: Cosmic.green,
                             value: energy.capitalized, sub: energySub)
             }
             if let place = cards.currentPlace {
-                ContextCard(label: "Nearby", icon: "location.fill", tint: DesignTokens.Color.accentBlue,
+                ContextCard(label: "Nearby", icon: "location.fill", tint: Cosmic.cyan,
                             value: place, sub: "You're here now")
             }
         }
