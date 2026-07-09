@@ -26,7 +26,7 @@ struct TodayView: View {
                     loadedBody(tasks: tasks)
                 }
             }
-            .background(DesignTokens.Color.background)
+            .background(CosmicBackground())
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
             .sheet(item: $scheduleDraft) { draft in
