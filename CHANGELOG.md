@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-149: The Now screen goes cosmic — the 'Best Next Action' is now a glowing blue→violet gradient card with a domain icon and signal pills, on a deep-navy background with soft auras. The color shifts by recommendation type (green for health, blue for errands, violet for focus). The cross-domain 'TimeSense suggests' card gets the same treatment
 - [2026-07-09] TIME-148: New cosmic theme foundation — deep-navy background, blue→violet accents, gradient + glow tokens, and a semantic energy green, all sampled from the app icon. App now defaults to the dark cosmic look (still switchable in Settings)
 - [2026-07-09] TIME-147: New app icon — the blue→violet glowing ring with a guiding-star clock (installed full-bleed; anchors the upcoming cosmic theme)
 - [2026-07-08] TIME-146: Fixed voice capture — it now keeps listening through pauses (continuing your sentence appends instead of wiping what you already said), and the waveform stays live and reacts to your voice the whole time

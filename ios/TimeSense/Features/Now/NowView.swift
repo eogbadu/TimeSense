@@ -16,7 +16,7 @@ struct NowView: View {
                     loadedBody(ctx: ctx)
                 }
             }
-            .background(DesignTokens.Color.background)
+            .background(CosmicBackground())
             .navigationTitle("Now")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -198,38 +198,50 @@ private struct SuggestionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-            HStack(spacing: DesignTokens.Spacing.sm) {
-                Image(systemName: icon).font(.subheadline).foregroundColor(DesignTokens.Color.accent)
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles").font(.footnote)
                 Text("TimeSense suggests")
                     .font(DesignTokens.Typography.footnote.weight(.semibold))
-                    .foregroundColor(DesignTokens.Color.accent)
                 Spacer(minLength: 0)
                 Text("\(Int((suggestion.confidence * 100).rounded()))% match")
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .font(DesignTokens.Typography.caption.weight(.medium))
             }
-            Text(suggestion.title)
-                .font(DesignTokens.Typography.title2)
-                .foregroundColor(DesignTokens.Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(suggestion.message)
-                .font(DesignTokens.Typography.subheadline)
-                .foregroundColor(DesignTokens.Color.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            if let travel = suggestion.travel {
-                HStack(spacing: DesignTokens.Spacing.xs) {
-                    Image(systemName: "car.fill").font(.caption2)
-                    Text(travelLine(travel)).font(DesignTokens.Typography.footnote)
+            .foregroundStyle(.white.opacity(0.9))
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(suggestion.title)
+                        .font(DesignTokens.Typography.title.weight(.bold))
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(suggestion.message)
+                        .font(DesignTokens.Typography.subheadline)
+                        .foregroundStyle(.white.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .foregroundColor(DesignTokens.Color.textSecondary)
+                Spacer(minLength: DesignTokens.Spacing.sm)
+                HeroGlyph(systemName: icon)
+            }
+
+            if let travel = suggestion.travel {
+                HeroPill(icon: "car.fill", text: travelLine(travel))
             }
         }
         .padding(DesignTokens.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
-            .fill(DesignTokens.Color.accent.opacity(0.08)))
-        .overlay(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
-            .stroke(DesignTokens.Color.accent.opacity(0.18), lineWidth: 1))
+        .background(heroGradient(end: domainEnd))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous))
+        .shadow(color: DesignTokens.Glow.accent.color,
+                radius: DesignTokens.Glow.accent.radius, y: DesignTokens.Glow.accent.y)
+    }
+
+    private var domainEnd: Color {
+        switch suggestion.domain {
+        case "health": return DesignTokens.Color.energy
+        case "location": return DesignTokens.Color.accentBlue
+        case "calendar": return Color(red: 0.65, green: 0.40, blue: 1.0)
+        default: return DesignTokens.Color.accent
+        }
     }
 
     private var icon: String {
@@ -281,44 +293,64 @@ private struct BestNextActionCard: View {
 
     var body: some View {
         let style = taskCategoryStyle(for: task.title)
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
-            HStack {
+        VStack(spacing: 0) {
+            heroHeader(style: style)
+            footer
+        }
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
+                .stroke(DesignTokens.Color.hairline, lineWidth: 1)
+        )
+        .shadow(color: DesignTokens.Glow.accent.color,
+                radius: DesignTokens.Glow.accent.radius, y: DesignTokens.Glow.accent.y)
+    }
+
+    // Gradient top: label, big action, and the glowing domain glyph + signal pills.
+    private func heroHeader(style: TaskCategoryStyle) -> some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles").font(.footnote)
                 Text("Best Next Action")
-                    .font(DesignTokens.Typography.headline)
-                    .foregroundColor(DesignTokens.Color.textPrimary)
-                Spacer()
+                    .font(DesignTokens.Typography.footnote.weight(.semibold))
+                Spacer(minLength: 0)
                 Text("AI Recommended")
                     .font(DesignTokens.Typography.caption.weight(.semibold))
-                    .foregroundColor(DesignTokens.Color.accent)
-                    .padding(.horizontal, DesignTokens.Spacing.sm)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(DesignTokens.Color.accent.opacity(0.12)))
+                    .padding(.horizontal, DesignTokens.Spacing.sm).padding(.vertical, 4)
+                    .background(Capsule().fill(Color.white.opacity(0.16)))
             }
+            .foregroundStyle(.white.opacity(0.9))
 
-            HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
-                    .fill(style.color.opacity(0.16))
-                    .frame(width: 56, height: 56)
-                    .overlay(Image(systemName: style.icon).font(.title2).foregroundColor(style.color))
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
-                        .font(DesignTokens.Typography.title2)
-                        .foregroundColor(DesignTokens.Color.textPrimary)
+                        .font(DesignTokens.Typography.title.weight(.bold))
+                        .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
                     if let mins = task.estimatedMinutes {
                         Text("for \(mins) minutes")
                             .font(DesignTokens.Typography.title2.weight(.regular))
-                            .foregroundColor(DesignTokens.Color.textPrimary)
+                            .foregroundStyle(.white.opacity(0.85))
                     }
                 }
-                Spacer(minLength: 0)
+                Spacer(minLength: DesignTokens.Spacing.sm)
+                HeroGlyph(systemName: style.icon)
             }
 
-            Text(metaLine(style: style))
-                .font(DesignTokens.Typography.footnote)
-                .foregroundColor(DesignTokens.Color.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .center)
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                HeroPill(icon: style.icon, text: style.descriptor)
+                if task.priority <= 2 { HeroPill(icon: "flag.fill", text: "High priority") }
+                if let mins = task.estimatedMinutes { HeroPill(icon: "clock", text: "\(mins) min") }
+            }
+        }
+        .padding(DesignTokens.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(heroGradient(end: heroEnd(style.descriptor)))
+    }
 
+    // Surface bottom: confidence + Why + quick actions stay readable on a solid card.
+    private var footer: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             if let confidence {
                 HStack(spacing: DesignTokens.Spacing.md) {
                     Text("Confidence")
@@ -331,19 +363,23 @@ private struct BestNextActionCard: View {
                         .monospacedDigit()
                 }
             }
-
             Divider()
             WhyThis(load: loadExplanation)
             QuickActionRow(onDone: onDone, onSnooze: onSnooze, onNotNow: onNotNow)
         }
         .padding(DesignTokens.Spacing.lg)
-        .cardStyle()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DesignTokens.Color.surface)
     }
+}
 
-    private func metaLine(style: TaskCategoryStyle) -> String {
-        var parts = [priorityLabel(task.priority) + " priority", style.descriptor]
-        if let m = task.estimatedMinutes { parts.append("\(m) min") }
-        return parts.joined(separator: "  ·  ")
+/// Maps a task category descriptor to a cosmic-friendly gradient end color (paired with AccentBlue).
+func heroEnd(_ descriptor: String) -> Color {
+    switch descriptor {
+    case "Health break": return DesignTokens.Color.energy
+    case "Errand", "Appointment": return DesignTokens.Color.accentBlue
+    case "Meeting": return Color(red: 0.65, green: 0.40, blue: 1.0)
+    default: return DesignTokens.Color.accent
     }
 }
 
