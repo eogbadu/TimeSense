@@ -87,24 +87,43 @@ def _to_task_item(task: Task) -> TaskItem:
     )
 
 
-async def _health(db: AsyncSession, user_id, now: datetime) -> HealthContext | None:
+async def _health(db: AsyncSession, user_id, now: datetime, tz: str = "UTC") -> HealthContext | None:
+    from zoneinfo import ZoneInfo
+    from app.repositories.daily_activity_repository import DailyActivityRepository
+
     ev = await SleepWakeRepository(db).get_latest_today(user_id)
-    if ev is None:
+    try:
+        local_today = now.astimezone(ZoneInfo(tz)).date()
+    except Exception:
+        local_today = now.date()
+    activity = await DailyActivityRepository(db).get_for_day(user_id, local_today)
+
+    if ev is None and activity is None:
         return None
+
+    # Sleep → energy/quality (default medium when we only have activity).
     sleep_hours = None
-    if ev.sleep_start is not None:
-        start = ev.sleep_start if ev.sleep_start.tzinfo else ev.sleep_start.replace(tzinfo=timezone.utc)
-        wake = ev.wake_time if ev.wake_time.tzinfo else ev.wake_time.replace(tzinfo=timezone.utc)
-        sleep_hours = round((wake - start).total_seconds() / 3600, 1)
-    if sleep_hours is None:
-        energy, quality = "medium", None
-    elif sleep_hours >= 7.5:
-        energy, quality = "high", "good"
-    elif sleep_hours >= 6:
-        energy, quality = "medium", "okay"
-    else:
-        energy, quality = "low", "poor"
-    return HealthContext(sleep_hours=sleep_hours, sleep_quality=quality, energy_estimate=energy)
+    energy, quality = "medium", None
+    if ev is not None:
+        if ev.sleep_start is not None:
+            start = ev.sleep_start if ev.sleep_start.tzinfo else ev.sleep_start.replace(tzinfo=timezone.utc)
+            wake = ev.wake_time if ev.wake_time.tzinfo else ev.wake_time.replace(tzinfo=timezone.utc)
+            sleep_hours = round((wake - start).total_seconds() / 3600, 1)
+        if sleep_hours is not None:
+            if sleep_hours >= 7.5:
+                energy, quality = "high", "good"
+            elif sleep_hours >= 6:
+                energy, quality = "medium", "okay"
+            else:
+                energy, quality = "low", "poor"
+
+    steps = activity.steps if activity is not None else None
+    return HealthContext(
+        sleep_hours=sleep_hours, sleep_quality=quality, energy_estimate=energy,
+        steps_today=steps,
+        step_goal=10000 if steps is not None else None,
+        sedentary_minutes=activity.inactive_minutes if activity is not None else None,
+    )
 
 
 _VALID_PLACE_TYPES = {
@@ -137,7 +156,7 @@ async def build_user_context(
         tz, now=now, work_start=time(work_start, 0), work_end=time(work_end, 0)
     )
     location = await get_user_location_snapshot(db, user.id, now)
-    health = await _health(db, user.id, now)
+    health = await _health(db, user.id, now, tz)
 
     saved_rows = await UserPlaceRepository(db).list_for_user(user.id)
     preferred_places = [_to_place(r) for r in saved_rows]

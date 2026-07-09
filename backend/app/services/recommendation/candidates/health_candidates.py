@@ -35,11 +35,17 @@ def generate_health_candidates(ctx: UserContext, now: datetime) -> list[Candidat
         low_steps = (h.steps_today is not None and h.step_goal is not None
                      and h.steps_today < 0.4 * h.step_goal)
         if sedentary or low_steps:
+            if sedentary:
+                desc = f"You've been sitting for {h.sedentary_minutes} min — a short walk will reset your focus."
+            else:
+                desc = "You're well under your step goal — get moving."
+            # Sitting longer → nudge a little harder.
+            urgency = 0.45 + min(0.25, (h.sedentary_minutes - 90) / 400) if sedentary else 0.4
             out.append(CandidateAction(
                 id="health:walk", type="walk", domain="health",
-                title="Go for a short walk", description="You've been still for a while — get moving.",
-                estimated_minutes=15, urgency=0.45, importance=0.5, context_fit=0.75, time_fit=0.9,
-                energy_fit=0.8, confidence=0.7, required_energy="low",
+                title="Go for a short walk", description=desc,
+                estimated_minutes=15, urgency=round(urgency, 2), importance=0.5, context_fit=0.78,
+                time_fit=0.9, energy_fit=0.85, confidence=0.72, required_energy="low",
                 reason_codes=["SEDENTARY_TOO_LONG"] if sedentary else ["LOW_STEP_COUNT"],
             ))
 

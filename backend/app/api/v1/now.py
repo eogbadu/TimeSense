@@ -52,6 +52,7 @@ class NowContextCards(BaseModel):
     steps_goal: int = 10000
     active_energy_kcal: int | None = None
     exercise_minutes: int | None = None
+    inactive_minutes: int | None = None   # minutes since last meaningful movement
 
 
 class NowResponse(BaseModel):
@@ -250,6 +251,7 @@ async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCar
         steps=activity.steps if activity is not None else None,
         active_energy_kcal=activity.active_energy_kcal if activity is not None else None,
         exercise_minutes=activity.exercise_minutes if activity is not None else None,
+        inactive_minutes=activity.inactive_minutes if activity is not None else None,
     )
 
 

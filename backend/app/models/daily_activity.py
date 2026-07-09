@@ -24,4 +24,7 @@ class DailyActivity(UUIDMixin, TimestampMixin, Base):
     steps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     active_energy_kcal: Mapped[int | None] = mapped_column(Integer, nullable=True)
     exercise_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Minutes since the user last moved meaningfully (inferred from step data) — powers the
+    # "you've been sitting for a while, take a walk" recommendation.
+    inactive_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source: Mapped[str] = mapped_column(String(16), nullable=False, default="healthkit")

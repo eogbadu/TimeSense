@@ -833,6 +833,7 @@ private struct ContextGrid: View {
         return "\(noun) · \(cards.tasksCompletedToday) done"
     }
     private var energySub: String {
+        if let m = cards.inactiveMinutes, m >= 60 { return "Sitting \(m)m — time to move" }
         if let h = cards.sleepHours { return "\(h.formatted(.number.precision(.fractionLength(0...1))))h last night" }
         return "based on your sleep"
     }

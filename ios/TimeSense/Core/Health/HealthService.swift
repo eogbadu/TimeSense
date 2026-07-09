@@ -108,17 +108,53 @@ final class HealthService: ObservableObject {
         let kcal = await sumToday(.activeEnergyBurned, unit: .kilocalorie())
         let exercise = await sumToday(.appleExerciseTime, unit: .minute())
         guard steps != nil || kcal != nil || exercise != nil else { return }
+        // Only infer "sitting" when we actually have step tracking today (avoids false positives).
+        let inactive = (steps ?? 0) > 0 ? await inactiveMinutes() : nil
 
         struct Body: Encodable {
             let steps: Int
             let active_energy_kcal: Int?
             let exercise_minutes: Int?
+            let inactive_minutes: Int?
         }
         struct Ack: Decodable { let steps: Int }
         let body = Body(steps: Int(steps ?? 0),
                         active_energy_kcal: kcal.map { Int($0) },
-                        exercise_minutes: exercise.map { Int($0) })
+                        exercise_minutes: exercise.map { Int($0) },
+                        inactive_minutes: inactive)
         _ = try? await APIClient.shared.post("/api/v1/activity", body: body) as Ack
+    }
+
+    /// Minutes since the user last moved meaningfully — inferred from 15-min step buckets over the
+    /// last 4h (the most recent bucket with >= 30 steps marks the last active moment).
+    private func inactiveMinutes() async -> Int? {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return nil }
+        let now = Date()
+        let lookback = now.addingTimeInterval(-4 * 3600)
+        let predicate = HKQuery.predicateForSamples(withStart: lookback, end: now, options: .strictStartDate)
+        let anchor = Calendar.current.startOfDay(for: now)
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type, quantitySamplePredicate: predicate,
+                options: .cumulativeSum, anchorDate: anchor,
+                intervalComponents: DateComponents(minute: 15)
+            )
+            query.initialResultsHandler = { _, results, _ in
+                guard let results else { continuation.resume(returning: nil); return }
+                var lastActiveEnd: Date?
+                results.enumerateStatistics(from: lookback, to: now) { stat, _ in
+                    let steps = stat.sumQuantity()?.doubleValue(for: .count()) ?? 0
+                    if steps >= 30 { lastActiveEnd = stat.endDate }
+                }
+                if let lastActiveEnd {
+                    continuation.resume(returning: max(0, Int(now.timeIntervalSince(lastActiveEnd) / 60)))
+                } else {
+                    // No active bucket in the window → sitting at least the whole window.
+                    continuation.resume(returning: Int(now.timeIntervalSince(lookback) / 60))
+                }
+            }
+            store.execute(query)
+        }
     }
 
     private func sumToday(_ id: HKQuantityTypeIdentifier, unit: HKUnit) async -> Double? {

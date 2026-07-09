@@ -8436,6 +8436,27 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("App Store screenshots."),
         ),
     },
+
+    {
+        "summary": "TIME-160: Inactivity/sedentary signal (the 'Sitting for 82m' reference)",
+        "labels": ["backend", "ios", "health", "recommendations"],
+        "description": doc(
+            h2("Goal"), p("Infer how long the user has been sitting (from step data) and use it to drive the 'take a short walk' recommendation and a dashboard signal — the reference's 'Sitting for 82m'."),
+            divider(), h2("Scope"), bullet_list([
+                "iOS HealthService.inactiveMinutes(): 15-min step buckets over 4h -> minutes since last active (>=30 steps); included in the activity sync",
+                "Backend: daily_activity.inactive_minutes column + migration; accept in /activity; surface in /now context",
+                "context_builder._health now also reads DailyActivity (steps + sedentary_minutes) and builds HealthContext even without a sleep event",
+                "health_candidates: the existing walk candidate now names the minutes and scales urgency with how long you've been sitting",
+                "iOS: Energy card sub shows 'Sitting Xm — time to move' when >= 60",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No Apple Watch stand-hours; point-in-time value (as of last sync)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend: models/daily_activity.py, migrations/*, repositories/daily_activity_repository.py, api/v1/activity.py, api/v1/now.py, services/recommendation/context_builder.py, candidates/health_candidates.py; ios: Core/Health/HealthService.swift, Features/Now/NowView.swift, NowViewModel.swift; tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Sitting >= 90 min surfaces a 'Go for a short walk' recommendation naming the minutes; dashboard shows the sitting signal; suite + iOS build pass"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_inactivity.py -v"),
+            divider(), h2("Dependencies"), p("TIME-158/159 (activity)."),
+            divider(), h2("Next Ticket"), p("App Store screenshots."),
+        ),
+    },
 ]
 
 
