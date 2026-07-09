@@ -8377,6 +8377,26 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("App Store screenshots; HealthKit steps extension."),
         ),
     },
+
+    {
+        "summary": "TIME-157: Cosmic/domain-colour pass on the Why-this-recommendation sheet",
+        "labels": ["ios", "design"],
+        "description": doc(
+            h2("Goal"), p("Bring the Why-this-recommendation sheet in line with the cosmic domain-colour theme."),
+            divider(), h2("Scope"), bullet_list([
+                "RecommendedActionHeaderCard -> domain hero (HeroBackground + tinted icon + white title) with a domain-coloured ConfidenceRing",
+                "ConfidenceRing gains tint + onDark params",
+                "SignalsCard signalStyle colours -> Cosmic accents (Calendar=blue, Time=amber, Location=cyan, Priority=violet, Energy=green); available check -> Cosmic.green",
+                "AlternativesCard already uses cosmic taskCategoryStyle",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No content/logic change"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Now/NowView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["The Why sheet header is a domain-coloured hero with a matching confidence ring; signals use multi-colour chips + green checks; iOS build succeeds (verified via mock screenshot)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-155/156 (domain-colour system)."),
+            divider(), h2("Next Ticket"), p("App Store screenshots."),
+        ),
+    },
 ]
 
 
