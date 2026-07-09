@@ -76,10 +76,13 @@ struct CaptureView: View {
     private var heroIcon: some View {
         ZStack {
             Circle()
-                .fill(DesignTokens.Color.accent)
+                .fill(LinearGradient(colors: [Cosmic.blue, Cosmic.violet],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 110, height: 110)
-                .shadow(color: DesignTokens.Color.accent.opacity(voice.isRecording ? 0.5 : 0.35),
-                        radius: voice.isRecording ? 28 : 20, y: 8)
+                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+                .shadow(color: Cosmic.violet.opacity(voice.isRecording ? 0.6 : 0.4),
+                        radius: voice.isRecording ? 30 : 22, y: 8)
+                .shadow(color: Cosmic.blue.opacity(0.4), radius: 16, y: 2)
             if voice.isRecording {
                 WaveformView(level: voice.level, color: .white)
             } else {

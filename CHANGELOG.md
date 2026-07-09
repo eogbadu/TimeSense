@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-156: The cosmic + domain-color look now extends across Today, Capture, and Insights — Today's recommendation is a domain-colored hero, task rows use the semantic accents, the Capture orb is a blue→violet gradient with a glow, and Insights stats get colored icon chips
 - [2026-07-09] TIME-155: The recommendation card now matches the reference — a dark card whose glow, icon, and pills take the COLOR of the recommendation (green for a walk/health, blue for focus, cyan for errands, violet for meetings), instead of a fixed blue→violet gradient. The dashboard now uses richer multi-color accents
 - [2026-07-09] TIME-154: Unified the theme so backgrounds and colors match everywhere — one near-black neutral navy across the background, cards, chips, footer, and tab bar (no more purple wash or mismatched tones), matched to the reference design
 - [2026-07-09] TIME-153: Premium glassmorphism pass — the recommendation card now uses a soft blue→violet gradient (no more flat blue) with a neon violet glow, cards are frosted glass, and the background blends navy→indigo→violet with soft glows

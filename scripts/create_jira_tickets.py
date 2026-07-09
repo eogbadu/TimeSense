@@ -8357,6 +8357,26 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Carry domain-colour treatment to Today; App Store screenshots."),
         ),
     },
+
+    {
+        "summary": "TIME-156: Domain-colour/cosmic treatment for Today, Capture, Insights",
+        "labels": ["ios", "design"],
+        "description": doc(
+            h2("Goal"), p("Extend the domain-coloured cosmic system (from Now) to Today, Capture and Insights so the whole app matches."),
+            divider(), h2("Scope"), bullet_list([
+                "taskCategoryStyle colours -> Cosmic accents (blue/green/cyan/violet) — propagates to Today rows + cards",
+                "Today AIRecommendedCard -> domain hero (dark HeroBackground + tinted glyph + pills + Why footer), like the Now hero",
+                "Capture hero orb -> blue->violet gradient + glow + hairline",
+                "Insights StatRow -> coloured icon chips (green/blue/amber/violet/cyan)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No new content; Insights premium gate unchanged; no HealthKit steps"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios: Features/Now/NowView.swift (taskCategoryStyle), Features/Today/TodayView.swift, Features/Capture/CaptureView.swift, Features/Insights/InsightsView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Today recommendation is a domain-coloured hero; task rows use cosmic accents; Capture orb is a blue->violet gradient; Insights stats have coloured chips; iOS build succeeds (Capture verified via screenshot)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-155 (domain-colour hero)."),
+            divider(), h2("Next Ticket"), p("App Store screenshots; HealthKit steps extension."),
+        ),
+    },
 ]
 
 
