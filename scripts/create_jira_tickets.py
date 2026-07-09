@@ -8534,6 +8534,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("TIME-165: iOS contextual inputs (date+time pickers, Places autocomplete)."),
         ),
     },
+
+    {
+        "summary": "TIME-165: iOS contextual Capture inputs (time / date / location)",
+        "labels": ["ios", "capture", "ux"],
+        "description": doc(
+            h2("Goal"), p("Reveal a relevant, optional input when a type chip is picked: Reminder/Schedule -> a date with optional time; Errand -> a Places/maps autocomplete. Explicit values override the parse."),
+            divider(), h2("Scope"), bullet_list([
+                "CaptureView: contextualInput(for:) below the chips; dateTimeInput (DatePicker + 'Add a time' toggle, fuller-but-optional); errandInput (debounced /places/search autocomplete with saved-star vs maps-pin results)",
+                "submit builds scheduled_at (time set) / due_at (date only) / location; onChange(chip) defaults includeTime for Reminder and clears state",
+                "CaptureViewModel: PlaceSearchResult + searchPlaces; submit carries the structured fields; near-bias from LocationService.currentLocation",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No map preview; no multi-location"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios: Features/Capture/CaptureView.swift, CaptureViewModel.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Picking Reminder/Schedule shows a date(+optional time) picker; Errand shows a location autocomplete; the values reach /capture and override the parse; iOS build succeeds (verified via screenshots)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-164 (backend overrides + places search)."),
+            divider(), h2("Next Ticket"), p("Engine use of task.location for errand candidates; 6.9\" screenshots."),
+        ),
+    },
 ]
 
 
