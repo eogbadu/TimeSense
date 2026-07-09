@@ -8625,6 +8625,27 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Real store links; privacy/support pages; SVG icons."),
         ),
     },
+
+    {
+        "summary": "TIME-170: Companion web app — Now, Today, Capture for signed-in users",
+        "labels": ["web", "feature"],
+        "description": doc(
+            h2("Goal"), p("Give a signed-in user a real (companion) web experience, not just admin. A cosmic /app with their best next action, today's plan, and quick capture."),
+            divider(), h2("Scope"), bullet_list([
+                "/app route (any signed-in user; reuses Firebase auth) with a cosmic shell (wordmark, Now/Today/Capture tabs, sign out) + email/password sign-in gate",
+                "Now: /api/v1/now -> domain-coloured best-next-action hero + Calendar/Tasks/Steps/Energy cards + Mark done (PATCH /tasks)",
+                "Today: /api/v1/timeline/today -> the day's plan (coloured icons, times, done state)",
+                "Capture: POST /api/v1/capture with the coloured type-hint chips",
+                "Landing: nav gets Log in / Open the app -> /app; Admin moved to the footer; useApi alias; app CSS",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["Not the full native product (companion only per product rules); no voice on web; no contextual capture pickers yet; Insights/Settings later"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/app/{layout,page,today/page,capture/page}.tsx, web/lib/{api.ts,appTypes.ts}, web/app/{page.tsx,globals.css}"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Signed-in users get Now/Today/Capture at /app matching the app's cosmic look; non-Firebase env shows a friendly gate; next build succeeds; verified via mock-data screenshots"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-168/169 (website)."),
+            divider(), h2("Next Ticket"), p("Insights on web; store links; privacy page."),
+        ),
+    },
 ]
 
 
