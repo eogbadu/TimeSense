@@ -8397,6 +8397,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("App Store screenshots."),
         ),
     },
+
+    {
+        "summary": "TIME-158: Backend — daily activity (HealthKit steps/energy/exercise) store + /now",
+        "labels": ["backend", "health"],
+        "description": doc(
+            h2("Goal"), p("Store and surface HealthKit activity (steps, active energy, exercise minutes) so the Now dashboard can show real steps/activity."),
+            divider(), h2("Scope"), bullet_list([
+                "DailyActivity model (one row per user/day, unique) + migration (server_default on timestamps)",
+                "DailyActivityRepository upsert/get_for_day; POST /api/v1/activity + GET /activity/today",
+                "NowContextCards gains steps/steps_goal/active_energy_kcal/exercise_minutes; _context_cards reads today's activity",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No iOS yet (separate ticket); no sitting/inactivity inference"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend: models/daily_activity.py, migrations/*, repositories/daily_activity_repository.py, api/v1/activity.py, api/v1/now.py, api/v1/__init__.py, models/__init__.py; tests/test_activity.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["POST /activity upserts today; /now context includes steps; suite passes; migration applies on the main chain"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_activity.py -v"),
+            divider(), h2("Dependencies"), p("TIME-151 (now context cards)."),
+            divider(), h2("Next Ticket"), p("TIME-159: iOS HealthService reads+syncs steps/activity; Steps dashboard card."),
+        ),
+    },
 ]
 
 

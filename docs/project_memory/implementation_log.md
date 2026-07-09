@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-09 — TIME-158 (Jira TIME-158): Daily activity store + /now
+
+DailyActivity model (user_id, day, steps, active_energy_kcal, exercise_minutes, source; UniqueConstraint(user_id,day)); migration b9c0d1e2f3a4 (down_revision z6a7b8c9d0e1) WITH created_at/updated_at server_default now() (TIME-125 lesson). NOTE: original rev id a7b8c9d0e1f2 collided with the existing referrals migration -> renamed to b9c0d1e2f3a4; repo has a pre-existing 2-head split (main z6 chain + separate referrals branch), so applied via `alembic upgrade b9c0d1e2f3a4` not `head`. DailyActivityRepository upsert/get_for_day. POST /api/v1/activity (upsert today by user tz) + GET /activity/today; router registered. NowContextCards += steps/steps_goal(10000)/active_energy_kcal/exercise_minutes; _context_cards reads DailyActivityRepository.get_for_day(local today). 3 tests (sync+read, upsert, now-context-steps). Suite 417. Backend restarted.
 ## 2026-07-09 — TIME-157 (Jira TIME-157): Why-recommendation sheet cosmic pass
 
 RecommendedActionHeaderCard rebuilt as a domain hero: accent=heroAccent(taskCategoryStyle(action.title).descriptor); HeroBackground(accent) + sparkle/label + tinted style.icon (glow) + white title/duration + ConfidenceRing(tint: accent, onDark: true); heroCardChrome(glow: accent). ConfidenceRing gains tint + onDark params (text white on dark). SignalsCard.signalStyle -> Cosmic accents (Calendar=blue, Time of day=amber sun, Location=cyan mappin, Priority=violet flag, Energy=green bolt); available check -> Cosmic.green. AlternativesCard already uses cosmic taskCategoryStyle. Verified via a mocked Why sheet (MOCK_WHY harness, reverted): green hero + green ring for the walk rec, multi-colour signal chips, green checks. iOS BUILD SUCCEEDED.
