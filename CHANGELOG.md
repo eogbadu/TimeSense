@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-167: When you attach a place to an errand at capture, TimeSense now recommends and routes to that exact place — instead of guessing the location from the task's title. Works even without maps by estimating travel from distance
 - [2026-07-09] TIME-165: Capture chips now reveal a matching input — Reminder/Schedule show a date with an optional time, and Errand shows a location autocomplete (your saved places + maps). What you pick overrides what the text parsed, and it all stays optional
 - [2026-07-09] TIME-164: Capture can now take an explicit time, date, or location that overrides what the text parsed — tasks store a real location (name + coordinates), and a new places search (your saved places + maps) powers errand autocomplete
 - [2026-07-09] TIME-163: The Capture chips now do something — tapping one (Task/Reminder/Schedule/Errand/Idea) tags your capture so TimeSense parses it that way (e.g. Idea = low-priority, no deadline). They're also fully visible now (wrap to two rows) instead of scrolling off-screen

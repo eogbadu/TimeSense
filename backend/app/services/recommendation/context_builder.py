@@ -69,6 +69,19 @@ def _status(s: str) -> TaskStatus:
     return "not_started"
 
 
+def _location_intent(task: Task) -> LocationIntent | None:
+    """Prefer the exact place the user attached to the task; otherwise infer from the title."""
+    lat = getattr(task, "location_lat", None)
+    lng = getattr(task, "location_lng", None)
+    if lat is not None and lng is not None:
+        return LocationIntent(
+            query=getattr(task, "location_name", None) or task.title,
+            requires_travel=True,
+            coordinates=Coordinates(latitude=lat, longitude=lng),
+        )
+    return detect_location_intent(task.title)
+
+
 def _to_task_item(task: Task) -> TaskItem:
     due = None
     if task.due_at is not None:
@@ -83,7 +96,7 @@ def _to_task_item(task: Task) -> TaskItem:
         status=_status(task.status),
         estimated_minutes=task.estimated_minutes,
         due_date=due,
-        location_intent=detect_location_intent(task.title),
+        location_intent=_location_intent(task),
     )
 
 

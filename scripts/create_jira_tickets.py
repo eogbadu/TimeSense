@@ -8568,6 +8568,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Engine use of task.location; 6.9\" screenshot set."),
         ),
     },
+
+    {
+        "summary": "TIME-167: Engine uses a task's stored errand location (not the title)",
+        "labels": ["backend", "recommendations", "location"],
+        "description": doc(
+            h2("Goal"), p("When a task has an explicit location (from the Capture errand field), the engine should use those exact coordinates as the errand destination instead of searching for a place by the task title."),
+            divider(), h2("Scope"), bullet_list([
+                "LocationIntent gains coordinates; context_builder._location_intent prefers task.location_lat/lng (query=location_name) over title detection",
+                "location_candidates: with explicit coordinates, build the destination Place directly (PREFERRED_PLACE_FOUND, no maps search); still compute travel feasibility via maps",
+                "Fallback: with a known destination but no maps, estimate travel from straight-line distance (~35 km/h) so the errand stays usable",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to title-based detection when there's no stored location"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend: services/recommendation/types.py, context_builder.py, candidates/location_candidates.py; tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["A task with stored coordinates yields a location candidate for that exact place (not a title guess); works even without maps via estimate; suite passes"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_errand_location.py -v"),
+            divider(), h2("Dependencies"), p("TIME-164/165 (stored errand location)."),
+            divider(), h2("Next Ticket"), p("6.9\" screenshots; App Store Connect."),
+        ),
+    },
 ]
 
 
