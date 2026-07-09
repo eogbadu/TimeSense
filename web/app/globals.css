@@ -41,6 +41,8 @@ body {
 
 /* ============================ Marketing site (dark cosmic) ============================ */
 
+html { scroll-behavior: smooth; }
+
 .site {
   --nav-h: 68px;
   color: var(--ink);
@@ -55,6 +57,9 @@ body {
 .site ::selection { background: rgba(154, 107, 255, 0.35); }
 
 .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+/* Keep in-page anchor targets clear of the sticky nav. */
+#features, #how, #get { scroll-margin-top: calc(var(--nav-h) + 16px); }
 
 /* Nav */
 .nav {

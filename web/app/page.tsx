@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import Brand from "./Brand";
 
 const features = [
   {
@@ -53,20 +54,13 @@ const grid = [
   { c: "var(--blue)", i: "🧭", t: "Calm by design", d: "One clear next step, native on iPhone and Android. The point is relief, not another dashboard to manage." },
 ];
 
-function Orb() {
-  return <span className="orb" aria-hidden />;
-}
-
 export default function Home() {
   return (
     <div className="site">
       {/* Nav */}
       <nav className="nav">
         <div className="wrap nav-inner">
-          <Link href="/" className="wordmark">
-            <Orb />
-            <span>Time<b>Sense</b></span>
-          </Link>
+          <Brand />
           <div className="nav-links">
             <a href="#features">Features</a>
             <a href="#how">How it works</a>
@@ -171,10 +165,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="footer">
         <div className="wrap footer-inner">
-          <Link href="/" className="wordmark" style={{ fontSize: 17 }}>
-            <Orb />
-            <span>Time<b>Sense</b></span>
-          </Link>
+          <Brand size={17} />
           <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
             <a href="#features">Features</a>
             <a href="#get">Download</a>
