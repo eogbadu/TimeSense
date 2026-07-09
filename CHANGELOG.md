@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-147: New app icon — the blue→violet glowing ring with a guiding-star clock (installed full-bleed; anchors the upcoming cosmic theme)
 - [2026-07-08] TIME-146: Fixed voice capture — it now keeps listening through pauses (continuing your sentence appends instead of wiping what you already said), and the waveform stays live and reacts to your voice the whole time
 - [2026-07-08] TIME-145: Voice capture now shows a live, audio-reactive waveform while listening — the bars rise and fall with your voice
 - [2026-07-08] TIME-144: Voice capture — tap the mic on Capture and speak; TimeSense transcribes on-device (live) into the field and turns it into a task. Raw audio is never stored
