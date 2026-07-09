@@ -37,6 +37,19 @@ class Feasibility(BaseModel):
     suggested_slot: datetime | None = None
 
 
+class NowContextCards(BaseModel):
+    """Glanceable dashboard signals for the Now screen — real data only; any field may be null when
+    we don't have that signal yet (the client hides those cards)."""
+    next_event_title: str | None = None
+    next_event_at: datetime | None = None
+    next_event_in_minutes: int | None = None
+    tasks_due_today: int = 0
+    tasks_completed_today: int = 0
+    energy_level: str | None = None   # high | moderate | low (from sleep)
+    sleep_hours: float | None = None
+    current_place: str | None = None
+
+
 class NowResponse(BaseModel):
     greeting: str
     usable_minutes: int
@@ -49,6 +62,8 @@ class NowResponse(BaseModel):
     moment: str | None = None
     # Set when the best task can't be finished before it's due (with a suggested slot).
     feasibility: Feasibility | None = None
+    # Glanceable dashboard signals (calendar / tasks / energy / nearby).
+    context: NowContextCards | None = None
 
 
 def _local_now(now: datetime, user_timezone: str) -> datetime:
@@ -169,6 +184,64 @@ def _feasibility(best, today_tasks, now: datetime, user_tz: str, work_hours: tup
     return Feasibility(fits=False, message=msg, suggested_slot=slot)
 
 
+def _u(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCards:
+    """Populate the glanceable dashboard from real signals — calendar, tasks, sleep, location."""
+    from datetime import time as _time
+    from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+    from app.repositories.user_location_repository import UserLocationRepository
+    from app.repositories.sleep_wake_repository import SleepWakeRepository
+
+    try:
+        tz = ZoneInfo(user_tz)
+    except Exception:
+        tz = timezone.utc
+    local = now.astimezone(tz)
+    start_utc = datetime.combine(local.date(), _time(0, 0), tzinfo=tz).astimezone(timezone.utc)
+    end_utc = start_utc + timedelta(days=1)
+
+    # Next timed calendar event
+    events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(hours=24))
+    upcoming = sorted((e for e in events if not e.all_day and _u(e.starts_at) > now),
+                      key=lambda e: _u(e.starts_at))
+    nxt = upcoming[0] if upcoming else None
+
+    # Tasks due today (pending, due or scheduled today) + completions today
+    pending = await TaskRepository(db).list_by_user(user_id=user.id, status="pending", limit=500)
+    def _today(dt) -> bool:
+        return dt is not None and start_utc <= _u(dt) < end_utc
+    due_today = sum(1 for t in pending if _today(t.due_at) or _today(t.scheduled_start))
+    completed = await TaskRepository(db).count_completed_in_range(user.id, start_utc, end_utc)
+
+    # Energy from last night's sleep
+    sleep = await SleepWakeRepository(db).get_latest_today(user.id)
+    hours = None
+    energy = None
+    if sleep is not None:
+        if sleep.sleep_start is not None:
+            hours = round((_u(sleep.wake_time) - _u(sleep.sleep_start)).total_seconds() / 3600, 1)
+        energy = ("high" if (hours or 0) >= 7.5 else "moderate" if (hours or 0) >= 6 else "low") \
+            if hours is not None else "moderate"
+
+    # Current place
+    place = await UserLocationRepository(db).get_current(user.id, now)
+    place_name = place.place_name if place is not None else None
+
+    return NowContextCards(
+        next_event_title=nxt.title if nxt else None,
+        next_event_at=_u(nxt.starts_at) if nxt else None,
+        next_event_in_minutes=int((_u(nxt.starts_at) - now).total_seconds() / 60) if nxt else None,
+        tasks_due_today=due_today,
+        tasks_completed_today=completed,
+        energy_level=energy,
+        sleep_hours=hours,
+        current_place=place_name,
+    )
+
+
 @router.get("", response_model=NowResponse)
 async def get_now(
     current_user: CurrentUser,
@@ -183,14 +256,17 @@ async def get_now(
     local_now = _local_now(now, user_tz)
 
     ranked, usable_minutes, today_tasks = await _ranked_candidates(db, user, now)
+    context = await _context_cards(db, user, now, user_tz)
     if not ranked:
         return NowResponse(
-            greeting=_greeting(local_now), usable_minutes=usable_minutes, best_task=None
+            greeting=_greeting(local_now), usable_minutes=usable_minutes, best_task=None,
+            context=context,
         )
 
     return NowResponse(
         greeting=_greeting(local_now),
         usable_minutes=usable_minutes,
+        context=context,
         best_task=TaskResponse.model_validate(ranked[0]),
         alternatives=[TaskResponse.model_validate(t) for t in ranked[1:3]],
         confidence=compute_confidence(ranked[0], usable_minutes, len(ranked[1:3]), now),

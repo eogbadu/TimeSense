@@ -95,6 +95,10 @@ struct NowView: View {
                     )
                     .padding(.top, DesignTokens.Spacing.xl)
                 }
+
+                if let cards = ctx.context {
+                    ContextGrid(cards: cards).padding(.top, DesignTokens.Spacing.xs)
+                }
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
             .padding(.top, DesignTokens.Spacing.sm)
@@ -803,3 +807,82 @@ private struct SecondaryAction: View {
     }
 }
 
+
+// MARK: - Glanceable dashboard (calendar / tasks / energy / nearby) — real signals only
+
+private struct ContextGrid: View {
+    let cards: NowContextCards
+    private let cols = [GridItem(.flexible(), spacing: DesignTokens.Spacing.md),
+                        GridItem(.flexible(), spacing: DesignTokens.Spacing.md)]
+
+    var body: some View {
+        LazyVGrid(columns: cols, spacing: DesignTokens.Spacing.md) {
+            if let title = cards.nextEventTitle {
+                ContextCard(label: "Calendar", icon: "calendar", tint: DesignTokens.Color.accentBlue,
+                            value: eventTime, sub: eventSub(title))
+            }
+            ContextCard(label: "Tasks", icon: "checkmark.circle.fill", tint: DesignTokens.Color.accent,
+                        value: "\(cards.tasksDueToday)", sub: taskSub)
+            if let energy = cards.energyLevel {
+                ContextCard(label: "Energy", icon: "bolt.fill", tint: DesignTokens.Color.energy,
+                            value: energy.capitalized, sub: energySub)
+            }
+            if let place = cards.currentPlace {
+                ContextCard(label: "Nearby", icon: "location.fill", tint: DesignTokens.Color.accentBlue,
+                            value: place, sub: "You're here now")
+            }
+        }
+    }
+
+    private var eventTime: String {
+        cards.nextEventAt?.formatted(date: .omitted, time: .shortened) ?? "—"
+    }
+    private func eventSub(_ title: String) -> String {
+        guard let mins = cards.nextEventInMinutes, mins > 0 else { return title }
+        let h = mins / 60, m = mins % 60
+        let when = h > 0 ? "in \(h)h \(m)m" : "in \(m)m"
+        return "\(title) · \(when)"
+    }
+    private var taskSub: String {
+        let noun = cards.tasksDueToday == 1 ? "task due today" : "tasks due today"
+        return "\(noun) · \(cards.tasksCompletedToday) done"
+    }
+    private var energySub: String {
+        if let h = cards.sleepHours { return "\(h.formatted(.number.precision(.fractionLength(0...1))))h last night" }
+        return "based on your sleep"
+    }
+}
+
+private struct ContextCard: View {
+    let label: String
+    let icon: String
+    let tint: Color
+    let value: String
+    let sub: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.caption).foregroundColor(tint)
+                Text(label.uppercased())
+                    .font(DesignTokens.Typography.caption.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .tracking(DesignTokens.Tracking.wide)
+            }
+            Text(value)
+                .font(DesignTokens.Typography.title2.weight(.bold))
+                .foregroundColor(tint)
+                .lineLimit(1).minimumScaleFactor(0.6)
+            if let sub {
+                Text(sub)
+                    .font(DesignTokens.Typography.footnote)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+        .padding(DesignTokens.Spacing.md)
+        .cardStyle()
+    }
+}

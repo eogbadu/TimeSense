@@ -8244,6 +8244,40 @@ TICKETS = [
             h2("Next Ticket"), p("Now dashboard context cards; Today hero polish."),
         ),
     },
+
+    {
+        "summary": "TIME-151: Now dashboard context cards (real signals)",
+        "labels": ["ios", "backend", "now", "design"],
+        "description": doc(
+            h2("Goal"),
+            p("Add the glanceable Calendar/Tasks/Energy/Nearby cards under the Now hero — populated "
+              "from REAL data only (no fabricated metrics), with cards hidden when the signal is absent."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Backend: NowResponse.context (NowContextCards) — next timed calendar event (title/time/"
+                "minutes), tasks due today + completed today, energy+sleep hours (from sleep), current place",
+                "iOS: decode context; ContextGrid (2x2 LazyVGrid) + ContextCard (glass); show Calendar "
+                "if next event, Energy if sleep signal, Nearby if a place, Tasks always",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No steps/activity (needs HealthKit extension); no live map card; no sparklines yet"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["backend: api/v1/now.py; ios: Features/Now/NowView.swift, NowViewModel.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Now shows a 2x2 dashboard of real signals below the hero; missing signals hide their card; suite + iOS build pass"]),
+            divider(),
+            h2("Verification"),
+            code_block("cd backend && pytest tests/test_now.py -q ; xcodebuild build ..."),
+            divider(),
+            h2("Dependencies"), p("TIME-149/150 (cosmic hero + glass cards)."),
+            divider(),
+            h2("Next Ticket"), p("Today hero + agenda cosmic polish; optional HealthKit steps extension."),
+        ),
+    },
 ]
 
 
