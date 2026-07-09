@@ -203,43 +203,47 @@ private struct AIRecommendedCard: View {
 
     var body: some View {
         let style = taskCategoryStyle(for: task.title)
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
-            HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
-                    .fill(style.color.opacity(0.16))
-                    .frame(width: 56, height: 56)
-                    .overlay(Image(systemName: style.icon).font(.title2).foregroundColor(style.color))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(task.title)
-                        .font(DesignTokens.Typography.title2)
-                        .foregroundColor(DesignTokens.Color.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let due = task.dueAt {
-                        Text("before \(due.formatted(date: .omitted, time: .shortened))")
-                            .font(DesignTokens.Typography.title2.weight(.regular))
-                            .foregroundColor(DesignTokens.Color.textPrimary)
-                    }
+        let accent = heroAccent(style.descriptor)
+        VStack(spacing: 0) {
+            // Dark hero header with the recommendation's domain colour (matches the Now hero).
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles").font(.footnote).foregroundStyle(accent)
+                    Text("AI Recommended")
+                        .font(DesignTokens.Typography.footnote.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(task.title)
+                            .font(DesignTokens.Typography.title.weight(.bold))
+                            .foregroundStyle(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let due = task.dueAt {
+                            Text("before \(due.formatted(date: .omitted, time: .shortened))")
+                                .font(DesignTokens.Typography.title2.weight(.regular))
+                                .foregroundStyle(.white.opacity(0.82))
+                        }
+                    }
+                    Spacer(minLength: DesignTokens.Spacing.sm)
+                    HeroGlyph(systemName: style.icon, tint: accent)
+                }
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    HeroPill(icon: style.icon, text: style.descriptor, tint: accent)
+                    if let m = task.estimatedMinutes { HeroPill(icon: "clock", text: "\(m) min", tint: .white.opacity(0.8)) }
+                }
             }
+            .padding(DesignTokens.Spacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(HeroBackground(accent: accent))
 
-            Text(metaLine(style))
-                .font(DesignTokens.Typography.footnote)
-                .foregroundColor(DesignTokens.Color.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-
-            Divider()
-            WhyThis(load: load)
+            VStack(alignment: .leading) { WhyThis(load: load) }
+                .padding(DesignTokens.Spacing.lg)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Cosmic.surface)
         }
-        .padding(DesignTokens.Spacing.lg)
-        .cardStyle()
-    }
-
-    private func metaLine(_ style: TaskCategoryStyle) -> String {
-        var parts = [style.descriptor]
-        if let m = task.estimatedMinutes { parts.append("\(m) min") }
-        if style.locationAware { parts.append("Location-aware") }
-        return parts.joined(separator: "  ·  ")
+        .heroCardChrome(glow: accent)
     }
 }
 

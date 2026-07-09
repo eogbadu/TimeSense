@@ -383,36 +383,36 @@ func taskCategoryStyle(for title: String) -> TaskCategoryStyle {
     let t = " \(title.lowercased()) "
     func has(_ words: [String]) -> Bool { words.contains { t.contains($0) } }
     if has(["revise", "paper", "write", "draft", "essay", "report", "document", "proposal", "read", "study", "research"]) {
-        return TaskCategoryStyle(icon: "doc.text.fill", color: DesignTokens.Color.accent, descriptor: "Focus task")
+        return TaskCategoryStyle(icon: "doc.text.fill", color: Cosmic.blue, descriptor: "Focus task")
     }
     if has(["jira", "ticket", "review", "code", "bug", "pr ", "pull request"]) {
-        return TaskCategoryStyle(icon: "checklist", color: .orange, descriptor: "Focus task")
+        return TaskCategoryStyle(icon: "checklist", color: Cosmic.blue, descriptor: "Focus task")
     }
     if has(["email", "reply", "respond", "inbox", "message", "slack"]) {
-        return TaskCategoryStyle(icon: "envelope.fill", color: .blue, descriptor: "Low focus")
+        return TaskCategoryStyle(icon: "envelope.fill", color: Cosmic.cyan, descriptor: "Low focus")
     }
     if has(["walk", "run", "gym", "exercise", "workout", "stretch", "yoga", "break"]) {
-        return TaskCategoryStyle(icon: "figure.walk", color: .orange, descriptor: "Health break")
+        return TaskCategoryStyle(icon: "figure.walk", color: Cosmic.green, descriptor: "Health break")
     }
     if has(["call", "phone", "dial"]) {
-        return TaskCategoryStyle(icon: "phone.fill", color: .green, descriptor: "Quick task")
+        return TaskCategoryStyle(icon: "phone.fill", color: Cosmic.green, descriptor: "Quick task")
     }
     if has(["buy", "shop", "store", "groceries", "grocery", "home depot", "mall", "walmart", "target", "market", "errand", "gift"]) {
-        return TaskCategoryStyle(icon: "cart.fill", color: .orange, descriptor: "Errand", locationAware: true)
+        return TaskCategoryStyle(icon: "cart.fill", color: Cosmic.cyan, descriptor: "Errand", locationAware: true)
     }
     if has(["clean", "laundry", "dishes", "tidy", "vacuum", "organize"]) {
-        return TaskCategoryStyle(icon: "sparkles", color: .teal, descriptor: "Chore")
+        return TaskCategoryStyle(icon: "sparkles", color: Cosmic.cyan, descriptor: "Chore")
     }
     if has(["meeting", "standup", "sync", "1:1"]) {
-        return TaskCategoryStyle(icon: "person.2.fill", color: .purple, descriptor: "Meeting")
+        return TaskCategoryStyle(icon: "person.2.fill", color: Cosmic.violet, descriptor: "Meeting")
     }
     if has(["doctor", "dentist", "appointment", "chiropractor"]) {
-        return TaskCategoryStyle(icon: "cross.case.fill", color: .pink, descriptor: "Appointment", locationAware: true)
+        return TaskCategoryStyle(icon: "cross.case.fill", color: Cosmic.violet, descriptor: "Appointment", locationAware: true)
     }
     if has(["family", "kids", "wife", "husband", "date night"]) {
-        return TaskCategoryStyle(icon: "house.fill", color: .blue, descriptor: "Personal")
+        return TaskCategoryStyle(icon: "house.fill", color: Cosmic.blue, descriptor: "Personal")
     }
-    return TaskCategoryStyle(icon: "checkmark.circle.fill", color: DesignTokens.Color.accent, descriptor: "Task")
+    return TaskCategoryStyle(icon: "checkmark.circle.fill", color: Cosmic.blue, descriptor: "Task")
 }
 
 /// "Why This Recommendation?" — fetches the structured explanation lazily on tap (so Now stays

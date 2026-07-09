@@ -87,21 +87,18 @@ private struct StatsGrid: View {
     }
 
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.sm) {
-            StatRow(
-                icon: "checkmark.circle",
-                label: "Tasks completed",
-                value: "\(insight.tasksCompleted) of \(insight.tasksTotal)"
-            )
-            StatRow(icon: "percent", label: "Completion rate", value: completionRateText)
+        VStack(spacing: DesignTokens.Spacing.md) {
+            StatRow(icon: "checkmark.circle.fill", tint: Cosmic.green, label: "Tasks completed",
+                    value: "\(insight.tasksCompleted) of \(insight.tasksTotal)")
+            StatRow(icon: "percent", tint: Cosmic.blue, label: "Completion rate", value: completionRateText)
             if let meal = insight.mostSkippedMeal {
-                StatRow(icon: "fork.knife", label: "Most skipped meal", value: meal.capitalized)
+                StatRow(icon: "fork.knife", tint: Cosmic.amber, label: "Most skipped meal", value: meal.capitalized)
             }
             if insight.lateWakeCount > 0 {
-                StatRow(icon: "moon.zzz", label: "Late wake-ups", value: "\(insight.lateWakeCount)")
+                StatRow(icon: "moon.zzz.fill", tint: Cosmic.violet, label: "Late wake-ups", value: "\(insight.lateWakeCount)")
             }
             if insight.commuteConfirmedCount > 0 {
-                StatRow(icon: "car", label: "Commutes tracked", value: "\(insight.commuteConfirmedCount)")
+                StatRow(icon: "car.fill", tint: Cosmic.cyan, label: "Commutes tracked", value: "\(insight.commuteConfirmedCount)")
             }
         }
         .padding(DesignTokens.Spacing.md)
@@ -111,17 +108,22 @@ private struct StatsGrid: View {
 
 private struct StatRow: View {
     let icon: String
+    var tint: Color = DesignTokens.Color.accent
     let label: String
     let value: String
 
     var body: some View {
-        HStack {
-            Label(label, systemImage: icon)
+        HStack(spacing: DesignTokens.Spacing.md) {
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                .fill(tint.opacity(0.16))
+                .frame(width: 32, height: 32)
+                .overlay(Image(systemName: icon).font(.footnote.weight(.semibold)).foregroundColor(tint))
+            Text(label)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(DesignTokens.Color.textSecondary)
+                .foregroundColor(DesignTokens.Color.textPrimary)
             Spacer()
             Text(value)
-                .font(DesignTokens.Typography.callout.weight(.semibold))
+                .font(DesignTokens.Typography.callout.weight(.bold))
                 .foregroundColor(DesignTokens.Color.textPrimary)
         }
     }
