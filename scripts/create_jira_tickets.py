@@ -8293,6 +8293,27 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("App Store marketing screenshots; optional HealthKit steps extension."),
         ),
     },
+
+    {
+        "summary": "TIME-153: Premium glassmorphism refinement (soft blue->violet, glass cards, neon edge)",
+        "labels": ["ios", "design"],
+        "description": doc(
+            h2("Goal"), p("Match the premium dark-glass spec: soft blue->violet hero gradients (fix flat blue), glassmorphism cards, richer navy->indigo->violet background, and neon edge lighting on primary cards."),
+            divider(), h2("Scope"), bullet_list([
+                "heroGradient -> soft 3-stop blue->indigo->violet (end optional, warms for health only) — fixes the flat-blue appointment card",
+                "CosmicBackground -> navy->indigo->violet gradient + 3 soft glows",
+                "cardStyle -> glass: ultraThinMaterial + translucent navy tint + top-light + gradient hairline",
+                "heroCardChrome() modifier: neon edge stroke + violet/blue glow shadows on hero cards",
+                "glassy context chips + hero pills",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No new content; other tabs inherit the glass card + background automatically"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios: Core/Design/CosmicComponents.swift, Core/Design/ViewModifiers.swift, Features/Now/NowView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Hero cards show a soft blue->violet gradient with a neon glow; cards read as frosted glass; background has navy->indigo depth; iOS build succeeds (verified via mock-data screenshot)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-148/149/150 (cosmic base)."),
+            divider(), h2("Next Ticket"), p("Extend glass treatment nuances to Today/Insights hero elements if desired; App Store screenshots."),
+        ),
+    },
 ]
 
 

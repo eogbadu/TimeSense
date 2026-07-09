@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-09 — TIME-153 (Jira TIME-153): Premium glassmorphism refinement
+
+User shared the current Now screenshot + a detailed premium dark-glass spec. Gaps fixed: (1) hero gradient was flat blue (heroEnd mapped Appointment/Errand->accentBlue = blue->blue). Rewrote heroGradient to a soft 3-stop blue(#3D66F1)->indigo(#6A56E6)->violet(#995CF2); end param now optional (warms to green for health only). (2) CosmicBackground now a navy->deep-navy->midnight-indigo LinearGradient + 3 RadialGradient glows (violet TR, blue TL, indigo bottom). (3) cardStyle glassmorphism: ultraThinMaterial + surface .45 tint + top white .05 gradient + gradient hairline (.22->.05) + black .30/18/10 shadow. (4) new heroCardChrome() modifier: neon edge stroke (white .35->.06->violet .20) + violet .35/28 and blue .20/16 glow shadows; applied to BestNextActionCard + SuggestionCard. (5) glassy context chips + hero pills (ultraThinMaterial). Verified via MOCK_NOW mock-data sim screenshot: soft blue->violet hero with violet glow, frosted footer/pills, deeper bg. Cosmic enum added (bg/hero/glow colors). iOS BUILD SUCCEEDED.
 ## 2026-07-09 — TIME-152 (Jira TIME-152): Today agenda cosmic polish
 
 SmartPlanCard time-of-day group headers gain a glowing Circle dot colored by groupColor(name) (Morning=accentBlue, Afternoon=accent, Evening=purple, Anytime=muted) with a soft same-color shadow. Completes the cosmic redesign arc (TIME-147 icon -> 148 palette -> 149 hero -> 150 all-tabs -> 151 dashboard -> 152 Today). iOS BUILD SUCCEEDED.

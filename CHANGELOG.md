@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-153: Premium glassmorphism pass — the recommendation card now uses a soft blue→violet gradient (no more flat blue) with a neon violet glow, cards are frosted glass, and the background blends navy→indigo→violet with soft glows
 - [2026-07-09] TIME-152: Today's agenda gets glowing accent dots on each time-of-day header (Morning/Afternoon/Evening) — the finishing touch on the cosmic redesign
 - [2026-07-09] TIME-151: The Now screen gains a glanceable dashboard — Calendar (next meeting), Tasks (due/done today), Energy (from your sleep), and Nearby (where you are) — all from real data, with cards that hide themselves when the signal isn't there
 - [2026-07-09] TIME-150: The whole app now wears the cosmic theme — every tab sits on the deep-navy background with soft auras, and all cards use a consistent translucent 'glass' style

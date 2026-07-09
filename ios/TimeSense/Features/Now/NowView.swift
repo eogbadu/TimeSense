@@ -165,8 +165,9 @@ private struct ContextChipsRow: View {
                     .minimumScaleFactor(0.75)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, DesignTokens.Spacing.sm)
-                    .background(Capsule().fill(DesignTokens.Color.surface))
-                    .overlay(Capsule().stroke(DesignTokens.Color.textSecondary.opacity(0.18), lineWidth: 1))
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .background(Capsule().fill(Color.white.opacity(0.04)))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 1))
             }
         }
     }
@@ -234,18 +235,11 @@ private struct SuggestionCard: View {
         .padding(DesignTokens.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(heroGradient(end: domainEnd))
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous))
-        .shadow(color: DesignTokens.Glow.accent.color,
-                radius: DesignTokens.Glow.accent.radius, y: DesignTokens.Glow.accent.y)
+        .heroCardChrome()
     }
 
-    private var domainEnd: Color {
-        switch suggestion.domain {
-        case "health": return DesignTokens.Color.energy
-        case "location": return DesignTokens.Color.accentBlue
-        case "calendar": return Color(red: 0.65, green: 0.40, blue: 1.0)
-        default: return DesignTokens.Color.accent
-        }
+    private var domainEnd: Color? {
+        suggestion.domain == "health" ? DesignTokens.Color.energy : nil
     }
 
     private var icon: String {
@@ -301,13 +295,7 @@ private struct BestNextActionCard: View {
             heroHeader(style: style)
             footer
         }
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
-                .stroke(DesignTokens.Color.hairline, lineWidth: 1)
-        )
-        .shadow(color: DesignTokens.Glow.accent.color,
-                radius: DesignTokens.Glow.accent.radius, y: DesignTokens.Glow.accent.y)
+        .heroCardChrome()
     }
 
     // Gradient top: label, big action, and the glowing domain glyph + signal pills.
@@ -373,18 +361,18 @@ private struct BestNextActionCard: View {
         }
         .padding(DesignTokens.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DesignTokens.Color.surface)
+        .background(
+            ZStack {
+                Cosmic.bgNavy.opacity(0.72)
+                Rectangle().fill(.ultraThinMaterial).opacity(0.25)
+            }
+        )
     }
 }
 
-/// Maps a task category descriptor to a cosmic-friendly gradient end color (paired with AccentBlue).
-func heroEnd(_ descriptor: String) -> Color {
-    switch descriptor {
-    case "Health break": return DesignTokens.Color.energy
-    case "Errand", "Appointment": return DesignTokens.Color.accentBlue
-    case "Meeting": return Color(red: 0.65, green: 0.40, blue: 1.0)
-    default: return DesignTokens.Color.accent
-    }
+/// Warms the hero gradient's tail for health (green); everything else keeps the pure blue→violet.
+func heroEnd(_ descriptor: String) -> Color? {
+    descriptor == "Health break" ? DesignTokens.Color.energy : nil
 }
 
 private func priorityLabel(_ p: Int) -> String {

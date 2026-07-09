@@ -4,17 +4,28 @@ import SwiftUI
 
 struct CardModifier: ViewModifier {
     func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
         content
+            // Glassmorphism: frosted blur of the atmospheric background, tinted with a translucent
+            // navy so content stays legible, then a soft top-light gradient for the "glass" edge.
             .background(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
-                    .fill(DesignTokens.Color.surface)
+                ZStack {
+                    shape.fill(.ultraThinMaterial)
+                    shape.fill(DesignTokens.Color.surface.opacity(0.45))
+                    shape.fill(
+                        LinearGradient(colors: [Color.white.opacity(0.05), .clear],
+                                       startPoint: .top, endPoint: .bottom)
+                    )
+                }
             )
             .overlay(
-                // Glass hairline — a subtle light edge that defines the card against the cosmic canvas.
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
-                    .stroke(DesignTokens.Color.hairline, lineWidth: 1)
+                shape.stroke(
+                    LinearGradient(colors: [Color.white.opacity(0.22), Color.white.opacity(0.05)],
+                                   startPoint: .top, endPoint: .bottom),
+                    lineWidth: 1
+                )
             )
-            .shadow(color: .black.opacity(0.22), radius: 16, x: 0, y: 8)
+            .shadow(color: .black.opacity(0.30), radius: 18, x: 0, y: 10)
     }
 }
 
