@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-152: Today's agenda gets glowing accent dots on each time-of-day header (Morning/Afternoon/Evening) — the finishing touch on the cosmic redesign
 - [2026-07-09] TIME-151: The Now screen gains a glanceable dashboard — Calendar (next meeting), Tasks (due/done today), Energy (from your sleep), and Nearby (where you are) — all from real data, with cards that hide themselves when the signal isn't there
 - [2026-07-09] TIME-150: The whole app now wears the cosmic theme — every tab sits on the deep-navy background with soft auras, and all cards use a consistent translucent 'glass' style
 - [2026-07-09] TIME-149: The Now screen goes cosmic — the 'Best Next Action' is now a glowing blue→violet gradient card with a domain icon and signal pills, on a deep-navy background with soft auras. The color shifts by recommendation type (green for health, blue for errands, violet for focus). The cross-domain 'TimeSense suggests' card gets the same treatment

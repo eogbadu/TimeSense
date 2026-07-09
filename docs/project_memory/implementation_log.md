@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-09 — TIME-152 (Jira TIME-152): Today agenda cosmic polish
+
+SmartPlanCard time-of-day group headers gain a glowing Circle dot colored by groupColor(name) (Morning=accentBlue, Afternoon=accent, Evening=purple, Anytime=muted) with a soft same-color shadow. Completes the cosmic redesign arc (TIME-147 icon -> 148 palette -> 149 hero -> 150 all-tabs -> 151 dashboard -> 152 Today). iOS BUILD SUCCEEDED.
 ## 2026-07-09 — TIME-151 (Jira TIME-151): Now dashboard context cards
 
 Backend: NowResponse gains context: NowContextCards (next_event_title/at/in_minutes, tasks_due_today, tasks_completed_today, energy_level, sleep_hours, current_place). _context_cards() populates from real sources: SyncedCalendarEventRepository.list_window (first upcoming timed event), TaskRepository (pending due/scheduled today + count_completed_in_range), SleepWakeRepository.get_latest_today (sleep hours -> energy high/mod/low), UserLocationRepository.get_current (place_name). Nulls when absent. iOS: NowContextCards Decodable + NowContext.context; ContextGrid (2x2 LazyVGrid) + ContextCard (glass, uppercase label+icon, big tinted value, subtitle); Calendar shown if next event, Energy if sleep, Nearby if place, Tasks always; placed under the hero. Suite passing; iOS BUILD SUCCEEDED. Honest: no steps/activity (would need HealthKit extension).
