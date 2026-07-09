@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-09 — TIME-148 (Jira TIME-148): Cosmic palette foundation
+
+Recolored all colorsets from the app icon (dark appearance = cosmic; light kept coherent): Background dark #070912, Surface #141A2E, AccentColor #8A6BFF (violet-indigo, primary), TextPrimary #F2F4FF, TextSecondary #9AA2C0, Success/energy #34D39A, Destructive #FF5C72. Added AccentBlue colorset (#4C8DFF azure). DesignTokens.Color gains accentBlue, energy (=Success), hairline (white .08). New DesignTokens.Gradient.hero (accentBlue->accent, topLeading->bottomTrailing = the ring sweep) + .screen (navy wash); DesignTokens.Glow.accent/.subtle. Default appTheme 'system'->'dark' (Settings toggle preserved). Folder-based asset catalog auto-discovers AccentBlue (no pbxproj change). iOS BUILD SUCCEEDED. Foundation for the domain-adaptive hero card + context cards. NOTE: visual look needs an on-device/sim check.
 ## 2026-07-09 — TIME-147 (Jira TIME-147): App icon (guiding-star clock)
 
 Installed the user-provided icon: a blue->violet glowing ring with a four-point north-star clock on near-black navy. Source was 1254px with a white margin + baked rounded corners (iOS rejects alpha/pre-rounding). Processed with Pillow: cropped a centered square inset 12% (inside the rounded corners + white halo) so the icon's own dark navy runs edge-to-edge, resized to 1024 RGB (no alpha), saved as AppIcon.appiconset/AppIcon-1024.png; Contents.json set to a single universal 1024 entry. actool generated all sizes cleanly; iOS BUILD SUCCEEDED. This icon anchors the planned cosmic palette (bg ~#080A16, accent blue ~#3D6BFF -> violet ~#8A4FFF).

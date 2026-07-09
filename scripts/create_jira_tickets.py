@@ -8138,6 +8138,43 @@ TICKETS = [
             h2("Next Ticket"), p("Cosmic palette foundation (DesignTokens) sampled from the icon."),
         ),
     },
+
+    {
+        "summary": "TIME-148: Cosmic palette foundation (DesignTokens sampled from the icon)",
+        "labels": ["ios", "design", "branding"],
+        "description": doc(
+            h2("Goal"),
+            p("Evolve the design system to the dark cosmic theme anchored by the new app icon: "
+              "near-black navy, blue->violet accents, gradient + glow tokens, semantic energy green."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "Recolor colorsets (dark = cosmic; light kept coherent): Background #070912, Surface "
+                "#141A2E, AccentColor violet-indigo #8A6BFF, TextPrimary/Secondary, Success/energy "
+                "green #34D39A, Destructive",
+                "New AccentBlue colorset (azure #4C8DFF)",
+                "DesignTokens: accentBlue, energy, hairline; Gradient.hero (blue->violet) + .screen; "
+                "Glow.accent/.subtle",
+                "Default appTheme to dark (toggle preserved)",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["No per-screen redesign yet (hero card + cards are later tickets); light theme not fully cosmic"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios: Assets.xcassets/*.colorset, Core/Design/DesignTokens.swift, App/TimeSenseApp.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["App renders the dark cosmic palette by default; new gradient/glow tokens available; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-147 (app icon anchor)."),
+            divider(),
+            h2("Next Ticket"), p("Domain-adaptive hero card on Now using Gradient.hero + Glow."),
+        ),
+    },
 ]
 
 
