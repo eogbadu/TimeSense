@@ -8646,6 +8646,43 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Insights on web; store links; privacy page."),
         ),
     },
+    {
+        "summary": "TIME-171: Insights in the companion web app",
+        "labels": ["web", "feature"],
+        "description": doc(
+            h2("Goal"), p("Complete the /app companion (Now/Today/Capture/Insights) by adding an Insights tab that mirrors the native app: Premium users see their weekly insight; non-Premium users see an upgrade gate."),
+            divider(), h2("Scope"), bullet_list([
+                "Add an Insights tab to the /app shell (TABS in layout.tsx)",
+                "New app/app/insights/page.tsx fetching GET /api/v1/insights/weekly via the authed useApi hook",
+                "Premium: Playfair 'Your week' + week range, summary card, domain-coloured stat cards (tasks/completion/most-skipped-meal/late-wakes/commutes/kept-vs-deferred); optional rows hide when zero",
+                "Non-Premium (403 SUBSCRIPTION_REQUIRED): cosmic upgrade gate — 'Your AI insights' banner, four preview cards with inline SVG mini-charts, 'Upgrade in the mobile app' CTA",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No web checkout (subscriptions are managed in the mobile app); no insights history view yet"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/app/layout.tsx, web/app/app/insights/page.tsx"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Insights tab renders the weekly insight for Premium users and a graceful upgrade gate for non-Premium (403); next build succeeds; both states verified via screenshots"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-170 (companion web app); backend GET /api/v1/insights/weekly (Premium-gated)."),
+            divider(), h2("Next Ticket"), p("Public privacy page; store links."),
+        ),
+    },
+    {
+        "summary": "TIME-172: Public Privacy Policy page for the marketing site",
+        "labels": ["web", "feature"],
+        "description": doc(
+            h2("Goal"), p("Give the marketing site a real, public Privacy Policy at /privacy, cosmic-styled and specific to how TimeSense actually handles data."),
+            divider(), h2("Scope"), bullet_list([
+                "New public web/app/privacy/page.tsx (Metadata title/description) in the cosmic .site shell, linked from the footer",
+                "TimeSense-specific copy: what we collect, the opt-in-only raw-audio rule (highlighted), AI/LLM parsing under no-training terms, sub-processors (Firebase/OpenAI/Apple/Google/Stripe), user controls (approval-first, opt-in connections, export, delete), retention, security, children, changes, contact",
+                "Scoped .legal prose styles in globals.css (section numbers, bulleted lists, callout box)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No Terms of Service page yet; contact address is a placeholder pending a real mailbox; not legal advice / human legal review still required"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/privacy/page.tsx, web/app/globals.css, web/app/page.tsx"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["/privacy renders a styled, accurate policy reachable from the footer; next build succeeds (static); verified via screenshot"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-168 (marketing site)."),
+            divider(), h2("Next Ticket"), p("Terms of Service; real App Store / Play download links."),
+        ),
+    },
 ]
 
 
