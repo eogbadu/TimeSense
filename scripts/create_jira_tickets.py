@@ -8278,6 +8278,21 @@ TICKETS = [
             h2("Next Ticket"), p("Today hero + agenda cosmic polish; optional HealthKit steps extension."),
         ),
     },
+
+    {
+        "summary": "TIME-152: Today agenda cosmic polish (time-of-day accent dots)",
+        "labels": ["ios", "design", "today"],
+        "description": doc(
+            h2("Goal"), p("Finish the cosmic pass on Today: give the time-of-day group headers glowing accent dots (like the mockup's colored timeline), so the agenda reads as designed for the cosmic theme."),
+            divider(), h2("Scope"), bullet_list(["SmartPlanCard group headers: a glowing Circle dot colored by part of day (Morning=blue, Afternoon=violet, Evening=purple, Anytime=muted)"]),
+            divider(), h2("Non-Goals"), bullet_list(["No new Today hero card; agenda structure unchanged"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Today/TodayView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Today shows glowing accent dots on each time-of-day header; iOS build succeeds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-150 (cosmic pass)."),
+            divider(), h2("Next Ticket"), p("App Store marketing screenshots; optional HealthKit steps extension."),
+        ),
+    },
 ]
 
 

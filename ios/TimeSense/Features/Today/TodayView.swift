@@ -260,6 +260,15 @@ private struct SmartPlanCard: View {
         }
     }
 
+    private func groupColor(_ name: String) -> Color {
+        switch name {
+        case "Morning": return DesignTokens.Color.accentBlue
+        case "Afternoon": return DesignTokens.Color.accent
+        case "Evening": return Color(red: 0.65, green: 0.40, blue: 1.0)
+        default: return DesignTokens.Color.textSecondary
+        }
+    }
+
     private func bucket(for t: TimelineTask) -> String {
         guard let start = t.scheduledStart else { return "Anytime" }
         let hour = Calendar.current.component(.hour, from: start)
@@ -272,6 +281,10 @@ private struct SmartPlanCard: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             ForEach(Array(groups.enumerated()), id: \.element.name) { idx, group in
                 HStack(spacing: DesignTokens.Spacing.sm) {
+                    Circle()
+                        .fill(groupColor(group.name))
+                        .frame(width: 8, height: 8)
+                        .shadow(color: groupColor(group.name).opacity(0.7), radius: 4)
                     Text(group.name)
                         .font(DesignTokens.Typography.headline)
                         .foregroundColor(DesignTokens.Color.textPrimary)
