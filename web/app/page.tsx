@@ -169,6 +169,7 @@ export default function Home() {
           <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
             <a href="#features">Features</a>
             <a href="#get">Download</a>
+            <Link href="/privacy">Privacy</Link>
             <Link href="/admin">Admin</Link>
           </div>
           <span>© {new Date().getFullYear()} TimeSense</span>
