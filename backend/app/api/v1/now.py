@@ -48,6 +48,10 @@ class NowContextCards(BaseModel):
     energy_level: str | None = None   # high | moderate | low (from sleep)
     sleep_hours: float | None = None
     current_place: str | None = None
+    steps: int | None = None          # HealthKit — today
+    steps_goal: int = 10000
+    active_energy_kcal: int | None = None
+    exercise_minutes: int | None = None
 
 
 class NowResponse(BaseModel):
@@ -230,6 +234,10 @@ async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCar
     place = await UserLocationRepository(db).get_current(user.id, now)
     place_name = place.place_name if place is not None else None
 
+    # Today's HealthKit activity (steps / active energy / exercise)
+    from app.repositories.daily_activity_repository import DailyActivityRepository
+    activity = await DailyActivityRepository(db).get_for_day(user.id, local.date())
+
     return NowContextCards(
         next_event_title=nxt.title if nxt else None,
         next_event_at=_u(nxt.starts_at) if nxt else None,
@@ -239,6 +247,9 @@ async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCar
         energy_level=energy,
         sleep_hours=hours,
         current_place=place_name,
+        steps=activity.steps if activity is not None else None,
+        active_energy_kcal=activity.active_energy_kcal if activity is not None else None,
+        exercise_minutes=activity.exercise_minutes if activity is not None else None,
     )
 
 
