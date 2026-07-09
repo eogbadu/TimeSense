@@ -804,6 +804,10 @@ private struct ContextGrid: View {
             }
             ContextCard(label: "Tasks", icon: "checkmark.circle.fill", tint: Cosmic.violet,
                         value: "\(cards.tasksDueToday)", sub: taskSub)
+            if let steps = cards.steps {
+                ContextCard(label: "Steps", icon: "figure.walk", tint: Cosmic.blue,
+                            value: steps.formatted(), sub: stepsSub(steps))
+            }
             if let energy = cards.energyLevel {
                 ContextCard(label: "Energy", icon: "bolt.fill", tint: Cosmic.green,
                             value: energy.capitalized, sub: energySub)
@@ -831,6 +835,11 @@ private struct ContextGrid: View {
     private var energySub: String {
         if let h = cards.sleepHours { return "\(h.formatted(.number.precision(.fractionLength(0...1))))h last night" }
         return "based on your sleep"
+    }
+    private func stepsSub(_ steps: Int) -> String {
+        let goal = cards.stepsGoal ?? 10000
+        if let ex = cards.exerciseMinutes, ex > 0 { return "\(ex) active min · goal \(goal.formatted())" }
+        return "of \(goal.formatted()) goal"
     }
 }
 

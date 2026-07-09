@@ -18,6 +18,10 @@
 	<!-- iOS 14+ requires a purpose string before the app makes local-network connections. -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>TimeSense connects to your development server on the local network.</string>
+	<!-- Apple Health (read-only): sleep to estimate your energy, and steps/activity for your daily
+	     summary. TimeSense never writes to Health. -->
+	<key>NSHealthShareUsageDescription</key>
+	<string>TimeSense reads your sleep and activity (steps, energy, exercise) to gauge your energy and show your daily summary. It never writes to Health.</string>
 	<!-- Voice capture: transcribe speech on-device into a task. Raw audio is never stored. -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TimeSense uses the microphone to turn what you say into a task. Your audio is never stored.</string>
