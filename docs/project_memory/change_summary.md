@@ -1,5 +1,16 @@
 # Change Summary
 
+## 2026-07-09 — TIME-171 & TIME-172 (Web companion + marketing polish)
+
+- **TIME-171 Insights (web):** new `web/app/app/insights/page.tsx` + Insights tab in the /app shell.
+  Fetches `GET /api/v1/insights/weekly`; Premium users get their weekly summary + coloured stat cards,
+  non-Premium users (403 SUBSCRIPTION_REQUIRED) get a cosmic upgrade gate with preview mini-charts and
+  an "Upgrade in the mobile app" CTA. Completes Now·Today·Capture·Insights for signed-in users.
+- **TIME-172 Privacy Policy (web):** new public `web/app/privacy/page.tsx` (linked from the footer) —
+  a TimeSense-specific, plain-language policy (opt-in-only audio, approval-first calendar, AI parsing
+  under no-training terms, sub-processors, export/delete). New scoped `.legal` prose styles in globals.css.
+- Both: `cd web && npm run build` passes; verified via headless Chrome. No backend changes.
+
 ## 2026-07-05 — TIME-057 (Jira TIME-63) App Store & Play Store Prep
 
 - New docs/launch/: privacy_policy.md, app_store_listing.md (metadata + review notes + App Privacy
