@@ -1,5 +1,8 @@
 # Implementation Log
 
+## 2026-07-09 — TIME-150 (Jira TIME-150): Cosmic pass across all tabs
+
+cardStyle() (CardModifier) updated to the glass look: surface fill + Color.hairline (white .08) 1px stroke + soft black .22/16/8 shadow — propagates to every card app-wide. Swapped .background(Color.background) -> .background(CosmicBackground()) on Today, Capture, Insights, Settings (Settings already had scrollContentBackground(.hidden)). iOS BUILD SUCCEEDED. Sim login screen confirms cosmic theme; authed screens require device login to view.
 ## 2026-07-09 — TIME-149 (Jira TIME-149): Domain-adaptive hero card + cosmic Now
 
 Made the palette visible. New Core/Design/CosmicComponents.swift: CosmicBackground (Color.background + two RadialGradient corner auras accent/accentBlue), HeroPill (translucent white capsule), HeroGlyph (white SF symbol + white/blue glow shadows), heroGradient(end:) (accentBlue->end, topLeading->bottomTrailing). NowView: BestNextActionCard rebuilt as two-tone — gradient header (sparkle label, big white title, estimatedMinutes, HeroGlyph top-right, signal HeroPills: descriptor/High priority/min) over heroGradient(end: heroEnd(descriptor)) + surface footer (confidence bar, Why, QuickActions), clipped xl, hairline stroke, Glow.accent shadow. heroEnd() maps category->cosmic end color (health=energy green, errand/appointment=accentBlue, meeting=purple, default=accent violet). SuggestionCard given the same gradient-hero look (domainEnd by domain). Now background -> CosmicBackground. Registered CosmicComponents.swift. iOS BUILD SUCCEEDED; sim confirms cosmic theme renders (login screen navy+violet). Hero card is behind auth (verify on device).

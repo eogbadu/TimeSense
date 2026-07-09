@@ -8211,6 +8211,39 @@ TICKETS = [
             h2("Next Ticket"), p("Cosmic pass on Today + context/dashboard cards."),
         ),
     },
+
+    {
+        "summary": "TIME-150: Cosmic pass — glass cards + cosmic background on all tabs",
+        "labels": ["ios", "design"],
+        "description": doc(
+            h2("Goal"),
+            p("Carry the cosmic theme across the whole app: update the shared card style to a glass "
+              "look (propagates to every card) and put the cosmic background on Today, Capture, "
+              "Insights, and Settings."),
+            divider(),
+            h2("Scope"),
+            bullet_list([
+                "cardStyle(): translucent surface + white hairline (Color.hairline) + soft dark shadow",
+                "Today/Capture/Insights/Settings backgrounds -> CosmicBackground()",
+            ]),
+            divider(),
+            h2("Non-Goals"),
+            bullet_list(["Per-screen hero redesigns beyond Now (Today hero is a separate ticket); dashboard cards separate"]),
+            divider(),
+            h2("Files Likely Changed"),
+            bullet_list(["ios: Core/Design/ViewModifiers.swift; Features/{Today,Capture,Insights,Settings}/*View.swift"]),
+            divider(),
+            h2("Acceptance Criteria"),
+            bullet_list(["Every tab renders on the cosmic background with glass cards; iOS build succeeds"]),
+            divider(),
+            h2("Verification"),
+            code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(),
+            h2("Dependencies"), p("TIME-148/149 (palette + cosmic components)."),
+            divider(),
+            h2("Next Ticket"), p("Now dashboard context cards; Today hero polish."),
+        ),
+    },
 ]
 
 

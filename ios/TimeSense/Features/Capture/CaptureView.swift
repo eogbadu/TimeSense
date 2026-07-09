@@ -41,7 +41,7 @@ struct CaptureView: View {
                 .padding(.horizontal, DesignTokens.Spacing.lg)
                 .padding(.bottom, DesignTokens.Spacing.xxl)
             }
-            .background(DesignTokens.Color.background)
+            .background(CosmicBackground())
             // Let the user swipe the keyboard down (the field is multi-line, so Return adds a
             // newline rather than dismissing).
             .scrollDismissesKeyboard(.interactively)

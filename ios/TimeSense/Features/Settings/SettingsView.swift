@@ -75,7 +75,7 @@ struct SettingsView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(DesignTokens.Color.background)
+            .background(CosmicBackground())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
             .alert("Delete your account?", isPresented: $showDeleteConfirm) {

@@ -13,7 +13,7 @@ struct InsightsView: View {
                     InsightsPremiumGate()
                 }
             }
-            .background(DesignTokens.Color.background)
+            .background(CosmicBackground())
             .navigationTitle("Insights")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {

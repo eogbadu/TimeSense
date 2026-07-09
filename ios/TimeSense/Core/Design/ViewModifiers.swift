@@ -10,16 +10,11 @@ struct CardModifier: ViewModifier {
                     .fill(DesignTokens.Color.surface)
             )
             .overlay(
-                // Hairline to define the white card against the soft canvas (mostly for light mode).
+                // Glass hairline — a subtle light edge that defines the card against the cosmic canvas.
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
-                    .stroke(DesignTokens.Color.textSecondary.opacity(0.08), lineWidth: 0.5)
+                    .stroke(DesignTokens.Color.hairline, lineWidth: 1)
             )
-            .shadow(
-                color: DesignTokens.Shadow.card.color,
-                radius: DesignTokens.Shadow.card.radius,
-                x: DesignTokens.Shadow.card.x,
-                y: DesignTokens.Shadow.card.y
-            )
+            .shadow(color: .black.opacity(0.22), radius: 16, x: 0, y: 8)
     }
 }
 
