@@ -64,8 +64,8 @@ export default function Home() {
           <div className="nav-links">
             <a href="#features">Features</a>
             <a href="#how">How it works</a>
-            <Link href="/admin">Admin</Link>
-            <a href="#get" className="btn btn-primary btn-sm">Get the app</a>
+            <Link href="/app">Log in</Link>
+            <Link href="/app" className="btn btn-primary btn-sm">Open the app</Link>
           </div>
         </div>
       </nav>
@@ -83,10 +83,10 @@ export default function Home() {
               thing to do now — so planning your day never becomes another job.
             </p>
             <div className="hero-cta" id="get">
-              <a href="#get" className="btn btn-primary">Download for iPhone</a>
+              <Link href="/app" className="btn btn-primary">Open the web app</Link>
               <a href="#features" className="btn btn-ghost">See how it works</a>
             </div>
-            <p className="hero-note">14-day free trial · Free Basic mode after · iPhone &amp; Android</p>
+            <p className="hero-note">Native on iPhone &amp; Android · 14-day free trial · Free Basic mode after</p>
           </div>
           <div className="hero-media">
             <div className="phone phone-lg">
@@ -156,8 +156,8 @@ export default function Home() {
             Let TimeSense hold the plan.
           </h2>
           <div className="hero-cta" style={{ justifyContent: "center" }}>
-            <a href="#get" className="btn btn-primary">Download for iPhone</a>
-            <a href="#get" className="btn btn-ghost">Get it on Android</a>
+            <Link href="/app" className="btn btn-primary">Open the web app</Link>
+            <a href="#get" className="btn btn-ghost">Download for iPhone</a>
           </div>
         </div>
       </section>

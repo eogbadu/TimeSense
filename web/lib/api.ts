@@ -49,3 +49,6 @@ export function useAdminApi() {
     [getIdToken]
   );
 }
+
+/** Same authed fetch, for any signed-in user (Now / Today / Capture in the web companion). */
+export const useApi = useAdminApi;
