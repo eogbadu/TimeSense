@@ -8476,6 +8476,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Upload to App Store Connect; localized variants."),
         ),
     },
+
+    {
+        "summary": "TIME-162: Multi-colour Capture + Insights screens (fix mono-purple)",
+        "labels": ["ios", "design"],
+        "description": doc(
+            h2("Goal"), p("Capture and Insights were just purple + white on dark. Bring in the multi-colour palette (blue/amber/green/cyan/violet) so they match the rest of the redesign."),
+            divider(), h2("Scope"), bullet_list([
+                "Capture: chips get an icon + distinct colour (Task blue, Reminder amber, Schedule violet, Errand cyan, Idea green); detector row -> coloured icon tiles",
+                "Insights gate: each preview card its own accent (focus blue line, pattern amber bars, balance green ring, routine violet ring) with glowing charts; lock banner -> blue->violet gradient with a lock chip",
+                "Regenerated the two affected App Store frames",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["Premium (loaded) Insights StatRow already coloured (TIME-156)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios: Features/Capture/CaptureView.swift, Features/Insights/InsightsView.swift; docs/marketing/appstore/*"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Capture + Insights show multiple accent colours, not mono-purple; iOS build succeeds (verified via screenshots)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-155/156 (domain colours)."),
+            divider(), h2("Next Ticket"), p("6.9\" screenshots; App Store Connect upload."),
+        ),
+    },
 ]
 
 
