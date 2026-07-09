@@ -8457,6 +8457,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("App Store screenshots."),
         ),
     },
+
+    {
+        "summary": "TIME-161: App Store marketing screenshots",
+        "labels": ["marketing", "design", "ios"],
+        "description": doc(
+            h2("Goal"), p("Produce App Store listing screenshots from the real, cosmic-themed app: cosmic backdrop + Didot serif headline + a device screen, matching the reference mockups."),
+            divider(), h2("Scope"), bullet_list([
+                "Capture 5 real screens via a DEBUG env-driven mock (MOCK_NOW/MOCK_TITLE/MOCK_TAB/MOCK_WHY), reverted after",
+                "Compose each onto a cosmic backdrop with a Didot headline + TimeSense wordmark (build_screenshots.py, Pillow) at 1290x2796",
+                "Deliverables in docs/marketing/appstore/ (5 PNGs + README); preview gallery artifact",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No 6.9\" (1320x2868) render yet (one-line change); no App Store Connect upload"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["docs/marketing/appstore/*.png, README.md; docs/marketing/build_screenshots.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["5 App Store-sized marketing screenshots exist showing the cosmic/domain-colour app with headlines"]),
+            divider(), h2("Verification"), code_block("open docs/marketing/appstore/*.png"),
+            divider(), h2("Dependencies"), p("The cosmic redesign (TIME-147..157) + health (TIME-158..160)."),
+            divider(), h2("Next Ticket"), p("Upload to App Store Connect; localized variants."),
+        ),
+    },
 ]
 
 
