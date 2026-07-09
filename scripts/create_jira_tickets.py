@@ -8606,6 +8606,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Wire real App Store / Play links; privacy + support pages."),
         ),
     },
+
+    {
+        "summary": "TIME-169: Fix website logo — return to top of home on click",
+        "labels": ["web", "bug", "ux"],
+        "description": doc(
+            h2("Goal"), p("Clicking the TimeSense wordmark didn't appear to do anything on the home page (Next.js doesn't scroll on same-route navigation). Make the logo return you to the top."),
+            divider(), h2("Scope"), bullet_list([
+                "Brand client component: on home, smooth-scroll to top (preventDefault); otherwise navigate to /",
+                "Use Brand in nav + footer (removes duplicated inline wordmark + Orb helper)",
+                "Smooth scroll + scroll-margin so #features/#how/#get anchors clear the sticky nav",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No content change"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/Brand.tsx (new), web/app/page.tsx, web/app/globals.css"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Clicking the logo returns to the top of the home page; anchor links land below the nav; next build succeeds"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-168 (website)."),
+            divider(), h2("Next Ticket"), p("Real store links; privacy/support pages; SVG icons."),
+        ),
+    },
 ]
 
 

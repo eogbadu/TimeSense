@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-169: Clicking the TimeSense logo now returns you to the top of the home page (it previously did nothing when you were already on the page), and in-page links land cleanly below the sticky nav
 - [2026-07-09] TIME-168: The companion website is now a real marketing landing page — a cosmic hero, five feature sections with app screenshots, a capability grid, and a download CTA, all matching the app's look (admin login still one click away)
 - [2026-07-09] TIME-167: When you attach a place to an errand at capture, TimeSense now recommends and routes to that exact place — instead of guessing the location from the task's title. Works even without maps by estimating travel from distance
 - [2026-07-09] TIME-165: Capture chips now reveal a matching input — Reminder/Schedule show a date with an optional time, and Errand shows a location autocomplete (your saved places + maps). What you pick overrides what the text parsed, and it all stays optional
