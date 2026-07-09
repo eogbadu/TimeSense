@@ -24,6 +24,12 @@ class CaptureRequest(BaseModel):
     raw_input: str = Field(..., min_length=1, max_length=2000)
     user_timezone: str = Field(default="UTC", max_length=64)
     type_hint: str | None = Field(default=None, max_length=20)
+    # Explicit refinements from the Capture inputs — these OVERRIDE whatever the text parsed.
+    scheduled_at: datetime | None = None          # a specific date+time (Reminder / timed Schedule)
+    due_at: datetime | None = None                # a date without a time (date-only Schedule)
+    location_name: str | None = Field(default=None, max_length=160)
+    location_lat: float | None = None
+    location_lng: float | None = None
 
 
 @router.post(
@@ -44,11 +50,27 @@ async def capture(
     parser = CaptureService(gateway)
     task_create = await parser.parse(body.raw_input, user_timezone=body.user_timezone, type_hint=body.type_hint)
 
+    # Explicit refinements from the Capture inputs win over the parsed text.
+    if body.scheduled_at is not None:
+        task_create.scheduled_start = body.scheduled_at
+        task_create.scheduled_end = None   # recomputed below once the duration is known
+        task_create.due_at = None
+    elif body.due_at is not None:
+        task_create.due_at = body.due_at
+    if body.location_name is not None:
+        task_create.location_name = body.location_name
+        task_create.location_lat = body.location_lat
+        task_create.location_lng = body.location_lng
+
     # Every task gets a realistic duration: the LLM's explicit estimate wins; otherwise fall back to
     # the duration lookup table (seed defaults, refined by what we've learned about this user).
     if task_create.estimated_minutes is None:
         minutes, _category = await TaskDurationEstimator(db).estimate(user.id, task_create.title)
         task_create.estimated_minutes = minutes
+
+    # A user-set time gets an end block from its duration (so it lands on the timeline correctly).
+    if task_create.scheduled_start is not None and task_create.scheduled_end is None and task_create.estimated_minutes:
+        task_create.scheduled_end = task_create.scheduled_start + timedelta(minutes=task_create.estimated_minutes)
 
     # Auto-place the task into the day: if it isn't already timed and is meant for today (or has no
     # date), find the next open slot within working hours. The user can Undo on Today.

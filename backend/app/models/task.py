@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Float, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,6 +42,11 @@ class Task(UUIDMixin, TimestampMixin, Base):
     # "Scheduled · Undo" affordance on Today.
     auto_scheduled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     raw_input: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # An explicit place for the task (e.g. an errand), chosen from saved places / maps — more reliable
+    # than parsing "the mall" from the title, and lets the engine compute real travel.
+    location_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    location_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    location_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     user: Mapped[User] = relationship("User", back_populates="tasks")
     reminders: Mapped[list[InternalReminder]] = relationship(

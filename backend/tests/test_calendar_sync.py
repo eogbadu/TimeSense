@@ -127,8 +127,9 @@ async def test_appointment_within_the_hour_is_surfaced_over_tasks(client, db_ses
                         "ends_at": _iso(now + timedelta(minutes=105))}]})
         r = await client.get("/api/v1/now/recommendation", headers={"Authorization": "Bearer t"})
     body = r.json()
+    # Assert on the deterministic engine fields (the title is LLM-phrased and non-deterministic).
     assert body["domain"] == "calendar"
-    assert "Acupuncture" in body["title"]
+    assert body["action_type"] in ("prepare_for_meeting", "leave_for_event", "join_meeting")
 
 
 @pytest.mark.anyio

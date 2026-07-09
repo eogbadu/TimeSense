@@ -28,6 +28,53 @@ class PlacesPayload(BaseModel):
     places: list[PlaceIn] = []
 
 
+class PlaceSearchResult(BaseModel):
+    name: str
+    address: str | None = None
+    latitude: float
+    longitude: float
+    source: str   # "saved" | "maps"
+
+
+@router.get("/search", response_model=list[PlaceSearchResult])
+async def search_places(
+    q: str,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    lat: float | None = None,
+    lng: float | None = None,
+) -> list[PlaceSearchResult]:
+    """Autocomplete for the Capture errand field — the user's saved places matching the query first,
+    then nearby maps results (biased to lat/lng when provided)."""
+    from app.services.recommendation.maps.factory import get_maps_provider
+    from app.services.recommendation.types import Coordinates, PlaceLookupRequest
+
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+    ql = q.strip().lower()
+    results: list[PlaceSearchResult] = []
+
+    saved = await UserPlaceRepository(db).list_for_user(user.id)
+    for p in saved:
+        if not ql or ql in p.name.lower():
+            results.append(PlaceSearchResult(name=p.name, latitude=p.latitude,
+                                             longitude=p.longitude, source="saved"))
+
+    provider = get_maps_provider()
+    if getattr(provider, "available", False) and len(ql) >= 3:
+        near = Coordinates(latitude=lat, longitude=lng) if lat is not None and lng is not None else None
+        places = await provider.search_nearby(
+            PlaceLookupRequest(query=q, user_location=near, max_results=6)
+        )
+        for pl in (places or []):
+            if pl.coordinates is not None:
+                results.append(PlaceSearchResult(
+                    name=pl.name, address=pl.address,
+                    latitude=pl.coordinates.latitude, longitude=pl.coordinates.longitude,
+                    source="maps",
+                ))
+    return results[:8]
+
+
 @router.get("", response_model=list[PlaceOut])
 async def list_places(current_user: CurrentUser, db: AsyncSession = Depends(get_db)) -> list[PlaceOut]:
     user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")

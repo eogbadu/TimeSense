@@ -8514,6 +8514,26 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("6.9\" screenshots; App Store Connect upload."),
         ),
     },
+
+    {
+        "summary": "TIME-164: Backend — explicit capture inputs (time/date/location) + places search",
+        "labels": ["backend", "capture", "location"],
+        "description": doc(
+            h2("Goal"), p("Let Capture send explicit scheduled_at / due_at / location that OVERRIDE the parse, store a real location on tasks, and provide an autocomplete search (saved places + maps)."),
+            divider(), h2("Scope"), bullet_list([
+                "Task: location_name/lat/lng columns + migration; TaskCreate/Response + task_service persist them",
+                "Capture request: scheduled_at/due_at/location_name/lat/lng; endpoint applies as overrides (explicit time -> scheduled_start + end from duration, prevents auto-schedule; explicit due date; location stored)",
+                "GET /places/search?q=&lat=&lng= -> saved places matching + maps text search (name/address/coords/source)",
+                "Made the flaky calendar test assert action_type (deterministic) not the LLM-phrased title",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["iOS inputs (TIME-165); engine use of task.location for candidates (follow-up)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend: models/task.py, migrations/*, schemas/task.py, services/task_service.py, api/v1/capture.py, api/v1/places.py; tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Explicit time/location on /capture override the parse and persist; /places/search returns saved + maps matches; suite passes"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_capture_overrides.py -v"),
+            divider(), h2("Dependencies"), p("TIME-163 (capture chips)."),
+            divider(), h2("Next Ticket"), p("TIME-165: iOS contextual inputs (date+time pickers, Places autocomplete)."),
+        ),
+    },
 ]
 
 
