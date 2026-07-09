@@ -7,12 +7,18 @@ struct CaptureView: View {
     @State private var selectedChip: String?
     @FocusState private var isInputFocused: Bool
 
-    private let chips = ["Task", "Reminder", "Schedule", "Errand", "Idea"]
-    private let detectors: [(icon: String, label: String)] = [
-        ("clock", "Time"),
-        ("gauge.medium", "Priority"),
-        ("tray.full.fill", "Task type"),
-        ("checkmark.seal.fill", "Schedule fit"),
+    private let chips: [(label: String, icon: String, color: Color)] = [
+        ("Task", "checkmark.circle.fill", Cosmic.blue),
+        ("Reminder", "bell.fill", Cosmic.amber),
+        ("Schedule", "calendar", Cosmic.violet),
+        ("Errand", "cart.fill", Cosmic.cyan),
+        ("Idea", "lightbulb.fill", Cosmic.green),
+    ]
+    private let detectors: [(icon: String, label: String, color: Color)] = [
+        ("clock.fill", "Time", Cosmic.blue),
+        ("gauge.medium", "Priority", Cosmic.amber),
+        ("tray.full.fill", "Task type", Cosmic.violet),
+        ("checkmark.seal.fill", "Schedule fit", Cosmic.green),
     ]
 
     var body: some View {
@@ -126,20 +132,20 @@ struct CaptureView: View {
     private var chipsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DesignTokens.Spacing.sm) {
-                ForEach(chips, id: \.self) { chip in
-                    let selected = selectedChip == chip
+                ForEach(chips, id: \.label) { chip in
+                    let selected = selectedChip == chip.label
                     Button {
-                        selectedChip = selected ? nil : chip
+                        selectedChip = selected ? nil : chip.label
                     } label: {
-                        Text(chip)
-                            .font(DesignTokens.Typography.footnote.weight(.medium))
-                            .foregroundColor(selected ? .white : DesignTokens.Color.accent)
-                            .padding(.horizontal, DesignTokens.Spacing.md)
-                            .padding(.vertical, DesignTokens.Spacing.sm)
-                            .background(
-                                Capsule().fill(selected ? DesignTokens.Color.accent : DesignTokens.Color.surface)
-                            )
-                            .overlay(Capsule().stroke(DesignTokens.Color.accent.opacity(0.4), lineWidth: 1))
+                        HStack(spacing: 6) {
+                            Image(systemName: chip.icon).font(.caption2.weight(.semibold))
+                            Text(chip.label).font(DesignTokens.Typography.footnote.weight(.medium))
+                        }
+                        .foregroundColor(selected ? .white : chip.color)
+                        .padding(.horizontal, DesignTokens.Spacing.md)
+                        .padding(.vertical, DesignTokens.Spacing.sm)
+                        .background(Capsule().fill(selected ? chip.color : chip.color.opacity(0.14)))
+                        .overlay(Capsule().stroke(chip.color.opacity(selected ? 0 : 0.5), lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                 }
@@ -176,12 +182,13 @@ struct CaptureView: View {
             Text("TimeSense can detect")
                 .font(DesignTokens.Typography.headline)
                 .foregroundColor(DesignTokens.Color.textPrimary)
-            HStack(spacing: 0) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
                 ForEach(detectors, id: \.label) { d in
-                    VStack(spacing: DesignTokens.Spacing.xs) {
-                        Image(systemName: d.icon)
-                            .font(.title3)
-                            .foregroundColor(DesignTokens.Color.accent)
+                    VStack(spacing: DesignTokens.Spacing.sm) {
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                            .fill(d.color.opacity(0.16))
+                            .frame(width: 48, height: 48)
+                            .overlay(Image(systemName: d.icon).font(.title3).foregroundColor(d.color))
                         Text(d.label)
                             .font(DesignTokens.Typography.caption)
                             .foregroundColor(DesignTokens.Color.textSecondary)
