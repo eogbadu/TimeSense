@@ -49,19 +49,29 @@ final class HealthService: ObservableObject {
         HKCategoryType.categoryType(forIdentifier: .sleepAnalysis)
     }
 
-    /// Requests read authorization for sleep analysis, then reads + syncs the latest wake.
+    private var readTypes: Set<HKObjectType> {
+        var types: Set<HKObjectType> = []
+        if let sleepType { types.insert(sleepType) }
+        for id in [HKQuantityTypeIdentifier.stepCount, .activeEnergyBurned, .appleExerciseTime] {
+            if let t = HKQuantityType.quantityType(forIdentifier: id) { types.insert(t) }
+        }
+        return types
+    }
+
+    /// Requests read authorization for sleep + activity, then reads + syncs both.
     func connectAndSync() async {
-        guard HKHealthStore.isHealthDataAvailable(), let sleepType else {
+        guard HKHealthStore.isHealthDataAvailable() else {
             state = .unavailable
             return
         }
         state = .requesting
         do {
-            try await store.requestAuthorization(toShare: [], read: [sleepType])
+            try await store.requestAuthorization(toShare: [], read: readTypes)
         } catch {
             state = .error("Couldn't access Apple Health.")
             return
         }
+        await syncActivity()
         await syncLatestSleep()
     }
 
@@ -86,6 +96,42 @@ final class HealthService: ObservableObject {
             state = .error(error.errorDescription ?? "Sync failed.")
         } catch {
             state = .error(error.localizedDescription)
+        }
+    }
+
+    // MARK: - Activity (steps / active energy / exercise) — best-effort, read-only
+
+    /// Reads today's step/energy/exercise totals and upserts them to the backend. Safe to call
+    /// anytime: unauthorized types just return no data and are skipped.
+    func syncActivity() async {
+        let steps = await sumToday(.stepCount, unit: .count())
+        let kcal = await sumToday(.activeEnergyBurned, unit: .kilocalorie())
+        let exercise = await sumToday(.appleExerciseTime, unit: .minute())
+        guard steps != nil || kcal != nil || exercise != nil else { return }
+
+        struct Body: Encodable {
+            let steps: Int
+            let active_energy_kcal: Int?
+            let exercise_minutes: Int?
+        }
+        struct Ack: Decodable { let steps: Int }
+        let body = Body(steps: Int(steps ?? 0),
+                        active_energy_kcal: kcal.map { Int($0) },
+                        exercise_minutes: exercise.map { Int($0) })
+        _ = try? await APIClient.shared.post("/api/v1/activity", body: body) as Ack
+    }
+
+    private func sumToday(_ id: HKQuantityTypeIdentifier, unit: HKUnit) async -> Double? {
+        guard let type = HKQuantityType.quantityType(forIdentifier: id) else { return nil }
+        let start = Calendar.current.startOfDay(for: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsQuery(
+                quantityType: type, quantitySamplePredicate: predicate, options: .cumulativeSum
+            ) { _, stats, _ in
+                continuation.resume(returning: stats?.sumQuantity()?.doubleValue(for: unit))
+            }
+            store.execute(query)
         }
     }
 
@@ -128,6 +174,7 @@ final class HealthService: ObservableObject {
     @Published private(set) var state: HealthConnectState = .unavailable
     func connectAndSync() async { state = .unavailable }
     func syncLatestSleep() async { state = .unavailable }
+    func syncActivity() async {}
 }
 
 #endif

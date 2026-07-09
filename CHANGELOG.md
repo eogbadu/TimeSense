@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-159: TimeSense now reads your steps and activity from Apple Health (in addition to sleep) and shows a real Steps card on Now. Read-only; TimeSense never writes to Health
 - [2026-07-09] TIME-158: Backend now stores daily HealthKit activity (steps, active energy, exercise minutes) and surfaces steps/activity in the Now dashboard payload — groundwork for the real Steps/Activity cards
 - [2026-07-09] TIME-157: The 'Why this recommendation' screen now matches the theme — its header is a domain-colored hero with a matching confidence ring, and the signals use colored icon chips with green checks
 - [2026-07-09] TIME-156: The cosmic + domain-color look now extends across Today, Capture, and Insights — Today's recommendation is a domain-colored hero, task rows use the semantic accents, the Capture orb is a blue→violet gradient with a glow, and Insights stats get colored icon chips

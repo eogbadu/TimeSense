@@ -8416,6 +8416,26 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("TIME-159: iOS HealthService reads+syncs steps/activity; Steps dashboard card."),
         ),
     },
+
+    {
+        "summary": "TIME-159: iOS HealthKit activity — read+sync steps/energy/exercise, Steps card",
+        "labels": ["ios", "health"],
+        "description": doc(
+            h2("Goal"), p("Extend the existing HealthService (sleep-only) to also read steps, active energy, and exercise minutes, sync them, and show a Steps card on Now."),
+            divider(), h2("Scope"), bullet_list([
+                "HealthService: request read auth for stepCount/activeEnergyBurned/appleExerciseTime; sumToday via HKStatisticsQuery; syncActivity -> POST /api/v1/activity; connectAndSync syncs both",
+                "Launch: AppDelegate best-effort syncActivity (no-op without access)",
+                "Info.plist NSHealthShareUsageDescription (required for any HealthKit read)",
+                "NowContextCards decode steps/steps_goal/active_energy_kcal/exercise_minutes; Steps dashboard card",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No sitting/inactivity inference; no HealthKit writes"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios: Core/Health/HealthService.swift, App/AppDelegate.swift, Info.plist, Features/Now/NowView.swift, NowViewModel.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Connecting Health reads+syncs steps/energy/exercise; Now shows a real Steps card; iOS build succeeds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-158 (activity backend)."),
+            divider(), h2("Next Ticket"), p("App Store screenshots."),
+        ),
+    },
 ]
 
 
