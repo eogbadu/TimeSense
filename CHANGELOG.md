@@ -17,6 +17,8 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-172: The website now has a real Privacy Policy at /privacy (linked from the footer) — plain-language, TimeSense-specific: what we collect, the opt-in-only raw-audio rule, how captures are parsed by AI, who we share with, and your controls (approval-first, opt-in connections, export, delete). No ads, no selling data
+- [2026-07-09] TIME-171: The web companion now has an Insights tab — Premium users see their weekly summary and stats (tasks, completion rate, most-skipped meal, late wake-ups, commutes); everyone else sees a preview of what Premium unlocks
 - [2026-07-09] TIME-170: The web is now a real companion app — signed-in users get /app with their best next action (Now), today's plan (Today), and quick Capture, all in the cosmic domain-colour style. Admin moved to the footer
 - [2026-07-09] TIME-169: Clicking the TimeSense logo now returns you to the top of the home page (it previously did nothing when you were already on the page), and in-page links land cleanly below the sticky nav
 - [2026-07-09] TIME-168: The companion website is now a real marketing landing page — a cosmic hero, five feature sections with app screenshots, a capability grid, and a download CTA, all matching the app's look (admin login still one click away)
