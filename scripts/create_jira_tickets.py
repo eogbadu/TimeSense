@@ -8314,6 +8314,28 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Extend glass treatment nuances to Today/Insights hero elements if desired; App Store screenshots."),
         ),
     },
+
+    {
+        "summary": "TIME-154: Unify cosmic palette + nav/tab bar (backgrounds & colors match)",
+        "labels": ["ios", "design", "bug"],
+        "description": doc(
+            h2("Goal"), p("User: backgrounds and colors do not match across the app. Root cause: two parallel palettes (hardcoded Cosmic vs DesignTokens assets) + a purple-heavy background that diverged from the near-black neutral navy reference. Unify to one palette matched to the reference."),
+            divider(), h2("Scope"), bullet_list([
+                "Single Cosmic palette matched to reference: base #080B14 (== asset Background), deep #05070E, surface #11141F (== asset Surface, neutral dark slate)",
+                "CosmicBackground -> near-black base->deep with faint (0.10) blue/violet corner glows only (no purple wash)",
+                "heroGradient muted (blue #3A5AE0 -> indigo #5E48CC -> violet #8A54DC)",
+                "cardStyle -> solid dark slate + faint sheen + hairline (was translucent/purple)",
+                "Align asset Background/Surface to Cosmic; hero footer + explanation sheet use unified colors",
+                "Global UINavigationBar transparent + UITabBar = Cosmic.base so bars match",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No layout changes; light theme unchanged"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios: Core/Design/CosmicComponents.swift, ViewModifiers.swift; Features/Now/NowView.swift; App/TimeSenseApp.swift; Assets.xcassets Background/Surface"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Background, cards, chips, footer, tab bar share one near-black navy; no purple wash; matches the reference; iOS build succeeds (verified via mock screenshot)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-153 (glassmorphism)."),
+            divider(), h2("Next Ticket"), p("Optional per-tab hero elements; App Store screenshots."),
+        ),
+    },
 ]
 
 
