@@ -8587,6 +8587,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("6.9\" screenshots; App Store Connect."),
         ),
     },
+
+    {
+        "summary": "TIME-168: Companion website — cosmic marketing landing page",
+        "labels": ["web", "marketing", "design"],
+        "description": doc(
+            h2("Goal"), p("The web companion only had an admin login. Build a proper marketing landing page that showcases TimeSense in the app's cosmic aesthetic, while keeping the admin entry."),
+            divider(), h2("Scope"), bullet_list([
+                "app/page.tsx: sticky nav (orb wordmark + Admin link + Get the app), hero (serif headline + gradient + phone), 5 alternating feature rows with real app screenshots + domain-colour pills, a 6-card capability grid, CTA band, footer (keeps Admin link)",
+                "globals.css: cosmic theme (navy base, blue/violet/cyan/green/amber accents, glass cards, glows) scoped to a .site wrapper; Playfair Display serif via next/font",
+                "layout.tsx: real metadata/OG/title + serif font; app screenshots copied to public/screens; app icon -> favicon/OG",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No real App Store links yet (anchors); admin dashboard unchanged; no CMS"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/{page,layout}.tsx, web/app/globals.css, web/public/screens/*, web/public/app-icon.png"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Landing page showcases TimeSense (hero + features + screenshots), matches the app's cosmic look, keeps Admin access; next build succeeds; verified via headless-Chrome screenshots"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("Heeded web/AGENTS.md (Next 16 docs)."),
+            divider(), h2("Next Ticket"), p("Wire real App Store / Play links; privacy + support pages."),
+        ),
+    },
 ]
 
 
