@@ -21,6 +21,7 @@ import com.timesense.app.features.capture.CaptureScreen
 import com.timesense.app.features.insights.InsightsScreen
 import com.timesense.app.features.now.NowScreen
 import com.timesense.app.features.settings.LearnedAssumptionsScreen
+import com.timesense.app.features.settings.ConnectionsScreen
 import com.timesense.app.features.settings.SettingsScreen
 import com.timesense.app.features.today.TodayScreen
 
@@ -70,10 +71,16 @@ fun MainNavHost(
             composable(Tab.CAPTURE.route) { CaptureScreen() }
             composable(Tab.INSIGHTS.route) { InsightsScreen(isPremium = isPremium) }
             composable(Tab.SETTINGS.route) {
-                SettingsScreen(onLearnedAssumptionsClick = { navController.navigate("learned_assumptions") })
+                SettingsScreen(
+                    onLearnedAssumptionsClick = { navController.navigate("learned_assumptions") },
+                    onConnectionsClick = { navController.navigate("connections") },
+                )
             }
             composable("learned_assumptions") {
                 LearnedAssumptionsScreen(onBack = { navController.popBackStack() })
+            }
+            composable("connections") {
+                ConnectionsScreen(isPremium = isPremium, onBack = { navController.popBackStack() })
             }
         }
     }

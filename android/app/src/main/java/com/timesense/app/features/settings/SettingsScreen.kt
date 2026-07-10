@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GppGood
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Psychology
@@ -42,7 +43,10 @@ import com.timesense.app.core.design.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onLearnedAssumptionsClick: () -> Unit = {}) {
+fun SettingsScreen(
+    onLearnedAssumptionsClick: () -> Unit = {},
+    onConnectionsClick: () -> Unit = {},
+) {
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Settings", style = MaterialTheme.typography.headlineMedium) })
@@ -60,6 +64,12 @@ fun SettingsScreen(onLearnedAssumptionsClick: () -> Unit = {}) {
                 SettingsItem(Icons.Filled.Star, "Subscription", Color(0xFFFFC107))
             }
             SettingsSection("Preferences") {
+                SettingsItem(
+                    Icons.Filled.Link,
+                    "Connections",
+                    Color(0xFF3949AB),
+                    onClick = onConnectionsClick
+                )
                 SettingsItem(Icons.Filled.Notifications, "Notifications", Color(0xFFE53935))
                 SettingsItem(Icons.Filled.CalendarMonth, "Calendar", Color(0xFF43A047))
                 SettingsItem(Icons.Filled.Palette, "Appearance", Color(0xFF8E24AA))
