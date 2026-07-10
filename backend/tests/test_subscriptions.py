@@ -38,13 +38,14 @@ async def test_get_subscription_none_before_trial(client):
 
 
 @pytest.mark.anyio
-async def test_entitlement_false_before_trial(client):
+async def test_entitlement_premium_during_intro_trial(client):
+    """A brand-new account (no subscription row) is Premium during its free intro trial."""
     with _mock_verify():
         r = await client.get("/api/v1/subscriptions/me/entitlement", headers=_auth_headers())
     assert r.status_code == 200
     data = r.json()
-    assert data["is_premium"] is False
-    assert data["status"] is None
+    assert data["is_premium"] is True
+    assert data["status"] == "trialing"
 
 
 @pytest.mark.anyio
@@ -101,6 +102,81 @@ async def test_stripe_webhook_bad_signature_returns_400(client):
             headers={"stripe-signature": "t=1,v1=badsig"},
         )
     assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_intro_trial_grace_by_account_age():
+    """is_premium is True inside the intro window and False after it, with no subscription row."""
+    import uuid
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+    from app.core.config import settings
+    from app.core.database import Base
+    from app.models.user import User
+    from app.services.subscription_service import SubscriptionService
+    from tests.conftest import TEST_DATABASE_URL
+
+    engine = create_async_engine(TEST_DATABASE_URL)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_session() as session:
+        fresh = User(firebase_uid="uid-fresh", email="fresh@example.com")
+        old = User(firebase_uid="uid-old", email="old@example.com")
+        session.add_all([fresh, old])
+        await session.flush()
+        # Backdate the "old" account to just past the intro window.
+        old.created_at = datetime.now(UTC) - timedelta(days=settings.intro_trial_days + 1)
+        await session.commit()
+
+        svc = SubscriptionService(session)
+        assert await svc.is_premium(fresh.id) is True    # inside intro trial
+        assert await svc.is_premium(old.id) is False      # intro trial expired, no subscription
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_active_subscription_is_premium_regardless_of_age():
+    """An active/paid subscription keeps Premium even after the intro trial would have expired."""
+    import uuid
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+    from app.core.config import settings
+    from app.core.database import Base
+    from app.models.user import User
+    from app.repositories.subscription_repository import SubscriptionRepository
+    from app.services.subscription_service import SubscriptionService
+    from tests.conftest import TEST_DATABASE_URL
+
+    engine = create_async_engine(TEST_DATABASE_URL)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_session() as session:
+        user = User(firebase_uid="uid-paid", email="paid@example.com")
+        session.add(user)
+        await session.flush()
+        user.created_at = datetime.now(UTC) - timedelta(days=settings.intro_trial_days + 30)
+        repo = SubscriptionRepository(session)
+        await repo.start_trial(user_id=user.id, platform="stripe", platform_customer_id="cus_paid")
+        await repo.update(user.id, status="active")
+        await session.commit()
+
+        svc = SubscriptionService(session)
+        assert await svc.is_premium(user.id) is True
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
 
 
 @pytest.mark.anyio

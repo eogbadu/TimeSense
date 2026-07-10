@@ -44,10 +44,16 @@ async def get_entitlement(
 ) -> EntitlementResponse:
     user_id = await _get_user_id(current_user, db)
     svc = SubscriptionService(db)
+    is_prem = await svc.is_premium(user_id)
     sub = await svc.get_subscription(user_id)
-    if sub is None:
-        return EntitlementResponse(is_premium=False, status=None, platform=None)
-    return EntitlementResponse(is_premium=sub.is_premium, status=sub.status, platform=sub.platform)
+    if sub is not None:
+        return EntitlementResponse(is_premium=is_prem, status=sub.status, platform=sub.platform)
+    # No subscription row: premium here means the account is inside its free intro trial.
+    return EntitlementResponse(
+        is_premium=is_prem,
+        status="trialing" if is_prem else None,
+        platform=None,
+    )
 
 
 @router.get("/me/features", response_model=FeatureFlagsResponse, summary="Get feature flags for current user")

@@ -53,6 +53,23 @@ async def db_session(db_engine):
         yield session
 
 
+async def expire_intro_trial(db_session, uid: str, email: str):
+    """Age a user past the free intro-trial window so Premium gates apply again (returns the user).
+
+    Everyone is Premium for their first `intro_trial_days` (TIME-178); tests that exercise the
+    non-premium 403 path must first push the account beyond that window.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    from app.core.config import settings
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(uid, email)
+    user.created_at = datetime.now(UTC) - timedelta(days=settings.intro_trial_days + 1)
+    await db_session.flush()
+    return user
+
+
 @pytest.fixture
 async def client(db_session: AsyncSession):
     async def override_get_db():
