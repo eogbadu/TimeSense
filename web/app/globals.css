@@ -75,13 +75,6 @@ html { scroll-behavior: smooth; }
 .nav-links a:hover { color: var(--ink); }
 
 .wordmark { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 19px; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; }
-.orb {
-  width: 22px; height: 22px; border-radius: 50%;
-  background: conic-gradient(from 200deg, var(--blue), var(--violet), var(--blue));
-  box-shadow: 0 0 16px rgba(124, 108, 255, 0.7);
-  position: relative; flex: none;
-}
-.orb::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--navy); }
 .wordmark b { color: var(--violet); font-weight: 600; }
 
 /* Buttons */

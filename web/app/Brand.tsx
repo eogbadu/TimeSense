@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Mark from "./Mark";
 
 /**
  * The TimeSense wordmark. Clicking it returns you home: if you're already on the landing page it
@@ -19,7 +20,7 @@ export default function Brand({ size = 19 }: { size?: number }) {
         }
       }}
     >
-      <span className="orb" aria-hidden />
+      <Mark size={Math.round(size * 1.15)} />
       <span>
         Time<b>Sense</b>
       </span>

@@ -29,7 +29,7 @@ export const metadata: Metadata = {
       "A context-aware AI time assistant that tells you the one best thing to do now — from your schedule, tasks, health, and location.",
     images: ["/app-icon.png"],
   },
-  icons: { icon: "/app-icon.png" },
+  // Favicon comes from the file-based app/icon.svg (crisp + light); PNG stays the social/OG image.
 };
 
 export default function RootLayout({
