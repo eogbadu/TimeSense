@@ -28,6 +28,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -80,7 +83,13 @@ fun NowScreen(
                         )
                         val task = state.context.best_task
                         if (task != null) {
-                            BestTaskCard(task = task, onDone = { viewModel.markDone(task.id) })
+                            BestTaskCard(
+                                task = task,
+                                onAgree = { viewModel.agree(task.id) },
+                                onDisagree = { viewModel.disagree(task.id) },
+                                onDone = { viewModel.markDone(task.id) },
+                                onSnooze = { viewModel.snooze(task.id) },
+                            )
                         } else {
                             EmptyState(
                                 icon = Icons.Filled.AutoAwesome,
@@ -116,7 +125,15 @@ private fun GreetingCard(greeting: String, usableMinutes: Int) {
 }
 
 @Composable
-private fun BestTaskCard(task: BestTask, onDone: () -> Unit) {
+private fun BestTaskCard(
+    task: BestTask,
+    onAgree: () -> Unit,
+    onDisagree: () -> Unit,
+    onDone: () -> Unit,
+    onSnooze: () -> Unit,
+) {
+    // Reset the Agree/Disagree stage whenever the recommendation changes (keyed by task id).
+    var agreed by remember(task.id) { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(Radius.lg),
@@ -148,14 +165,18 @@ private fun BestTaskCard(task: BestTask, onDone: () -> Unit) {
             }
             Spacer(Modifier.height(Spacing.md))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Button(onClick = onDone) { Text("Done") }
-                OutlinedButton(onClick = {}) { Text("Snooze") }
-                OutlinedButton(
-                    onClick = {},
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                ) { Text("Not now") }
+                if (agreed) {
+                    Button(onClick = onDone) { Text("Done") }
+                    OutlinedButton(onClick = onSnooze) { Text("Snooze") }
+                } else {
+                    Button(onClick = { agreed = true; onAgree() }) { Text("Agree") }
+                    OutlinedButton(
+                        onClick = onDisagree,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) { Text("Disagree") }
+                }
             }
         }
     }
