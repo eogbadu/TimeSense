@@ -8804,6 +8804,42 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Outlook + Slack backend handshakes; mobile Connect UI."),
         ),
     },
+    {
+        "summary": "TIME-180: Outlook/Microsoft calendar provider + OAuth handshake",
+        "labels": ["backend", "integrations", "feature"],
+        "description": doc(
+            h2("Goal"), p("Add Outlook/Microsoft calendar support (net-new provider + OAuth), alongside Google."),
+            divider(), h2("Scope"), bullet_list([
+                "MicrosoftCalendarProvider against Microsoft Graph (/me/calendarView read, /me/events create/delete), registered as 'microsoft'",
+                "microsoft_oauth.py (common-tenant authorize + code exchange; scope offline_access + Calendars.ReadWrite)",
+                "/api/v1/integrations/microsoft/{authorize,callback}; refactor the Google callback into a shared helper both providers use",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No token-refresh scheduler; no mobile UI (separate ticket)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/integrations/microsoft_calendar.py, backend/app/integrations/microsoft_oauth.py, backend/app/services/calendar_service.py, backend/app/api/v1/integrations.py, backend/tests/test_integrations_oauth.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["authorize returns a Microsoft consent URL when configured (503 otherwise); callback exchanges + stores encrypted tokens; provider maps Graph events; tests green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_integrations_oauth.py -q"),
+            divider(), h2("Dependencies"), p("TIME-177 (handshake framework)."),
+            divider(), h2("Next Ticket"), p("Slack OAuth handshake."),
+        ),
+    },
+    {
+        "summary": "TIME-181: Slack OAuth handshake",
+        "labels": ["backend", "integrations", "feature"],
+        "description": doc(
+            h2("Goal"), p("Add the Slack OAuth consent handshake so users can connect Slack without pasting a token (scan→task already exists)."),
+            divider(), h2("Scope"), bullet_list([
+                "slack_oauth.py (v2 authorize URL + oauth.v2.access exchange; check ok:false; bot scopes channels:history/read, groups:history)",
+                "/api/v1/integrations/slack/{authorize,callback}; callback stores the token via SlackService.connect",
+                "config.slack_redirect_uri",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to the existing scan/pending/confirm flow; no mobile UI (separate ticket)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/integrations/slack_oauth.py, backend/app/api/v1/integrations.py, backend/app/core/config.py, backend/tests/test_integrations_oauth.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["authorize returns a Slack consent URL when configured (503 otherwise); callback exchanges the code and stores the token; ok:false raises; tests green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_integrations_oauth.py -q"),
+            divider(), h2("Dependencies"), p("TIME-177 (handshake framework); existing SlackService (TIME-049)."),
+            divider(), h2("Next Ticket"), p("Mobile Connect UI for Google/Outlook/Slack."),
+        ),
+    },
 ]
 
 

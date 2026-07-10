@@ -17,6 +17,8 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-10] TIME-181: Backend support to connect Slack — a real OAuth flow so you can authorise TimeSense to scan channels for action items (activates once the Slack app credentials are set)
+- [2026-07-10] TIME-180: TimeSense can now connect Outlook / Microsoft calendars — a new Microsoft Graph provider plus its OAuth flow, alongside Google (activates once the Microsoft app credentials are set)
 - [2026-07-10] TIME-179: The mobile apps now recognise your real Premium status on sign-in — fixing Insights, which previously showed the "Upgrade" gate to everyone (even paying/trial users) because the app never checked your subscription
 - [2026-07-10] TIME-178: Everyone now gets Premium free for their first 2 weeks (no payment) — a true 14-day intro trial that unlocks Insights, the "why" explanations, integrations, and all Premium features from day one
 - [2026-07-09] TIME-177: Backend groundwork to connect Google Calendar — a real OAuth handshake (/integrations/google/authorize + /callback) that gets consent, exchanges the code server-side, and stores tokens encrypted. Goes live once the Google OAuth app credentials are set; calendar writes stay approval-gated
