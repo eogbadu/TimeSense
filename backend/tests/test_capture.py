@@ -289,3 +289,24 @@ async def test_capture_service_injection_falls_back_to_rule_based():
     tc = await CaptureService(gw).parse("call the dentist tomorrow")
     assert "dentist" in tc.title.lower()
     assert tc.priority == 3  # default, not hijacked
+
+
+# ── Anti-abuse: near-duplicate capture dedupe (TIME-193) ──────────────────────
+
+@pytest.mark.anyio
+async def test_capture_dedupes_rapid_duplicate(client):
+    _use_mock_gateway({"title": "Buy milk", "estimated_minutes": 5, "priority": 3})
+    with _mock_verify(MOCK_USER):
+        r1 = await client.post("/api/v1/capture", headers=_auth_headers(), json={"raw_input": "buy milk"})
+        r2 = await client.post("/api/v1/capture", headers=_auth_headers(), json={"raw_input": "Buy Milk"})
+    assert r1.status_code == 201 and r2.status_code == 201
+    assert r1.json()["id"] == r2.json()["id"]  # same task, case-insensitive
+
+
+@pytest.mark.anyio
+async def test_capture_different_text_not_deduped(client):
+    _use_mock_gateway({"title": "A thing", "priority": 3})
+    with _mock_verify(MOCK_USER):
+        r1 = await client.post("/api/v1/capture", headers=_auth_headers(), json={"raw_input": "buy milk"})
+        r2 = await client.post("/api/v1/capture", headers=_auth_headers(), json={"raw_input": "call mom"})
+    assert r1.json()["id"] != r2.json()["id"]

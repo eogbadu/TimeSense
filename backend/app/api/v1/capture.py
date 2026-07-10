@@ -28,6 +28,8 @@ _WHITESPACE = re.compile(r"\s+")
 _VALID_TYPE_HINTS = {"task", "reminder", "schedule", "errand", "idea"}
 # A captured task shouldn't be scheduled/due absurdly far out (or before this millennium).
 _MAX_FUTURE_YEARS = 5
+# Identical captures within this window are treated as one (double-tap / retry idempotency).
+_DEDUPE_WINDOW = timedelta(seconds=60)
 
 
 class CaptureRequest(BaseModel):
@@ -112,6 +114,15 @@ async def capture(
     user, _ = await UserService(db).get_or_create_user(
         current_user.uid, current_user.email or ""
     )
+
+    # Idempotency: a rapid double-tap / retry with identical text returns the same task rather than
+    # creating a duplicate (and skips a needless LLM call).
+    duplicate = await TaskRepository(db).find_recent_duplicate(
+        user.id, body.raw_input, datetime.now(timezone.utc) - _DEDUPE_WINDOW
+    )
+    if duplicate is not None:
+        return TaskResponse.model_validate(duplicate)
+
     parser = CaptureService(gateway)
     task_create = await parser.parse(body.raw_input, user_timezone=body.user_timezone, type_hint=body.type_hint)
 
