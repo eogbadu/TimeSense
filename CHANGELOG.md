@@ -17,6 +17,8 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-10] TIME-179: The mobile apps now recognise your real Premium status on sign-in — fixing Insights, which previously showed the "Upgrade" gate to everyone (even paying/trial users) because the app never checked your subscription
+- [2026-07-10] TIME-178: Everyone now gets Premium free for their first 2 weeks (no payment) — a true 14-day intro trial that unlocks Insights, the "why" explanations, integrations, and all Premium features from day one
 - [2026-07-09] TIME-177: Backend groundwork to connect Google Calendar — a real OAuth handshake (/integrations/google/authorize + /callback) that gets consent, exchanges the code server-side, and stores tokens encrypted. Goes live once the Google OAuth app credentials are set; calendar writes stay approval-gated
 - [2026-07-09] TIME-176: The TimeSense logo across the web now uses the real app-icon mark — a glowing blue→violet ring with a sparkle — instead of a plain circle, with a matching favicon
 - [2026-07-09] TIME-175: The web Now page now has a "Why this recommendation?" explainer — tap it to see the summary, the signals TimeSense weighed (with what's connected vs not), what tipped the decision, and the alternatives it considered
