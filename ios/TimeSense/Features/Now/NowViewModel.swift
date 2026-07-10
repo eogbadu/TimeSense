@@ -11,6 +11,7 @@ struct NowContext: Decodable {
     let moment: String?
     let feasibility: Feasibility?
     let context: NowContextCards?
+    let recommendationEventId: String?
 
     enum CodingKeys: String, CodingKey {
         case greeting
@@ -22,6 +23,7 @@ struct NowContext: Decodable {
         case moment
         case feasibility
         case context
+        case recommendationEventId = "recommendation_event_id"
     }
 }
 
@@ -268,16 +270,18 @@ final class NowViewModel: ObservableObject {
     }
 
     private func sendFeedback(taskId: String, signal: String, snoozeUntil: String?, reload: Bool = true) async {
-        guard case .loaded = uiState else { return }
+        guard case .loaded(let ctx) = uiState else { return }
         struct FeedbackBody: Encodable {
             let task_id: String
             let signal: String
             let snooze_until: String?
+            let recommendation_event_id: String?
         }
         do {
             let _: FeedbackResponse = try await APIClient.shared.post(
                 "/api/v1/recommendations/feedback",
-                body: FeedbackBody(task_id: taskId, signal: signal, snooze_until: snoozeUntil)
+                body: FeedbackBody(task_id: taskId, signal: signal, snooze_until: snoozeUntil,
+                                   recommendation_event_id: ctx.recommendationEventId)
             )
         } catch {
             // ignore; reload reflects the true state
