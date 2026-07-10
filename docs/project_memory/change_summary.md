@@ -1,5 +1,16 @@
 # Change Summary
 
+## 2026-07-10 — TIME-178 & TIME-179 (universal intro trial + mobile Premium wiring)
+
+- **TIME-178 (backend):** `SubscriptionService.is_premium` grants Premium for the account's first
+  `intro_trial_days` (14) with no payment; `/me/entitlement` routes through it (status "trialing").
+  Unlocks every Premium gate for new users. 444 tests pass; existing gate tests age the account.
+- **TIME-179 (mobile):** iOS `AppState` + Android `AppViewModel` fetch `/subscriptions/me/entitlement`
+  on sign-in and set `isPremium` (was hardcoded false). Fixes mobile Insights (everyone saw the gate)
+  and unblocks the Premium-gated Connect flows. iOS BUILD SUCCEEDED; Android unverified (no JDK).
+- Diagnosis that prompted this: mobile Insights UI + backend were both fine, but `isPremium` was never
+  wired, so the real insights were unreachable for all users.
+
 ## 2026-07-09 — TIME-177 (backend OAuth handshake + Google Calendar)
 
 - New /api/v1/integrations/google/authorize (Premium → consent URL + signed state) and /callback

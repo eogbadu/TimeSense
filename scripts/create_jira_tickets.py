@@ -8769,6 +8769,41 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Outlook/Microsoft calendar provider + handshake; then mobile Connect UI."),
         ),
     },
+    {
+        "summary": "TIME-178: Everyone is Premium for their first 2 weeks (intro trial)",
+        "labels": ["backend", "subscriptions", "feature"],
+        "description": doc(
+            h2("Goal"), p("Give every account Premium free for its first 2 weeks (no payment), so new users get the full experience (Insights, integrations, AI features) from day one."),
+            divider(), h2("Scope"), bullet_list([
+                "SubscriptionService.is_premium returns True when the account is younger than settings.intro_trial_days (14), in addition to an active/trialing subscription",
+                "Route /subscriptions/me/entitlement through is_premium; report status 'trialing' during the intro window",
+                "config.intro_trial_days = 14; helpers in_intro_trial / intro_trial_ends_at",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to paid billing/webhooks; no per-user trial overrides; after the window users fall back to Free Basic unless subscribed"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/subscription_service.py, backend/app/api/v1/subscriptions.py, backend/app/core/config.py, backend/tests/*"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["A brand-new account is Premium (entitlement is_premium True, status trialing); after intro_trial_days it is not (absent a subscription); active subs stay Premium; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_subscriptions.py tests/test_entitlements.py -q"),
+            divider(), h2("Dependencies"), p("Existing SubscriptionService/entitlement gate."),
+            divider(), h2("Next Ticket"), p("Wire real Premium state into the mobile apps."),
+        ),
+    },
+    {
+        "summary": "TIME-179: Wire real Premium state into the mobile apps",
+        "labels": ["ios", "android", "subscriptions", "bug"],
+        "description": doc(
+            h2("Goal"), p("Make the iOS and Android apps reflect the user's real Premium entitlement, so Insights (and Premium-gated Connect flows) actually work instead of always showing the upgrade gate."),
+            divider(), h2("Scope"), bullet_list([
+                "iOS AppState: on sign-in, fetch GET /api/v1/subscriptions/me/entitlement and set isPremium; clear on sign-out; InsightsView .task(id: isPremium) so it loads when Premium resolves",
+                "Android AppViewModel: fetch entitlement on auth and combine into AppUiState.isPremium (replace the hardcoded false)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No StoreKit/Play purchase UI; no live mid-session entitlement refresh"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/App/AppState.swift, ios/TimeSense/Features/Insights/InsightsView.swift, android/app/src/main/java/com/timesense/app/AppViewModel.kt"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["A Premium/intro-trial user sees real Insights (not the gate) on both platforms; isPremium reflects /me/entitlement; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-178 (entitlement reflects the intro trial)."),
+            divider(), h2("Next Ticket"), p("Outlook + Slack backend handshakes; mobile Connect UI."),
+        ),
+    },
 ]
 
 
