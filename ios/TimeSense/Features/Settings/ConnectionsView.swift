@@ -1,0 +1,211 @@
+import AuthenticationServices
+import SwiftUI
+
+/// Settings ▸ Connections — connect Google Calendar, Outlook, and Slack via OAuth.
+///
+/// Each "Connect" opens the provider's consent page in an ASWebAuthenticationSession. The backend
+/// handles the code→token exchange server-side and redirects to `timesense://integrations/connected`,
+/// which the session catches (callbackURLScheme "timesense") and closes.
+struct ConnectionsView: View {
+    @EnvironmentObject private var appState: AppState
+    @StateObject private var viewModel = ConnectionsViewModel()
+
+    private let providers: [ConnectProvider] = [
+        ConnectProvider(id: "google", name: "Google Calendar", systemImage: "calendar",
+                        tint: .green, blurb: "Schedule around your Google events."),
+        ConnectProvider(id: "microsoft", name: "Outlook Calendar", systemImage: "calendar",
+                        tint: .blue, blurb: "Schedule around your Outlook / Microsoft events."),
+        ConnectProvider(id: "slack", name: "Slack", systemImage: "message.fill",
+                        tint: .purple, blurb: "Turn Slack messages into tasks you can approve."),
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: DesignTokens.Spacing.lg) {
+                Text("Connect the tools you already use. TimeSense only reads what it needs, and calendar changes always ask first.")
+                    .font(DesignTokens.Typography.callout)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, DesignTokens.Spacing.md)
+                    .padding(.top, DesignTokens.Spacing.md)
+
+                if appState.isPremium {
+                    VStack(spacing: DesignTokens.Spacing.md) {
+                        ForEach(providers) { provider in
+                            ConnectRow(
+                                provider: provider,
+                                state: viewModel.state(for: provider.id),
+                                onConnect: { Task { await viewModel.connect(provider.id) } }
+                            )
+                        }
+                    }
+                } else {
+                    Text("Connecting apps is a Premium feature.")
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                        .padding(.top, DesignTokens.Spacing.lg)
+                }
+            }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.bottom, DesignTokens.Spacing.xxl)
+        }
+        .background(DesignTokens.Color.background)
+        .navigationTitle("Connections")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Row
+
+private struct ConnectRow: View {
+    let provider: ConnectProvider
+    let state: ConnectState
+    let onConnect: () -> Void
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            Image(systemName: provider.systemImage)
+                .font(.title3)
+                .foregroundColor(provider.tint)
+                .frame(width: 40, height: 40)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(provider.tint.opacity(0.14)))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(provider.name)
+                    .font(DesignTokens.Typography.headline)
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                Text(state.subtitle ?? provider.blurb)
+                    .font(DesignTokens.Typography.footnote)
+                    .foregroundColor(state.isError ? .red : DesignTokens.Color.textSecondary)
+            }
+            Spacer(minLength: DesignTokens.Spacing.sm)
+
+            trailing
+        }
+        .padding(DesignTokens.Spacing.md)
+        .cardStyle()
+    }
+
+    @ViewBuilder
+    private var trailing: some View {
+        switch state {
+        case .connecting:
+            ProgressView()
+        case .connected:
+            Label("Connected", systemImage: "checkmark.circle.fill")
+                .labelStyle(.iconOnly)
+                .foregroundColor(.green)
+                .font(.title2)
+        default:
+            Button(action: onConnect) {
+                Text("Connect")
+                    .font(DesignTokens.Typography.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .background(Capsule().fill(provider.tint))
+            }
+        }
+    }
+}
+
+// MARK: - Model
+
+struct ConnectProvider: Identifiable {
+    let id: String
+    let name: String
+    let systemImage: String
+    let tint: Color
+    let blurb: String
+}
+
+enum ConnectState: Equatable {
+    case idle
+    case connecting
+    case connected
+    case failed(String)
+
+    var isError: Bool { if case .failed = self { return true }; return false }
+
+    var subtitle: String? {
+        switch self {
+        case .connected: return "Connected"
+        case .connecting: return "Opening sign-in…"
+        case .failed(let message): return message
+        case .idle: return nil
+        }
+    }
+}
+
+// MARK: - View model
+
+@MainActor
+final class ConnectionsViewModel: ObservableObject {
+    @Published private var states: [String: ConnectState] = [:]
+    private let authenticator = WebAuthenticator()
+
+    func state(for provider: String) -> ConnectState { states[provider] ?? .idle }
+
+    func connect(_ provider: String) async {
+        states[provider] = .connecting
+        do {
+            let resp: AuthorizeResponse = try await APIClient.shared.get("/api/v1/integrations/\(provider)/authorize")
+            guard let url = URL(string: resp.authorizeUrl) else {
+                states[provider] = .failed("Couldn't start sign-in.")
+                return
+            }
+            let callback = try await authenticator.authenticate(url: url, callbackScheme: "timesense")
+            states[provider] = callback.absoluteString.contains("connected")
+                ? .connected
+                : .failed("Couldn't connect. Try again.")
+        } catch is CancellationError {
+            states[provider] = .idle  // no callback returned
+        } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+            states[provider] = .idle  // user dismissed the sheet
+        } catch APIError.forbidden {
+            states[provider] = .failed("Premium required.")
+        } catch APIError.serverError(503, _) {
+            states[provider] = .failed("Not available yet.")
+        } catch {
+            states[provider] = .failed("Couldn't connect. Try again.")
+        }
+    }
+}
+
+private struct AuthorizeResponse: Decodable {
+    let authorizeUrl: String
+    enum CodingKeys: String, CodingKey { case authorizeUrl = "authorize_url" }
+}
+
+// MARK: - Web auth
+
+/// Wraps ASWebAuthenticationSession in an async call and provides the presentation anchor.
+@MainActor
+final class WebAuthenticator: NSObject, ASWebAuthenticationPresentationContextProviding {
+    private var session: ASWebAuthenticationSession?
+
+    func authenticate(url: URL, callbackScheme: String) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackScheme) { callbackURL, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let callbackURL {
+                    continuation.resume(returning: callbackURL)
+                } else {
+                    continuation.resume(throwing: CancellationError())
+                }
+            }
+            session.presentationContextProvider = self
+            session.prefersEphemeralWebBrowserSession = false
+            self.session = session
+            session.start()
+        }
+    }
+
+    nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
+    }
+}
