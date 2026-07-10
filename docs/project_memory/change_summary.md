@@ -1,5 +1,14 @@
 # Change Summary
 
+## 2026-07-09 — TIME-173 (Terms of Service page)
+
+- New public `web/app/terms/page.tsx` (linked from the footer, cross-linked with Privacy) — a
+  TimeSense-specific ToS: service scope (suggestions you approve), accounts, subscriptions & billing
+  (14-day trial requires payment, Free Basic after; Apple/Google/Stripe; no card numbers), acceptable
+  use, content + AI license, third-party connections, disclaimers callout, liability, termination.
+- Reuses the `.legal` styles from TIME-172; no new CSS. `cd web && npm run build` passes; verified
+  via headless Chrome. **No app-store links** (real URLs still pending). No backend changes.
+
 ## 2026-07-09 — TIME-171 & TIME-172 (Web companion + marketing polish)
 
 - **TIME-171 Insights (web):** new `web/app/app/insights/page.tsx` + Insights tab in the /app shell.

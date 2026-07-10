@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-173: The website now has a Terms of Service at /terms (linked from the footer, cross-linked with Privacy) — plain-language and TimeSense-specific: recommendations are suggestions you approve, the trial/Free-Basic/billing rules, acceptable use, your content, and clear disclaimers. No app-store links yet (pending real URLs)
 - [2026-07-09] TIME-172: The website now has a real Privacy Policy at /privacy (linked from the footer) — plain-language, TimeSense-specific: what we collect, the opt-in-only raw-audio rule, how captures are parsed by AI, who we share with, and your controls (approval-first, opt-in connections, export, delete). No ads, no selling data
 - [2026-07-09] TIME-171: The web companion now has an Insights tab — Premium users see their weekly summary and stats (tasks, completion rate, most-skipped meal, late wake-ups, commutes); everyone else sees a preview of what Premium unlocks
 - [2026-07-09] TIME-170: The web is now a real companion app — signed-in users get /app with their best next action (Now), today's plan (Today), and quick Capture, all in the cosmic domain-colour style. Admin moved to the footer

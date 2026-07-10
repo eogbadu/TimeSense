@@ -8683,6 +8683,23 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Terms of Service; real App Store / Play download links."),
         ),
     },
+    {
+        "summary": "TIME-173: Public Terms of Service page for the marketing site",
+        "labels": ["web", "feature"],
+        "description": doc(
+            h2("Goal"), p("Give the marketing site a real, public Terms of Service at /terms, cosmic-styled and specific to TimeSense (an assistant that suggests, never acts without approval)."),
+            divider(), h2("Scope"), bullet_list([
+                "New public web/app/terms/page.tsx (Metadata) in the cosmic .site shell, reusing the .legal styles; linked from the footer and cross-linked with Privacy",
+                "TimeSense-specific ToS: service scope (suggestions not instructions; approval-first), accounts (Firebase, age 13+), subscriptions & billing (14-day trial requires payment, Free Basic after; Apple/Google/Stripe; no card numbers; auto-renew/cancel/refunds), acceptable use, your content + AI license, third-party connections, disclaimers, limitation of liability, termination, changes, contact",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No App Store / Play download links yet (real app URLs pending); contact address is a placeholder; not legal advice / human legal review still required"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/terms/page.tsx, web/app/page.tsx, web/app/privacy/page.tsx"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["/terms renders a styled, accurate ToS reachable from the footer and cross-linked with Privacy; next build succeeds (static); verified via screenshot"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-168 (marketing site), TIME-172 (Privacy / .legal styles)."),
+            divider(), h2("Next Ticket"), p("Real App Store / Play download links once available."),
+        ),
+    },
 ]
 
 
