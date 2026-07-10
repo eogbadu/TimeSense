@@ -12,6 +12,7 @@ export default function NowPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [agreedFor, setAgreedFor] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -32,6 +33,46 @@ export default function NowPage() {
     setBusy(true);
     try {
       await callApi(`/api/v1/tasks/${id}`, { method: "PATCH", body: JSON.stringify({ status: "done" }) });
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendFeedback(id: string, signal: string, snoozeUntil?: string) {
+    await callApi("/api/v1/recommendations/feedback", {
+      method: "POST",
+      body: JSON.stringify({ task_id: id, signal, snooze_until: snoozeUntil ?? null }),
+    });
+  }
+
+  // Agree: record it and reveal Done/Snooze in place (no reload — stay on the same recommendation).
+  async function agree(id: string) {
+    setAgreedFor(id);
+    try {
+      await sendFeedback(id, "agree");
+    } catch {
+      /* keep the revealed buttons; the signal is best-effort */
+    }
+  }
+
+  // Disagree: record it and reload so a different (demoted, not hidden) action surfaces.
+  async function disagree(id: string) {
+    setBusy(true);
+    try {
+      await sendFeedback(id, "disagree");
+      setAgreedFor(null);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function snooze(id: string) {
+    setBusy(true);
+    try {
+      await sendFeedback(id, "snooze", new Date(Date.now() + 3 * 3600 * 1000).toISOString());
+      setAgreedFor(null);
       await load();
     } finally {
       setBusy(false);
@@ -86,10 +127,25 @@ export default function NowPage() {
                 </div>
               </div>
               <div className="foot">
-                <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => markDone(task.id)}>
-                  {busy ? "…" : "✓ Mark done"}
-                </button>
-                <Link className="btn btn-ghost btn-sm" href="/app/capture">Capture something</Link>
+                {agreedFor === task.id ? (
+                  <>
+                    <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => markDone(task.id)}>
+                      {busy ? "…" : "✓ Done"}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => snooze(task.id)}>
+                      Snooze
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => agree(task.id)}>
+                      👍 Agree
+                    </button>
+                    <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => disagree(task.id)}>
+                      👎 Disagree
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <WhyPanel taskId={task.id} />
