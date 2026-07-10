@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
+from app.repositories.consent_repository import ConsentRepository
 from app.repositories.recommendation_event_repository import RecommendationEventRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
@@ -69,6 +70,8 @@ class NowResponse(BaseModel):
     feasibility: Feasibility | None = None
     # Glanceable dashboard signals (calendar / tasks / energy / nearby).
     context: NowContextCards | None = None
+    # The impression id for this shown best-task — echo it back on feedback to link the outcome.
+    recommendation_event_id: uuid.UUID | None = None
 
 
 def _local_now(now: datetime, user_timezone: str) -> datetime:
@@ -123,12 +126,14 @@ async def _ranked_candidates(db: AsyncSession, user, now: datetime):
     """Shared Now ranking: returns (ranked_tasks, usable_minutes, today_scheduled_tasks)."""
     candidates, usable_minutes, today_tasks = await _gather_candidate_tasks(db, user, now)
     if not candidates:
-        return [], usable_minutes, today_tasks
-    ranked = await _engine_rank_tasks(db, user, candidates, now, usable_minutes)
-    return ranked, usable_minutes, today_tasks
+        return [], usable_minutes, today_tasks, None
+    ranked, best_meta = await _engine_rank_tasks(db, user, candidates, now, usable_minutes)
+    return ranked, usable_minutes, today_tasks, best_meta
 
 
-async def _engine_rank_tasks(db: AsyncSession, user, candidates: list, now: datetime, usable_minutes: int) -> list:
+async def _engine_rank_tasks(
+    db: AsyncSession, user, candidates: list, now: datetime, usable_minutes: int
+) -> tuple[list, dict | None]:
     """Order candidate Tasks using the deterministic recommendation engine (task + location domains),
     then map the engine's ranked candidates back to the ORM Tasks. Any candidate the engine didn't
     surface is safety-appended so best_task is never dropped."""
@@ -139,18 +144,21 @@ async def _engine_rank_tasks(db: AsyncSession, user, candidates: list, now: date
 
     ordered: list = []
     seen: set = set()
+    best_meta: dict | None = None
     for scored in ranked:
         c = scored.candidate
         if c.domain not in ("task", "location") or not c.related_entity_ids:
             continue
         tid = c.related_entity_ids[0]
         if tid in task_map and tid not in seen:
+            if best_meta is None:  # metadata of the top-ranked pick, for the impression log
+                best_meta = {"action_type": c.type, "domain": c.domain, "score": scored.score}
             ordered.append(task_map[tid])
             seen.add(tid)
     for t in candidates:  # safety net — keep any task the engine didn't rank
         if str(t.id) not in seen:
             ordered.append(t)
-    return ordered
+    return ordered, best_meta
 
 
 def _fmt_local(dt: datetime, tz_name: str) -> str:
@@ -268,7 +276,7 @@ async def get_now(
     user_tz = user.profile.timezone if user.profile else "UTC"
     local_now = _local_now(now, user_tz)
 
-    ranked, usable_minutes, today_tasks = await _ranked_candidates(db, user, now)
+    ranked, usable_minutes, today_tasks, best_meta = await _ranked_candidates(db, user, now)
     context = await _context_cards(db, user, now, user_tz)
     if not ranked:
         return NowResponse(
@@ -276,20 +284,43 @@ async def get_now(
             context=context,
         )
 
+    confidence = compute_confidence(ranked[0], usable_minutes, len(ranked[1:3]), now)
+    event_id = await _record_now_impression(db, user, ranked[0], confidence, best_meta)
     return NowResponse(
         greeting=_greeting(local_now),
         usable_minutes=usable_minutes,
         context=context,
         best_task=TaskResponse.model_validate(ranked[0]),
         alternatives=[TaskResponse.model_validate(t) for t in ranked[1:3]],
-        confidence=compute_confidence(ranked[0], usable_minutes, len(ranked[1:3]), now),
+        confidence=confidence,
         moment=_moment(local_now, ranked, now),
         feasibility=_feasibility(
             ranked[0], today_tasks, now, user_tz,
             (user.preferences.work_start_hour, user.preferences.work_end_hour)
             if user.preferences else (8, 21),
         ),
+        recommendation_event_id=event_id,
     )
+
+
+async def _record_now_impression(db, user, best_task, confidence: float, best_meta: dict | None):
+    """Best-effort, consent-gated impression of the shown best task. Never blocks /now; returns the
+    impression id (or None) so the client can echo it on feedback to link the outcome."""
+    try:
+        effective = await ConsentRepository(db).get_effective(user.id)
+        if not effective.get("analytics"):
+            return None
+        meta = best_meta or {}
+        event = await RecommendationEventRepository(db).record_impression(
+            user_id=user.id, task_id=best_task.id, surface="now", confidence=confidence,
+            action_type=meta.get("action_type"), domain=meta.get("domain"),
+            score=meta.get("score"), rank=0,
+        )
+        await db.commit()
+        return event.id
+    except Exception:
+        await db.rollback()
+        return None
 
 
 class RecommendedAction(BaseModel):
@@ -345,7 +376,7 @@ async def get_now_why(
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
 
     now = datetime.now(timezone.utc)
-    ranked, _usable, today_tasks = await _ranked_candidates(db, user, now)
+    ranked, _usable, today_tasks, _meta = await _ranked_candidates(db, user, now)
 
     target = next((t for t in ranked if t.id == task_id), None)
     if target is None:
