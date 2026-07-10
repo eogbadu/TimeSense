@@ -57,6 +57,7 @@ export default function CapturePage() {
       <textarea
         className="field"
         rows={3}
+        maxLength={2000}
         placeholder="e.g. Pick up groceries after work"
         value={text}
         onChange={(e) => setText(e.target.value)}

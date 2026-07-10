@@ -204,6 +204,9 @@ struct CaptureView: View {
                 .lineLimit(1...5)
                 .focused($isInputFocused)
                 .disabled(viewModel.uiState == .loading)
+                .onChange(of: captureText) { _, v in
+                    if v.count > 2000 { captureText = String(v.prefix(2000)) }  // match the backend cap
+                }
             Button {
                 isInputFocused = false
                 Task { await voice.toggle() }
