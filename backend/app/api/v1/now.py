@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
-from app.models.recommendation_event import RecommendationEvent
+from app.repositories.recommendation_event_repository import RecommendationEventRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
@@ -360,10 +360,10 @@ async def get_now_why(
 
     # Audit trail (best-effort — never block the response on it).
     try:
-        db.add(RecommendationEvent(
-            user_id=user.id, task_id=target.id,
+        await RecommendationEventRepository(db).record_impression(
+            user_id=user.id, task_id=target.id, surface="now_why",
             confidence=explanation["confidence"], explanation=explanation,
-        ))
+        )
         await db.commit()
     except Exception:
         await db.rollback()
@@ -471,11 +471,11 @@ async def get_now_recommendation(
 
     # Audit only task-backed picks (the audit model requires a task_id).
     if related_task_id is not None:
-        db.add(RecommendationEvent(
-            user_id=user.id, task_id=related_task_id, confidence=rec.confidence,
-            explanation={"action_type": rec.action_type, "domain": rec.domain,
-                         "score": rec.score, "reason_codes": list(rec.reason_codes)},
-        ))
+        await RecommendationEventRepository(db).record_impression(
+            user_id=user.id, task_id=related_task_id, surface="now_recommendation",
+            confidence=rec.confidence, action_type=rec.action_type, domain=rec.domain,
+            score=rec.score, explanation={"reason_codes": list(rec.reason_codes)},
+        )
         await db.commit()
 
     return NowRecommendationResponse(
