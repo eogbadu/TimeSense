@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-07-10 — TIME-196..201: Recommendation telemetry (Phase 2 — impression→outcome loop)
+
+Turns the write-only RecommendationEvent audit into a measured impression→outcome loop. Backend suite 489.
+
+- **TIME-196 (Jira TIME-2230) repo+migration**: added nullable typed columns to recommendation_events (surface, action_type, domain, score, rank, outcome, outcome_at, feedback_id) + 2 indexes; migration e2f3a4b5c6d7 (down_revision d1e2f3a4b5c6). New RecommendationEventRepository.record_impression (dedupe on user/task/surface where outcome IS NULL, 10-min window) + set_outcome. Refactored the 2 existing write sites (/now/why→surface "now_why"; /now/recommendation→"now_recommendation" with typed action_type/domain/score) through the repo.
+- **TIME-197 (Jira TIME-2231) /now impression**: main /now logs an impression of the shown best task (surface "now") — best-effort + consent-gated on analytics — and returns recommendation_event_id in NowResponse. Threaded the top pick's action_type/domain/score up (_engine_rank_tasks/_ranked_candidates now also return best_meta; /now/why caller updated to 4-tuple). _record_now_impression helper.
+- **TIME-198 (Jira TIME-2232) feedback→outcome**: FeedbackRequest gains optional recommendation_event_id; submit_feedback calls set_outcome(outcome=signal incl agree/disagree, feedback_id) when present. Optional → backward-compatible.
+- **TIME-199 (Jira TIME-2233) metrics**: RecommendationEventRepository.acceptance_stats (accepted=agree/done ÷ shown, overall + per action_type) + calibration_buckets (predicted-mean vs observed-accept-rate per confidence decile, with n; Python-side, DB-agnostic). New admin GET /api/v1/admin/recommendations/metrics?days=N. (Per-user WeeklyInsight acceptance columns deferred as optional follow-up.)
+- **TIME-200 (Jira TIME-2234) privacy**: added recommendation_events to privacy_service _USER_DATA (export bundle; deletion already cascades via user_id FK).
+- **TIME-201 (Jira TIME-2235) clients**: iOS/web/Android read recommendation_event_id from /now and echo it on feedback (agree/disagree/snooze) → outcome links to the impression. iOS built; web built; Android compile-unverified (no JDK). LOOP LIVE: /now impression → client echoes id → feedback records outcome → admin metrics read acceptance-rate + calibration. The agree/disagree signals (TIME-185) are the primary accept/reject outcomes.
+
 ## 2026-07-10 — TIME-189..195: Capture guardrails (Phase 1 of the Guardrails→Telemetry→Learning plan)
 
 Phase 1 of the plan the Ultraplan cloud session was refining (that session lapsed unapproved; approved direction reconstructed locally). Hardens the capture pipeline end-to-end. Ships standalone; backend suite 477 passed.

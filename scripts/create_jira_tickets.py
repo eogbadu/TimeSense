@@ -9078,6 +9078,105 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Phase 2: recommendation telemetry (impression→outcome log)."),
         ),
     },
+    {
+        "summary": "TIME-196: RecommendationEvent impression→outcome log (repo + migration)",
+        "labels": ["backend", "telemetry", "recommendation-engine"],
+        "description": doc(
+            h2("Goal"), p("Turn the write-only RecommendationEvent audit into a real impression→outcome log (Phase 2 foundation)."),
+            divider(), h2("Scope"), bullet_list([
+                "Add nullable typed columns (surface, action_type, domain, score, rank, outcome, outcome_at, feedback_id) + indexes; Alembic migration",
+                "RecommendationEventRepository.record_impression (dedupe on user/task/surface, no-outcome, 10-min window) + set_outcome",
+                "Refactor the 2 existing write sites (/now/why, /now/recommendation) to write via the repo with surface + typed columns",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No metrics endpoint yet; no client changes"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/models/recommendation_event.py, backend/migrations/versions/*, backend/app/repositories/recommendation_event_repository.py, backend/app/api/v1/now.py, backend/tests/test_recommendation_events.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["record_impression inserts + dedupes; set_outcome records reaction; migration head loads; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_recommendation_events.py -q"),
+            divider(), h2("Dependencies"), p("Existing RecommendationEvent model."),
+            divider(), h2("Next Ticket"), p("Write an impression on /now."),
+        ),
+    },
+    {
+        "summary": "TIME-197: Write an impression on /now + surface its id",
+        "labels": ["backend", "telemetry"],
+        "description": doc(
+            h2("Goal"), p("Log an impression of the shown best task on the main /now, and return its id so the client can echo it on feedback."),
+            divider(), h2("Scope"), bullet_list([
+                "record_impression(surface='now', best-effort, consent-gated on analytics); thread the top pick's action_type/domain/score up from the engine ranking",
+                "Add recommendation_event_id to NowResponse",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["Only log rank 0 in v1 (not alternatives)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/api/v1/now.py, backend/tests/test_now.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["With analytics consent /now returns an id + one 'now' impression; without consent → null id + no row; /now never blocks on telemetry"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_now.py -q"),
+            divider(), h2("Dependencies"), p("TIME-196."),
+            divider(), h2("Next Ticket"), p("Link feedback→outcome."),
+        ),
+    },
+    {
+        "summary": "TIME-198: Link feedback → impression → outcome",
+        "labels": ["backend", "telemetry"],
+        "description": doc(
+            h2("Goal"), p("Record how the user reacted to a shown recommendation by linking feedback to its impression."),
+            divider(), h2("Scope"), bullet_list([
+                "Add optional recommendation_event_id to FeedbackRequest",
+                "On feedback, set_outcome(outcome=signal incl agree/disagree, feedback_id) when present",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No completion linkage for non-feedback 'done' paths"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/api/v1/recommendations.py, backend/tests/test_feedback.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Feedback with an event id sets the impression outcome; feedback without one still works (backward-compat); suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_feedback.py -q"),
+            divider(), h2("Dependencies"), p("TIME-196/197."),
+            divider(), h2("Next Ticket"), p("Acceptance-rate + calibration metrics."),
+        ),
+    },
+    {
+        "summary": "TIME-199: Recommendation acceptance-rate + calibration metrics (admin)",
+        "labels": ["backend", "telemetry", "admin"],
+        "description": doc(
+            h2("Goal"), p("Read the impression→outcome log to measure recommendation quality."),
+            divider(), h2("Scope"), bullet_list([
+                "Repo acceptance_stats (accepted÷shown overall + per action_type) + calibration_buckets (predicted vs observed per confidence decile)",
+                "Admin GET /api/v1/admin/recommendations/metrics?days=N",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["Per-user WeeklyInsight acceptance columns deferred (optional follow-up)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/repositories/recommendation_event_repository.py, backend/app/api/v1/admin.py, backend/tests/test_admin.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Metrics report acceptance rate + per-action breakdown + calibration; 403 for non-admin; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_admin.py -q"),
+            divider(), h2("Dependencies"), p("TIME-196/197/198."),
+            divider(), h2("Next Ticket"), p("Privacy export/purge."),
+        ),
+    },
+    {
+        "summary": "TIME-200: Privacy export + purge for recommendation_events",
+        "labels": ["backend", "privacy"],
+        "description": doc(
+            h2("Goal"), p("Include the impression→outcome log in the GDPR data export (deletion already cascades)."),
+            divider(), h2("Scope"), bullet_list(["Add recommendation_events to privacy_service _USER_DATA"]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to deletion (FK cascade already covers it)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/privacy_service.py, backend/tests/test_privacy.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Export includes recommendation_events; account delete removes them; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_privacy.py -q"),
+            divider(), h2("Dependencies"), p("TIME-196."),
+            divider(), h2("Next Ticket"), p("Clients echo the impression id."),
+        ),
+    },
+    {
+        "summary": "TIME-201: Clients echo the impression id on feedback",
+        "labels": ["ios", "android", "web", "telemetry"],
+        "description": doc(
+            h2("Goal"), p("Close the loop: clients read recommendation_event_id from /now and send it on feedback so outcomes link to impressions."),
+            divider(), h2("Scope"), bullet_list([
+                "iOS NowContext + FeedbackBody; web NowResponse + sendFeedback; Android NowContext + FeedbackRequest",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["'Done' via task PATCH stays a separate path (not linked)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/.../Now/NowViewModel.swift, web/lib/appTypes.ts, web/app/app/page.tsx, android/.../now/NowViewModel.kt"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Feedback payloads include the id when available; iOS builds, web builds (Android in CI)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense && cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-197/198."),
+            divider(), h2("Next Ticket"), p("Phase 3: learning (revive apply_feedback)."),
+        ),
+    },
 ]
 
 
