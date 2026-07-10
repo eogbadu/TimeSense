@@ -8893,6 +8893,75 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(backlog) give part_of_day a per-user timezone fallback."),
         ),
     },
+    {
+        "summary": "TIME-185: agree/disagree feedback signals + demote-not-hide",
+        "labels": ["backend", "recommendation-engine", "feature"],
+        "description": doc(
+            h2("Goal"), p("Add first-class agree/disagree feedback signals so the Now screen can offer a two-stage Agree/Disagree flow; disagree surfaces a different recommendation without hiding the task for hours."),
+            divider(), h2("Scope"), bullet_list([
+                "Add agree/disagree to FeedbackRequest Literal + RecommendationFeedback.VALID_SIGNALS (no migration)",
+                "agree: positive, non-suppressing (recorded only)",
+                "disagree: 'demote, don't hide' — new get_recently_disagreed_task_ids (3h window) → UserContext.recently_disagreed_task_ids → RECENTLY_DISAGREED reason code → +30 demotion penalty; NOT the not_now 4h hide",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to done/snooze/not_now; no impression log yet (separate telemetry plan)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/api/v1/recommendations.py, backend/app/models/recommendation_feedback.py, backend/app/repositories/recommendation_feedback_repository.py, backend/app/services/recommendation/{types.py,context_builder.py,candidates/task_candidates.py,scoring/penalties.py}, tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["agree/disagree accepted (201); a disagreed task is demoted (different best surfaces) but still appears in alternatives (not hidden); agree stays best; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_feedback.py tests/test_now.py -q"),
+            divider(), h2("Dependencies"), p("Existing recommendation feedback + engine."),
+            divider(), h2("Next Ticket"), p("iOS/Android/web two-stage UI."),
+        ),
+    },
+    {
+        "summary": "TIME-186: iOS two-stage Agree/Disagree on the Best Next Action card",
+        "labels": ["ios", "feature"],
+        "description": doc(
+            h2("Goal"), p("Replace Done/Snooze/Not-now on the Now card with a two-stage Agree/Disagree flow."),
+            divider(), h2("Scope"), bullet_list([
+                "QuickActionRow: initial Agree/Disagree; on Agree reveal existing Done/Snooze; reset via .id(task.id)",
+                "NowViewModel agree()/disagree(); sendFeedback gains a reload flag (agree no-reload, disagree reload)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No snooze-duration picker (keeps 3h default)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Now/NowView.swift, NowViewModel.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Two-stage swap works; Disagree surfaces a different action; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-185."),
+            divider(), h2("Next Ticket"), p("Android + web parity."),
+        ),
+    },
+    {
+        "summary": "TIME-187: Android two-stage Agree/Disagree on the Best Next Action card",
+        "labels": ["android", "feature"],
+        "description": doc(
+            h2("Goal"), p("Bring Android to parity: build the Now feedback plumbing (none today) and the two-stage Agree/Disagree flow."),
+            divider(), h2("Scope"), bullet_list([
+                "NowViewModel: sendFeedback POST + agree/disagree/snooze (java.time.Instant for snooze_until)",
+                "NowScreen BestTaskCard: two-stage remember(task.id){mutableStateOf(false)} replacing the no-op Snooze/Not-now buttons",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No local compile (no JDK) — build in CI"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["android/app/src/main/java/com/timesense/app/features/now/NowViewModel.kt, NowScreen.kt"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Two-stage flow wired to the feedback endpoint; builds in CI"]),
+            divider(), h2("Verification"), code_block("cd android && ./gradlew assembleDebug"),
+            divider(), h2("Dependencies"), p("TIME-185/186."),
+            divider(), h2("Next Ticket"), p("Web parity."),
+        ),
+    },
+    {
+        "summary": "TIME-188: web two-stage Agree/Disagree on the Now page",
+        "labels": ["web", "feature"],
+        "description": doc(
+            h2("Goal"), p("Bring the web companion to parity with the two-stage Agree/Disagree flow."),
+            divider(), h2("Scope"), bullet_list([
+                "page.tsx: replace 'Mark done' with Agree/Disagree → Done/Snooze; agreedFor state keyed to task id",
+                "New sendFeedback POST to /api/v1/recommendations/feedback",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No snooze-duration picker"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/app/page.tsx"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Two-stage swap renders and calls feedback; next build succeeds; verified via screenshot"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-185."),
+            divider(), h2("Next Ticket"), p("(future) wire agree/disagree into the impression->outcome telemetry log."),
+        ),
+    },
 ]
 
 
