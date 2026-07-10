@@ -1,6 +1,6 @@
 # Context Summary
 
-**Last updated:** 2026-07-09 (web companion track: TIME-168..176 merged — marketing site, /app companion, Insights, Privacy, Terms; + web polish: removed Next dev badge, "Why this recommendation?" on web Now, app-icon logo/favicon. NEXT DISCUSSED: Google/Outlook calendar + Slack integrations — backend provider/scan largely built, but the client-side OAuth "Connect" flow is the missing piece and is gated on OAuth app credentials; Outlook calendar is net-new)
+**Last updated:** 2026-07-09 (web TIME-168..176 merged — marketing site, /app companion, Insights, Privacy, Terms, web polish. INTEGRATIONS IN PROGRESS: TIME-177 done = backend OAuth handshake + Google Calendar connect (/integrations/google/authorize + /callback, signed state, server-side token exchange, encrypted storage; unit-tested; goes live once GOOGLE_CLIENT_ID/SECRET set). NEXT: TIME-178 Outlook/Microsoft calendar provider + handshake (net-new), TIME-179 Slack OAuth handshake (scan already built), then mobile "Connect" UI (needs OAuth apps to verify E2E). Known: 1 pre-existing unrelated test failure in test_calendar_sync — see known_issues)
 
 ## v1 STATUS: FEATURE-COMPLETE (2026-07-06)
 

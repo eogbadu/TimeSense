@@ -1,5 +1,13 @@
 # Change Summary
 
+## 2026-07-09 — TIME-177 (backend OAuth handshake + Google Calendar)
+
+- New /api/v1/integrations/google/authorize (Premium → consent URL + signed state) and /callback
+  (verify state → exchange code server-side → store tokens encrypted via CalendarService.connect →
+  deep-link back). New oauth_state.py (HS256 signed/expiring state) + google_oauth.py (URL + exchange).
+- Scope calendar.events (writes still approval-gated). 503 until GOOGLE_CLIENT_ID/SECRET set.
+- 11 new tests; suite 442 passed (+1 pre-existing unrelated failure — see known_issues). Backend only.
+
 ## 2026-07-09 — TIME-174/175/176 (web polish: dev badge, Why explainer, app-icon logo)
 
 - **TIME-174:** `devIndicators:false` in next.config — removes the Next dev "N" badge.

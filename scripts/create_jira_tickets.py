@@ -8750,6 +8750,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Google/Outlook calendar + Slack integration connect flow."),
         ),
     },
+    {
+        "summary": "TIME-177: Backend OAuth handshake + Google Calendar connect",
+        "labels": ["backend", "integrations", "feature"],
+        "description": doc(
+            h2("Goal"), p("Implement the server-side OAuth handshake the integration config already assumed, starting with Google Calendar, so a user can grant calendar access and have tokens stored securely."),
+            divider(), h2("Scope"), bullet_list([
+                "GET /api/v1/integrations/google/authorize (Premium) → Google consent URL carrying a signed, expiring state (user identity + CSRF); 503 until configured",
+                "GET /api/v1/integrations/google/callback → verify state, exchange code for tokens server-side, store encrypted via CalendarService.connect, deep-link back; all failure branches → failure deep link",
+                "app/core/oauth_state.py (HS256 signed/expiring state), app/integrations/google_oauth.py (authorize URL + code exchange), oauth_success/failure_redirect config",
+                "Scope calendar.events (writes still gated behind in-app approval)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No mobile Connect UI yet (separate ticket); no Outlook/Slack yet; no token-refresh scheduler"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/api/v1/integrations.py, backend/app/core/oauth_state.py, backend/app/integrations/google_oauth.py, backend/app/core/config.py, backend/app/api/v1/__init__.py, backend/tests/test_integrations_oauth.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["authorize returns a valid Google consent URL when configured (503 otherwise); callback exchanges the code and stores encrypted tokens, redirecting back; all failure paths handled; tests green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_integrations_oauth.py -q"),
+            divider(), h2("Dependencies"), p("Existing GoogleCalendarProvider + CalendarService.connect + EncryptedString (TIME-056)."),
+            divider(), h2("Next Ticket"), p("Outlook/Microsoft calendar provider + handshake; then mobile Connect UI."),
+        ),
+    },
 ]
 
 

@@ -1,5 +1,13 @@
 # Known Issues
 
+## Pre-existing test failure: test_calendar_sync::test_appointment_within_the_hour_is_surfaced_over_tasks (observed 2026-07-09, TIME-177)
+- Fails deterministically on `main` — asserts the recommendation's action_type is `calendar` but the engine returns `context_switch` (`- calendar / + context_switch` at tests/test_calendar_sync.py:131).
+- Confirmed PRE-EXISTING and unrelated to TIME-177 (reproduced with the OAuth changes stashed). A recommendation-engine classification regression, not integrations.
+- Rest of suite: 442 passed. Needs a separate ticket to fix the action_type classification (or update the assertion if the new behaviour is intended).
+
+## Integrations: real OAuth connect can't be verified end-to-end without OAuth app credentials (2026-07-09, TIME-177)
+- The Google Calendar OAuth handshake (/integrations/google/authorize + /callback) is built and unit-tested against a mocked token exchange, but a real Google consent flow needs GOOGLE_CLIENT_ID/SECRET + a registered redirect URI (user's Google Cloud project). Same will apply to Microsoft/Outlook (Azure) and Slack. The mobile "Connect" UI is not built yet.
+
 ## Migration/model drift risk (found TIME-125)
 Hand-written Alembic migrations must include server_default=now() on created_at/updated_at to match TimestampMixin. Unit tests use Base.metadata.create_all (from models), so they DON'T catch a migration missing the default — it only fails on Postgres at runtime. Four tables (user_location_states/user_places/device_tokens/push_notifications) hit this; fixed by migration y5z6a7b8c9d0. Future hand-written migrations: copy created_at/updated_at with sa.text('now()') server_default.
 
