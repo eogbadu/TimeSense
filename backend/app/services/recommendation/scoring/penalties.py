@@ -55,6 +55,12 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
             and cal.minutes_until_next_event is not None and cal.minutes_until_next_event <= 60):
         penalty += 40
 
+    # A generic context-switch nudge (into work / home / sleep) must not override an imminent
+    # calendar commitment — the appointment is the salient next thing, not "move toward sleep".
+    if (c.domain == "context_switch" and cal.next_event is not None
+            and cal.minutes_until_next_event is not None and 0 <= cal.minutes_until_next_event <= 60):
+        penalty += 40
+
     # At home, an errand is only doable if we've confirmed a feasible trip — otherwise it must not
     # lead (you'd have to leave, and we can't verify it fits). Restores the TIME-110 guarantee.
     loc = ctx.location_context
