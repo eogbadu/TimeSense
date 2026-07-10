@@ -13,7 +13,7 @@ class TaskCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     description: str | None = None
     priority: int = Field(default=3, ge=1, le=5)
-    estimated_minutes: int | None = Field(default=None, ge=1)
+    estimated_minutes: int | None = Field(default=None, ge=1, le=1440)
     scheduled_start: datetime | None = None
     scheduled_end: datetime | None = None
     due_at: datetime | None = None
@@ -29,7 +29,7 @@ class TaskUpdate(BaseModel):
     description: str | None = None
     status: TaskStatus | None = None
     priority: int | None = Field(default=None, ge=1, le=5)
-    estimated_minutes: int | None = Field(default=None, ge=1)
+    estimated_minutes: int | None = Field(default=None, ge=1, le=1440)
     scheduled_start: datetime | None = None
     scheduled_end: datetime | None = None
     due_at: datetime | None = None
