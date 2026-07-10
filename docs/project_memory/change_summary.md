@@ -1,5 +1,14 @@
 # Change Summary
 
+## 2026-07-10 — TIME-196..201 (Recommendation telemetry — Phase 2, impression→outcome loop)
+
+- RecommendationEvent → real impression→outcome log: typed columns + migration + repository
+  (record_impression/set_outcome/acceptance_stats/calibration_buckets).
+- /now logs a consent-gated impression + returns its id; feedback echoes the id and records the
+  outcome (agree/disagree/snooze); admin GET /admin/recommendations/metrics = acceptance rate +
+  calibration. recommendation_events added to privacy export. iOS/web built; Android unverified.
+- Full loop live. Optional follow-up: per-user WeeklyInsight acceptance columns. Suite 489.
+
 ## 2026-07-10 — TIME-189..195 (Capture guardrails — Phase 1 of Guardrails→Telemetry→Learning)
 
 - Backend: CaptureRequest validators (tz/type_hint/lat-lng/dates/whitespace), CaptureService output
