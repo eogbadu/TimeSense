@@ -110,6 +110,53 @@ async def test_feedback_disagree_accepted(client):
 
 
 @pytest.mark.anyio
+async def test_feedback_links_outcome_to_impression(client, db_session):
+    """Feedback carrying a recommendation_event_id records the outcome on that impression."""
+    from sqlalchemy import select
+
+    from app.models.recommendation_event import RecommendationEvent
+    from app.models.task import Task
+    from app.repositories.recommendation_event_repository import RecommendationEventRepository
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    task = Task(user_id=user.id, title="Draft doc", status="pending")
+    db_session.add(task)
+    await db_session.flush()
+    ev = await RecommendationEventRepository(db_session).record_impression(
+        user.id, task.id, surface="now", confidence=0.8
+    )
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.post(
+            "/api/v1/recommendations/feedback",
+            headers=_auth_headers(),
+            json={"task_id": str(task.id), "signal": "agree", "recommendation_event_id": str(ev.id)},
+        )
+    assert r.status_code == 201
+    row = (
+        await db_session.execute(
+            select(RecommendationEvent).where(RecommendationEvent.id == ev.id)
+        )
+    ).scalar_one()
+    assert row.outcome == "agree" and row.feedback_id is not None and row.outcome_at is not None
+
+
+@pytest.mark.anyio
+async def test_feedback_without_event_id_still_works(client):
+    """Backward-compat: feedback with no recommendation_event_id still records (no linkage)."""
+    task_id = await _create_task(client, MOCK_USER)
+    with _mock_verify(MOCK_USER):
+        r = await client.post(
+            "/api/v1/recommendations/feedback",
+            headers=_auth_headers(),
+            json={"task_id": task_id, "signal": "disagree"},
+        )
+    assert r.status_code == 201
+
+
+@pytest.mark.anyio
 async def test_feedback_wrong_task_404(client):
     import uuid
     with _mock_verify(MOCK_USER):

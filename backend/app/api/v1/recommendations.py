@@ -13,6 +13,7 @@ from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.models.recommendation_feedback import RecommendationFeedback
 from app.repositories.meal_repository import MealRepository
+from app.repositories.recommendation_event_repository import RecommendationEventRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
@@ -81,6 +82,8 @@ class FeedbackRequest(BaseModel):
     # disagree = "not this one" → the task is demoted (not hidden) so a different rec surfaces.
     signal: Literal["done", "snooze", "not_now", "agree", "disagree"]
     snooze_until: datetime | None = None
+    # Optional: the impression this feedback reacts to (from NowResponse). Links outcome→impression.
+    recommendation_event_id: uuid.UUID | None = None
 
 
 class FeedbackResponse(BaseModel):
@@ -113,6 +116,14 @@ async def submit_feedback(
         snooze_until=body.snooze_until,
     )
     db.add(fb)
+    await db.flush()
+
+    # Link the outcome back to the impression it reacted to, if the client sent one.
+    if body.recommendation_event_id is not None:
+        await RecommendationEventRepository(db).set_outcome(
+            body.recommendation_event_id, user.id, outcome=body.signal, feedback_id=fb.id
+        )
+
     await db.commit()
     await db.refresh(fb)
 
