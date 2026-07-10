@@ -121,6 +121,10 @@ async def capture(
         user.id, body.raw_input, datetime.now(timezone.utc) - _DEDUPE_WINDOW
     )
     if duplicate is not None:
+        await AnalyticsService(db).track(
+            "task_captured", user_id=user.id,
+            properties={"source": "capture", "was_deduped": True},
+        )
         return TaskResponse.model_validate(duplicate)
 
     parser = CaptureService(gateway)
@@ -175,6 +179,14 @@ async def capture(
 
     task = await TaskService(db).create_task(user.id, task_create, auto_scheduled=auto_scheduled)
     await AnalyticsService(db).track(
-        "task_captured", user_id=user.id, properties={"source": task_create.source}
+        "task_captured", user_id=user.id,
+        properties={
+            "source": task_create.source,
+            "had_type_hint": body.type_hint is not None,
+            "had_explicit_time": body.scheduled_at is not None or body.due_at is not None,
+            "had_location": body.location_name is not None,
+            "auto_scheduled": auto_scheduled,
+            "was_deduped": False,
+        },
     )
     return TaskResponse.model_validate(task)
