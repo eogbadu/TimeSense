@@ -3,6 +3,8 @@ Admin-only API endpoints. All routes require AdminUser dependency (role == "admi
 Normal users receive 403 Forbidden — the route existence is not hidden,
 but the data is access-controlled at the dependency level.
 """
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +12,7 @@ from app.core.database import get_db
 from app.core.security import AdminUser
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.calendar_repository import CalendarIntegrationRepository
+from app.repositories.recommendation_event_repository import RecommendationEventRepository
 from app.repositories.invite_repository import InviteCodeRepository, WaitlistRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.subscription_repository import SubscriptionRepository
@@ -176,6 +179,22 @@ async def analytics_counts(
 ) -> dict:
     counts = await AnalyticsRepository(db).counts_by_event()
     return {"event_counts": counts, "total": sum(counts.values())}
+
+
+@router.get("/recommendations/metrics", summary="Recommendation acceptance + calibration (admin)")
+async def recommendation_metrics(
+    _admin: AdminUser = None,  # type: ignore[assignment]
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Acceptance rate (accepted ÷ shown, overall + per action_type) and confidence-calibration
+    buckets over the last `days`, from the recommendation impression→outcome log."""
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=max(1, days))
+    repo = RecommendationEventRepository(db)
+    stats = await repo.acceptance_stats(start, end)
+    calibration = await repo.calibration_buckets(start, end)
+    return {"window_days": days, **stats, "calibration": calibration}
 
 
 @router.get("/health", summary="Admin health check (admin)")
