@@ -117,6 +117,7 @@ export default function Privacy() {
           <Brand size={17} />
           <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
             <Link href="/">Home</Link>
+            <Link href="/terms">Terms</Link>
             <Link href="/app">Open the app</Link>
           </div>
           <span>© {new Date().getFullYear()} TimeSense</span>
