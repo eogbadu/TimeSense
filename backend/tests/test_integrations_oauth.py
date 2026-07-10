@@ -286,3 +286,98 @@ async def test_microsoft_provider_list_events_maps_graph_payload():
     assert events[0].title == "Standup"
     assert events[0].location == "Room 4"
     assert events[0].provider == "microsoft"
+
+
+# ── Slack (TIME-181) ──────────────────────────────────────────────────────────
+
+def test_slack_build_authorize_url_has_required_params():
+    from app.integrations import slack_oauth
+    with patch.object(slack_oauth.settings, "slack_client_id", "slack-cid"), \
+         patch.object(slack_oauth.settings, "slack_redirect_uri", "https://api.example/slack/cb"):
+        url = slack_oauth.build_authorize_url("STATE-SL")
+    assert url.startswith(slack_oauth.AUTHORIZE_ENDPOINT)
+    assert "client_id=slack-cid" in url
+    assert "state=STATE-SL" in url
+    assert "channels%3Ahistory" in url  # scope, url-encoded
+
+
+@pytest.mark.anyio
+async def test_slack_authorize_requires_configuration(client):
+    from app.integrations import slack_oauth
+    with patch.object(slack_oauth.settings, "slack_client_id", ""), \
+         patch.object(slack_oauth.settings, "slack_client_secret", ""):
+        resp = await client.get("/api/v1/integrations/slack/authorize")
+    assert resp.status_code == 503
+
+
+@pytest.mark.anyio
+async def test_slack_authorize_returns_url_when_configured(client):
+    from app.integrations import slack_oauth
+    with patch.object(slack_oauth.settings, "slack_client_id", "slack-cid"), \
+         patch.object(slack_oauth.settings, "slack_client_secret", "slack-secret"):
+        resp = await client.get("/api/v1/integrations/slack/authorize")
+    assert resp.status_code == 200
+    assert resp.json()["authorize_url"].startswith(slack_oauth.AUTHORIZE_ENDPOINT)
+
+
+@pytest.mark.anyio
+async def test_slack_callback_success_stores_token(client, db_session):
+    from app.integrations import slack_oauth
+    from app.integrations.slack_oauth import SlackTokenResult
+    from app.repositories.slack_repository import SlackIntegrationRepository
+
+    user = User(firebase_uid="uid-sl-cb", email="slcb@example.com")
+    db_session.add(user)
+    await db_session.flush()
+    state = sign_state(str(user.id), "slack")
+
+    fake = SlackTokenResult(access_token="xoxb-tok", team_id="T123")
+    with patch.object(slack_oauth, "exchange_code", AsyncMock(return_value=fake)):
+        resp = await client.get(
+            f"/api/v1/integrations/slack/callback?code=abc&state={state}",
+            follow_redirects=False,
+        )
+    assert resp.status_code == 302
+    assert resp.headers["location"].startswith("timesense://integrations/connected")
+
+    integration = await SlackIntegrationRepository(db_session).get_active(user.id)
+    assert integration is not None
+    assert integration.access_token == "xoxb-tok"
+    assert integration.team_id == "T123"
+
+
+@pytest.mark.anyio
+async def test_slack_callback_bad_state_redirects_to_failure(client):
+    resp = await client.get(
+        "/api/v1/integrations/slack/callback?code=abc&state=nope",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert resp.headers["location"].startswith("timesense://integrations/failed")
+
+
+@pytest.mark.anyio
+async def test_slack_exchange_raises_on_ok_false():
+    from app.integrations import slack_oauth
+    from app.integrations.slack_oauth import SlackOAuthError
+
+    class _Resp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"ok": False, "error": "invalid_code"}
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def post(self, *a, **k):
+            return _Resp()
+
+    with patch.object(slack_oauth.httpx, "AsyncClient", return_value=_Client()):
+        with pytest.raises(SlackOAuthError):
+            await slack_oauth.exchange_code("bad")
