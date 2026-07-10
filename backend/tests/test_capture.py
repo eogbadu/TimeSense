@@ -222,3 +222,39 @@ async def test_capture_out_of_range_lat_returns_422(client):
             json={"raw_input": "buy milk", "location_lat": 200},
         )
     assert r.status_code == 422
+
+
+# ── LLM-output safety (TIME-191): never trust the model's structured output ────
+
+class _StubGateway:
+    """A gateway whose complete_simple returns fixed JSON — used to feed hostile LLM output."""
+
+    def __init__(self, payload: dict):
+        self._text = json.dumps(payload)
+
+    async def complete_simple(self, prompt: str, system: str, max_tokens: int) -> str:
+        return self._text
+
+
+@pytest.mark.anyio
+async def test_capture_service_clamps_absurd_minutes():
+    from app.services.capture_service import CaptureService
+    gw = _StubGateway({"title": "Do a thing", "estimated_minutes": 999999, "priority": 3})
+    tc = await CaptureService(gw).parse("do a thing")
+    assert tc.estimated_minutes == 1440
+
+
+@pytest.mark.anyio
+async def test_capture_service_nulls_absurd_dates():
+    from app.services.capture_service import CaptureService
+    gw = _StubGateway({"title": "Do a thing", "scheduled_start": "3000-01-01T09:00:00Z", "priority": 3})
+    tc = await CaptureService(gw).parse("do a thing")
+    assert tc.scheduled_start is None
+
+
+@pytest.mark.anyio
+async def test_capture_service_cleans_blank_title():
+    from app.services.capture_service import CaptureService
+    gw = _StubGateway({"title": "   ", "priority": 3})
+    tc = await CaptureService(gw).parse("call the dentist")
+    assert tc.title.strip() != ""

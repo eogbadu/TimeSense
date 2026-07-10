@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from app.llm.base import LLMRequest
@@ -75,17 +76,17 @@ class CaptureService:
                 prompt=prompt, system=_PARSE_SYSTEM, max_tokens=256,
             )
             parsed = json.loads(raw_json.strip())
-            # LLM values win when present; the deterministic parser fills the gaps.
-            scheduled_start = _parse_iso(parsed.get("scheduled_start")) or rb_start
-            due_at = _parse_iso(parsed.get("due_at")) or rb_due
-            estimated = _safe_int(parsed.get("estimated_minutes"))
-            title = str(parsed.get("title") or rb_title)[:500]
+            # LLM values win when present, but never trusted blindly: dates are sanity-checked,
+            # minutes clamped, and the title cleaned. The deterministic parser fills the gaps.
+            scheduled_start = _sane_date(_parse_iso(parsed.get("scheduled_start"))) or rb_start
+            due_at = _sane_date(_parse_iso(parsed.get("due_at"))) or rb_due
+            estimated = _clamp_minutes(_safe_int(parsed.get("estimated_minutes")))
+            title = _clean_title(parsed.get("title")) or _clean_title(rb_title) or "New task"
             priority = _clamp(int(parsed.get("priority", 3)), 1, 5)
         except Exception as exc:
             logger.warning("Capture parse failed, using rule-based fallback: %s", exc)
-            scheduled_start, due_at, estimated, title, priority = (
-                rb_start, rb_due, None, rb_title[:500], 3
-            )
+            scheduled_start, due_at, estimated, priority = rb_start, rb_due, None, 3
+            title = _clean_title(rb_title) or "New task"
 
         # An "Idea" is a someday capture — never urgent, never auto-scheduled.
         if (type_hint or "").lower() == "idea":
@@ -122,3 +123,29 @@ def _safe_int(value) -> int | None:
 
 def _clamp(value: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, value))
+
+
+# ── Output-safety guards for the (untrusted) LLM parse ────────────────────────
+_MAX_FUTURE_YEARS = 5
+_MAX_MINUTES = 1440          # one working day — reject absurd durations
+_WHITESPACE = re.compile(r"\s+")
+
+
+def _sane_date(dt: datetime | None) -> datetime | None:
+    """Drop absurd parsed dates (before 2000 or more than a few years out) so they don't poison
+    scheduling; the caller falls back to the deterministic parser's value or None."""
+    if dt is None:
+        return None
+    max_year = datetime.now(timezone.utc).year + _MAX_FUTURE_YEARS
+    return dt if 2000 <= dt.year <= max_year else None
+
+
+def _clamp_minutes(value: int | None) -> int | None:
+    return None if value is None else _clamp(value, 1, _MAX_MINUTES)
+
+
+def _clean_title(value) -> str:
+    """Collapse whitespace + cap length; returns '' when there's nothing usable."""
+    if not value:
+        return ""
+    return _WHITESPACE.sub(" ", str(value)).strip()[:500]
