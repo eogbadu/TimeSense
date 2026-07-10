@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     microsoft_client_id: str = ""
     microsoft_client_secret: str = ""
     microsoft_redirect_uri: str = "http://localhost:8000/api/v1/integrations/microsoft/callback"
+    # Where the /callback deep-links back to once tokens are stored (mobile app / web companion).
+    oauth_success_redirect: str = "timesense://integrations/connected"
+    oauth_failure_redirect: str = "timesense://integrations/failed"
 
     # Slack
     slack_client_id: str = ""
