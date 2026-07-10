@@ -88,6 +88,32 @@ async def test_capture_emits_task_captured_event(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_capture_event_includes_enriched_properties(client, db_session):
+    import json
+
+    from sqlalchemy import select
+
+    from app.models.analytics_event import AnalyticsEvent
+
+    await _user_with_analytics(db_session, granted=True)
+    with _mock_verify(USER):
+        r = await client.post(
+            "/api/v1/capture", headers=_auth_headers(),
+            json={"raw_input": "email the team", "type_hint": "task"},
+        )
+    assert r.status_code == 201
+    row = (
+        await db_session.execute(
+            select(AnalyticsEvent).where(AnalyticsEvent.event_name == "task_captured")
+        )
+    ).scalars().first()
+    props = json.loads(row.properties)
+    assert props["had_type_hint"] is True
+    assert props["was_deduped"] is False
+    assert "auto_scheduled" in props and "had_location" in props
+
+
+@pytest.mark.anyio
 async def test_capture_no_event_without_consent(client, db_session):
     await _user_with_analytics(db_session, granted=False)
     with _mock_verify(USER):
