@@ -76,6 +76,11 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
     if "LOCATION_DATA_MISSING" in codes or "MAPS_API_UNAVAILABLE" in codes:
         penalty += 20  # can't confirm a real trip → don't let it win confidently
 
+    # Recently 'disagreed' with this exact task → demote it (don't hide): enough to drop below
+    # other candidates so a different recommendation surfaces, but it stays rankable and reappears.
+    if "RECENTLY_DISAGREED" in codes:
+        penalty += 30
+
     # Feedback: user often rejects this action type.
     if "USER_OFTEN_REJECTS_THIS_ACTION" in codes:
         penalty += 25

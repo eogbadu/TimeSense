@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task
 from app.models.user_place import UserPlace
+from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.sleep_wake_repository import SleepWakeRepository
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.user_place_repository import UserPlaceRepository
@@ -217,5 +218,11 @@ async def build_user_context(
             calendar_context=dataclasses.replace(
                 ctx.calendar_context, free_block_minutes=usable_minutes
             ),
+        )
+    # Recently 'disagreed' tasks are demoted (not hidden) so a different rec surfaces.
+    disagreed = await RecommendationFeedbackRepository(db).get_recently_disagreed_task_ids(user.id, now)
+    if disagreed:
+        ctx = dataclasses.replace(
+            ctx, recently_disagreed_task_ids=frozenset(str(i) for i in disagreed)
         )
     return ctx, task_map

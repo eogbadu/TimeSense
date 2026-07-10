@@ -11,11 +11,11 @@ from app.models.base import Base, TimestampMixin, UUIDMixin
 
 
 class RecommendationFeedback(UUIDMixin, TimestampMixin, Base):
-    """User reaction to a single recommendation — done / snooze / not_now."""
+    """User reaction to a single recommendation — agree / disagree / done / snooze / not_now."""
 
     __tablename__ = "recommendation_feedback"
 
-    VALID_SIGNALS = frozenset({"done", "snooze", "not_now"})
+    VALID_SIGNALS = frozenset({"done", "snooze", "not_now", "agree", "disagree"})
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

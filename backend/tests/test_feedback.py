@@ -84,6 +84,32 @@ async def test_feedback_snooze_stores_snooze_until(client):
 
 
 @pytest.mark.anyio
+async def test_feedback_agree_accepted(client):
+    task_id = await _create_task(client, MOCK_USER)
+    with _mock_verify(MOCK_USER):
+        r = await client.post(
+            "/api/v1/recommendations/feedback",
+            headers=_auth_headers(),
+            json={"task_id": task_id, "signal": "agree"},
+        )
+    assert r.status_code == 201
+    assert r.json()["signal"] == "agree"
+
+
+@pytest.mark.anyio
+async def test_feedback_disagree_accepted(client):
+    task_id = await _create_task(client, MOCK_USER)
+    with _mock_verify(MOCK_USER):
+        r = await client.post(
+            "/api/v1/recommendations/feedback",
+            headers=_auth_headers(),
+            json={"task_id": task_id, "signal": "disagree"},
+        )
+    assert r.status_code == 201
+    assert r.json()["signal"] == "disagree"
+
+
+@pytest.mark.anyio
 async def test_feedback_wrong_task_404(client):
     import uuid
     with _mock_verify(MOCK_USER):

@@ -57,6 +57,8 @@ def generate_task_candidates(ctx: UserContext, now: datetime) -> list[CandidateA
         if task.location_intent is not None:
             continue  # handled by the location generator
         action_type, codes = _classify(task, now)
+        if task.id in ctx.recently_disagreed_task_ids:
+            codes = codes + ["RECENTLY_DISAGREED"]
         req_energy = task_required_energy(task)
         candidates.append(CandidateAction(
             id=f"task:{task.id}",

@@ -15,6 +15,11 @@ from app.models.user import User
 # still-pending task doesn't vanish for the rest of the day.
 NOT_NOW_COOLDOWN = timedelta(hours=4)
 
+# How long a "disagree" DEMOTES (never hides) a task — long enough to surface a different
+# recommendation right after the user rejects one, short enough that the task reappears
+# later the same session once other candidates fade.
+DISAGREE_DEMOTE_WINDOW = timedelta(hours=3)
+
 
 class RecommendationFeedbackRepository:
     def __init__(self, db: AsyncSession) -> None:
@@ -57,6 +62,35 @@ class RecommendationFeedbackRepository:
                     suppressed.add(task_id)
 
         return suppressed
+
+    async def get_recently_disagreed_task_ids(
+        self, user_id: uuid.UUID, now: datetime | None = None
+    ) -> set[uuid.UUID]:
+        """Task IDs to DEMOTE (not hide) because the user recently 'disagreed' with recommending
+        them. Uses the latest feedback per task, so a later agree/done/snooze clears the demotion;
+        only a `disagree` within DISAGREE_DEMOTE_WINDOW counts.
+        """
+        now = now or datetime.now(timezone.utc)
+        result = await self.db.execute(
+            select(RecommendationFeedback)
+            .where(RecommendationFeedback.user_id == user_id)
+            .order_by(RecommendationFeedback.created_at.desc())
+        )
+
+        latest_by_task: dict[uuid.UUID, RecommendationFeedback] = {}
+        for fb in result.scalars().all():
+            latest_by_task.setdefault(fb.task_id, fb)
+
+        demoted: set[uuid.UUID] = set()
+        for task_id, fb in latest_by_task.items():
+            if fb.signal != "disagree":
+                continue
+            created_at = fb.created_at
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            if now - created_at < DISAGREE_DEMOTE_WINDOW:
+                demoted.add(task_id)
+        return demoted
 
     async def count_signals_in_range(
         self, user_id: uuid.UUID, start: datetime, end: datetime
