@@ -82,6 +82,15 @@ async def test_imminent_meeting_drives_prepare_recommendation(client, db_session
     assert body["action_type"] in ("prepare_for_meeting", "join_meeting")
 
 
+class _FixedNow(datetime):
+    """A datetime whose .now() is pinned to a fixed mid-workday UTC time, so the "next event within
+    the working window" logic is deterministic regardless of when the suite runs."""
+
+    @classmethod
+    def now(cls, tz=None):  # noqa: D401
+        return datetime(2026, 7, 10, 12, 0, tzinfo=tz or timezone.utc)
+
+
 @pytest.mark.anyio
 async def test_why_calendar_signal_reflects_real_free_time(client, db_session):
     """The 'Why this recommendation?' Calendar signal must reflect real free time until the next
@@ -93,9 +102,11 @@ async def test_why_calendar_signal_reflects_real_free_time(client, db_session):
     task = Task(user_id=user.id, title="Draft doc", status="pending", priority=2, estimated_minutes=30)
     db_session.add(task)
     await db_session.flush()
-    now = datetime.now(timezone.utc)
+    # Pin the server clock to noon UTC so the meeting always lands inside the working window
+    # (previously the meeting could fall past the default work-end, zeroing the free block).
+    now = _FixedNow.now(timezone.utc)
 
-    with _verify():
+    with _verify(), patch("app.api.v1.now.datetime", _FixedNow):
         await client.put("/api/v1/calendar/synced", headers={"Authorization": "Bearer t"}, json={
             "source": "apple",
             "events": [{"external_id": "mtg", "title": "Design review",
