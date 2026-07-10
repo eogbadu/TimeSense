@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.calendar_base import CalendarEvent, CalendarEventCreate, CalendarProvider
 from app.integrations.google_calendar import GoogleCalendarProvider
+from app.integrations.microsoft_calendar import MicrosoftCalendarProvider
 from app.models.calendar import CalendarIntegration, PendingCalendarAction
 from app.repositories.calendar_repository import (
     CalendarIntegrationRepository,
@@ -20,6 +21,7 @@ from app.repositories.calendar_repository import (
 
 _PROVIDERS: dict[str, CalendarProvider] = {
     "google": GoogleCalendarProvider(),
+    "microsoft": MicrosoftCalendarProvider(),
 }
 
 
