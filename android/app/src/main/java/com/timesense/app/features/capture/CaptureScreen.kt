@@ -92,7 +92,7 @@ fun CaptureScreen(
                 Spacer(Modifier.height(Spacing.sm))
                 OutlinedTextField(
                     value = text,
-                    onValueChange = { text = it },
+                    onValueChange = { if (it.length <= 2000) text = it },  // match the backend cap
                     placeholder = { Text("e.g. Call dentist tomorrow at 2pm") },
                     modifier = Modifier
                         .fillMaxWidth()
