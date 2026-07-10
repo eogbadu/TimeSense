@@ -1,7 +1,9 @@
+import re
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -19,6 +21,14 @@ from app.services.user_service import UserService
 
 router = APIRouter(prefix="/capture", tags=["capture"])
 
+# Control characters (except tab/newline/CR, which we collapse to a space) — stripped from input.
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_WHITESPACE = re.compile(r"\s+")
+# The Capture chips — the only accepted type hints.
+_VALID_TYPE_HINTS = {"task", "reminder", "schedule", "errand", "idea"}
+# A captured task shouldn't be scheduled/due absurdly far out (or before this millennium).
+_MAX_FUTURE_YEARS = 5
+
 
 class CaptureRequest(BaseModel):
     raw_input: str = Field(..., min_length=1, max_length=2000)
@@ -30,6 +40,61 @@ class CaptureRequest(BaseModel):
     location_name: str | None = Field(default=None, max_length=160)
     location_lat: float | None = None
     location_lng: float | None = None
+
+    @field_validator("raw_input")
+    @classmethod
+    def _clean_raw_input(cls, v: str) -> str:
+        """Strip control chars, collapse whitespace, and reject blank-after-strip input
+        (min_length=1 alone lets a string of only spaces through)."""
+        cleaned = _WHITESPACE.sub(" ", _CONTROL_CHARS.sub("", v)).strip()
+        if not cleaned:
+            raise ValueError("raw_input cannot be blank")
+        return cleaned
+
+    @field_validator("user_timezone")
+    @classmethod
+    def _valid_timezone(cls, v: str) -> str:
+        """Fall back to UTC for an unknown timezone rather than failing the whole capture later."""
+        try:
+            ZoneInfo(v)
+            return v
+        except Exception:
+            return "UTC"
+
+    @field_validator("type_hint")
+    @classmethod
+    def _normalize_type_hint(cls, v: str | None) -> str | None:
+        """Lower-case and whitelist against the 5 chips; unknown hints are ignored (None)."""
+        if v is None:
+            return None
+        v = v.strip().lower()
+        return v if v in _VALID_TYPE_HINTS else None
+
+    @field_validator("location_lat")
+    @classmethod
+    def _valid_lat(cls, v: float | None) -> float | None:
+        if v is not None and not (-90.0 <= v <= 90.0):
+            raise ValueError("location_lat must be between -90 and 90")
+        return v
+
+    @field_validator("location_lng")
+    @classmethod
+    def _valid_lng(cls, v: float | None) -> float | None:
+        if v is not None and not (-180.0 <= v <= 180.0):
+            raise ValueError("location_lng must be between -180 and 180")
+        return v
+
+    @model_validator(mode="after")
+    def _sanitize_dates(self) -> "CaptureRequest":
+        # Both set → keep the more specific scheduled_at (matches the endpoint's precedence).
+        if self.scheduled_at is not None and self.due_at is not None:
+            self.due_at = None
+        max_year = datetime.now(timezone.utc).year + _MAX_FUTURE_YEARS
+        for field in ("scheduled_at", "due_at"):
+            dt = getattr(self, field)
+            if dt is not None and not (2000 <= dt.year <= max_year):
+                raise ValueError(f"{field} is out of a sensible range")
+        return self
 
 
 @router.post(

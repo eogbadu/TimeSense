@@ -158,3 +158,67 @@ async def test_capture_empty_input_rejected(client):
 async def test_capture_unauthenticated_rejected(client):
     r = await client.post("/api/v1/capture", json={"raw_input": "test"})
     assert r.status_code == 401
+
+
+# ── Input validation & hygiene (TIME-189) ─────────────────────────────────────
+
+def test_capture_request_cleans_and_collapses_raw_input():
+    from app.api.v1.capture import CaptureRequest
+    req = CaptureRequest(raw_input="  call   the\n\n dentist  ")
+    assert req.raw_input == "call the dentist"
+
+
+def test_capture_request_rejects_whitespace_only():
+    from pydantic import ValidationError
+    from app.api.v1.capture import CaptureRequest
+    with pytest.raises(ValidationError):
+        CaptureRequest(raw_input="    \t\n ")
+
+
+def test_capture_request_invalid_timezone_falls_back_to_utc():
+    from app.api.v1.capture import CaptureRequest
+    assert CaptureRequest(raw_input="x", user_timezone="Not/AZone").user_timezone == "UTC"
+    assert CaptureRequest(raw_input="x", user_timezone="America/New_York").user_timezone == "America/New_York"
+
+
+def test_capture_request_unknown_type_hint_ignored():
+    from app.api.v1.capture import CaptureRequest
+    assert CaptureRequest(raw_input="x", type_hint="banana").type_hint is None
+    assert CaptureRequest(raw_input="x", type_hint="Errand").type_hint == "errand"
+
+
+def test_capture_request_lat_lng_range():
+    from pydantic import ValidationError
+    from app.api.v1.capture import CaptureRequest
+    with pytest.raises(ValidationError):
+        CaptureRequest(raw_input="x", location_lat=200.0)
+    with pytest.raises(ValidationError):
+        CaptureRequest(raw_input="x", location_lng=-999.0)
+    ok = CaptureRequest(raw_input="x", location_lat=40.7, location_lng=-73.9)
+    assert ok.location_lat == 40.7
+
+
+def test_capture_request_date_sanity_and_precedence():
+    from datetime import datetime, timezone
+    from pydantic import ValidationError
+    from app.api.v1.capture import CaptureRequest
+    with pytest.raises(ValidationError):
+        CaptureRequest(raw_input="x", scheduled_at=datetime(3999, 1, 1, tzinfo=timezone.utc))
+    # Both set → the more specific scheduled_at wins; due_at is dropped.
+    req = CaptureRequest(
+        raw_input="x",
+        scheduled_at=datetime(2026, 7, 1, 9, 0, tzinfo=timezone.utc),
+        due_at=datetime(2026, 7, 2, tzinfo=timezone.utc),
+    )
+    assert req.due_at is None
+
+
+@pytest.mark.anyio
+async def test_capture_out_of_range_lat_returns_422(client):
+    with _mock_verify(MOCK_USER):
+        r = await client.post(
+            "/api/v1/capture",
+            headers=_auth_headers(),
+            json={"raw_input": "buy milk", "location_lat": 200},
+        )
+    assert r.status_code == 422
