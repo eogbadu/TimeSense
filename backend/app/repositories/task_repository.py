@@ -25,6 +25,25 @@ class TaskRepository:
         await self.db.refresh(task)
         return task
 
+    async def find_recent_duplicate(
+        self, user_id: uuid.UUID, raw_input: str, since: datetime
+    ) -> Task | None:
+        """The most recent still-active capture with the same text (case-insensitive) created at or
+        after `since` — used to make rapid double-taps / retries idempotent."""
+        result = await self.db.execute(
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.source == "capture",
+                Task.status.in_(("pending", "in_progress")),
+                func.lower(Task.raw_input) == raw_input.strip().lower(),
+                Task.created_at >= since,
+            )
+            .order_by(Task.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def get_by_id(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
         result = await self.db.execute(
             select(Task).where(Task.id == task_id, Task.user_id == user_id)
