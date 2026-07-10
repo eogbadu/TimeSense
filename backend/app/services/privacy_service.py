@@ -26,6 +26,7 @@ from app.models.notification import Notification, ReplanRequest
 from app.models.notification_event import NotificationEvent
 from app.models.notion import NotionImportItem, NotionIntegration
 from app.models.onboarding import AssistantPersonality, OnboardingState
+from app.models.recommendation_event import RecommendationEvent
 from app.models.recommendation_feedback import RecommendationFeedback
 from app.models.referral import ReferralCode, ReferralConversion
 from app.models.routine import RoutineAssumption
@@ -59,6 +60,7 @@ _USER_DATA: list[tuple[str, type, object]] = [
     ("replan_requests", ReplanRequest, ReplanRequest.user_id),
     ("notification_events", NotificationEvent, NotificationEvent.user_id),
     ("recommendation_feedback", RecommendationFeedback, RecommendationFeedback.user_id),
+    ("recommendation_events", RecommendationEvent, RecommendationEvent.user_id),
     ("weekly_insights", WeeklyInsight, WeeklyInsight.user_id),
     ("calendar_integrations", CalendarIntegration, CalendarIntegration.user_id),
     ("pending_calendar_actions", PendingCalendarAction, PendingCalendarAction.user_id),

@@ -112,3 +112,37 @@ async def test_delete_only_affects_own_data(client, db_session):
 async def test_delete_requires_auth(client):
     r = await client.delete("/api/v1/privacy/account?confirm=true")
     assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_export_and_delete_cover_recommendation_events(client, db_session):
+    """recommendation_events are in the export bundle and removed on account deletion (TIME-200)."""
+    from sqlalchemy import select
+
+    from app.models.recommendation_event import RecommendationEvent
+    from app.models.task import Task
+    from app.repositories.recommendation_event_repository import RecommendationEventRepository
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(USER.uid, USER.email)
+    user_id = user.id
+    task = Task(user_id=user.id, title="T", status="pending")
+    db_session.add(task)
+    await db_session.flush()
+    await RecommendationEventRepository(db_session).record_impression(user.id, task.id, surface="now", confidence=0.8)
+    await db_session.commit()
+
+    with _mock_verify(USER):
+        r = await client.get("/api/v1/privacy/export", headers=_auth_headers())
+    assert r.status_code == 200
+    assert len(r.json()["recommendation_events"]) == 1
+
+    with _mock_verify(USER):
+        d = await client.delete("/api/v1/privacy/account?confirm=true", headers=_auth_headers())
+    assert d.status_code == 204
+    remaining = (
+        await db_session.execute(
+            select(RecommendationEvent).where(RecommendationEvent.user_id == user_id)
+        )
+    ).scalars().all()
+    assert remaining == []
