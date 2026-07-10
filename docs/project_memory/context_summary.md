@@ -1,6 +1,6 @@
 # Context Summary
 
-**Last updated:** 2026-07-09 (web companion track: TIME-168..173 merged — marketing site, /app companion, Insights, Privacy Policy, Terms of Service)
+**Last updated:** 2026-07-09 (web companion track: TIME-168..176 merged — marketing site, /app companion, Insights, Privacy, Terms; + web polish: removed Next dev badge, "Why this recommendation?" on web Now, app-icon logo/favicon. NEXT DISCUSSED: Google/Outlook calendar + Slack integrations — backend provider/scan largely built, but the client-side OAuth "Connect" flow is the missing piece and is gated on OAuth app credentials; Outlook calendar is net-new)
 
 ## v1 STATUS: FEATURE-COMPLETE (2026-07-06)
 

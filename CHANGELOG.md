@@ -17,6 +17,9 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-09] TIME-176: The TimeSense logo across the web now uses the real app-icon mark — a glowing blue→violet ring with a sparkle — instead of a plain circle, with a matching favicon
+- [2026-07-09] TIME-175: The web Now page now has a "Why this recommendation?" explainer — tap it to see the summary, the signals TimeSense weighed (with what's connected vs not), what tipped the decision, and the alternatives it considered
+- [2026-07-09] TIME-174: Removed the Next.js dev-tools "N" badge from the web app
 - [2026-07-09] TIME-173: The website now has a Terms of Service at /terms (linked from the footer, cross-linked with Privacy) — plain-language and TimeSense-specific: recommendations are suggestions you approve, the trial/Free-Basic/billing rules, acceptable use, your content, and clear disclaimers. No app-store links yet (pending real URLs)
 - [2026-07-09] TIME-172: The website now has a real Privacy Policy at /privacy (linked from the footer) — plain-language, TimeSense-specific: what we collect, the opt-in-only raw-audio rule, how captures are parsed by AI, who we share with, and your controls (approval-first, opt-in connections, export, delete). No ads, no selling data
 - [2026-07-09] TIME-171: The web companion now has an Insights tab — Premium users see their weekly summary and stats (tasks, completion rate, most-skipped meal, late wake-ups, commutes); everyone else sees a preview of what Premium unlocks
