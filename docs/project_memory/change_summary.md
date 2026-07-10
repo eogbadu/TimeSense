@@ -1,5 +1,16 @@
 # Change Summary
 
+## 2026-07-10 — TIME-182 & TIME-183 (mobile "Connect" UI — plan C complete)
+
+- **TIME-182 (iOS):** Settings ▸ Connections (ConnectionsView) — Connect buttons for Google/Outlook/
+  Slack that GET /integrations/{provider}/authorize and open the consent URL in an
+  ASWebAuthenticationSession (callback scheme "timesense"). iOS BUILD SUCCEEDED; new file registered
+  in the Xcode target.
+- **TIME-183 (Android):** the same screen via an ACTION_VIEW intent + a timesense://integrations
+  deep-link filter (MainActivity singleTask). Compile unverified (no JDK); mirrors existing patterns.
+- Plan "C" done: backend handshakes (Google/Outlook/Slack) + mobile Connect UI on both platforms.
+  Everything activates once the provider OAuth app credentials are set.
+
 ## 2026-07-10 — TIME-180 & TIME-181 (Outlook + Slack OAuth handshakes)
 
 - **TIME-180:** net-new `MicrosoftCalendarProvider` (Graph /me/calendarView + /me/events) registered

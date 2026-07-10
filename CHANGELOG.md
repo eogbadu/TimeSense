@@ -17,6 +17,8 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-10] TIME-183: Android now has a Connections screen (Settings ▸ Connections) to connect Google Calendar, Outlook, and Slack — opens the sign-in in your browser and returns to the app when done
+- [2026-07-10] TIME-182: iOS now has a Connections screen (Settings ▸ Connections) to connect Google Calendar, Outlook, and Slack via a secure in-app sign-in sheet
 - [2026-07-10] TIME-181: Backend support to connect Slack — a real OAuth flow so you can authorise TimeSense to scan channels for action items (activates once the Slack app credentials are set)
 - [2026-07-10] TIME-180: TimeSense can now connect Outlook / Microsoft calendars — a new Microsoft Graph provider plus its OAuth flow, alongside Google (activates once the Microsoft app credentials are set)
 - [2026-07-10] TIME-179: The mobile apps now recognise your real Premium status on sign-in — fixing Insights, which previously showed the "Upgrade" gate to everyone (even paying/trial users) because the app never checked your subscription

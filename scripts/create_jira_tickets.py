@@ -8840,6 +8840,42 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Mobile Connect UI for Google/Outlook/Slack."),
         ),
     },
+    {
+        "summary": "TIME-182: iOS Connect UI for Google/Outlook/Slack",
+        "labels": ["ios", "integrations", "feature"],
+        "description": doc(
+            h2("Goal"), p("Let users connect Google Calendar, Outlook, and Slack from the iOS app via the OAuth handshake."),
+            divider(), h2("Scope"), bullet_list([
+                "Settings ▸ Connections (ConnectionsView) with a Connect button per provider",
+                "Connect → GET /api/v1/integrations/{provider}/authorize → open the URL in ASWebAuthenticationSession (callback scheme 'timesense')",
+                "Handle cancel / 403 (Premium) / 503 (not configured); Premium-gated section; register the new file in the Xcode target",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No per-provider connected-status endpoint; no token refresh UI"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Settings/ConnectionsView.swift, ios/TimeSense/Features/Settings/SettingsView.swift, ios/TimeSense.xcodeproj/project.pbxproj"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Settings ▸ Connections shows Connect buttons that launch the provider consent flow; iOS builds; failure states handled"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-177/180/181 (backend handshakes); TIME-179 (Premium state)."),
+            divider(), h2("Next Ticket"), p("Android Connect UI."),
+        ),
+    },
+    {
+        "summary": "TIME-183: Android Connect UI for Google/Outlook/Slack",
+        "labels": ["android", "integrations", "feature"],
+        "description": doc(
+            h2("Goal"), p("Let users connect Google Calendar, Outlook, and Slack from the Android app via the OAuth handshake."),
+            divider(), h2("Scope"), bullet_list([
+                "Settings ▸ Connections (ConnectionsScreen + ConnectionsViewModel) with a Connect button per provider",
+                "Connect → GET /api/v1/integrations/{provider}/authorize → open the URL via an ACTION_VIEW intent",
+                "MainActivity timesense://integrations deep-link filter + singleTask so the redirect returns to the app; Premium-gated",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No per-provider connected-status endpoint; no Custom Tabs dependency"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["android/app/src/main/java/com/timesense/app/features/settings/ConnectionsScreen.kt, .../ConnectionsViewModel.kt, .../SettingsScreen.kt, .../navigation/MainNavHost.kt, android/app/src/main/AndroidManifest.xml"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Settings ▸ Connections shows Connect buttons that open the provider consent flow; redirect returns to the app; failure states handled (compile verified in CI)"]),
+            divider(), h2("Verification"), code_block("cd android && ./gradlew assembleDebug"),
+            divider(), h2("Dependencies"), p("TIME-177/180/181 (backend handshakes); TIME-179 (Premium state); TIME-182 (iOS parity)."),
+            divider(), h2("Next Ticket"), p("Set the OAuth app credentials to go live; add a connected-status endpoint."),
+        ),
+    },
 ]
 
 
