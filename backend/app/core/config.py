@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     firebase_project_id: str = ""
     firebase_service_account_json: str = "{}"
 
+    # Everyone gets Premium free for their first N days (intro trial), no payment required.
+    intro_trial_days: int = 14
+
     # Stripe
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""

@@ -306,7 +306,9 @@ async def _grant_premium(db_session, uid: str, email: str):
 
 
 @pytest.mark.anyio
-async def test_weekly_insight_without_premium_returns_403(client):
+async def test_weekly_insight_without_premium_returns_403(client, db_session):
+    from tests.conftest import expire_intro_trial
+    await expire_intro_trial(db_session, MOCK_USER.uid, MOCK_USER.email)
     with _mock_verify(MOCK_USER):
         r = await client.get("/api/v1/insights/weekly", headers=_auth_headers())
     assert r.status_code == 403

@@ -27,7 +27,9 @@ def _mock_stripe_customer(customer_id: str = "cus_gate_test"):
 
 
 @pytest.mark.anyio
-async def test_premium_gate_blocks_free_user(client):
+async def test_premium_gate_blocks_free_user(client, db_session):
+    from tests.conftest import expire_intro_trial
+    await expire_intro_trial(db_session, FREE_USER.uid, FREE_USER.email)
     with _mock_verify(FREE_USER):
         r = await client.get("/api/v1/subscriptions/premium-only-example", headers=_auth_headers())
     assert r.status_code == 403
@@ -45,7 +47,9 @@ async def test_premium_gate_allows_trialing_user(client):
 
 
 @pytest.mark.anyio
-async def test_feature_flags_free_user(client):
+async def test_feature_flags_free_user(client, db_session):
+    from tests.conftest import expire_intro_trial
+    await expire_intro_trial(db_session, FREE_USER.uid, FREE_USER.email)
     with _mock_verify(FREE_USER):
         r = await client.get("/api/v1/subscriptions/me/features", headers=_auth_headers())
     assert r.status_code == 200

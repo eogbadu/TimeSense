@@ -6,6 +6,7 @@ are handled on-device; this service receives their webhook payloads and
 updates the unified Subscription record.
 """
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,20 +14,39 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.subscription import Subscription
 from app.repositories.subscription_repository import SubscriptionRepository
+from app.repositories.user_repository import UserRepository
 
 
 class SubscriptionService:
     def __init__(self, db: AsyncSession) -> None:
         self.repo = SubscriptionRepository(db)
+        self.user_repo = UserRepository(db)
 
     async def get_subscription(self, user_id: uuid.UUID) -> Subscription | None:
         return await self.repo.get_by_user_id(user_id)
 
     async def is_premium(self, user_id: uuid.UUID) -> bool:
+        """Premium if there's an active/trialing subscription, OR the account is still inside its
+        intro trial — everyone gets Premium free for their first `intro_trial_days`, no payment."""
         sub = await self.repo.get_by_user_id(user_id)
-        if sub is None:
-            return False
-        return sub.is_premium
+        if sub is not None and sub.is_premium:
+            return True
+        return await self.in_intro_trial(user_id)
+
+    async def in_intro_trial(self, user_id: uuid.UUID) -> bool:
+        """True while the account is younger than the intro-trial window."""
+        end = await self.intro_trial_ends_at(user_id)
+        return end is not None and datetime.now(timezone.utc) < end
+
+    async def intro_trial_ends_at(self, user_id: uuid.UUID) -> datetime | None:
+        """When this account's free intro trial ends (created_at + intro_trial_days), or None."""
+        user = await self.user_repo.get_by_id(user_id)
+        if user is None or user.created_at is None:
+            return None
+        created = user.created_at
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        return created + timedelta(days=settings.intro_trial_days)
 
     async def start_trial(
         self,

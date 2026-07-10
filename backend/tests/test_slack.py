@@ -216,7 +216,9 @@ async def test_reject_creates_no_task(db_session):
 # ── API-layer tests (premium gate, isolation) ─────────────────────────────────
 
 @pytest.mark.anyio
-async def test_scan_without_premium_returns_403(client):
+async def test_scan_without_premium_returns_403(client, db_session):
+    from tests.conftest import expire_intro_trial
+    await expire_intro_trial(db_session, MOCK_USER.uid, MOCK_USER.email)
     with _mock_verify(MOCK_USER):
         r = await client.post("/api/v1/slack/scan", headers=_auth_headers(), json={"channel": "C123"})
     assert r.status_code == 403
