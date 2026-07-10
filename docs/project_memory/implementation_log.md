@@ -1,5 +1,17 @@
 # Implementation Log
 
+## 2026-07-10 — TIME-189..195: Capture guardrails (Phase 1 of the Guardrails→Telemetry→Learning plan)
+
+Phase 1 of the plan the Ultraplan cloud session was refining (that session lapsed unapproved; approved direction reconstructed locally). Hardens the capture pipeline end-to-end. Ships standalone; backend suite 477 passed.
+
+- **TIME-189 (Jira TIME-2223) input validation & hygiene**: Pydantic validators on CaptureRequest (capture.py) — user_timezone via zoneinfo (invalid→UTC), type_hint normalized+whitelisted to the 5 chips (unknown→None), location_lat/lng range (422), raw_input strip-control-chars+collapse-whitespace+reject-blank-after-strip, model_validator date sanity (scheduled_at wins over due_at; reject <2000 or >now+5y). Schema-level + endpoint tests.
+- **TIME-190 (Jira TIME-2224) test hardening**: fixed the flaky test_calendar_sync::test_why_calendar_signal_reflects_real_free_time — UTC/work-hours time-dependence (next_event clipped to the working window; after ~20:20 UTC the meeting fell past work-end so the Calendar signal said "0 minutes free"). Pinned the server clock via a datetime subclass (_FixedNow → noon UTC) patched onto app.api.v1.now.datetime, meeting placed relative to it.
+- **TIME-191 (Jira TIME-2225) LLM-output safety**: CaptureService.parse never trusts model output — _clamp_minutes [1,1440] (+ le=1440 on TaskCreate/TaskUpdate), _sane_date nulls absurd dates (<2000 or >now+5y), _clean_title (collapse ws, cap 500, never blank→"New task"); rule-based fallback runs through the same cleaning.
+- **TIME-192 (Jira TIME-2226) prompt-injection**: fence raw_input in <user_input>…</user_input> + _PARSE_SYSTEM instruction (data not instructions); strip spoofed fence tags; extracted _build_parse_prompt; non-JSON/echoed output still falls back to rule-based.
+- **TIME-193 (Jira TIME-2227) dedupe**: TaskRepository.find_recent_duplicate (same user, source=capture, pending/in_progress, case-insensitive raw_input, 60s window); capture endpoint returns the existing task on a hit (idempotent double-tap/retry), before parsing. _DEDUPE_WINDOW=60s.
+- **TIME-194 (Jira TIME-2228) cross-client cap**: 2000-char cap on all capture inputs — iOS TextField truncates onChange, web textarea maxLength=2000, Android OutlinedTextField ignores >2000. Android's leaner payload (raw_input+tz only) documented as intentional (no chips/contextual UI). iOS built; web built.
+- **TIME-195 (Jira TIME-2229) analytics enrichment**: task_captured event (consent-gated) now carries had_type_hint/had_explicit_time/had_location/auto_scheduled/was_deduped; dedupe path emits was_deduped=true.
+
 ## 2026-07-10 — TIME-185..188: Agree/Disagree on the Best Next Action screen (two-stage feedback)
 
 New product interaction replacing Done/Snooze/Not-now with a two-stage flow: initial Agree/Disagree; Agree → reveal Done/Snooze (act on it); Disagree → record + surface a different (demoted, not hidden) recommendation. Direct accept/reject quality signal; telemetry-ready (maps to accepted/rejected outcomes once the impression log lands — separate cloud plan). Ships standalone on the existing feedback endpoint.

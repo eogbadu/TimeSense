@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-10] TIME-189..195: Hardened capture — input is validated and cleaned (timezone, location, dates, blank/oversized text), the AI parse output is bounded and sanity-checked, prompt-injection in captured text is neutralized, rapid duplicate captures are deduped, and all apps cap input at 2000 chars. Groundwork for measuring and improving recommendations
 - [2026-07-10] TIME-185..188: The Best Next Action screen now asks "Agree / Disagree" first — Agree reveals Done/Snooze to act on it; Disagree swaps in a different recommendation (the one you passed on drops down but isn't hidden, so it can come back later). Live on backend + iOS + Android + web; a cleaner signal of how good each recommendation is
 - [2026-07-10] TIME-184: An appointment coming up within the hour now reliably shows as your top recommendation, instead of occasionally being edged out by a generic "wind down for the night" nudge (also fixes a flaky test)
 - [2026-07-10] TIME-183: Android now has a Connections screen (Settings ▸ Connections) to connect Google Calendar, Outlook, and Slack — opens the sign-in in your browser and returns to the app when done

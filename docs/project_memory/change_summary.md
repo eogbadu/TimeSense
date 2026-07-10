@@ -1,5 +1,13 @@
 # Change Summary
 
+## 2026-07-10 — TIME-189..195 (Capture guardrails — Phase 1 of Guardrails→Telemetry→Learning)
+
+- Backend: CaptureRequest validators (tz/type_hint/lat-lng/dates/whitespace), CaptureService output
+  clamps (minutes/dates/title) + prompt-injection fencing, near-duplicate dedupe, enriched analytics.
+- Clients: 2000-char cap on iOS/web/Android capture inputs (Android leaner payload intentional).
+- TIME-190 hardened a flaky time-dependent calendar-sync test (pinned clock). Suite 477 passed.
+- Reconstructed from the (lapsed) Ultraplan cloud plan; approved direction, shipped standalone.
+
 ## 2026-07-10 — TIME-185..188 (Agree/Disagree on the Best Next Action screen)
 
 - Two-stage feedback replacing Done/Snooze/Not-now: Agree → Done/Snooze in place; Disagree →

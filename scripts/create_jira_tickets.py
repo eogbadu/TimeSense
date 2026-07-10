@@ -8962,6 +8962,122 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(future) wire agree/disagree into the impression->outcome telemetry log."),
         ),
     },
+    {
+        "summary": "TIME-189: Capture input validation & hygiene",
+        "labels": ["backend", "capture", "guardrails"],
+        "description": doc(
+            h2("Goal"), p("Reject/normalize malformed capture input at the schema boundary (Phase 1 of the capture-guardrails plan)."),
+            divider(), h2("Scope"), bullet_list([
+                "Pydantic validators on CaptureRequest: timezone via zoneinfo (invalid→UTC), type_hint whitelist to the 5 chips (unknown→None), lat/lng ranges (422), raw_input strip/collapse/reject-whitespace-only, model_validator date sanity (scheduled_at over due_at; reject <2000 or >now+5y)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No LLM-output coercion (separate ticket)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/api/v1/capture.py, backend/tests/test_capture.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Bad lat/lng → 422; whitespace-only → 422; invalid tz → UTC; unknown chip → ignored; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_capture.py -q"),
+            divider(), h2("Dependencies"), p("None."),
+            divider(), h2("Next Ticket"), p("LLM-output safety."),
+        ),
+    },
+    {
+        "summary": "TIME-190: Harden the flaky time-dependent calendar-sync test",
+        "labels": ["backend", "tests"],
+        "description": doc(
+            h2("Goal"), p("Make test_why_calendar_signal_reflects_real_free_time deterministic (it was UTC/work-hours flaky)."),
+            divider(), h2("Scope"), bullet_list(["Pin the server clock (patch now.datetime with a datetime subclass → noon UTC) and place the meeting relative to it"]),
+            divider(), h2("Non-Goals"), bullet_list(["No product/engine change"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/tests/test_calendar_sync.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Test passes deterministically regardless of run time; full suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_calendar_sync.py -q"),
+            divider(), h2("Dependencies"), p("None."),
+            divider(), h2("Next Ticket"), p("LLM-output safety."),
+        ),
+    },
+    {
+        "summary": "TIME-191: LLM-output safety in CaptureService",
+        "labels": ["backend", "capture", "guardrails"],
+        "description": doc(
+            h2("Goal"), p("Never trust the model's structured parse output — bound and sanity-check every field."),
+            divider(), h2("Scope"), bullet_list([
+                "Clamp estimated_minutes to [1,1440] (+ le=1440 on TaskCreate/TaskUpdate)",
+                "Null absurd parsed dates (<2000 or >now+5y); clean title (collapse ws, cap 500, never blank)",
+                "Rule-based fallback runs through the same cleaning",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No prompt-injection handling (separate ticket)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/capture_service.py, backend/app/schemas/task.py, backend/tests/test_capture.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["999999 min → 1440; year-3000 date → null; blank title → non-empty; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_capture.py -q"),
+            divider(), h2("Dependencies"), p("TIME-189."),
+            divider(), h2("Next Ticket"), p("Prompt-injection handling."),
+        ),
+    },
+    {
+        "summary": "TIME-192: Prompt-injection handling in the capture parse prompt",
+        "labels": ["backend", "capture", "guardrails"],
+        "description": doc(
+            h2("Goal"), p("Treat captured raw_input strictly as data, never instructions, in the LLM parse."),
+            divider(), h2("Scope"), bullet_list([
+                "Fence raw_input in <user_input>…</user_input> + _PARSE_SYSTEM instruction; strip spoofed fence tags; extract _build_parse_prompt",
+                "Non-JSON/echoed output still falls back to the deterministic parse",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No output-content moderation"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/capture_service.py, backend/tests/test_capture.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Prompt fences input + strips spoofed tags; injection-shaped input still yields a sane task; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_capture.py -q"),
+            divider(), h2("Dependencies"), p("TIME-191."),
+            divider(), h2("Next Ticket"), p("Dedupe."),
+        ),
+    },
+    {
+        "summary": "TIME-193: Near-duplicate capture dedupe",
+        "labels": ["backend", "capture", "guardrails"],
+        "description": doc(
+            h2("Goal"), p("Make rapid double-tap / retry captures idempotent — return the same task instead of a duplicate."),
+            divider(), h2("Scope"), bullet_list([
+                "TaskRepository.find_recent_duplicate (same user, source=capture, active, case-insensitive raw_input, 60s window)",
+                "Capture endpoint returns the existing task on a hit, before parsing (skips the LLM call)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to the 30/min rate limiter"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/repositories/task_repository.py, backend/app/api/v1/capture.py, backend/tests/test_capture.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Identical text (case-insensitive) within the window → same task id; different text → distinct tasks; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_capture.py -q"),
+            divider(), h2("Dependencies"), p("TIME-189."),
+            divider(), h2("Next Ticket"), p("Cross-client cap."),
+        ),
+    },
+    {
+        "summary": "TIME-194: Cross-client capture input consistency (2000-char cap)",
+        "labels": ["ios", "android", "web", "capture"],
+        "description": doc(
+            h2("Goal"), p("Enforce the backend's 2000-char raw_input cap on every client so long input is prevented at the source."),
+            divider(), h2("Scope"), bullet_list([
+                "iOS TextField truncates onChange; web textarea maxLength=2000; Android OutlinedTextField ignores >2000",
+                "Document Android's leaner payload (raw_input+tz) as intentional",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No new Android chips/contextual capture UI"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/.../Capture/CaptureView.swift, web/app/app/capture/page.tsx, android/.../capture/CaptureScreen.kt"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["No client can submit >2000 chars; iOS builds, web builds (Android in CI)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense && cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-189."),
+            divider(), h2("Next Ticket"), p("Analytics enrichment."),
+        ),
+    },
+    {
+        "summary": "TIME-195: Enrich the task_captured analytics event",
+        "labels": ["backend", "capture", "analytics"],
+        "description": doc(
+            h2("Goal"), p("Make Phase-1 capture behavior observable via non-PII analytics properties."),
+            divider(), h2("Scope"), bullet_list([
+                "Add had_type_hint/had_explicit_time/had_location/auto_scheduled/was_deduped to the consent-gated task_captured event",
+                "Dedupe early-return emits the event with was_deduped=true",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No new admin analytics UI"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/api/v1/capture.py, backend/tests/test_monitoring_analytics.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Emitted event carries the enriched props; consent gating unchanged; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_monitoring_analytics.py -q"),
+            divider(), h2("Dependencies"), p("TIME-193 (dedupe flag)."),
+            divider(), h2("Next Ticket"), p("Phase 2: recommendation telemetry (impression→outcome log)."),
+        ),
+    },
 ]
 
 
