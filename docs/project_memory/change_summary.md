@@ -1,5 +1,16 @@
 # Change Summary
 
+## 2026-07-10 — TIME-185..188 (Agree/Disagree on the Best Next Action screen)
+
+- Two-stage feedback replacing Done/Snooze/Not-now: Agree → Done/Snooze in place; Disagree →
+  record + surface a different recommendation.
+- **TIME-185 backend:** first-class agree/disagree signals; disagree "demotes, don't hide" via a
+  new RECENTLY_DISAGREED reason code + 3h demote window + penalty (not the not_now 4h hide). 462 tests.
+- **TIME-186 iOS / TIME-187 Android / TIME-188 web:** two-stage button swap (local stage reset per
+  task id) + agree/disagree feedback calls; Android also gained its first Now feedback plumbing.
+- Standalone on the existing feedback endpoint; signals are telemetry-ready for the impression log.
+  iOS built; web built + screenshotted; Android compile-unverified (no JDK).
+
 ## 2026-07-10 — TIME-184 (imminent appointment > context-switch nudge)
 
 - One penalty in scoring/penalties.py: a generic context_switch nudge (work/home/sleep) is suppressed
