@@ -8700,6 +8700,56 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Real App Store / Play download links once available."),
         ),
     },
+    {
+        "summary": "TIME-174: Hide the Next.js dev-tools indicator on the web app",
+        "labels": ["web", "chore"],
+        "description": doc(
+            h2("Goal"), p("Remove the on-screen Next.js dev-tools indicator (the 'N' badge in the lower-left corner) from the web app."),
+            divider(), h2("Scope"), bullet_list(["Set devIndicators:false in web/next.config.ts"]),
+            divider(), h2("Non-Goals"), bullet_list(["No other config changes"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/next.config.ts"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["The 'N' indicator no longer renders; next build succeeds"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("None."),
+            divider(), h2("Next Ticket"), p("Web Now 'Why this recommendation?'."),
+        ),
+    },
+    {
+        "summary": "TIME-175: Why this recommendation on the web Now page",
+        "labels": ["web", "feature"],
+        "description": doc(
+            h2("Goal"), p("Surface the reasoning behind the web Now pick, matching the native app's 'Why This Recommendation?' sheet."),
+            divider(), h2("Scope"), bullet_list([
+                "New WhyPanel disclosure under the Now hero; lazily fetches GET /api/v1/now/why?task_id= on first open",
+                "Renders the structured WhyResponse: summary, colour-coded signals (connected vs not), decision-factor chips, alternatives considered",
+                "appTypes: WhyResponse type + signalColor() helper",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No backend changes (/now/why already exists)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/app/WhyPanel.tsx, web/app/app/page.tsx, web/lib/appTypes.ts"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Tapping 'Why this recommendation?' expands the structured explanation; next build succeeds; verified via screenshot"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-170 (companion web app); backend GET /api/v1/now/why."),
+            divider(), h2("Next Ticket"), p("App-icon logo mark."),
+        ),
+    },
+    {
+        "summary": "TIME-176: Web logo uses the app-icon mark",
+        "labels": ["web", "feature"],
+        "description": doc(
+            h2("Goal"), p("Replace the plain circle in the web wordmark with a mark that matches the real app icon (glowing blue→violet ring + sparkle)."),
+            divider(), h2("Scope"), bullet_list([
+                "New reusable SVG <Mark> (gradient ring, subtle clock ticks, sparkle core), used in the marketing nav/footer, the /app bar, and sign-in",
+                "New file-based app/icon.svg favicon (rounded dark square) replacing the heavy PNG favicon (PNG kept as OG image)",
+                "Remove the now-unused .orb CSS",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No changes to the native iOS/Android app icons (web only)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/Mark.tsx, web/app/Brand.tsx, web/app/app/layout.tsx, web/app/icon.svg, web/app/layout.tsx, web/app/globals.css"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Wordmark + favicon show the app-icon-style mark; next build succeeds; verified via screenshot"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-168 (marketing site)."),
+            divider(), h2("Next Ticket"), p("Google/Outlook calendar + Slack integration connect flow."),
+        ),
+    },
 ]
 
 

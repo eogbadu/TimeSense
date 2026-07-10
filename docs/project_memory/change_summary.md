@@ -1,5 +1,14 @@
 # Change Summary
 
+## 2026-07-09 — TIME-174/175/176 (web polish: dev badge, Why explainer, app-icon logo)
+
+- **TIME-174:** `devIndicators:false` in next.config — removes the Next dev "N" badge.
+- **TIME-175:** web Now "Why this recommendation?" disclosure → GET /api/v1/now/why (summary,
+  colour-coded signals, decision factors, alternatives). New WhyPanel.tsx + appTypes WhyResponse.
+- **TIME-176:** reusable SVG `Mark` (gradient ring + sparkle) replaces the plain `.orb` in all
+  wordmarks; new app/icon.svg favicon; dropped the 1.2 MB PNG favicon (kept as OG image).
+- Web-only, no backend changes; `cd web && npm run build` passes; all verified via screenshots.
+
 ## 2026-07-09 — TIME-173 (Terms of Service page)
 
 - New public `web/app/terms/page.tsx` (linked from the footer, cross-linked with Privacy) — a
