@@ -24,6 +24,9 @@ struct SettingsView: View {
                 }
 
                 Section("Integrations") {
+                    NavigationLink { ConnectionsView() } label: {
+                        SettingsRowLabel(icon: "link", title: "Connections", tint: .indigo)
+                    }
                     NavigationLink { CalendarSettingsView() } label: {
                         SettingsRowLabel(icon: "calendar", title: "Calendar", tint: .green)
                     }
