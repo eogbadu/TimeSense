@@ -203,3 +203,40 @@ async def test_admin_waitlist_forbidden_to_normal_user(client):
     with _mock_verify(NORMAL_USER):
         r = await client.get("/api/v1/admin/waitlist", headers=_auth_headers())
     assert r.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_recommendation_metrics_acceptance_rate(client, db_session):
+    """Admin metrics report acceptance rate + per-action_type breakdown from the impression log."""
+    from app.models.task import Task
+    from app.models.user import User
+    from app.repositories.recommendation_event_repository import RecommendationEventRepository
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(NORMAL_USER.uid, NORMAL_USER.email)
+    task = Task(user_id=user.id, title="T", status="pending")
+    db_session.add(task)
+    await db_session.flush()
+    repo = RecommendationEventRepository(db_session)
+    # 3 impressions of the same action: agree (accepted), done (accepted), disagree (rejected).
+    for outcome in ("agree", "done", "disagree"):
+        ev = await repo.record_impression(user.id, task.id, surface="now", confidence=0.8, action_type="deep_work")
+        ev.outcome = outcome  # set directly (record_impression dedupes, so bypass for the test)
+        await db_session.flush()
+        # re-record needs a fresh impression each time → clear dedupe by giving an outcome (done above)
+
+    with _mock_verify(ADMIN_USER):
+        r = await client.get("/api/v1/admin/recommendations/metrics?days=7", headers=_auth_headers())
+    assert r.status_code == 200
+    body = r.json()
+    assert body["overall"]["shown"] == 3
+    assert body["overall"]["accepted"] == 2
+    assert body["overall"]["acceptance_rate"] == round(2 / 3, 3)
+    assert any(a["action_type"] == "deep_work" for a in body["by_action_type"])
+
+
+@pytest.mark.anyio
+async def test_recommendation_metrics_forbidden_for_non_admin(client):
+    with _mock_verify(NORMAL_USER):
+        r = await client.get("/api/v1/admin/recommendations/metrics", headers=_auth_headers())
+    assert r.status_code == 403
