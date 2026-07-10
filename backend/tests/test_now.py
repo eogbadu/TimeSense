@@ -152,6 +152,54 @@ async def test_now_excludes_not_now_task(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_now_demotes_disagreed_task_but_keeps_it(client, db_session):
+    """A 'disagree' DEMOTES the task (a different best surfaces) but does NOT hide it — it stays
+    rankable and still appears among the alternatives, unlike a suppressing 'not now'."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+    from app.models.recommendation_feedback import RecommendationFeedback
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    # The disagreed task is higher priority, so without demotion it would be the best pick.
+    disagreed = Task(user_id=user.id, title="Disagreed", status="pending", priority=1)
+    keep = Task(user_id=user.id, title="Keep", status="pending", priority=2)
+    db_session.add_all([disagreed, keep])
+    await db_session.flush()
+    db_session.add(RecommendationFeedback(user_id=user.id, task_id=disagreed.id, signal="disagree"))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    assert r.status_code == 200
+    body = r.json()
+    # Demoted: the other task wins despite lower priority.
+    assert body["best_task"] is not None and body["best_task"]["title"] == "Keep"
+    # Not hidden: the disagreed task is still present (as an alternative), unlike a suppressed one.
+    titles = {body["best_task"]["title"]} | {a["title"] for a in body["alternatives"]}
+    assert "Disagreed" in titles
+
+
+@pytest.mark.anyio
+async def test_now_agree_does_not_demote_or_hide(client, db_session):
+    """'agree' is a positive, non-suppressing signal — the task stays the best pick."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+    from app.models.recommendation_feedback import RecommendationFeedback
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    agreed = Task(user_id=user.id, title="Agreed", status="pending", priority=1)
+    db_session.add(agreed)
+    await db_session.flush()
+    db_session.add(RecommendationFeedback(user_id=user.id, task_id=agreed.id, signal="agree"))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    assert r.status_code == 200
+    assert r.json()["best_task"]["title"] == "Agreed"
+
+
+@pytest.mark.anyio
 async def test_now_why_returns_reason_lazily(client, db_session):
     """/now stays fast (no reason); /now/why lazily returns a human 'why' for the task."""
     from app.services.user_service import UserService

@@ -77,7 +77,9 @@ async def get_recommendations(
 
 class FeedbackRequest(BaseModel):
     task_id: uuid.UUID
-    signal: Literal["done", "snooze", "not_now"]
+    # agree = "yes, this is the right next thing" (positive, non-suppressing).
+    # disagree = "not this one" → the task is demoted (not hidden) so a different rec surfaces.
+    signal: Literal["done", "snooze", "not_now", "agree", "disagree"]
     snooze_until: datetime | None = None
 
 
@@ -92,7 +94,7 @@ async def submit_feedback(
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ) -> FeedbackResponse:
-    """Record user reaction (done/snooze/not_now) to a recommendation."""
+    """Record user reaction (agree/disagree/done/snooze/not_now) to a recommendation."""
     user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
 
     # Validate task belongs to user

@@ -102,7 +102,7 @@ ReasonCode = Literal[
     "FOCUS_MODE_AVAILABLE", "FAMILY_TIME_WINDOW",
     # Feedback
     "RECENTLY_DISMISSED_SIMILAR_ACTION", "USER_OFTEN_ACCEPTS_THIS_ACTION",
-    "USER_OFTEN_REJECTS_THIS_ACTION",
+    "USER_OFTEN_REJECTS_THIS_ACTION", "RECENTLY_DISAGREED",
     # Fallback
     "NO_URGENT_ACTION", "LOW_CONFIDENCE_CONTEXT",
 ]
@@ -317,6 +317,8 @@ class UserContext:
     location_context: Optional[UserLocationSnapshot] = None
     travel_context: Optional[TravelContext] = None
     health_context: Optional[HealthContext] = None
+    # Task ids (as strings) the user recently "disagreed" with — demoted, not hidden.
+    recently_disagreed_task_ids: frozenset = frozenset()
 
 
 # --------------------------------------------------------------------------------------
