@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useApi } from "@/lib/api";
 import { accentFor, priorityLabel, type NowResponse } from "@/lib/appTypes";
+import WhyPanel from "./WhyPanel";
 
 export default function NowPage() {
   const callApi = useApi();
@@ -57,6 +58,7 @@ export default function NowPage() {
         (() => {
           const a = accentFor(task.title);
           return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div className="hero-card">
               <div
                 className="top"
@@ -89,6 +91,8 @@ export default function NowPage() {
                 </button>
                 <Link className="btn btn-ghost btn-sm" href="/app/capture">Capture something</Link>
               </div>
+            </div>
+            <WhyPanel taskId={task.id} />
             </div>
           );
         })()

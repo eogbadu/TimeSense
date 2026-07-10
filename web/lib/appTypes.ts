@@ -41,6 +41,28 @@ export interface TaskResponse {
   due_at: string | null;
 }
 
+export interface WhyResponse {
+  recommended_action: { task_id: string; title: string; recommended_duration_minutes: number | null };
+  confidence: number;
+  context_used: string[];
+  decision_factors: { name: string; rating: string }[];
+  signals: { name: string; detail: string; available: boolean }[];
+  alternatives_considered: { task_id: string; title: string; reason_not_selected: string }[];
+  summary: string;
+  reason: string;
+}
+
+/** Accent colour for a "Why" signal, keyed by its name. */
+export function signalColor(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("calendar")) return "var(--blue)";
+  if (n.includes("time")) return "var(--violet)";
+  if (n.includes("location")) return "var(--cyan)";
+  if (n.includes("energy") || n.includes("health")) return "var(--green)";
+  if (n.includes("priority")) return "var(--amber)";
+  return "var(--blue)";
+}
+
 /** A task's domain accent — mirrors the native app's colour system. */
 export function accentFor(title: string): { color: string; label: string; icon: string } {
   const t = ` ${title.toLowerCase()} `;
