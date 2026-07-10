@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-10] TIME-184: An appointment coming up within the hour now reliably shows as your top recommendation, instead of occasionally being edged out by a generic "wind down for the night" nudge (also fixes a flaky test)
 - [2026-07-10] TIME-183: Android now has a Connections screen (Settings ▸ Connections) to connect Google Calendar, Outlook, and Slack — opens the sign-in in your browser and returns to the app when done
 - [2026-07-10] TIME-182: iOS now has a Connections screen (Settings ▸ Connections) to connect Google Calendar, Outlook, and Slack via a secure in-app sign-in sheet
 - [2026-07-10] TIME-181: Backend support to connect Slack — a real OAuth flow so you can authorise TimeSense to scan channels for action items (activates once the Slack app credentials are set)

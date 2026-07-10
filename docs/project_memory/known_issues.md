@@ -1,9 +1,10 @@
 # Known Issues
 
-## Pre-existing test failure: test_calendar_sync::test_appointment_within_the_hour_is_surfaced_over_tasks (observed 2026-07-09, TIME-177)
-- Fails deterministically on `main` — asserts the recommendation's action_type is `calendar` but the engine returns `context_switch` (`- calendar / + context_switch` at tests/test_calendar_sync.py:131).
-- Confirmed PRE-EXISTING and unrelated to TIME-177 (reproduced with the OAuth changes stashed). A recommendation-engine classification regression, not integrations.
-- Rest of suite: 442 passed. Needs a separate ticket to fix the action_type classification (or update the assertion if the new behaviour is intended).
+## RESOLVED (2026-07-10, TIME-184): test_calendar_sync::test_appointment_within_the_hour_is_surfaced_over_tasks
+- Was failing deterministically at "night" (UTC): an appointment ~45 min out returned domain `context_switch` instead of `calendar`.
+- Root cause: with no user timezone, part_of_day derives from UTC; at "night" a transition_to_sleep (context_switch) candidate scored ~0.6755, edging the "coming up" calendar candidate ~0.675 by a hair.
+- FIX (TIME-184): added a penalty in scoring/penalties.py — a generic context_switch nudge is suppressed when a calendar event is within the hour (mirrors the "don't start an errand before a commitment" rule). Suite now 458 passed, 0 failures.
+- Latent (not fixed): part_of_day falls back to UTC when a user has no timezone; harmless in production (users have a timezone) and the penalty makes behaviour correct regardless.
 
 ## Integrations: real OAuth connect can't be verified end-to-end without OAuth app credentials (2026-07-09, TIME-177)
 - The Google Calendar OAuth handshake (/integrations/google/authorize + /callback) is built and unit-tested against a mocked token exchange, but a real Google consent flow needs GOOGLE_CLIENT_ID/SECRET + a registered redirect URI (user's Google Cloud project). Same will apply to Microsoft/Outlook (Azure) and Slack. The mobile "Connect" UI is not built yet.

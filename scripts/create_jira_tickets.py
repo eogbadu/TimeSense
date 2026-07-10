@@ -8876,6 +8876,23 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Set the OAuth app credentials to go live; add a connected-status endpoint."),
         ),
     },
+    {
+        "summary": "TIME-184: Imminent appointment beats a generic context-switch nudge",
+        "labels": ["backend", "recommendation-engine", "bug"],
+        "description": doc(
+            h2("Goal"), p("An appointment coming up within the hour should reliably be the top recommendation, not occasionally edged out by a generic 'wind down / switch mode' nudge. Fixes the flaky test_calendar_sync test."),
+            divider(), h2("Scope"), bullet_list([
+                "Add a scoring penalty: a context_switch nudge (work/home/sleep) is suppressed when a calendar event is within the hour",
+                "Root cause was a near-tie score at 'night' (part_of_day derives from UTC when the user has no timezone)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["Not changing part_of_day's UTC fallback (harmless in production); no scoring-weight overhaul"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/recommendation/scoring/penalties.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["test_calendar_sync::test_appointment_within_the_hour_is_surfaced_over_tasks passes deterministically; full suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest -q"),
+            divider(), h2("Dependencies"), p("None."),
+            divider(), h2("Next Ticket"), p("(backlog) give part_of_day a per-user timezone fallback."),
+        ),
+    },
 ]
 
 
