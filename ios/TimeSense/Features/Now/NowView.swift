@@ -70,9 +70,10 @@ struct NowView: View {
                         task: task,
                         confidence: ctx.confidence,
                         loadExplanation: { await viewModel.fetchExplanation(taskId: task.id) },
+                        onAgree: { Task { await viewModel.agree(taskId: task.id) } },
+                        onDisagree: { Task { await viewModel.disagree(taskId: task.id) } },
                         onDone: { Task { await viewModel.markDone(taskId: task.id, title: task.title) } },
-                        onSnooze: { Task { await viewModel.snooze(taskId: task.id) } },
-                        onNotNow: { Task { await viewModel.notNow(taskId: task.id) } }
+                        onSnooze: { Task { await viewModel.snooze(taskId: task.id) } }
                     )
 
                     if let feasibility = ctx.feasibility, !feasibility.fits {
@@ -283,9 +284,10 @@ private struct BestNextActionCard: View {
     let task: NowTask
     let confidence: Double?
     let loadExplanation: () async -> RecommendationExplanation?
+    let onAgree: () -> Void
+    let onDisagree: () -> Void
     let onDone: () -> Void
     let onSnooze: () -> Void
-    let onNotNow: () -> Void
 
     var body: some View {
         let style = taskCategoryStyle(for: task.title)
@@ -357,7 +359,8 @@ private struct BestNextActionCard: View {
             }
             Divider()
             WhyThis(load: loadExplanation)
-            QuickActionRow(onDone: onDone, onSnooze: onSnooze, onNotNow: onNotNow)
+            QuickActionRow(onAgree: onAgree, onDisagree: onDisagree, onDone: onDone, onSnooze: onSnooze)
+                .id(task.id)  // reset the Agree/Disagree stage whenever the recommendation changes
         }
         .padding(DesignTokens.Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -742,26 +745,48 @@ private struct OptionRow: View {
     }
 }
 
+/// Two-stage feedback: first ask whether the user agrees with the recommendation. On Agree, reveal
+/// Done/Snooze to act on it. On Disagree, the view model records it and surfaces a different action
+/// (the parent resets this view via `.id(task.id)` when the recommendation changes).
 private struct QuickActionRow: View {
+    let onAgree: () -> Void
+    let onDisagree: () -> Void
     let onDone: () -> Void
     let onSnooze: () -> Void
-    let onNotNow: () -> Void
+
+    @State private var agreed = false
 
     var body: some View {
-        // Full-width primary Done + two compact secondary actions; labels never wrap.
         HStack(spacing: DesignTokens.Spacing.sm) {
-            Button(action: onDone) {
-                Label("Done", systemImage: "checkmark.circle.fill")
-                    .font(DesignTokens.Typography.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DesignTokens.Spacing.sm)
-                    .background(DesignTokens.Color.accent)
-                    .clipShape(Capsule())
+            if agreed {
+                PrimaryAction(title: "Done", systemImage: "checkmark.circle.fill", action: onDone)
+                SecondaryAction(title: "Snooze", systemImage: "clock.arrow.2.circlepath", action: onSnooze)
+            } else {
+                PrimaryAction(title: "Agree", systemImage: "hand.thumbsup.fill") {
+                    withAnimation(.easeInOut(duration: 0.18)) { agreed = true }
+                    onAgree()
+                }
+                SecondaryAction(title: "Disagree", systemImage: "hand.thumbsdown", action: onDisagree)
             }
-            SecondaryAction(title: "Snooze", systemImage: "clock.arrow.2.circlepath", action: onSnooze)
-            SecondaryAction(title: "Not now", systemImage: "xmark", action: onNotNow)
+        }
+    }
+}
+
+private struct PrimaryAction: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(DesignTokens.Typography.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DesignTokens.Spacing.sm)
+                .background(DesignTokens.Color.accent)
+                .clipShape(Capsule())
         }
     }
 }

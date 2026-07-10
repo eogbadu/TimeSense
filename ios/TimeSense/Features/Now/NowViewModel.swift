@@ -244,6 +244,18 @@ final class NowViewModel: ObservableObject {
         return try? await APIClient.shared.get("/api/v1/now/why?task_id=\(taskId)")
     }
 
+    /// User agrees this is the right next action — record it, then reveal Done/Snooze in place
+    /// (no re-fetch; we stay on the same recommendation).
+    func agree(taskId: String) async {
+        await sendFeedback(taskId: taskId, signal: "agree", snoozeUntil: nil, reload: false)
+    }
+
+    /// User disagrees — record it and re-fetch so a different best action surfaces (the disagreed
+    /// task is demoted, not hidden).
+    func disagree(taskId: String) async {
+        await sendFeedback(taskId: taskId, signal: "disagree", snoozeUntil: nil)
+    }
+
     /// Snooze the current best task for a few hours; it drops out of Now until then.
     func snooze(taskId: String, hours: Int = 3) async {
         let until = ISO8601DateFormatter().string(from: Date().addingTimeInterval(Double(hours) * 3600))
@@ -255,7 +267,7 @@ final class NowViewModel: ObservableObject {
         await sendFeedback(taskId: taskId, signal: "not_now", snoozeUntil: nil)
     }
 
-    private func sendFeedback(taskId: String, signal: String, snoozeUntil: String?) async {
+    private func sendFeedback(taskId: String, signal: String, snoozeUntil: String?, reload: Bool = true) async {
         guard case .loaded = uiState else { return }
         struct FeedbackBody: Encodable {
             let task_id: String
@@ -270,7 +282,7 @@ final class NowViewModel: ObservableObject {
         } catch {
             // ignore; reload reflects the true state
         }
-        await load()
+        if reload { await load() }
     }
 }
 
