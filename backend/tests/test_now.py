@@ -200,6 +200,59 @@ async def test_now_agree_does_not_demote_or_hide(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_now_records_impression_and_surfaces_id(client, db_session):
+    """With analytics consent, /now logs an impression of the shown best task and returns its id."""
+    from sqlalchemy import select
+
+    from app.models.recommendation_event import RecommendationEvent
+    from app.models.task import Task
+    from app.repositories.consent_repository import ConsentRepository
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    await ConsentRepository(db_session).record(user.id, "analytics", True)
+    db_session.add(Task(user_id=user.id, title="Buy milk", status="pending", priority=3))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    body = r.json()
+    assert body["best_task"] is not None
+    assert body["recommendation_event_id"] is not None
+    rows = (
+        await db_session.execute(
+            select(RecommendationEvent).where(RecommendationEvent.surface == "now")
+        )
+    ).scalars().all()
+    assert len(rows) == 1 and rows[0].task_id is not None
+
+
+@pytest.mark.anyio
+async def test_now_no_impression_without_analytics_consent(client, db_session):
+    from sqlalchemy import select
+
+    from app.models.recommendation_event import RecommendationEvent
+    from app.models.task import Task
+    from app.repositories.consent_repository import ConsentRepository
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    await ConsentRepository(db_session).record(user.id, "analytics", False)
+    db_session.add(Task(user_id=user.id, title="Buy milk", status="pending", priority=3))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    assert r.json()["recommendation_event_id"] is None
+    rows = (
+        await db_session.execute(
+            select(RecommendationEvent).where(RecommendationEvent.surface == "now")
+        )
+    ).scalars().all()
+    assert len(rows) == 0
+
+
+@pytest.mark.anyio
 async def test_now_why_returns_reason_lazily(client, db_session):
     """/now stays fast (no reason); /now/why lazily returns a human 'why' for the task."""
     from app.services.user_service import UserService
