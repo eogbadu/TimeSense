@@ -170,6 +170,7 @@ export default function Home() {
             <a href="#features">Features</a>
             <a href="#get">Download</a>
             <Link href="/privacy">Privacy</Link>
+            <Link href="/terms">Terms</Link>
             <Link href="/admin">Admin</Link>
           </div>
           <span>© {new Date().getFullYear()} TimeSense</span>
