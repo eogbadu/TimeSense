@@ -1,5 +1,11 @@
 # Change Summary
 
+## 2026-07-10 — TIME-184 (imminent appointment > context-switch nudge)
+
+- One penalty in scoring/penalties.py: a generic context_switch nudge (work/home/sleep) is suppressed
+  when a calendar event is within the hour, so an imminent appointment reliably surfaces.
+- Fixes the long-standing flaky test_calendar_sync test (near-tie at "night"). Suite 458 passed, 0 failures.
+
 ## 2026-07-10 — TIME-182 & TIME-183 (mobile "Connect" UI — plan C complete)
 
 - **TIME-182 (iOS):** Settings ▸ Connections (ConnectionsView) — Connect buttons for Google/Outlook/
