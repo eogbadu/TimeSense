@@ -1,5 +1,15 @@
 # Change Summary
 
+## 2026-07-10 — TIME-180 & TIME-181 (Outlook + Slack OAuth handshakes)
+
+- **TIME-180:** net-new `MicrosoftCalendarProvider` (Graph /me/calendarView + /me/events) registered
+  as "microsoft", plus `microsoft_oauth` + `/integrations/microsoft/{authorize,callback}`. The Google
+  callback was refactored into a shared `_authorize`/`_callback` both calendar providers use.
+- **TIME-181:** `slack_oauth` (v2 authorize + oauth.v2.access, ok-check) + `/integrations/slack/*`
+  storing the token via `SlackService.connect` (scan→task already existed).
+- All three OAuth handshakes (Google/Outlook/Slack) now built + unit-tested; each activates when its
+  CLIENT_ID/SECRET are set. Suite 457 passed. Backend integrations track (plan "C→B") complete.
+
 ## 2026-07-10 — TIME-178 & TIME-179 (universal intro trial + mobile Premium wiring)
 
 - **TIME-178 (backend):** `SubscriptionService.is_premium` grants Premium for the account's first
