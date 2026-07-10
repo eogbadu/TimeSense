@@ -22,7 +22,8 @@ struct InsightsView: View {
                 }
             }
         }
-        .task {
+        .task(id: appState.isPremium) {
+            // Re-runs when entitlement resolves, so Insights loads as soon as Premium is known.
             if appState.isPremium {
                 await viewModel.load()
             }
