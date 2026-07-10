@@ -170,3 +170,119 @@ async def test_callback_provider_error_redirects_to_failure(client):
     )
     assert resp.status_code == 302
     assert resp.headers["location"].startswith("timesense://integrations/failed")
+
+
+# ── Microsoft / Outlook (TIME-180) ────────────────────────────────────────────
+
+def test_microsoft_build_authorize_url_has_required_params():
+    from app.integrations import microsoft_oauth
+    with patch.object(microsoft_oauth.settings, "microsoft_client_id", "ms-cid"), \
+         patch.object(microsoft_oauth.settings, "microsoft_redirect_uri", "https://api.example/ms/cb"):
+        url = microsoft_oauth.build_authorize_url("STATE-MS")
+    assert url.startswith(microsoft_oauth.AUTHORIZE_ENDPOINT)
+    assert "client_id=ms-cid" in url
+    assert "state=STATE-MS" in url
+    assert "Calendars.ReadWrite" in url
+    assert "offline_access" in url
+
+
+@pytest.mark.anyio
+async def test_microsoft_authorize_requires_configuration(client):
+    from app.integrations import microsoft_oauth
+    with patch.object(microsoft_oauth.settings, "microsoft_client_id", ""), \
+         patch.object(microsoft_oauth.settings, "microsoft_client_secret", ""):
+        resp = await client.get("/api/v1/integrations/microsoft/authorize")
+    assert resp.status_code == 503
+
+
+@pytest.mark.anyio
+async def test_microsoft_authorize_returns_url_when_configured(client):
+    from app.integrations import microsoft_oauth
+    with patch.object(microsoft_oauth.settings, "microsoft_client_id", "ms-cid"), \
+         patch.object(microsoft_oauth.settings, "microsoft_client_secret", "ms-secret"):
+        resp = await client.get("/api/v1/integrations/microsoft/authorize")
+    assert resp.status_code == 200
+    assert resp.json()["authorize_url"].startswith(microsoft_oauth.AUTHORIZE_ENDPOINT)
+
+
+@pytest.mark.anyio
+async def test_microsoft_callback_success_stores_tokens(client, db_session):
+    from app.integrations import microsoft_oauth
+    from app.integrations.microsoft_oauth import TokenResult
+
+    user = User(firebase_uid="uid-ms-cb", email="mscb@example.com")
+    db_session.add(user)
+    await db_session.flush()
+    state = sign_state(str(user.id), "microsoft")
+
+    fake = TokenResult(access_token="ms-acc", refresh_token="ms-ref", expires_at=datetime.now(UTC))
+    with patch.object(microsoft_oauth, "exchange_code", AsyncMock(return_value=fake)):
+        resp = await client.get(
+            f"/api/v1/integrations/microsoft/callback?code=abc&state={state}",
+            follow_redirects=False,
+        )
+    assert resp.status_code == 302
+    assert resp.headers["location"].startswith("timesense://integrations/connected")
+
+    integration = await CalendarService(db_session).get_integration(user.id, "microsoft")
+    assert integration is not None
+    assert integration.access_token == "ms-acc"
+
+
+@pytest.mark.anyio
+async def test_microsoft_callback_bad_state_redirects_to_failure(client):
+    resp = await client.get(
+        "/api/v1/integrations/microsoft/callback?code=abc&state=nope",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert resp.headers["location"].startswith("timesense://integrations/failed")
+
+
+# ── Microsoft Graph calendar provider ─────────────────────────────────────────
+
+def test_graph_datetime_parser_trims_fractional_seconds():
+    from app.integrations.microsoft_calendar import _parse_graph_dt
+    dt = _parse_graph_dt("2026-07-10T09:30:00.0000000")
+    assert (dt.year, dt.month, dt.day, dt.hour, dt.minute) == (2026, 7, 10, 9, 30)
+
+
+@pytest.mark.anyio
+async def test_microsoft_provider_list_events_maps_graph_payload():
+    from datetime import datetime as _dt
+
+    from app.integrations import microsoft_calendar
+    from app.integrations.microsoft_calendar import MicrosoftCalendarProvider
+
+    class _Resp:
+        status_code = 200
+        is_success = True
+
+        def json(self):
+            return {"value": [{
+                "id": "evt1",
+                "subject": "Standup",
+                "start": {"dateTime": "2026-07-10T09:00:00.0000000", "timeZone": "UTC"},
+                "end": {"dateTime": "2026-07-10T09:15:00.0000000", "timeZone": "UTC"},
+                "location": {"displayName": "Room 4"},
+                "bodyPreview": "Daily sync",
+            }]}
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, *a, **k):
+            return _Resp()
+
+    with patch.object(microsoft_calendar.httpx, "AsyncClient", return_value=_Client()):
+        events = await MicrosoftCalendarProvider().list_events(
+            "tok", _dt(2026, 7, 10), _dt(2026, 7, 11)
+        )
+    assert len(events) == 1
+    assert events[0].title == "Standup"
+    assert events[0].location == "Room 4"
+    assert events[0].provider == "microsoft"
