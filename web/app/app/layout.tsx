@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { isFirebaseConfigured } from "@/lib/firebase";
+import Mark from "../Mark";
 
 const TABS = [
   { href: "/app", label: "Now" },
@@ -39,7 +40,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <header className="app-bar">
         <div className="app-main app-bar-inner" style={{ padding: "0 20px" }}>
           <Link href="/" className="wordmark" style={{ fontSize: 17 }}>
-            <span className="orb" aria-hidden />
+            <Mark size={20} />
             <span>Time<b>Sense</b></span>
           </Link>
           <nav className="app-tabs">
@@ -88,7 +89,7 @@ function SignIn() {
   return (
     <Centered>
       <Link href="/" className="wordmark" style={{ justifyContent: "center", marginBottom: 22 }}>
-        <span className="orb" aria-hidden />
+        <Mark size={26} />
         <span>Time<b>Sense</b></span>
       </Link>
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, width: 300, textAlign: "left" }}>
