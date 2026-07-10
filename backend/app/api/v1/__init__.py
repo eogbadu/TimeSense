@@ -4,6 +4,7 @@ from app.api.v1.admin import router as admin_router
 from app.api.v1.assistant import router as assistant_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.calendar import router as calendar_router
+from app.api.v1.integrations import router as integrations_router
 from app.api.v1.commutes import router as commutes_router
 from app.api.v1.consent import router as consent_router
 from app.api.v1.devices import router as devices_router
@@ -42,6 +43,7 @@ api_router.include_router(admin_router)
 api_router.include_router(assistant_router)
 api_router.include_router(subscriptions_router)
 api_router.include_router(calendar_router)
+api_router.include_router(integrations_router)
 api_router.include_router(commutes_router)
 api_router.include_router(notifications_router)
 api_router.include_router(referrals_router)
