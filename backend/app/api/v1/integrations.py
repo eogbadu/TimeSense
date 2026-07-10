@@ -25,8 +25,11 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.entitlements import PremiumUser
 from app.core.oauth_state import OAuthStateError, sign_state, verify_state
-from app.integrations import google_oauth, microsoft_oauth
+from app.integrations import google_oauth, microsoft_oauth, slack_oauth
+from app.integrations.slack_oauth import SlackOAuthError
+from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.services.calendar_service import CalendarService
+from app.services.slack_service import SlackService
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -105,3 +108,32 @@ async def microsoft_callback(
 ):
     """Microsoft redirects here after consent."""
     return await _callback("microsoft", microsoft_oauth, code, state, error, db)
+
+
+@router.get("/slack/authorize", response_model=AuthorizeResponse)
+async def slack_authorize(current_user: PremiumUser, db: AsyncSession = Depends(get_db)):
+    """Return the Slack consent URL to open. Premium only."""
+    return await _authorize("slack", slack_oauth, current_user, db)
+
+
+@router.get("/slack/callback")
+async def slack_callback(
+    code: str | None = None, state: str | None = None, error: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    gateway: LLMGateway = Depends(get_llm_gateway),
+):
+    """Slack redirects here after consent. Exchange the code, store the token via SlackService."""
+    if error or not code:
+        return _failure()
+    try:
+        user_id = verify_state(state or "", "slack")
+    except OAuthStateError:
+        return _failure()
+    try:
+        tokens = await slack_oauth.exchange_code(code)
+    except (httpx.HTTPError, KeyError, SlackOAuthError):
+        return _failure()
+
+    await SlackService(db, gateway).connect(uuid.UUID(user_id), tokens.access_token, tokens.team_id)
+    await db.commit()
+    return RedirectResponse(settings.oauth_success_redirect, status_code=status.HTTP_302_FOUND)
