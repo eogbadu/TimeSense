@@ -28,6 +28,7 @@ export interface NowResponse {
   moment: string | null;
   alternatives: NowTask[];
   context: NowContextCards | null;
+  recommendation_event_id: string | null;
 }
 
 export interface TaskResponse {

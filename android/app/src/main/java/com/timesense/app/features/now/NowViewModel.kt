@@ -20,6 +20,7 @@ data class NowContext(
     val greeting: String,
     val usable_minutes: Int,
     val best_task: BestTask? = null,
+    val recommendation_event_id: String? = null,
 )
 
 @Serializable
@@ -99,11 +100,15 @@ class NowViewModel(application: Application) : AndroidViewModel(application) {
         snoozeUntil: String? = null,
         reload: Boolean = true,
     ) {
+        val eventId = (_uiState.value as? NowUiState.Loaded)?.context?.recommendation_event_id
         viewModelScope.launch {
             try {
                 val json = ApiClient.jsonInstance.encodeToString(
                     FeedbackRequest.serializer(),
-                    FeedbackRequest(task_id = taskId, signal = signal, snooze_until = snoozeUntil),
+                    FeedbackRequest(
+                        task_id = taskId, signal = signal, snooze_until = snoozeUntil,
+                        recommendation_event_id = eventId,
+                    ),
                 )
                 val request = Request.Builder()
                     .url("${ApiClient.baseUrl}/api/v1/recommendations/feedback")
@@ -124,4 +129,5 @@ private data class FeedbackRequest(
     val task_id: String,
     val signal: String,
     val snooze_until: String? = null,
+    val recommendation_event_id: String? = null,
 )

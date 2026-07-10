@@ -42,7 +42,12 @@ export default function NowPage() {
   async function sendFeedback(id: string, signal: string, snoozeUntil?: string) {
     await callApi("/api/v1/recommendations/feedback", {
       method: "POST",
-      body: JSON.stringify({ task_id: id, signal, snooze_until: snoozeUntil ?? null }),
+      body: JSON.stringify({
+        task_id: id,
+        signal,
+        snooze_until: snoozeUntil ?? null,
+        recommendation_event_id: now?.recommendation_event_id ?? null,
+      }),
     });
   }
 
