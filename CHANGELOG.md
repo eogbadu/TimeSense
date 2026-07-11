@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-11] TIME-212: The "Why this recommendation?" screen now shows the plain-language summary at the top instead of the bottom, so the takeaway is the first thing you read
 - [2026-07-11] TIME-211: Fixed inverted location alerts — leaving home now correctly says "You left Home" and arriving says "You're at Home" (they were swapped). Direction is now read from your actual position at the moment you cross, not a stale cached fix
 - [2026-07-10] TIME-210: Your weekly Insights now show a "Recommendations accepted" stat — the share of the week's suggestions you acted on, with the count shown (on iOS and web)
 - [2026-07-10] TIME-209: Weekly insights now record how well that week's recommendations landed for you (shown, accepted, acceptance rate, average confidence), pulled from the recommendation feedback loop

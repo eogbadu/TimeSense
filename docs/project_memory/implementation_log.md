@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-11 — TIME-212 (Jira TIME-2246): "Why this recommendation?" sheet — summary at top
+
+User report: the "Why this" link opens a sheet with the plain-language summary at the very bottom; it should be at the top. In `RecommendationExplanationSheet` (NowView.swift) the order was action-header → Signals analyzed → Alternatives considered → **Summary** → "Evaluated just now". Moved the Summary block to sit directly under the recommended-action header card (above "Signals analyzed"); Signals/Alternatives order unchanged. Layout-only. iOS BUILD SUCCEEDED.
+
 ## 2026-07-11 — TIME-211 (Jira TIME-2245): Fix inverted geofence arrive/leave notifications
 
 User bug: leaving home fired "You're at Home" and arriving home fired "You left Home" (consistent inversion). Root cause: since TIME-105, `LocationService` derived the crossing direction from `requestState`/`CLRegionState`, which reflects the device's last *cached* location — stale right after a boundary crossing (still the pre-crossing spot), so `isInside` was systematically opposite to the true crossing. TIME-105 introduced this to fix an earlier late-event bug but traded it for this everyday inversion.

@@ -1,5 +1,10 @@
 # Change Summary
 
+## 2026-07-11 — TIME-212 ("Why this recommendation?" sheet — summary at top)
+
+- The iOS explanation sheet showed the plain-language Summary at the very bottom; moved it directly
+  under the action header (above "Signals analyzed"). Layout-only; iOS built.
+
 ## 2026-07-11 — TIME-211 (fix inverted geofence arrive/leave notifications)
 
 - Bug: leaving home said "You're at Home", arriving said "You left Home". The TIME-105 requestState/
