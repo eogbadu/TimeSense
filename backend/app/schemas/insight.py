@@ -16,6 +16,10 @@ class WeeklyInsightResponse(BaseModel):
     commute_confirmed_count: int
     feedback_done_count: int
     feedback_not_now_count: int
+    recommendations_shown: int
+    recommendations_accepted: int
+    recommendation_acceptance_rate: float | None
+    mean_confidence: float | None
     summary_text: str
 
     model_config = {"from_attributes": True}

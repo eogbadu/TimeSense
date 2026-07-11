@@ -20,11 +20,13 @@ def _summarize(items) -> dict:
     shown = len(items)
     accepted = sum(1 for r in items if r.outcome in POSITIVE_OUTCOMES)
     rejected = sum(1 for r in items if r.outcome in NEGATIVE_OUTCOMES)
+    confidences = [r.confidence for r in items if r.confidence is not None]
     return {
         "shown": shown,
         "accepted": accepted,
         "rejected": rejected,
         "acceptance_rate": round(accepted / shown, 3) if shown else None,
+        "mean_confidence": round(sum(confidences) / len(confidences), 3) if confidences else None,
     }
 
 

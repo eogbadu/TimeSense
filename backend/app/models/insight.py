@@ -33,4 +33,10 @@ class WeeklyInsight(UUIDMixin, TimestampMixin, Base):
     commute_confirmed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     feedback_done_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     feedback_not_now_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Recommendation quality for the week, from the impression→outcome log (nullable when the
+    # week predates telemetry or had no impressions — same "no data ≠ zero" rule as completion_rate).
+    recommendations_shown: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    recommendations_accepted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    recommendation_acceptance_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mean_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     summary_text: Mapped[str] = mapped_column(Text, nullable=False)

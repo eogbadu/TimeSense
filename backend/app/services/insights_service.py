@@ -10,6 +10,7 @@ from app.models.insight import WeeklyInsight
 from app.repositories.commute_repository import CommuteRepository
 from app.repositories.insight_repository import InsightRepository
 from app.repositories.meal_repository import MealRepository
+from app.repositories.recommendation_event_repository import RecommendationEventRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.sleep_wake_repository import SleepWakeRepository
 from app.repositories.task_repository import TaskRepository
@@ -40,6 +41,7 @@ class InsightsService:
         self.meal_repo = MealRepository(db)
         self.sleep_repo = SleepWakeRepository(db)
         self.commute_repo = CommuteRepository(db)
+        self.event_repo = RecommendationEventRepository(db)
 
     async def get_or_generate_latest(self, user_id: uuid.UUID) -> WeeklyInsight:
         week_start, week_end = most_recently_completed_week(datetime.now(timezone.utc).date())
@@ -81,6 +83,9 @@ class InsightsService:
 
         signal_counts = await self.feedback_repo.count_signals_in_range(user_id, start_dt, end_dt)
 
+        # Recommendation quality from the impression→outcome log, scoped to this user + week.
+        rec = (await self.event_repo.acceptance_stats(start_dt, end_dt, user_id=user_id))["overall"]
+
         stats = {
             "week_start": week_start,
             "week_end": week_end,
@@ -92,6 +97,10 @@ class InsightsService:
             "commute_confirmed_count": commute_confirmed_count,
             "feedback_done_count": signal_counts.get("done", 0),
             "feedback_not_now_count": signal_counts.get("not_now", 0),
+            "recommendations_shown": rec["shown"],
+            "recommendations_accepted": rec["accepted"],
+            "recommendation_acceptance_rate": rec["acceptance_rate"],
+            "mean_confidence": rec["mean_confidence"],
         }
         summary_text = await self._summarize(stats)
 
@@ -106,7 +115,14 @@ class InsightsService:
                 f"Late wake-ups: {stats['late_wake_count']}\n"
                 f"Confirmed commutes: {stats['commute_confirmed_count']}\n"
                 f"Recommendations marked done: {stats['feedback_done_count']}, "
-                f"dismissed with not now: {stats['feedback_not_now_count']}"
+                f"dismissed with not now: {stats['feedback_not_now_count']}\n"
+                f"Recommendations shown: {stats['recommendations_shown']}, "
+                f"accepted: {stats['recommendations_accepted']}"
+                + (
+                    f" ({round(stats['recommendation_acceptance_rate'] * 100)}% acceptance)"
+                    if stats.get("recommendation_acceptance_rate") is not None
+                    else ""
+                )
             )
             text = await self._gateway.complete_simple(
                 prompt, system=_SUMMARY_SYSTEM, max_tokens=120
