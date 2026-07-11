@@ -1,5 +1,13 @@
 # Change Summary
 
+## 2026-07-11 — TIME-211 (fix inverted geofence arrive/leave notifications)
+
+- Bug: leaving home said "You're at Home", arriving said "You left Home". The TIME-105 requestState/
+  CLRegionState approach read the stale cached location right at the crossing, inverting the direction.
+- Fix: on enter/exit request a fresh fix and derive inside/outside from the real distance to the place
+  center (didUpdateLocations), deduped; fall back to the raw event direction on fix failure. Seed/place-
+  sync path unchanged. iOS built; on-device walk test still required.
+
 ## 2026-07-10 — TIME-208..210 (acceptance-rate learning + per-user acceptance on Insights)
 
 - TIME-208: user_preference_fit is now continuous — the observed acceptance rate acc/(acc+rej) once an

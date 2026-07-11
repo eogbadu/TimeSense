@@ -1,5 +1,11 @@
 # Implementation Log
 
+## 2026-07-11 — TIME-211 (Jira TIME-2245): Fix inverted geofence arrive/leave notifications
+
+User bug: leaving home fired "You're at Home" and arriving home fired "You left Home" (consistent inversion). Root cause: since TIME-105, `LocationService` derived the crossing direction from `requestState`/`CLRegionState`, which reflects the device's last *cached* location — stale right after a boundary crossing (still the pre-crossing spot), so `isInside` was systematically opposite to the true crossing. TIME-105 introduced this to fix an earlier late-event bug but traded it for this everyday inversion.
+
+Fix (fresh-location verification): on `didEnterRegion`/`didExitRegion` we now `requestLocation()` and compute inside/outside from the actual distance to the place center in `didUpdateLocations` (ground truth at crossing time), deduped via `lastRegionState`. Extracted the shared dedup+place-sync+notify into `resolveCrossing(regionId:isInside:)`. `didFailWithError` falls back to the raw event direction so a failed fix still notifies. `pendingEvents` changed from `Set<String>` to `[String: Bool]` (regionId → raw event direction). The stationary seed/place-sync path (`registerGeofence`/`reregisterGeofences` → `requestState` → `didDetermineState`) is preserved and still only syncs the backend place — never notifies, never seeds `lastRegionState` — so a background-relaunch crossing still fires exactly once. Supersedes the TIME-105 `requestState` mechanism. iOS BUILD SUCCEEDED. On-device walk test still required (CoreLocation can't be verified headless).
+
 ## 2026-07-10 — TIME-208..210: Acceptance-rate learning + per-user acceptance on Insights
 
 The two deferred follow-ups from the learning surface. Backend suite 498.
