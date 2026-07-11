@@ -9365,6 +9365,30 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none — bug fix)"),
         ),
     },
+    {
+        "summary": "TIME-213: Score-based, consistent recommendation confidence",
+        "labels": ["backend", "recommendations", "bug"],
+        "description": doc(
+            h2("Goal"), p("Make the confidence % reflect the pick's actual strength (its 0-100 engine score) and show ONE consistent value on every surface, replacing the flat 0.50-0.95 heuristic and the hardcoded per-candidate literals."),
+            divider(), h2("Scope"), bullet_list([
+                "New score_to_confidence(score) helper in scoring/score.py: round(min(0.95, max(0.30, score/100)), 2)",
+                "/now: confidence = score_to_confidence(best_meta['score'])",
+                "/now/recommendation (select.py): confidence = score_to_confidence(best.score) (also feeds eligible_for_push; thresholds align at 75/0.75 so push behavior is preserved)",
+                "/now/why: thread the target task's score through _engine_rank_tasks/_ranked_candidates + build_explanation and use score_to_confidence",
+                "Remove the now-unused compute_confidence heuristic",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No 'margin over runner-up' nuance (deferred)", "No iOS/web change (clients already render confidence*100)", "Leave vestigial per-candidate confidence= literals (optional later cleanup)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/recommendation/scoring/score.py, backend/app/api/v1/now.py, backend/app/services/recommendation/selection/select.py, backend/app/services/recommendation_explainer.py, backend/tests/"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "/now, /now/why, /now/recommendation all report the same score-based confidence for the same pick",
+                "Strong pick reads high (~0.8), weak pick low (~0.4); mapping floored 0.30, capped 0.95",
+                "Push eligibility unchanged at the score>=75 boundary; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest -q"),
+            divider(), h2("Dependencies"), p("TIME-112/113 (engine scoring), TIME-117/118 (explanation + recommendation endpoint)."),
+            divider(), h2("Next Ticket"), p("(optional) margin-over-runner-up nuance."),
+        ),
+    },
 ]
 
 

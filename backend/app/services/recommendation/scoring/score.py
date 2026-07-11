@@ -28,3 +28,14 @@ def score_candidate(c: CandidateAction, ctx: UserContext) -> ScoredCandidateActi
     penalty = compute_penalty(c, ctx)
     score = max(0.0, min(100.0, base_score(c) - penalty))
     return ScoredCandidateAction(candidate=c, score=score, penalty_score=penalty)
+
+
+def score_to_confidence(score: float) -> float:
+    """The single source of truth for the confidence shown on a recommendation: it just reflects how
+    strong the winning pick's 0–100 score is. Cap at 0.95 (never claim near-certainty); gentle 0.30
+    floor so a weak 'nothing pressing' pick doesn't read as broken. Both bounds are tunable.
+
+    Note score_to_confidence(75) == 0.75 == PUSH_CONFIDENCE_THRESHOLD, so eligible_for_push (score>=75
+    AND confidence>=0.75) stays equivalent to score>=75 — push behaviour is unchanged, just consistent.
+    """
+    return round(min(0.95, max(0.30, score / 100.0)), 2)

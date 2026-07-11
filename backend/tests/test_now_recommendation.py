@@ -37,6 +37,9 @@ async def test_recommendation_for_task_includes_related_task_id(client, db_sessi
     assert body["title"] and body["explanation"] and body["reason_codes"]
     assert 0.0 <= body["confidence"] <= 1.0 and 0.0 <= body["score"] <= 100.0
     assert isinstance(body["eligible_for_push"], bool)
+    # Confidence is derived from the score (single source of truth), not a hardcoded literal.
+    from app.services.recommendation.scoring.score import score_to_confidence
+    assert body["confidence"] == score_to_confidence(body["score"])
 
 
 @pytest.mark.anyio

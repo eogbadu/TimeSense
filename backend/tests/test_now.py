@@ -346,7 +346,8 @@ async def test_now_why_returns_structured_explanation(client, db_session):
     assert w.status_code == 200
     body = w.json()
     assert body["recommended_action"]["title"] == "Revise paper"
-    assert 0.5 <= body["confidence"] <= 0.95
+    # Confidence now reflects the pick's engine score (floor 0.30, cap 0.95).
+    assert 0.30 <= body["confidence"] <= 0.95
     assert any(f["name"] == "Priority" for f in body["decision_factors"])
     assert isinstance(body["context_used"], list) and body["context_used"]
     assert body["summary"] and body["reason"] == body["summary"]

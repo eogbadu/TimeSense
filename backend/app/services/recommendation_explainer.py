@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.commute import CommuteEvent
 from app.models.sleep_wake import SleepWakeEvent
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+from app.services.recommendation.scoring.score import score_to_confidence
 from app.services.scheduling_service import SchedulingService
 
 _SUMMARY_SYSTEM = (
@@ -44,29 +45,6 @@ def _local(now: datetime, tz_name: str) -> datetime:
 
 def _priority_label(p: int) -> str:
     return "High" if p <= 2 else ("Medium" if p == 3 else "Low")
-
-
-def compute_confidence(best, free_minutes: int, alt_count: int, now: datetime) -> float:
-    """Heuristic, explainable confidence (0.5–0.95) — shared by /now (inline bar) and the full
-    explanation so they always agree."""
-    est = best.estimated_minutes or 0
-    fits = (est <= free_minutes) if est else True
-    urgent = False
-    if best.due_at is not None:
-        due = _utc(best.due_at)
-        urgent = due < now or due.date() == now.date()
-    conf = 0.70
-    if est and fits:
-        conf += 0.10
-    if best.priority <= 2:
-        conf += 0.06
-    if urgent:
-        conf += 0.05
-    if est and not fits:
-        conf -= 0.15
-    if alt_count == 0:
-        conf += 0.05
-    return round(max(0.5, min(0.95, conf)), 2)
 
 
 def _time_of_day(local_now: datetime) -> tuple[str, str]:
@@ -189,6 +167,7 @@ async def build_explanation(
     now: datetime,
     tz_name: str,
     gateway,
+    score: float = 0.0,
 ) -> dict:
     free_minutes, next_event = await _free_and_next(db, user, today_tasks, now, tz_name)
     local_now = _local(now, tz_name)
@@ -263,8 +242,8 @@ async def build_explanation(
     else:
         signals.append({"name": "Energy", "detail": "No sleep or wake signal connected yet.", "available": False})
 
-    # ---- Confidence (heuristic, explainable — shared with /now) ----
-    confidence = compute_confidence(best, free_minutes, len(alternatives), now)
+    # ---- Confidence: reflects the pick's real engine score (shared source with /now + recommendation) ----
+    confidence = score_to_confidence(score)
 
     # ---- Alternatives considered ----
     alts = []
