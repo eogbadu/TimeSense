@@ -1,5 +1,12 @@
 # Change Summary
 
+## 2026-07-11 — TIME-213 (score-based, consistent recommendation confidence)
+
+- Confidence now reflects the pick's real 0-100 engine score via one score_to_confidence() helper,
+  shown consistently on /now, /now/why, /now/recommendation (was a flat 0.50-0.95 heuristic on two
+  surfaces + hardcoded literals on a third, which disagreed). Push eligibility unchanged (75/0.75
+  aligned). Removed dead compute_confidence. No client change. Suite 501.
+
 ## 2026-07-11 — Jira: marked the 53 leftover "To Do" tickets Done
 
 - The 53 remaining "To Do" (canonical copies of logical TIME-118..170) were all verified shipped work;
