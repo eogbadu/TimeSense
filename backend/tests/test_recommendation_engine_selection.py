@@ -59,6 +59,24 @@ class _StubMaps:
                               r.mode, "maps_api", 0.9)
 
 
+async def test_user_often_accepts_boosts_score():
+    """An action type the user consistently accepts gets a bounded boost (a -15 penalty)."""
+    from app.services.recommendation.scoring.penalties import compute_penalty
+    from app.services.recommendation.types import CandidateAction
+
+    ctx = _ctx(BASE)
+
+    def cand(codes):
+        return CandidateAction(
+            id="c", type="deep_work", domain="task", title="T", description="d",
+            estimated_minutes=30, reason_codes=codes,
+        )
+
+    p_plain = compute_penalty(cand([]), ctx)
+    p_accept = compute_penalty(cand(["USER_OFTEN_ACCEPTS_THIS_ACTION"]), ctx)
+    assert p_accept == p_plain - 15
+
+
 # --------------------------- calendar hard rules ---------------------------
 
 async def test_meeting_in_10_min_prefers_prep_not_deep_work():

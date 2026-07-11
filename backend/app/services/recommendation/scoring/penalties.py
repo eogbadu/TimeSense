@@ -84,6 +84,10 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
     # Feedback: user often rejects this action type.
     if "USER_OFTEN_REJECTS_THIS_ACTION" in codes:
         penalty += 25
+    # Feedback: user often accepts this action type → a bounded boost (negative penalty) so it edges
+    # ahead of comparable candidates. Bounded (base is 0..100) so hard safety rules still dominate.
+    if "USER_OFTEN_ACCEPTS_THIS_ACTION" in codes:
+        penalty -= 15
     if "RECENTLY_DISMISSED_SIMILAR_ACTION" in codes:
         penalty += 35
 
