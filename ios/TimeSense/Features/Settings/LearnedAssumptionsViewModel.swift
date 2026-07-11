@@ -23,9 +23,29 @@ enum LearnedAssumptionsUiState {
     case error(String)
 }
 
+/// A plain-language thing TimeSense has learned from your Agree/Disagree history.
+struct LearnedPreference: Decodable, Identifiable {
+    let kind: String            // prefers / avoids / avoids_at_time
+    let label: String
+    let detail: String
+    let partOfDay: String?
+
+    var id: String { "\(kind)-\(label)-\(partOfDay ?? "")" }
+
+    enum CodingKeys: String, CodingKey {
+        case kind, label, detail
+        case partOfDay = "part_of_day"
+    }
+}
+
+private struct LearnedPreferencesResponse: Decodable {
+    let preferences: [LearnedPreference]
+}
+
 @MainActor
 final class LearnedAssumptionsViewModel: ObservableObject {
     @Published var uiState: LearnedAssumptionsUiState = .idle
+    @Published var preferences: [LearnedPreference] = []
 
     func load() async {
         uiState = .loading
@@ -34,6 +54,10 @@ final class LearnedAssumptionsViewModel: ObservableObject {
             uiState = .loaded(routines)
         } catch {
             uiState = .error(error.localizedDescription)
+        }
+        // Additive + best-effort: a failure here must not block the routines screen.
+        if let resp: LearnedPreferencesResponse = try? await APIClient.shared.get("/api/v1/recommendations/learned") {
+            preferences = resp.preferences
         }
     }
 

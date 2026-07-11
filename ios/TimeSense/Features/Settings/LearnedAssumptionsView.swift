@@ -94,6 +94,24 @@ struct LearnedAssumptionsView: View {
                             .fill(DesignTokens.Color.accent.opacity(0.10))
                     )
 
+                if !viewModel.preferences.isEmpty {
+                    Text("What TimeSense has learned")
+                        .font(DesignTokens.Typography.footnote.weight(.semibold))
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                        .padding(.top, DesignTokens.Spacing.sm)
+                    VStack(spacing: 0) {
+                        ForEach(Array(viewModel.preferences.enumerated()), id: \.element.id) { idx, pref in
+                            LearnedPreferenceRow(pref: pref)
+                            if idx < viewModel.preferences.count - 1 { Divider().padding(.leading, 56) }
+                        }
+                    }
+                    .cardStyle()
+                }
+
+                Text("Your routines")
+                    .font(DesignTokens.Typography.footnote.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .padding(.top, viewModel.preferences.isEmpty ? 0 : DesignTokens.Spacing.sm)
                 VStack(spacing: 0) {
                     ForEach(Array(routines.enumerated()), id: \.element.id) { idx, routine in
                         Button { editingRoutine = routine } label: { PatternRow(routine: routine) }
@@ -124,6 +142,33 @@ struct LearnedAssumptionsView: View {
             (routineOrder.firstIndex(of: $0.routineType) ?? routineOrder.count)
                 < (routineOrder.firstIndex(of: $1.routineType) ?? routineOrder.count)
         }
+    }
+}
+
+private struct LearnedPreferenceRow: View {
+    let pref: LearnedPreference
+
+    private var style: (icon: String, color: Color) {
+        switch pref.kind {
+        case "prefers": return ("hand.thumbsup.fill", .green)
+        case "avoids_at_time": return ("clock.badge.xmark", .orange)
+        default: return ("hand.thumbsdown.fill", .orange)  // avoids
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            Image(systemName: style.icon)
+                .font(.title3)
+                .foregroundColor(style.color)
+                .frame(width: 40, height: 40)
+            Text(pref.detail)
+                .font(DesignTokens.Typography.subheadline)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(DesignTokens.Spacing.md)
     }
 }
 
