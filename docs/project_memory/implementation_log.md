@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-11 — TIME-213 (Jira TIME-2247): score-based, consistent recommendation confidence
+
+User: "the confidence percentage seems off." It was fabricated + inconsistent — /now & /now/why used compute_confidence (flat 0.70 base, clamped 0.50-0.95, ignoring the real 0-100 score); /now/recommendation used a hardcoded per-candidate literal — two score-blind numbers that could disagree on one screen. Fix: single `score_to_confidence(score)=round(min(0.95,max(0.30,score/100)),2)` in scoring/score.py as the source of truth, applied at /now (best_meta["score"]), /now/recommendation (select.py best.score, also feeds eligible_for_push), and /now/why (threaded the target task's score through _engine_rank_tasks/_ranked_candidates → build_explanation, so it's right even on an alternative). `score_to_confidence(75)==0.75==PUSH_CONFIDENCE_THRESHOLD` → push eligibility unchanged (still score>=75). Removed dead compute_confidence. No client change (iOS/web already render confidence*100). Suite 501 passed (+3). Deferred: the optional "margin over runner-up" nuance; cleaning the vestigial per-candidate confidence= literals.
+
 ## 2026-07-11 — Jira: marked the 53 leftover "To Do" tickets Done
 
 Follow-up to the dedup. The 53 remaining "To Do" were the canonical copies of logical tickets TIME-118..170 whose historical move-to-Done had landed on a (now-deleted) duplicate. Verified all 53 are shipped work (signature artifacts exist: APNs sender, EventKit CalendarSyncService, HealthKit HealthService, VoiceCaptureService, cosmic DesignTokens/CosmicComponents, web app, time-blocks; nearly all also recorded as done in this log). This Jira workflow has no "Won't Do" state, so per the user's choice, transitioned all 53 to Done via new `scripts/mark_todo_done.py` (dry-run default, `--execute`, count-guard = 53, idempotent). Exact recount: **205 tickets, all Done, 0 To Do**.
