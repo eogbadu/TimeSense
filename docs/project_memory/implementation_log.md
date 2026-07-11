@@ -1,5 +1,15 @@
 # Implementation Log
 
+## 2026-07-10 — TIME-202..204: Learning (Phase 3 — the engine learns from the telemetry loop)
+
+Completes the Guardrails→Telemetry→Learning plan. Backend suite 493.
+
+- **TIME-202 (Jira TIME-2236) revive apply_feedback**: the engine's apply_feedback layer was fully built but never invoked (all run_engine sites passed feedback=None; the main /now fast path bypasses run_engine entirely). New build_feedback_summary(db, user_id, now, user_timezone) → FeedbackSummary(accepts/rejects per action_type + recently_dismissed) from recommendation_events (outcome+action_type; 30-day history, 6h recent-dismiss). Applied in _engine_rank_tasks (main /now), the /now/recommendation run_engine call, and both push_service run_engine sites. Empty history → empty summary → no-op (existing behavior unchanged). The impression's action_type == CandidateAction.type so it keys correctly.
+- **TIME-203 (Jira TIME-2237) accepts boost**: penalties.py — USER_OFTEN_ACCEPTS_THIS_ACTION → penalty -= 15 (bounded boost; base_score is 0..100 so hard safety penalties like meeting-imminent +60 still dominate). Symmetric with the +25 reject penalty; previously accepts only bumped user_preference_fit +0.2.
+- **TIME-204 (Jira TIME-2238) time-of-day rule**: build_feedback_summary buckets each rejection by the local part_of_day of its impression (user's tz) and exposes avoided_now = action types with >=3 rejects at the CURRENT part of day; apply_feedback tags AVOIDED_AT_THIS_TIME; penalties.py +20. All 4 callers pass user_timezone. (Fuller acceptance-rate-scaled user_preference_fit noted as optional follow-up; it's already dynamic via the TIME-202 accepts bump.)
+
+PLAN COMPLETE: Phase 1 guardrails (189-195) + Phase 2 telemetry (196-201) + Phase 3 learning (202-204). The loop: capture (hardened) → recommend → impression logged → user reacts (agree/disagree) → outcome recorded → measured (admin acceptance-rate/calibration) → learned (accept/reject/time-of-day adjust future ranking).
+
 ## 2026-07-10 — TIME-196..201: Recommendation telemetry (Phase 2 — impression→outcome loop)
 
 Turns the write-only RecommendationEvent audit into a measured impression→outcome loop. Backend suite 489.

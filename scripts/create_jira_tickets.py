@@ -9177,6 +9177,54 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("Phase 3: learning (revive apply_feedback)."),
         ),
     },
+    {
+        "summary": "TIME-202: Revive the apply_feedback seam (learning from telemetry)",
+        "labels": ["backend", "recommendation-engine", "learning"],
+        "description": doc(
+            h2("Goal"), p("Wire the built-but-unused apply_feedback layer, fed by the Phase-2 impression→outcome log, so the engine boosts/penalizes action types the user accepts/rejects."),
+            divider(), h2("Scope"), bullet_list([
+                "build_feedback_summary(db, user, now, tz) → FeedbackSummary(accepts/rejects per action_type + recently_dismissed) from recommendation_events",
+                "Apply in the main /now fast path (_engine_rank_tasks), /now/recommendation, and both push run_engine sites",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["Empty history must be a no-op (existing behavior unchanged)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/recommendation/feedback/build_summary.py, backend/app/api/v1/now.py, backend/app/services/push/push_service.py, backend/tests/test_recommendation_events.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Summary counts accepts/rejects per action_type; feedback influences ranking for users with history; no-history = no-op; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_recommendation_events.py -q"),
+            divider(), h2("Dependencies"), p("Phase 2 telemetry (TIME-196..201)."),
+            divider(), h2("Next Ticket"), p("Accepts boost."),
+        ),
+    },
+    {
+        "summary": "TIME-203: USER_OFTEN_ACCEPTS boost in scoring",
+        "labels": ["backend", "recommendation-engine", "learning"],
+        "description": doc(
+            h2("Goal"), p("Make consistently-accepted action types rank higher (symmetry with the reject penalty)."),
+            divider(), h2("Scope"), bullet_list(["Add a bounded boost (-15 penalty) for USER_OFTEN_ACCEPTS_THIS_ACTION in penalties.py"]),
+            divider(), h2("Non-Goals"), bullet_list(["Must stay bounded so hard safety rules dominate"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/recommendation/scoring/penalties.py, backend/tests/test_recommendation_engine_selection.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["The accepts code lowers a candidate's penalty by 15; safety penalties still dominate; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_recommendation_engine_selection.py -q"),
+            divider(), h2("Dependencies"), p("TIME-202."),
+            divider(), h2("Next Ticket"), p("Time-of-day rule."),
+        ),
+    },
+    {
+        "summary": "TIME-204: Time-of-day learning rule",
+        "labels": ["backend", "recommendation-engine", "learning"],
+        "description": doc(
+            h2("Goal"), p("Avoid an action type at the time of day the user repeatedly rejects it."),
+            divider(), h2("Scope"), bullet_list([
+                "build_feedback_summary buckets rejections by the local part_of_day of the impression; avoided_now = action types with >=3 rejects at the current part of day",
+                "apply_feedback tags AVOIDED_AT_THIS_TIME; penalties.py +20; callers pass the user's timezone",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["Fuller acceptance-rate-scaled user_preference_fit deferred (optional)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/recommendation/feedback/{build_summary,apply_feedback}.py, backend/app/services/recommendation/{types,scoring/penalties}.py, backend/app/api/v1/now.py, backend/app/services/push/push_service.py, tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["3 rejects at the current time-of-day → avoided_now; AVOIDED_AT_THIS_TIME adds +20; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_recommendation_events.py tests/test_recommendation_engine_selection.py -q"),
+            divider(), h2("Dependencies"), p("TIME-202/203."),
+            divider(), h2("Next Ticket"), p("(optional) per-user WeeklyInsight acceptance columns; surface learned preferences."),
+        ),
+    },
 ]
 
 

@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-10] TIME-202..204: TimeSense now learns from your reactions — action types you keep passing on get shown less (and less at the times of day you tend to reject them), and ones you consistently accept get shown more. Powered by the new feedback + measurement loop
 - [2026-07-10] TIME-196..201: TimeSense can now measure how good its recommendations are — it records each suggestion it shows and how you react (Agree/Disagree/Snooze), then computes an acceptance rate and confidence calibration (admin metrics). Privacy-respecting (consent-gated, included in data export/delete). The groundwork for the app learning from your reactions
 - [2026-07-10] TIME-189..195: Hardened capture — input is validated and cleaned (timezone, location, dates, blank/oversized text), the AI parse output is bounded and sanity-checked, prompt-injection in captured text is neutralized, rapid duplicate captures are deduped, and all apps cap input at 2000 chars. Groundwork for measuring and improving recommendations
 - [2026-07-10] TIME-185..188: The Best Next Action screen now asks "Agree / Disagree" first — Agree reveals Done/Snooze to act on it; Disagree swaps in a different recommendation (the one you passed on drops down but isn't hidden, so it can come back later). Live on backend + iOS + Android + web; a cleaner signal of how good each recommendation is
