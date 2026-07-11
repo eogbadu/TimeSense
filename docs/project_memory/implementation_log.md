@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-11 — Jira: marked the 53 leftover "To Do" tickets Done
+
+Follow-up to the dedup. The 53 remaining "To Do" were the canonical copies of logical tickets TIME-118..170 whose historical move-to-Done had landed on a (now-deleted) duplicate. Verified all 53 are shipped work (signature artifacts exist: APNs sender, EventKit CalendarSyncService, HealthKit HealthService, VoiceCaptureService, cosmic DesignTokens/CosmicComponents, web app, time-blocks; nearly all also recorded as done in this log). This Jira workflow has no "Won't Do" state, so per the user's choice, transitioned all 53 to Done via new `scripts/mark_todo_done.py` (dry-run default, `--execute`, count-guard = 53, idempotent). Exact recount: **205 tickets, all Done, 0 To Do**.
+
 ## 2026-07-11 — Jira cleanup: removed 2,034 duplicate tickets + fixed the script bug
 
 User noticed 2,034 "To Do" tickets. Audit (read-only, paginated the whole project): 2,239 issues but only **205 distinct** — 2,034 duplicates, all To Do (TIME-108 had 65 copies). Root cause: `create_jira_tickets.py::get_existing_tickets()` only read the first page of the token-paginated `/rest/api/3/search/jql` (never followed `nextPageToken`), so dedup was blind past ~100 issues and every full run re-created all tickets.

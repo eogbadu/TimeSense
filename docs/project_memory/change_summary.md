@@ -1,5 +1,10 @@
 # Change Summary
 
+## 2026-07-11 — Jira: marked the 53 leftover "To Do" tickets Done
+
+- The 53 remaining "To Do" (canonical copies of logical TIME-118..170) were all verified shipped work;
+  transitioned to Done via scripts/mark_todo_done.py. Project now 205 tickets, all Done, 0 To Do.
+
 ## 2026-07-11 — Jira cleanup (removed 2,034 duplicate tickets)
 
 - Project had 2,239 issues but only 205 distinct tickets; deleted the 2,034 duplicates (one canonical
