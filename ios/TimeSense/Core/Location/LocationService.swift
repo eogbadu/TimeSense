@@ -22,10 +22,12 @@ final class LocationService: NSObject, ObservableObject {
     private let manager = CLLocationManager()
     private let placesKey = "saved_places"
 
-    // Geofence events are laggy and can arrive stale/out-of-order, so we don't trust them directly:
-    // on any event we ask iOS for the authoritative current state and only notify on a real change.
+    // Geofence events report a crossing but iOS's CLRegionState/`requestState` reflects the last
+    // *cached* location, which right after a boundary crossing is stale (still the pre-crossing spot)
+    // — that inverted the arrive/leave message. So on a crossing we request a *fresh* fix and derive
+    // inside/outside from the real distance to the place center, deduping on a genuine change.
     private var lastRegionState: [String: Bool] = [:]   // regionId -> isInside
-    private var pendingEvents: Set<String> = []          // regions whose state query came from an event
+    private var pendingEvents: [String: Bool] = [:]      // regionId -> the raw event's direction (true=enter), pending a fresh fix
 
     @Published private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published private(set) var places: [SavedPlace] = []
@@ -196,6 +198,23 @@ final class LocationService: NSObject, ObservableObject {
         )
     }
 
+    /// Resolve a geofence crossing once we know the user's true inside/outside for the place: keep the
+    /// backend's current place in sync, dedup against the last known state, and notify on a real change.
+    private func resolveCrossing(regionId: String, isInside: Bool) {
+        guard let place = places.first(where: { $0.id == regionId }) else { return }
+        let previous = lastRegionState[regionId]
+        lastRegionState[regionId] = isInside
+        if isInside {
+            let isHome = place.name.caseInsensitiveCompare("home") == .orderedSame
+            Task { await postPlace(placeName: place.name, isHome: isHome) }
+        } else if !lastRegionState.values.contains(true) {
+            // Left this place and not inside any other tracked place → you're out and about.
+            Task { await postPlace(placeName: nil, isHome: false) }
+        }
+        guard previous != isInside else { return }   // dedup stale/duplicate crossings
+        Task { await notifyBestTask(placeName: place.name, entered: isInside) }
+    }
+
     private func notifyBestTask(placeName: String, entered: Bool) async {
         // Ask the full engine for its recommendation here (the app already posted the current place),
         // and use its LLM-phrased notification text. Deterministic fallback is built into the endpoint.
@@ -231,49 +250,50 @@ extension LocationService: CLLocationManagerDelegate {
         start()
     }
 
-    // On any enter/exit, verify the *actual* current state with iOS rather than trusting the (often
-    // stale/late) event, then notify only on a genuine change.
+    // On a crossing, request a *fresh* fix (see pendingEvents note) and resolve inside/outside from the
+    // real distance in didUpdateLocations — we no longer derive direction from the stale CLRegionState.
     func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-        pendingEvents.insert(region.identifier)
-        manager.requestState(for: region)
+        pendingEvents[region.identifier] = true
+        manager.requestLocation()
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-        pendingEvents.insert(region.identifier)
-        manager.requestState(for: region)
+        pendingEvents[region.identifier] = false
+        manager.requestLocation()
     }
 
+    // Only the stationary seed/sync path (registerGeofence / reregisterGeofences call requestState)
+    // reaches here now. Its job is solely to keep the backend's current place in sync at launch — it
+    // never notifies and never seeds lastRegionState, so a real background-relaunch crossing still
+    // fires exactly once via didUpdateLocations.
     func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
-        let cameFromEvent = pendingEvents.remove(region.identifier) != nil
-        guard state != .unknown else { return }
-        let isInside = (state == .inside)
-        let placeName = places.first { $0.id == region.identifier }?.name
-
-        // Keep the backend's current place in sync on EVERY determination — even a seed/sync — so it
-        // knows where you are even when you were already there and no enter event fired.
-        if isInside {
-            let isHome = placeName?.caseInsensitiveCompare("home") == .orderedSame
-            Task { await postPlace(placeName: placeName, isHome: isHome) }
-        }
-
-        // A seed/sync (not from an enter/exit event) only refreshes the place above — never notifies
-        // and never seeds lastRegionState (so it can't dedup a real relaunch event).
-        guard cameFromEvent else { return }
-        let previous = lastRegionState[region.identifier]
-        lastRegionState[region.identifier] = isInside
-        guard previous != isInside else { return }   // dedup stale/out-of-order events
-
-        if !isInside, !lastRegionState.values.contains(true) {
-            // Left this place and not inside any other tracked place → you're out and about.
-            Task { await postPlace(placeName: nil, isHome: false) }
-        }
-        Task { await notifyBestTask(placeName: placeName ?? "a saved place", entered: isInside) }
+        guard state == .inside, let place = places.first(where: { $0.id == region.identifier }) else { return }
+        let isHome = place.name.caseInsensitiveCompare("home") == .orderedSame
+        Task { await postPlace(placeName: place.name, isHome: isHome) }
     }
 
-    // manager.location is updated automatically; these satisfy requestLocation().
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         objectWillChange.send()
+        guard !pendingEvents.isEmpty, let fix = locations.last else { return }
+        // Only trust a genuinely fresh fix — a stale cached one is exactly what inverted the messages.
+        guard abs(fix.timestamp.timeIntervalSinceNow) <= 60 else { return }
+        let events = pendingEvents
+        pendingEvents.removeAll()
+        for (regionId, _) in events {
+            guard let place = places.first(where: { $0.id == regionId }) else { continue }
+            let center = CLLocation(latitude: place.latitude, longitude: place.longitude)
+            resolveCrossing(regionId: regionId, isInside: fix.distance(from: center) <= place.radius)
+        }
     }
 
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {}
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // Couldn't get a fresh fix for the crossing → fall back to the raw event's direction so the
+        // user still gets a (correct-in-the-common-case) arrive/leave notification.
+        guard !pendingEvents.isEmpty else { return }
+        let events = pendingEvents
+        pendingEvents.removeAll()
+        for (regionId, enteredEvent) in events {
+            resolveCrossing(regionId: regionId, isInside: enteredEvent)
+        }
+    }
 }

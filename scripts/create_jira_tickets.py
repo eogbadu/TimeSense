@@ -9323,6 +9323,29 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(optional) Android acceptance surface in CI."),
         ),
     },
+    {
+        "summary": "TIME-211: Fix inverted geofence arrive/leave notifications",
+        "labels": ["ios", "location", "bug"],
+        "description": doc(
+            h2("Goal"), p("Fix a consistent inversion: leaving home fires 'You're at Home' and arriving fires 'You left Home'. Derive the crossing direction from the user's actual current position, not a stale point-in-region check."),
+            divider(), h2("Scope"), bullet_list([
+                "LocationService.swift: on didEnter/didExit, request a fresh location and compute inside/outside from distance to the place center (supersedes the TIME-105 requestState mechanism, whose CLRegionState reflects the stale pre-crossing location)",
+                "Carry the event direction (pendingEvents: [regionId: enteredEvent]) as a fallback",
+                "Resolve crossings in didUpdateLocations (fresh-fix distance) with the existing dedup + backend place-sync + notify; fall back to the event direction in didFailWithError",
+                "Preserve the stationary seed/place-sync path (registerGeofence/reregisterGeofences requestState -> didDetermineState, no notify)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No Android/web (no geofencing there)", "No change to notification copy or the LLM recommendation branch"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Core/Location/LocationService.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "Leaving home -> 'You left Home' (or LLM nudge), never 'You're at'",
+                "Arriving home -> 'You're at Home', never 'You left'",
+                "One notification per crossing (dedup intact); backend place still updates; iOS builds",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense\n# then on-device: walk out/in past the geofence and check the notification text"),
+            divider(), h2("Dependencies"), p("TIME-103/105 (location subsystem + geofence notifications)."),
+            divider(), h2("Next Ticket"), p("(none — bug fix)"),
+        ),
+    },
 ]
 
 
