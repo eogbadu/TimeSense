@@ -86,3 +86,18 @@ async def test_build_feedback_summary_counts_by_action_type(db_session):
     assert summary.accepts.get("deep_work") == 1
     assert summary.accepts.get("run_errand") == 1
     assert "deep_work" in summary.recently_dismissed  # the disagrees are recent
+
+
+@pytest.mark.anyio
+async def test_build_feedback_summary_avoids_action_at_current_time_of_day(db_session):
+    from app.services.recommendation.feedback.build_summary import build_feedback_summary
+
+    user, task = await _user_and_task(db_session, "rev-tod")
+    repo = RecommendationEventRepository(db_session)
+    # 3 disagrees for the same action type, all just now (i.e. at the current part of day).
+    for _ in range(3):
+        ev = await repo.record_impression(user.id, task.id, surface="now", confidence=0.8, action_type="deep_work")
+        await repo.set_outcome(ev.id, user.id, outcome="disagree")
+
+    summary = await build_feedback_summary(db_session, user.id, user_timezone="UTC")
+    assert "deep_work" in summary.avoided_now

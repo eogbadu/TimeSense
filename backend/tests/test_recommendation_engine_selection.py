@@ -77,6 +77,22 @@ async def test_user_often_accepts_boosts_score():
     assert p_accept == p_plain - 15
 
 
+async def test_avoided_at_this_time_penalizes():
+    """An action type the user rejects at this time of day gets a +20 penalty."""
+    from app.services.recommendation.scoring.penalties import compute_penalty
+    from app.services.recommendation.types import CandidateAction
+
+    ctx = _ctx(BASE)
+
+    def cand(codes):
+        return CandidateAction(
+            id="c", type="deep_work", domain="task", title="T", description="d",
+            estimated_minutes=30, reason_codes=codes,
+        )
+
+    assert compute_penalty(cand(["AVOIDED_AT_THIS_TIME"]), ctx) == compute_penalty(cand([]), ctx) + 20
+
+
 # --------------------------- calendar hard rules ---------------------------
 
 async def test_meeting_in_10_min_prefers_prep_not_deep_work():

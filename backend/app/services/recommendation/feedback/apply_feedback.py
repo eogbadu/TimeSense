@@ -14,6 +14,7 @@ class FeedbackSummary:
     rejects: dict[ActionType, int] = field(default_factory=dict)
     accepts: dict[ActionType, int] = field(default_factory=dict)
     recently_dismissed: set = field(default_factory=set)  # action types dismissed within cooldown
+    avoided_now: set = field(default_factory=set)          # action types the user rejects at THIS time of day
 
 
 def apply_feedback_adjustments(c: CandidateAction, summary: FeedbackSummary) -> CandidateAction:
@@ -27,5 +28,7 @@ def apply_feedback_adjustments(c: CandidateAction, summary: FeedbackSummary) -> 
     elif acc >= 3 and acc > rej:
         codes.append("USER_OFTEN_ACCEPTS_THIS_ACTION")
         c.user_preference_fit = min(1.0, c.user_preference_fit + 0.2)
+    if c.type in summary.avoided_now:
+        codes.append("AVOIDED_AT_THIS_TIME")
     c.reason_codes = codes
     return c

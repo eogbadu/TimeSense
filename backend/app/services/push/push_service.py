@@ -69,7 +69,7 @@ class ProactivePushService:
         candidates, usable, _ = await gather_candidate_tasks(self.db, user, now)
         ctx, _ = await build_user_context(self.db, user, candidates, now, usable)
         maps = MapsSkillService(get_maps_provider())
-        summary = await build_feedback_summary(self.db, user.id, now)
+        summary = await build_feedback_summary(self.db, user.id, now, user_timezone=(user.profile.timezone if user.profile else "UTC"))
         rec = await run_engine(ctx, maps=maps, now=now, feedback=summary, gateway=gateway)
 
         if rec.domain == "fallback" or not rec.eligible_for_push:
@@ -186,7 +186,7 @@ class ProactivePushService:
             candidates, usable, _ = await gather_candidate_tasks(self.db, user, now)
             ctx, _ = await build_user_context(self.db, user, candidates, now, usable)
             maps = MapsSkillService(get_maps_provider())
-            summary = await build_feedback_summary(self.db, user.id, now)
+            summary = await build_feedback_summary(self.db, user.id, now, user_timezone=(user.profile.timezone if user.profile else "UTC"))
             rec = await run_engine(ctx, maps=maps, now=now, feedback=summary, gateway=gateway)
             out_title, out_body, action = rec.title, rec.message, rec.action_type
 
