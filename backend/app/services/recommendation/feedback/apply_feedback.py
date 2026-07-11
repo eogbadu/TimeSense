@@ -8,6 +8,10 @@ from dataclasses import dataclass, field
 
 from app.services.recommendation.types import ActionType, CandidateAction
 
+# Reactions needed before we scale user_preference_fit by the observed acceptance rate
+# (mirrors the task-duration learning target so a couple of taps don't swing the signal).
+PREFERENCE_MIN_SAMPLES = 5
+
 
 @dataclass
 class FeedbackSummary:
@@ -23,11 +27,16 @@ def apply_feedback_adjustments(c: CandidateAction, summary: FeedbackSummary) -> 
         codes.append("RECENTLY_DISMISSED_SIMILAR_ACTION")
     rej = summary.rejects.get(c.type, 0)
     acc = summary.accepts.get(c.type, 0)
+    total = acc + rej
+    # Continuous learned preference: once we've seen enough reactions, set user_preference_fit to the
+    # observed acceptance rate (below the sample floor it stays at whatever the candidate set — 0.5
+    # neutral). This is a smooth signal; the reject/accept reason codes below add the sharper nudges.
+    if total >= PREFERENCE_MIN_SAMPLES:
+        c.user_preference_fit = max(0.0, min(1.0, acc / total))
     if rej >= 3 and rej > acc:
         codes.append("USER_OFTEN_REJECTS_THIS_ACTION")
     elif acc >= 3 and acc > rej:
         codes.append("USER_OFTEN_ACCEPTS_THIS_ACTION")
-        c.user_preference_fit = min(1.0, c.user_preference_fit + 0.2)
     if c.type in summary.avoided_now:
         codes.append("AVOIDED_AT_THIS_TIME")
     c.reason_codes = codes
