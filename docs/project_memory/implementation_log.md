@@ -1,5 +1,11 @@
 # Implementation Log
 
+## 2026-07-11 — Jira cleanup: removed 2,034 duplicate tickets + fixed the script bug
+
+User noticed 2,034 "To Do" tickets. Audit (read-only, paginated the whole project): 2,239 issues but only **205 distinct** — 2,034 duplicates, all To Do (TIME-108 had 65 copies). Root cause: `create_jira_tickets.py::get_existing_tickets()` only read the first page of the token-paginated `/rest/api/3/search/jql` (never followed `nextPageToken`), so dedup was blind past ~100 issues and every full run re-created all tickets.
+
+Fix: (1) new `scripts/dedupe_jira_tickets.py` (dry-run default, `--execute`, resumable/idempotent — 404 = already gone; keeps one canonical per summary preferring the oldest Done copy, else oldest). Safety-verified before deleting: all 8 recent tickets + all 42 memory-cited Jira keys kept; the 53 zero-Done summaries each keep a To Do copy. Deleted 2,034 in two passes (first cut short by a 590s wrapper; removed the wrapper + a now-wrong count-floor guard and resumed). Final: **205 total, 0 duplicate summaries** (152 Done, 53 To Do). (2) `get_existing_tickets()` now paginates the full project via `nextPageToken` (returns all 205 vs ~100 before) so re-runs update rather than duplicate. See known_issues.md. No app code touched.
+
 ## 2026-07-11 — TIME-212 (Jira TIME-2246): "Why this recommendation?" sheet — summary at top
 
 User report: the "Why this" link opens a sheet with the plain-language summary at the very bottom; it should be at the top. In `RecommendationExplanationSheet` (NowView.swift) the order was action-header → Signals analyzed → Alternatives considered → **Summary** → "Evaluated just now". Moved the Summary block to sit directly under the recommended-action header card (above "Signals analyzed"); Signals/Alternatives order unchanged. Layout-only. iOS BUILD SUCCEEDED.

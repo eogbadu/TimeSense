@@ -1,5 +1,13 @@
 # Change Summary
 
+## 2026-07-11 — Jira cleanup (removed 2,034 duplicate tickets)
+
+- Project had 2,239 issues but only 205 distinct tickets; deleted the 2,034 duplicates (one canonical
+  kept per summary) → 205 total, 0 duplicate summaries.
+- Root cause fixed: create_jira_tickets.py get_existing_tickets() now paginates the whole project via
+  nextPageToken (was reading only the first ~100 issues, so every full run re-created all tickets).
+- New scripts/dedupe_jira_tickets.py (resumable one-off). No app code changed.
+
 ## 2026-07-11 — TIME-212 ("Why this recommendation?" sheet — summary at top)
 
 - The iOS explanation sheet showed the plain-language Summary at the very bottom; moved it directly
