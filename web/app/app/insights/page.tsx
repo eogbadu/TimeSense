@@ -14,6 +14,10 @@ interface WeeklyInsight {
   commute_confirmed_count: number;
   feedback_done_count: number;
   feedback_not_now_count: number;
+  recommendations_shown: number;
+  recommendations_accepted: number;
+  recommendation_acceptance_rate: number | null;
+  mean_confidence: number | null;
   summary_text: string;
 }
 
@@ -59,7 +63,15 @@ export default function InsightsPage() {
     insight.late_wake_count > 0 ? { label: "Late wake-ups", color: "var(--violet)", value: String(insight.late_wake_count) } : null,
     insight.commute_confirmed_count > 0 ? { label: "Commutes tracked", color: "var(--cyan)", value: String(insight.commute_confirmed_count) } : null,
     { label: "Kept vs deferred", color: "var(--green)", value: `${insight.feedback_done_count} / ${insight.feedback_not_now_count}` },
-  ].filter(Boolean) as { label: string; color: string; value: string }[];
+    insight.recommendation_acceptance_rate != null
+      ? {
+          label: "Recommendations accepted",
+          color: "var(--blue)",
+          value: `${Math.round(insight.recommendation_acceptance_rate * 100)}%`,
+          sub: `${insight.recommendations_accepted} of ${insight.recommendations_shown} shown`,
+        }
+      : null,
+  ].filter(Boolean) as { label: string; color: string; value: string; sub?: string }[];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -80,6 +92,7 @@ export default function InsightsPage() {
           <div className="acard" key={s.label}>
             <p className="label" style={{ color: s.color, marginBottom: 8 }}>{s.label}</p>
             <p className="val" style={{ color: s.color, margin: 0 }}>{s.value}</p>
+            {s.sub && <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>{s.sub}</p>}
           </div>
         ))}
       </div>

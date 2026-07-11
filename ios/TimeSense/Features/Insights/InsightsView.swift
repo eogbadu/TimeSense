@@ -101,6 +101,11 @@ private struct StatsGrid: View {
             if insight.commuteConfirmedCount > 0 {
                 StatRow(icon: "car.fill", tint: Cosmic.cyan, label: "Commutes tracked", value: "\(insight.commuteConfirmedCount)")
             }
+            if let rate = insight.recommendationAcceptanceRate {
+                StatRow(icon: "sparkles", tint: Cosmic.blue, label: "Recommendations accepted",
+                        value: "\(Int((rate * 100).rounded()))%",
+                        detail: "\(insight.recommendationsAccepted) of \(insight.recommendationsShown) shown")
+            }
         }
         .padding(DesignTokens.Spacing.md)
         .cardStyle()
@@ -112,6 +117,7 @@ private struct StatRow: View {
     var tint: Color = DesignTokens.Color.accent
     let label: String
     let value: String
+    var detail: String? = nil
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.md) {
@@ -123,9 +129,16 @@ private struct StatRow: View {
                 .font(DesignTokens.Typography.callout)
                 .foregroundColor(DesignTokens.Color.textPrimary)
             Spacer()
-            Text(value)
-                .font(DesignTokens.Typography.callout.weight(.bold))
-                .foregroundColor(DesignTokens.Color.textPrimary)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(value)
+                    .font(DesignTokens.Typography.callout.weight(.bold))
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                if let detail {
+                    Text(detail)
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                }
+            }
         }
     }
 }
