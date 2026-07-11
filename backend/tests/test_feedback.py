@@ -157,6 +157,44 @@ async def test_feedback_without_event_id_still_works(client):
 
 
 @pytest.mark.anyio
+async def test_learned_preferences_endpoint(client, db_session):
+    """The learned-preferences surface reports prefers/avoids from accept/reject history."""
+    from app.models.task import Task
+    from app.repositories.recommendation_event_repository import RecommendationEventRepository
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    task = Task(user_id=user.id, title="T", status="pending")
+    db_session.add(task)
+    await db_session.flush()
+    repo = RecommendationEventRepository(db_session)
+    for _ in range(3):
+        ev = await repo.record_impression(user.id, task.id, surface="now", confidence=0.8, action_type="deep_work")
+        await repo.set_outcome(ev.id, user.id, outcome="agree")
+    for _ in range(3):
+        ev = await repo.record_impression(user.id, task.id, surface="now", confidence=0.8, action_type="run_nearby_errand")
+        await repo.set_outcome(ev.id, user.id, outcome="disagree")
+    await db_session.commit()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/recommendations/learned", headers=_auth_headers())
+    assert r.status_code == 200
+    body = r.json()
+    assert body["based_on"] == 6
+    prefs = body["preferences"]
+    assert any(p["kind"] == "prefers" and p["label"] == "focus blocks" for p in prefs)
+    assert any(p["label"] == "nearby errands" and p["kind"] in ("avoids", "avoids_at_time") for p in prefs)
+
+
+@pytest.mark.anyio
+async def test_learned_preferences_empty_for_new_user(client):
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/recommendations/learned", headers=_auth_headers())
+    assert r.status_code == 200
+    assert r.json() == {"preferences": [], "based_on": 0}
+
+
+@pytest.mark.anyio
 async def test_feedback_wrong_task_404(client):
     import uuid
     with _mock_verify(MOCK_USER):

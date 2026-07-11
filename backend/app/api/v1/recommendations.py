@@ -17,6 +17,7 @@ from app.repositories.recommendation_event_repository import RecommendationEvent
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
+from app.services.learned_preferences_service import LearnedPreferencesService
 from app.services.recommendation_service import RecommendationService
 from app.services.user_service import UserService
 
@@ -74,6 +75,30 @@ async def get_recommendations(
         usable_minutes=usable_minutes,
         skipped_meals=skipped_meals,
     )
+
+
+class LearnedPreference(BaseModel):
+    kind: Literal["prefers", "avoids", "avoids_at_time"]
+    label: str
+    detail: str
+    part_of_day: str | None = None
+
+
+class LearnedPreferencesResponse(BaseModel):
+    preferences: list[LearnedPreference]
+    based_on: int          # how many of your reactions this is drawn from
+
+
+@router.get("/learned", response_model=LearnedPreferencesResponse, summary="What TimeSense has learned")
+async def get_learned_preferences(
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+) -> LearnedPreferencesResponse:
+    """Plain-language learned preferences from your accept/reject history — a transparency surface."""
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+    tz = user.profile.timezone if user.profile else "UTC"
+    result = await LearnedPreferencesService(db).for_user(user.id, tz)
+    return LearnedPreferencesResponse(**result)
 
 
 class FeedbackRequest(BaseModel):
