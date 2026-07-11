@@ -17,9 +17,17 @@ interface WeeklyInsight {
   summary_text: string;
 }
 
+interface LearnedPreference {
+  kind: string;
+  label: string;
+  detail: string;
+  part_of_day: string | null;
+}
+
 export default function InsightsPage() {
   const callApi = useApi();
   const [insight, setInsight] = useState<WeeklyInsight | null>(null);
+  const [learned, setLearned] = useState<LearnedPreference[]>([]);
   const [gated, setGated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +40,10 @@ export default function InsightsPage() {
         else setError(err instanceof Error ? err.message : "Couldn't load.");
       })
       .finally(() => setLoading(false));
+    // Additive + best-effort: the learned-preferences section shouldn't affect the main load.
+    callApi<{ preferences: LearnedPreference[] }>("/api/v1/recommendations/learned")
+      .then((r) => setLearned(r.preferences))
+      .catch(() => {});
   }, [callApi]);
 
   if (loading) return <p className="muted">Loading your insights…</p>;
@@ -71,6 +83,22 @@ export default function InsightsPage() {
           </div>
         ))}
       </div>
+
+      {learned.length > 0 && (
+        <div className="acard">
+          <p className="label" style={{ color: "var(--cyan)", marginBottom: 12 }}>What TimeSense has learned</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {learned.map((p, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span aria-hidden style={{ flex: "none", fontSize: 16 }}>
+                  {p.kind === "prefers" ? "👍" : p.kind === "avoids_at_time" ? "🕓" : "👎"}
+                </span>
+                <span style={{ fontSize: 15, lineHeight: 1.5 }}>{p.detail}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
