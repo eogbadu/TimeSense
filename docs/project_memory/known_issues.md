@@ -1,5 +1,11 @@
 # Known Issues
 
+## RESOLVED (2026-07-11): Jira project had 2,034 duplicate tickets
+- Symptom: the project held 2,239 issues but only **205 distinct tickets** — 2,034 duplicates, all in "To Do" (e.g. `TIME-108` had 65 copies).
+- Root cause: `scripts/create_jira_tickets.py` → `get_existing_tickets()` read only the FIRST page of the token-paginated `/rest/api/3/search/jql` endpoint (`maxResults:500` but never followed `nextPageToken`, which caps ~100/page). So the dedup was blind past the oldest ~100 issues and every full run re-created all tickets. Transitions only ever moved the first matching copy to Done, leaving the rest in To Do.
+- FIX: (1) `scripts/dedupe_jira_tickets.py` (new, one-off, resumable) — keeps one canonical per summary (oldest Done, else oldest) and deleted the other 2,034; ran in two passes (first was cut short by a 590s wrapper). Final: **205 total, 0 duplicate summaries** (152 Done, 53 To Do). (2) `get_existing_tickets()` now paginates the whole project via `nextPageToken` (verified it returns all 205 vs ~100 before), so re-runs UPDATE the canonical copy instead of duplicating.
+- Follow-up (not done): 53 kept tickets are "To Do" but some correspond to already-shipped work — a status-reconciliation pass is optional and separate. Also the logical-`TIME-###`-in-summary vs auto-assigned Jira-key mismatch is inherent and left as-is.
+
 ## RESOLVED (2026-07-10, TIME-184): test_calendar_sync::test_appointment_within_the_hour_is_surfaced_over_tasks
 - Was failing deterministically at "night" (UTC): an appointment ~45 min out returned domain `context_switch` instead of `calendar`.
 - Root cause: with no user timezone, part_of_day derives from UTC; at "night" a transition_to_sleep (context_switch) candidate scored ~0.6755, edging the "coming up" calendar candidate ~0.675 by a hair.

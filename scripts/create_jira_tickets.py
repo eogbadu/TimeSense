@@ -9463,17 +9463,35 @@ def update_ticket(issue_key: str, ticket: dict) -> bool:
 
 
 def get_existing_tickets() -> dict[str, str]:
-    """Return mapping of summary -> issue key for existing TIME tickets."""
-    response = requests.get(
-        f"{JIRA_BASE_URL}/rest/api/3/search/jql",
-        auth=AUTH,
-        headers=HEADERS,
-        params={"jql": f"project={JIRA_PROJECT_KEY} ORDER BY created ASC", "maxResults": 500, "fields": "summary"},
-    )
-    if response.status_code != 200:
-        return {}
-    issues = response.json().get("issues", [])
-    return {i["fields"]["summary"]: i["key"] for i in issues}
+    """Return mapping of summary -> issue key for existing TIME tickets.
+
+    Paginates the ENTIRE project via nextPageToken. This is load-bearing: /rest/api/3/search/jql is
+    token-paginated and returns only ~100 issues per page, so reading a single page (the old bug) made
+    the dedup blind to everything past the first page and every full run re-created duplicate tickets.
+    Keeps the FIRST key seen per summary (oldest by created) so re-runs update the canonical copy.
+    """
+    mapping: dict[str, str] = {}
+    token, pages = None, 0
+    while True:
+        params = {"jql": f"project={JIRA_PROJECT_KEY} ORDER BY created ASC",
+                  "maxResults": 100, "fields": "summary"}
+        if token:
+            params["nextPageToken"] = token
+        response = requests.get(
+            f"{JIRA_BASE_URL}/rest/api/3/search/jql", auth=AUTH, headers=HEADERS, params=params
+        )
+        if response.status_code != 200:
+            break
+        data = response.json()
+        for i in data.get("issues", []):
+            summary = i["fields"]["summary"]
+            if summary not in mapping:   # keep the oldest (canonical) key per summary
+                mapping[summary] = i["key"]
+        token = data.get("nextPageToken")
+        pages += 1
+        if not token or pages > 200:
+            break
+    return mapping
 
 
 def main():
