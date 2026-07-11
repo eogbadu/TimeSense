@@ -20,6 +20,8 @@ from app.services.recommendation.candidate_gather import gather_candidate_tasks
 from app.services.recommendation.candidates.generate import generate_candidate_actions
 from app.services.recommendation.context_builder import build_user_context
 from app.services.recommendation.engine import run_engine
+from app.services.recommendation.feedback.apply_feedback import apply_feedback_adjustments
+from app.services.recommendation.feedback.build_summary import build_feedback_summary
 from app.services.recommendation.maps.factory import get_maps_provider
 from app.services.recommendation.maps.maps_skill_service import MapsSkillService
 from app.services.recommendation.selection.rank import rank_candidates
@@ -140,6 +142,9 @@ async def _engine_rank_tasks(
     ctx, task_map = await build_user_context(db, user, candidates, now, usable_minutes)
     maps = MapsSkillService(get_maps_provider())
     actions = await generate_candidate_actions(ctx, maps, now)
+    # Personalize: boost/penalize action types the user consistently accepts/rejects (from telemetry).
+    summary = await build_feedback_summary(db, user.id, now)
+    actions = [apply_feedback_adjustments(a, summary) for a in actions]
     ranked = rank_candidates(actions, ctx)
 
     ordered: list = []
@@ -474,7 +479,8 @@ async def get_now_recommendation(
     candidates, usable_minutes, _ = await _gather_candidate_tasks(db, user, now)
     ctx, task_map = await build_user_context(db, user, candidates, now, usable_minutes)
     maps = MapsSkillService(get_maps_provider())
-    rec = await run_engine(ctx, maps=maps, now=now, gateway=gateway)
+    summary = await build_feedback_summary(db, user.id, now)
+    rec = await run_engine(ctx, maps=maps, now=now, feedback=summary, gateway=gateway)
 
     place = None
     if rec.destination_place is not None:

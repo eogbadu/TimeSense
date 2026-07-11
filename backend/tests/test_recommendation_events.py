@@ -67,3 +67,22 @@ async def test_set_outcome_unknown_event_returns_false(db_session):
     user, _ = await _user_and_task(db_session, "rev-5")
     repo = RecommendationEventRepository(db_session)
     assert await repo.set_outcome(uuid.uuid4(), user.id, outcome="done") is False
+
+
+@pytest.mark.anyio
+async def test_build_feedback_summary_counts_by_action_type(db_session):
+    from app.services.recommendation.feedback.build_summary import build_feedback_summary
+
+    user, task = await _user_and_task(db_session, "rev-fb")
+    repo = RecommendationEventRepository(db_session)
+    for outcome in ("disagree", "disagree", "disagree", "agree"):
+        ev = await repo.record_impression(user.id, task.id, surface="now", confidence=0.8, action_type="deep_work")
+        await repo.set_outcome(ev.id, user.id, outcome=outcome)
+    ev2 = await repo.record_impression(user.id, task.id, surface="now_recommendation", confidence=0.8, action_type="run_errand")
+    await repo.set_outcome(ev2.id, user.id, outcome="done")
+
+    summary = await build_feedback_summary(db_session, user.id)
+    assert summary.rejects.get("deep_work") == 3
+    assert summary.accepts.get("deep_work") == 1
+    assert summary.accepts.get("run_errand") == 1
+    assert "deep_work" in summary.recently_dismissed  # the disagrees are recent
