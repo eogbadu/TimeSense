@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-10] TIME-205..207: TimeSense now shows you what it's learned about you — a "What TimeSense has learned" section (in Learned Patterns on iOS, and on the web Insights page) with plain-language notes like "You usually act on focus blocks" or "You tend to skip meeting prep in the evening"
 - [2026-07-10] TIME-202..204: TimeSense now learns from your reactions — action types you keep passing on get shown less (and less at the times of day you tend to reject them), and ones you consistently accept get shown more. Powered by the new feedback + measurement loop
 - [2026-07-10] TIME-196..201: TimeSense can now measure how good its recommendations are — it records each suggestion it shows and how you react (Agree/Disagree/Snooze), then computes an acceptance rate and confidence calibration (admin metrics). Privacy-respecting (consent-gated, included in data export/delete). The groundwork for the app learning from your reactions
 - [2026-07-10] TIME-189..195: Hardened capture — input is validated and cleaned (timezone, location, dates, blank/oversized text), the AI parse output is bounded and sanity-checked, prompt-injection in captured text is neutralized, rapid duplicate captures are deduped, and all apps cap input at 2000 chars. Groundwork for measuring and improving recommendations

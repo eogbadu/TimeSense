@@ -1,5 +1,13 @@
 # Implementation Log
 
+## 2026-07-10 — TIME-205..207: Surface "What TimeSense has learned" (learning transparency)
+
+Optional follow-up to Phase 3: show users the learned preferences the engine now acts on. Backend suite 495.
+
+- **TIME-205 (Jira TIME-2239) backend**: new GET /api/v1/recommendations/learned (NOT premium-gated) → LearnedPreferencesService turns recommendation_events into plain-language prefs: prefers ("You usually act on focus blocks."), avoids ("You often pass on nearby errands."), avoids_at_time ("You tend to skip meeting prep in the evening."). Per action_type, >=3 reactions (same thresholds as the engine), humanized labels (override dict + de-underscore fallback), capped at 6, based_on=reaction count. Tests (prefers/avoids from history; empty for new user).
+- **TIME-206 (Jira TIME-2240) iOS**: LearnedAssumptionsView (Settings ▸ Learned Patterns) gained a "What TimeSense has learned" section (LearnedPreferenceRow 👍/👎/clock) fed by the endpoint (best-effort — never blocks routines); routines moved under a "Your routines" header. iOS BUILD SUCCEEDED.
+- **TIME-207 (Jira TIME-2241) web**: Insights page (/app/insights) gained a "What TimeSense has learned" card (best-effort fetch, 👍/👎/🕓 rows) below the weekly stats. Build passes; verified via preview screenshot. (Android could follow as a CI-verified add.)
+
 ## 2026-07-10 — TIME-202..204: Learning (Phase 3 — the engine learns from the telemetry loop)
 
 Completes the Guardrails→Telemetry→Learning plan. Backend suite 493.
