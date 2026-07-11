@@ -1,5 +1,13 @@
 # Change Summary
 
+## 2026-07-10 — TIME-202..204 (Learning — Phase 3, engine learns from telemetry)
+
+- Revived the built-but-unused apply_feedback seam: build_feedback_summary (from recommendation_events)
+  wired into the main /now, /now/recommendation, and both push run_engine sites (no-op without history).
+- USER_OFTEN_ACCEPTS boost (-15 penalty); time-of-day rule (AVOIDED_AT_THIS_TIME +20) — action types
+  rejected repeatedly at the current part of day get demoted.
+- Completes the Guardrails→Telemetry→Learning plan. Suite 493.
+
 ## 2026-07-10 — TIME-196..201 (Recommendation telemetry — Phase 2, impression→outcome loop)
 
 - RecommendationEvent → real impression→outcome log: typed columns + migration + repository
