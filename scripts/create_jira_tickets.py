@@ -9346,6 +9346,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none — bug fix)"),
         ),
     },
+    {
+        "summary": "TIME-212: 'Why this recommendation?' sheet — summary at top",
+        "labels": ["ios", "recommendations", "bug"],
+        "description": doc(
+            h2("Goal"), p("On the iOS 'Why this recommendation?' sheet the plain-language Summary renders at the very bottom; move it to the top so users read the takeaway first."),
+            divider(), h2("Scope"), bullet_list([
+                "RecommendationExplanationSheet (NowView.swift): move the Summary block above 'Signals analyzed' (directly under the recommended-action header card)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No copy/content changes; no backend changes; Signals/Alternatives order unchanged"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Now/NowView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "Summary appears near the top of the sheet (under the action header), before Signals analyzed",
+                "iOS builds",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-175 / recommendation explanation sheet."),
+            divider(), h2("Next Ticket"), p("(none — bug fix)"),
+        ),
+    },
 ]
 
 

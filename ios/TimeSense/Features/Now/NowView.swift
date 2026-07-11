@@ -474,14 +474,6 @@ struct RecommendationExplanationSheet: View {
                         confidence: explanation.confidence
                     )
 
-                    header("Signals analyzed")
-                    SignalsCard(signals: explanation.signals ?? [])
-
-                    if !explanation.alternativesConsidered.isEmpty {
-                        header("Alternatives considered")
-                        AlternativesCard(alternatives: explanation.alternativesConsidered)
-                    }
-
                     if !explanation.summary.isEmpty {
                         header("Summary")
                         Text(explanation.summary)
@@ -491,6 +483,14 @@ struct RecommendationExplanationSheet: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(DesignTokens.Spacing.lg)
                             .cardStyle()
+                    }
+
+                    header("Signals analyzed")
+                    SignalsCard(signals: explanation.signals ?? [])
+
+                    if !explanation.alternativesConsidered.isEmpty {
+                        header("Alternatives considered")
+                        AlternativesCard(alternatives: explanation.alternativesConsidered)
                     }
 
                     Text("Evaluated just now")
