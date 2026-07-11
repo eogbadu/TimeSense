@@ -1,5 +1,15 @@
 # Change Summary
 
+## 2026-07-10 — TIME-208..210 (acceptance-rate learning + per-user acceptance on Insights)
+
+- TIME-208: user_preference_fit is now continuous — the observed acceptance rate acc/(acc+rej) once an
+  action type has ≥5 reactions (was a binary +0.2 bump); neutral 0.5 below the floor.
+- TIME-209: WeeklyInsight gains recommendations_shown/accepted, recommendation_acceptance_rate,
+  mean_confidence (migration f3a4b5c6d7e8), from the impression→outcome log scoped to the user's week;
+  null when no impressions.
+- TIME-210: "Recommendations accepted" stat surfaced on iOS + web Insights (rate + "N of M shown").
+  Suite 498; iOS built; web build clean. Android parity = CI follow-up.
+
 ## 2026-07-10 — TIME-205..207 ("What TimeSense has learned" transparency surface)
 
 - New GET /api/v1/recommendations/learned (LearnedPreferencesService) → plain-language prefers/avoids/

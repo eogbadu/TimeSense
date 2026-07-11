@@ -17,6 +17,9 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-10] TIME-210: Your weekly Insights now show a "Recommendations accepted" stat — the share of the week's suggestions you acted on, with the count shown (on iOS and web)
+- [2026-07-10] TIME-209: Weekly insights now record how well that week's recommendations landed for you (shown, accepted, acceptance rate, average confidence), pulled from the recommendation feedback loop
+- [2026-07-10] TIME-208: TimeSense now tunes how strongly it weights an action type by how often you actually accept it — a smooth acceptance-rate signal rather than an all-or-nothing nudge
 - [2026-07-10] TIME-205..207: TimeSense now shows you what it's learned about you — a "What TimeSense has learned" section (in Learned Patterns on iOS, and on the web Insights page) with plain-language notes like "You usually act on focus blocks" or "You tend to skip meeting prep in the evening"
 - [2026-07-10] TIME-202..204: TimeSense now learns from your reactions — action types you keep passing on get shown less (and less at the times of day you tend to reject them), and ones you consistently accept get shown more. Powered by the new feedback + measurement loop
 - [2026-07-10] TIME-196..201: TimeSense can now measure how good its recommendations are — it records each suggestion it shows and how you react (Agree/Disagree/Snooze), then computes an acceptance rate and confidence calibration (admin metrics). Privacy-respecting (consent-gated, included in data export/delete). The groundwork for the app learning from your reactions

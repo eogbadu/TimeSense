@@ -1,5 +1,13 @@
 # Implementation Log
 
+## 2026-07-10 — TIME-208..210: Acceptance-rate learning + per-user acceptance on Insights
+
+The two deferred follow-ups from the learning surface. Backend suite 498.
+
+- **TIME-208 (Jira TIME-2242) rate-scaled user_preference_fit**: `apply_feedback_adjustments` now makes `user_preference_fit` a *continuous* signal instead of a binary +0.2 bump — once an action type has ≥`PREFERENCE_MIN_SAMPLES` (5) reactions, `user_preference_fit = acc/(acc+rej)` clamped 0..1; below the floor it stays neutral (0.5). Reject/accept reason codes unchanged. Small blast radius (weight 0.05). Test: 8/2 → 0.8; <5 → stays 0.5.
+- **TIME-209 (Jira TIME-2243) per-user WeeklyInsight acceptance columns**: added `recommendations_shown`, `recommendations_accepted`, `recommendation_acceptance_rate`, `mean_confidence` to `WeeklyInsight` (migration `f3a4b5c6d7e8`; int counts default 0, floats nullable). `InsightsService._generate` populates them from `RecommendationEventRepository.acceptance_stats(start, end, user_id=user_id)["overall"]` scoped to the user's week; rate/mean_confidence are null when the week had no impressions (same "no data ≠ zero" rule as `completion_rate`). `_summarize` gained a `mean_confidence` field (additive — admin metrics inherit it), and the LLM summary prompt now mentions acceptance. Schema + 2 tests (populate; null when no impressions).
+- **TIME-210 (Jira TIME-2244) surface on Insights (iOS + web)**: new "Recommendations accepted" stat showing the rate with an "N of M shown" subline — iOS `StatsGrid` gains a `sparkles` `StatRow` (with new optional `detail` line), web insights grid gains a card (with new optional `sub`). Both render only when `recommendation_acceptance_rate` is non-null. iOS BUILD SUCCEEDED; web `npm run build` clean. Android parity is a CI follow-up (columns already in the API).
+
 ## 2026-07-10 — TIME-205..207: Surface "What TimeSense has learned" (learning transparency)
 
 Optional follow-up to Phase 3: show users the learned preferences the engine now acts on. Backend suite 495.
