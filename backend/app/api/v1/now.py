@@ -143,7 +143,7 @@ async def _engine_rank_tasks(
     maps = MapsSkillService(get_maps_provider())
     actions = await generate_candidate_actions(ctx, maps, now)
     # Personalize: boost/penalize action types the user consistently accepts/rejects (from telemetry).
-    summary = await build_feedback_summary(db, user.id, now)
+    summary = await build_feedback_summary(db, user.id, now, user_timezone=(user.profile.timezone if user.profile else "UTC"))
     actions = [apply_feedback_adjustments(a, summary) for a in actions]
     ranked = rank_candidates(actions, ctx)
 
@@ -479,7 +479,7 @@ async def get_now_recommendation(
     candidates, usable_minutes, _ = await _gather_candidate_tasks(db, user, now)
     ctx, task_map = await build_user_context(db, user, candidates, now, usable_minutes)
     maps = MapsSkillService(get_maps_provider())
-    summary = await build_feedback_summary(db, user.id, now)
+    summary = await build_feedback_summary(db, user.id, now, user_timezone=(user.profile.timezone if user.profile else "UTC"))
     rec = await run_engine(ctx, maps=maps, now=now, feedback=summary, gateway=gateway)
 
     place = None

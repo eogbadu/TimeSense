@@ -88,6 +88,9 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
     # ahead of comparable candidates. Bounded (base is 0..100) so hard safety rules still dominate.
     if "USER_OFTEN_ACCEPTS_THIS_ACTION" in codes:
         penalty -= 15
+    # Learned time-of-day: the user repeatedly rejects this action type at this part of the day.
+    if "AVOIDED_AT_THIS_TIME" in codes:
+        penalty += 20
     if "RECENTLY_DISMISSED_SIMILAR_ACTION" in codes:
         penalty += 35
 

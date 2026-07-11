@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,17 +20,30 @@ from app.repositories.recommendation_event_repository import (
     POSITIVE_OUTCOMES,
 )
 from app.services.recommendation.feedback.apply_feedback import FeedbackSummary
+from app.services.recommendation.time_service import part_of_day
 
 # How far back we count accept/reject history, and what counts as "recently" dismissed.
 HISTORY_WINDOW = timedelta(days=30)
 RECENT_DISMISS_WINDOW = timedelta(hours=6)
+# Rejections of the same action type at the same part of day before we learn to avoid it then.
+AVOID_AT_TIME_THRESHOLD = 3
+
+
+def _local_hour(dt: datetime, tz: str) -> int:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    try:
+        return dt.astimezone(ZoneInfo(tz)).hour
+    except Exception:
+        return dt.hour
 
 
 async def build_feedback_summary(
-    db: AsyncSession, user_id: uuid.UUID, now: datetime | None = None
+    db: AsyncSession, user_id: uuid.UUID, now: datetime | None = None, user_timezone: str = "UTC"
 ) -> FeedbackSummary:
     now = now or datetime.now(timezone.utc)
     since = now - HISTORY_WINDOW
+    current_pod = part_of_day(_local_hour(now, user_timezone))
     rows = (
         await db.execute(
             select(RecommendationEvent).where(
@@ -44,6 +58,7 @@ async def build_feedback_summary(
     accepts: dict = {}
     rejects: dict = {}
     recently_dismissed: set = set()
+    rejects_at_current_pod: dict = {}  # action_type → rejections that happened at the current part of day
     for r in rows:
         at = r.action_type
         if r.outcome in POSITIVE_OUTCOMES:
@@ -56,5 +71,12 @@ async def build_feedback_summary(
                     oc_at = oc_at.replace(tzinfo=timezone.utc)
                 if now - oc_at < RECENT_DISMISS_WINDOW:
                     recently_dismissed.add(at)
+            # Time-of-day learning: was this rejection at the same part of day as now?
+            if part_of_day(_local_hour(r.created_at, user_timezone)) == current_pod:
+                rejects_at_current_pod[at] = rejects_at_current_pod.get(at, 0) + 1
 
-    return FeedbackSummary(rejects=rejects, accepts=accepts, recently_dismissed=recently_dismissed)
+    avoided_now = {at for at, n in rejects_at_current_pod.items() if n >= AVOID_AT_TIME_THRESHOLD}
+    return FeedbackSummary(
+        rejects=rejects, accepts=accepts,
+        recently_dismissed=recently_dismissed, avoided_now=avoided_now,
+    )
