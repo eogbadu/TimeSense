@@ -11,6 +11,10 @@ struct WeeklyInsight: Decodable {
     let commuteConfirmedCount: Int
     let feedbackDoneCount: Int
     let feedbackNotNowCount: Int
+    let recommendationsShown: Int
+    let recommendationsAccepted: Int
+    let recommendationAcceptanceRate: Double?
+    let meanConfidence: Double?
     let summaryText: String
 
     enum CodingKeys: String, CodingKey {
@@ -24,6 +28,10 @@ struct WeeklyInsight: Decodable {
         case commuteConfirmedCount = "commute_confirmed_count"
         case feedbackDoneCount = "feedback_done_count"
         case feedbackNotNowCount = "feedback_not_now_count"
+        case recommendationsShown = "recommendations_shown"
+        case recommendationsAccepted = "recommendations_accepted"
+        case recommendationAcceptanceRate = "recommendation_acceptance_rate"
+        case meanConfidence = "mean_confidence"
         case summaryText = "summary_text"
     }
 }
