@@ -6,6 +6,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
+from app.services.recommendation.scoring.score import score_to_confidence
 from app.services.recommendation.selection.notification_policy import eligible_for_push
 from app.services.recommendation.types import (
     Priority,
@@ -73,6 +74,9 @@ def select_recommendation(
     c = best.candidate
     alternatives = [s.candidate for s in ranked[1:4]]
     explanation = _fallback_text(c.reason_codes)
+    # Confidence reflects the winning pick's real strength (its 0–100 score), not a per-candidate
+    # literal — the single source of truth shared with /now and /now/why.
+    confidence = score_to_confidence(best.score)
 
     return Recommendation(
         id=str(uuid.uuid4()),
@@ -81,14 +85,14 @@ def select_recommendation(
         message=explanation,
         action_type=c.type,
         domain=c.domain,
-        confidence=c.confidence,
+        confidence=confidence,
         score=best.score,
         estimated_minutes=c.estimated_minutes,
         urgency=_urgency_label(c.urgency),
         reason_codes=c.reason_codes,
         explanation=explanation,
         alternatives=alternatives,
-        eligible_for_push=eligible_for_push(best.score, c.confidence),
+        eligible_for_push=eligible_for_push(best.score, confidence),
         related_entity_ids=c.related_entity_ids,
         destination_place=c.destination_place,
         travel_estimate=c.travel_estimate,

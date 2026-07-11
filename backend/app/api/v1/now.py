@@ -25,7 +25,8 @@ from app.services.recommendation.feedback.build_summary import build_feedback_su
 from app.services.recommendation.maps.factory import get_maps_provider
 from app.services.recommendation.maps.maps_skill_service import MapsSkillService
 from app.services.recommendation.selection.rank import rank_candidates
-from app.services.recommendation_explainer import build_explanation, compute_confidence
+from app.services.recommendation.scoring.score import score_to_confidence
+from app.services.recommendation_explainer import build_explanation
 from app.services.recommendation_service import RecommendationService
 from app.services.scheduling_service import SchedulingService
 from app.services.usable_time_service import UsableTimeService
@@ -125,20 +126,22 @@ async def _gather_candidate_tasks(db: AsyncSession, user, now: datetime):
 
 
 async def _ranked_candidates(db: AsyncSession, user, now: datetime):
-    """Shared Now ranking: returns (ranked_tasks, usable_minutes, today_scheduled_tasks)."""
+    """Shared Now ranking: returns (ranked_tasks, usable_minutes, today_scheduled_tasks, best_meta,
+    scores) where scores maps task_id(str) -> the engine's 0–100 score for that task."""
     candidates, usable_minutes, today_tasks = await _gather_candidate_tasks(db, user, now)
     if not candidates:
-        return [], usable_minutes, today_tasks, None
-    ranked, best_meta = await _engine_rank_tasks(db, user, candidates, now, usable_minutes)
-    return ranked, usable_minutes, today_tasks, best_meta
+        return [], usable_minutes, today_tasks, None, {}
+    ranked, best_meta, scores = await _engine_rank_tasks(db, user, candidates, now, usable_minutes)
+    return ranked, usable_minutes, today_tasks, best_meta, scores
 
 
 async def _engine_rank_tasks(
     db: AsyncSession, user, candidates: list, now: datetime, usable_minutes: int
-) -> tuple[list, dict | None]:
+) -> tuple[list, dict | None, dict]:
     """Order candidate Tasks using the deterministic recommendation engine (task + location domains),
     then map the engine's ranked candidates back to the ORM Tasks. Any candidate the engine didn't
-    surface is safety-appended so best_task is never dropped."""
+    surface is safety-appended so best_task is never dropped. Also returns a task_id->score map so
+    every surface (incl. /now/why on an alternative) can derive confidence from the real score."""
     ctx, task_map = await build_user_context(db, user, candidates, now, usable_minutes)
     maps = MapsSkillService(get_maps_provider())
     actions = await generate_candidate_actions(ctx, maps, now)
@@ -150,6 +153,7 @@ async def _engine_rank_tasks(
     ordered: list = []
     seen: set = set()
     best_meta: dict | None = None
+    scores: dict = {}
     for scored in ranked:
         c = scored.candidate
         if c.domain not in ("task", "location") or not c.related_entity_ids:
@@ -158,12 +162,13 @@ async def _engine_rank_tasks(
         if tid in task_map and tid not in seen:
             if best_meta is None:  # metadata of the top-ranked pick, for the impression log
                 best_meta = {"action_type": c.type, "domain": c.domain, "score": scored.score}
+            scores[tid] = scored.score
             ordered.append(task_map[tid])
             seen.add(tid)
     for t in candidates:  # safety net — keep any task the engine didn't rank
         if str(t.id) not in seen:
             ordered.append(t)
-    return ordered, best_meta
+    return ordered, best_meta, scores
 
 
 def _fmt_local(dt: datetime, tz_name: str) -> str:
@@ -281,7 +286,7 @@ async def get_now(
     user_tz = user.profile.timezone if user.profile else "UTC"
     local_now = _local_now(now, user_tz)
 
-    ranked, usable_minutes, today_tasks, best_meta = await _ranked_candidates(db, user, now)
+    ranked, usable_minutes, today_tasks, best_meta, _scores = await _ranked_candidates(db, user, now)
     context = await _context_cards(db, user, now, user_tz)
     if not ranked:
         return NowResponse(
@@ -289,7 +294,8 @@ async def get_now(
             context=context,
         )
 
-    confidence = compute_confidence(ranked[0], usable_minutes, len(ranked[1:3]), now)
+    # Confidence just reflects how strong the top pick's engine score is (single source of truth).
+    confidence = score_to_confidence(best_meta["score"] if best_meta else 0.0)
     event_id = await _record_now_impression(db, user, ranked[0], confidence, best_meta)
     return NowResponse(
         greeting=_greeting(local_now),
@@ -381,7 +387,7 @@ async def get_now_why(
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
 
     now = datetime.now(timezone.utc)
-    ranked, _usable, today_tasks, _meta = await _ranked_candidates(db, user, now)
+    ranked, _usable, today_tasks, _meta, scores = await _ranked_candidates(db, user, now)
 
     target = next((t for t in ranked if t.id == task_id), None)
     if target is None:
@@ -391,7 +397,8 @@ async def get_now_why(
     user_tz = user.profile.timezone if user.profile else "UTC"
 
     explanation = await build_explanation(
-        db, user, target, alternatives, today_tasks, now, user_tz, gateway
+        db, user, target, alternatives, today_tasks, now, user_tz, gateway,
+        score=scores.get(str(target.id), 0.0),
     )
 
     # Audit trail (best-effort — never block the response on it).
