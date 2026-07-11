@@ -9270,6 +9270,59 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(optional) Android learned surface in CI."),
         ),
     },
+    {
+        "summary": "TIME-208: Acceptance-rate-scaled user_preference_fit",
+        "labels": ["backend", "recommendations", "learning"],
+        "description": doc(
+            h2("Goal"), p("Make user_preference_fit a continuous learned signal (observed acceptance rate) instead of a binary +0.2 bump."),
+            divider(), h2("Scope"), bullet_list([
+                "In apply_feedback_adjustments: once an action type has >=PREFERENCE_MIN_SAMPLES (5) reactions, set user_preference_fit = acc/(acc+rej), clamped 0..1",
+                "Below the sample floor it stays neutral (0.5); reject/accept reason codes unchanged",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No weight changes; no new reason codes"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/recommendation/feedback/apply_feedback.py, backend/tests/test_recommendation_engine_selection.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["8/2 reactions -> 0.8; <5 reactions -> stays 0.5; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest -q"),
+            divider(), h2("Dependencies"), p("Phase 2/3 (telemetry + learning)."),
+            divider(), h2("Next Ticket"), p("Per-user WeeklyInsight acceptance columns."),
+        ),
+    },
+    {
+        "summary": "TIME-209: Per-user recommendation acceptance columns on WeeklyInsight",
+        "labels": ["backend", "insights", "telemetry"],
+        "description": doc(
+            h2("Goal"), p("Record per-user recommendation quality on each weekly insight from the impression->outcome log."),
+            divider(), h2("Scope"), bullet_list([
+                "Add recommendations_shown, recommendations_accepted, recommendation_acceptance_rate, mean_confidence to WeeklyInsight + Alembic migration",
+                "Populate in InsightsService._generate via acceptance_stats(start,end,user_id) scoped to the user's week",
+                "Null rate/mean_confidence when no impressions (same rule as completion_rate); _summarize gains mean_confidence",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No backfill of past weeks"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/models/insight.py, app/schemas/insight.py, app/services/insights_service.py, app/repositories/recommendation_event_repository.py, migrations/, tests/test_insights.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Columns populate correctly; null when no impressions; single alembic head; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && alembic heads && pytest tests/test_insights.py -q"),
+            divider(), h2("Dependencies"), p("TIME-196 (impression log), TIME-046 (weekly insights)."),
+            divider(), h2("Next Ticket"), p("Surface acceptance stat in Insights UI."),
+        ),
+    },
+    {
+        "summary": "TIME-210: Surface recommendation acceptance on Insights (iOS + web)",
+        "labels": ["ios", "web", "insights"],
+        "description": doc(
+            h2("Goal"), p("Show a 'Recommendations accepted' stat on the weekly Insights screen."),
+            divider(), h2("Scope"), bullet_list([
+                "iOS StatsGrid: new StatRow with rate + 'N of M shown' detail line",
+                "Web insights grid: new stat card with a muted 'N of M shown' subline",
+                "Render only when recommendation_acceptance_rate is non-null",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No Android in this ticket (CI-verified follow-up)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/.../Insights/InsightsView.swift, InsightsViewModel.swift, web/app/app/insights/page.tsx"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Card renders when rate present, hidden otherwise; iOS builds; web build clean"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense && cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-209."),
+            divider(), h2("Next Ticket"), p("(optional) Android acceptance surface in CI."),
+        ),
+    },
 ]
 
 
