@@ -93,6 +93,30 @@ async def test_avoided_at_this_time_penalizes():
     assert compute_penalty(cand(["AVOIDED_AT_THIS_TIME"]), ctx) == compute_penalty(cand([]), ctx) + 20
 
 
+def test_user_preference_fit_scales_by_acceptance_rate():
+    """With enough reactions, user_preference_fit becomes the observed acceptance rate; below the
+    sample floor it stays neutral (0.5)."""
+    from app.services.recommendation.feedback.apply_feedback import (
+        FeedbackSummary,
+        apply_feedback_adjustments,
+    )
+    from app.services.recommendation.types import CandidateAction
+
+    def cand():
+        return CandidateAction(
+            id="c", type="deep_work", domain="task", title="T", description="d",
+            estimated_minutes=30, user_preference_fit=0.5,
+        )
+
+    # 8 accepts / 2 rejects = 0.8 rate, and >= 5 samples → user_preference_fit becomes 0.8.
+    strong = FeedbackSummary(accepts={"deep_work": 8}, rejects={"deep_work": 2})
+    assert apply_feedback_adjustments(cand(), strong).user_preference_fit == 0.8
+
+    # Only 3 reactions (< 5) → stays neutral.
+    weak = FeedbackSummary(accepts={"deep_work": 2}, rejects={"deep_work": 1})
+    assert apply_feedback_adjustments(cand(), weak).user_preference_fit == 0.5
+
+
 # --------------------------- calendar hard rules ---------------------------
 
 async def test_meeting_in_10_min_prefers_prep_not_deep_work():
