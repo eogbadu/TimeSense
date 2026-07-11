@@ -26,6 +26,7 @@ from app.services.push.sender import PushSender
 from app.services.recommendation.candidate_gather import gather_candidate_tasks
 from app.services.recommendation.context_builder import build_user_context
 from app.services.recommendation.engine import run_engine
+from app.services.recommendation.feedback.build_summary import build_feedback_summary
 from app.services.recommendation.maps.factory import get_maps_provider
 from app.services.recommendation.maps.maps_skill_service import MapsSkillService
 from app.services.recommendation.types import Recommendation
@@ -68,7 +69,8 @@ class ProactivePushService:
         candidates, usable, _ = await gather_candidate_tasks(self.db, user, now)
         ctx, _ = await build_user_context(self.db, user, candidates, now, usable)
         maps = MapsSkillService(get_maps_provider())
-        rec = await run_engine(ctx, maps=maps, now=now, gateway=gateway)
+        summary = await build_feedback_summary(self.db, user.id, now)
+        rec = await run_engine(ctx, maps=maps, now=now, feedback=summary, gateway=gateway)
 
         if rec.domain == "fallback" or not rec.eligible_for_push:
             return None
@@ -184,7 +186,8 @@ class ProactivePushService:
             candidates, usable, _ = await gather_candidate_tasks(self.db, user, now)
             ctx, _ = await build_user_context(self.db, user, candidates, now, usable)
             maps = MapsSkillService(get_maps_provider())
-            rec = await run_engine(ctx, maps=maps, now=now, gateway=gateway)
+            summary = await build_feedback_summary(self.db, user.id, now)
+            rec = await run_engine(ctx, maps=maps, now=now, feedback=summary, gateway=gateway)
             out_title, out_body, action = rec.title, rec.message, rec.action_type
 
         delivered = 0
