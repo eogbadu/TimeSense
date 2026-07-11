@@ -19,6 +19,7 @@ from app.models.base import Base
 from app.models.commute import CommuteEvent
 from app.models.meal import MealEvent
 from app.models.notification import ReplanRequest
+from app.models.recommendation_event import RecommendationEvent
 from app.models.recommendation_feedback import RecommendationFeedback
 from app.models.sleep_wake import SleepWakeEvent
 from app.models.subscription import Subscription
@@ -112,6 +113,20 @@ async def _add_commute(db_session, user_id, detected_start: datetime, status: st
     db_session.add(event)
     await db_session.flush()
     return event
+
+
+async def _add_event(db_session, user_id, confidence: float, outcome: str | None, created_at: datetime):
+    import uuid as _uuid
+    ev = RecommendationEvent(
+        user_id=user_id, task_id=_uuid.uuid4(), confidence=confidence, explanation={},
+        surface="now", action_type="deep_work", domain="task", score=confidence * 100, rank=0,
+        outcome=outcome,
+    )
+    db_session.add(ev)
+    await db_session.flush()
+    ev.created_at = created_at
+    await db_session.flush()
+    return ev
 
 
 async def _add_feedback(db_session, user_id, task_id, signal: str, created_at: datetime):
@@ -223,6 +238,37 @@ async def test_feedback_counts(db_session):
 
     assert insight.feedback_done_count == 2
     assert insight.feedback_not_now_count == 1
+
+
+@pytest.mark.anyio
+async def test_recommendation_acceptance_columns(db_session):
+    user = await _make_user(db_session, "uid-ins-accept")
+    # 4 impressions this week: agree + done (accepted), disagree (rejected), one still-shown (null).
+    await _add_event(db_session, user.id, 0.9, "agree", _in_week(0))
+    await _add_event(db_session, user.id, 0.8, "done", _in_week(1))
+    await _add_event(db_session, user.id, 0.4, "disagree", _in_week(2))
+    await _add_event(db_session, user.id, 0.6, None, _in_week(3))
+    # Outside the week — excluded.
+    await _add_event(db_session, user.id, 0.1, "agree", _in_week(-1))
+
+    svc = InsightsService(db_session, get_llm_gateway())
+    insight = await svc.get_or_generate_for_week(user.id, WEEK_START, WEEK_END)
+
+    assert insight.recommendations_shown == 4
+    assert insight.recommendations_accepted == 2
+    assert insight.recommendation_acceptance_rate == pytest.approx(0.5)
+    assert insight.mean_confidence == pytest.approx((0.9 + 0.8 + 0.4 + 0.6) / 4)
+
+
+@pytest.mark.anyio
+async def test_no_impressions_gives_none_acceptance_rate(db_session):
+    user = await _make_user(db_session, "uid-ins-noacc")
+    svc = InsightsService(db_session, get_llm_gateway())
+    insight = await svc.get_or_generate_for_week(user.id, WEEK_START, WEEK_END)
+
+    assert insight.recommendations_shown == 0
+    assert insight.recommendation_acceptance_rate is None
+    assert insight.mean_confidence is None
 
 
 @pytest.mark.anyio
