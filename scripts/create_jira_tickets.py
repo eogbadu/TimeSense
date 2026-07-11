@@ -9225,6 +9225,51 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(optional) per-user WeeklyInsight acceptance columns; surface learned preferences."),
         ),
     },
+    {
+        "summary": "TIME-205: 'What TimeSense has learned' endpoint",
+        "labels": ["backend", "learning", "transparency"],
+        "description": doc(
+            h2("Goal"), p("Surface the engine's learned preferences to users as plain-language statements (transparency)."),
+            divider(), h2("Scope"), bullet_list([
+                "GET /api/v1/recommendations/learned (not premium-gated) → prefers/avoids/avoids_at_time per action_type from recommendation_events",
+                "Humanized labels; >=3-reaction threshold; capped at 6; based_on = reaction count",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No editing of learned preferences"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/learned_preferences_service.py, backend/app/api/v1/recommendations.py, backend/tests/test_feedback.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["prefers/avoids derived from history; empty for a new user; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_feedback.py -q"),
+            divider(), h2("Dependencies"), p("Phase 2/3 (telemetry + learning)."),
+            divider(), h2("Next Ticket"), p("iOS + web surfaces."),
+        ),
+    },
+    {
+        "summary": "TIME-206: Surface learned preferences on iOS",
+        "labels": ["ios", "learning", "transparency"],
+        "description": doc(
+            h2("Goal"), p("Show 'What TimeSense has learned' in the Learned Patterns screen."),
+            divider(), h2("Scope"), bullet_list(["Fetch /api/v1/recommendations/learned (best-effort) + render a section of plain-language rows above the routines"]),
+            divider(), h2("Non-Goals"), bullet_list(["No editing"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Settings/LearnedAssumptionsView.swift, LearnedAssumptionsViewModel.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Learned section renders when preferences exist; failure doesn't block routines; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-205."),
+            divider(), h2("Next Ticket"), p("Web surface."),
+        ),
+    },
+    {
+        "summary": "TIME-207: Surface learned preferences on web",
+        "labels": ["web", "learning", "transparency"],
+        "description": doc(
+            h2("Goal"), p("Show 'What TimeSense has learned' on the web Insights page."),
+            divider(), h2("Scope"), bullet_list(["Best-effort fetch of /api/v1/recommendations/learned + a card below the weekly stats"]),
+            divider(), h2("Non-Goals"), bullet_list(["No Android in this ticket (CI-verified follow-up)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/app/insights/page.tsx"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Learned card renders when preferences exist; next build succeeds; verified via screenshot"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-205."),
+            divider(), h2("Next Ticket"), p("(optional) Android learned surface in CI."),
+        ),
+    },
 ]
 
 

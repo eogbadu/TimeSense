@@ -1,5 +1,11 @@
 # Change Summary
 
+## 2026-07-10 — TIME-205..207 ("What TimeSense has learned" transparency surface)
+
+- New GET /api/v1/recommendations/learned (LearnedPreferencesService) → plain-language prefers/avoids/
+  avoids-at-time from recommendation_events (not premium-gated).
+- Surfaced in iOS Learned Patterns (built) and the web Insights page (built + screenshot). Suite 495.
+
 ## 2026-07-10 — TIME-202..204 (Learning — Phase 3, engine learns from telemetry)
 
 - Revived the built-but-unused apply_feedback seam: build_feedback_summary (from recommendation_events)
