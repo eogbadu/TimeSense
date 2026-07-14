@@ -1,5 +1,13 @@
 # Implementation Log
 
+## 2026-07-14 — TIME-219..222: Home UX batch (color, swipe, tap-through, calendar→tasks)
+
+User punch-list on the iOS home screens.
+- **TIME-219 (Jira TIME-2253) color refresh**: Now/Today read as green/blue/violet on flat near-black. Added Cosmic.orange/red/yellow and spread warm colors across task types via the shared `taskCategoryStyle` (deadlines→red, errands→orange, quick/personal/chores→yellow, email→amber, focus→blue, health→green, meetings→violet). heroAccent/domainAccent warm mappings (location→orange); high-priority pill→red; Today time-of-day headers warm→cool (yellow→orange→violet). CosmicBackground → "warmer dark" ground (baseWarm #12172B → deepWarm #0A0E1C + warm amber bloom). Direction chosen from a published color-preview artifact. iOS built.
+- **TIME-220 (Jira TIME-2254) swipe between tabs**: MainTabView low-priority horizontal DragGesture (|dx|>80 and |dx|>1.6·|dy|) moves to the adjacent tab without fighting vertical scroll / Today row swipe. iOS built.
+- **TIME-221 (Jira TIME-2255) Now→Today tap**: the Now "Tasks" context card is now a plain Button that sets appState.selectedTab=.today. iOS built.
+- **TIME-222 (Jira TIME-2256) calendar→tasks**: synced (EventKit) calendar events import into the task list as editable tasks (title/scheduled_start/end/location, source="calendar"), deduped on new Task.calendar_event_id ("{source}:{external_id}") vs all the user's tasks incl. deleted; all-day skipped. Backend CalendarImportService.import_window + POST /calendar/import (migration c6d7e8f9a0b1); iOS CalendarSyncService calls import after each sync. Suite 528; iOS built. One-way only (no write-back).
+
 ## 2026-07-14 — TIME-218 (Jira TIME-2252): Premium test allowlist
 
 Problem: premium = active sub OR 14-day intro trial, so once a test account ages out, premium-gated features (Connections, etc.) vanish from the app and their PremiumUser endpoints 403 — untestable. Fix: dev-only `premium_test_emails` config (comma-separated); `SubscriptionService.is_premium` also returns True when the account's email is in the allowlist (checked after sub + intro-trial; case-insensitive). Empty by default → no production effect. Unblocks both the app entitlement and every PremiumUser endpoint. To use: set `PREMIUM_TEST_EMAILS=you@example.com` in backend/.env and restart. Suite 526 (+2).
