@@ -17,6 +17,8 @@ struct ConnectionsView: View {
                         tint: .blue, blurb: "Schedule around your Outlook / Microsoft events."),
         ConnectProvider(id: "slack", name: "Slack", systemImage: "message.fill",
                         tint: .purple, blurb: "Turn Slack messages into tasks you can approve."),
+        ConnectProvider(id: "gmail", name: "Gmail", systemImage: "envelope.fill",
+                        tint: .red, blurb: "Find tasks in recent emails — read-only, you approve each one."),
     ]
 
     var body: some View {
@@ -38,6 +40,32 @@ struct ConnectionsView: View {
                                 onConnect: { Task { await viewModel.connect(provider.id) } }
                             )
                         }
+
+                        // Review detected email tasks (after connecting Gmail).
+                        NavigationLink(destination: EmailTasksView()) {
+                            HStack(spacing: DesignTokens.Spacing.md) {
+                                Image(systemName: "tray.full.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.red)
+                                    .frame(width: 40, height: 40)
+                                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.red.opacity(0.14)))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Email tasks")
+                                        .font(DesignTokens.Typography.headline)
+                                        .foregroundColor(DesignTokens.Color.textPrimary)
+                                    Text("Scan recent emails and approve the tasks TimeSense finds.")
+                                        .font(DesignTokens.Typography.footnote)
+                                        .foregroundColor(DesignTokens.Color.textSecondary)
+                                }
+                                Spacer(minLength: DesignTokens.Spacing.sm)
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundColor(DesignTokens.Color.textSecondary)
+                            }
+                            .padding(DesignTokens.Spacing.md)
+                            .cardStyle()
+                        }
+                        .buttonStyle(.plain)
                     }
                 } else {
                     Text("Connecting apps is a Premium feature.")

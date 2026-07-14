@@ -9454,6 +9454,27 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("TIME-217: iOS Gmail connect + review screen."),
         ),
     },
+    {
+        "summary": "TIME-217: iOS — Gmail connect + 'Email tasks' review screen",
+        "labels": ["ios", "integrations", "email"],
+        "description": doc(
+            h2("Goal"), p("Make email->task detection usable on iPhone: connect Gmail from Connections and review/approve detected tasks."),
+            divider(), h2("Scope"), bullet_list([
+                "ConnectionsView: add a Gmail (read-only) connect row + a NavigationLink to the review screen",
+                "New EmailTasksView + view model: explicit email_content consent grant (GET/POST /consent), 'Scan for tasks' (POST /email/scan), pending list with Approve (confirm) / Dismiss (reject)",
+                "Backend: add email_content to the ConsentType Literal in schemas/consent.py (POST /consent/ would 422 otherwise)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No Android/web (follow-up)", "No background scan", "No nagging — explicit user-triggered review"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Settings/ConnectionsView.swift, ios/TimeSense/Features/Settings/EmailTasksView.swift (new), backend/app/schemas/consent.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "Gmail connect row opens the OAuth sheet; review screen grants consent, scans, lists detected items, approve creates a Task, dismiss removes it",
+                "iOS builds; backend suite green",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense && cd backend && pytest -q"),
+            divider(), h2("Dependencies"), p("TIME-214/215/216 (email backend)."),
+            divider(), h2("Next Ticket"), p("(follow-up) Outlook; Android + web review screens; background scan."),
+        ),
+    },
 ]
 
 

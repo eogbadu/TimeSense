@@ -11,6 +11,7 @@ ConsentType = Literal[
     "health_data",
     "calendar_details",
     "analytics",
+    "email_content",
 ]
 
 
