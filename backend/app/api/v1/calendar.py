@@ -17,6 +17,7 @@ from app.schemas.calendar import (
     CalendarIntegrationOut,
     PendingCalendarActionOut,
 )
+from app.services.calendar_import_service import CalendarImportService
 from app.services.calendar_service import CalendarService
 from app.services.user_service import UserService
 
@@ -63,6 +64,26 @@ async def sync_calendar(
     )
     await db.commit()
     return CalendarSyncOut(synced=n)
+
+
+class CalendarImportOut(BaseModel):
+    imported: int
+
+
+@router.post("/import", response_model=CalendarImportOut)
+async def import_calendar_events(
+    current_user: CurrentUser, db: AsyncSession = Depends(get_db)
+) -> CalendarImportOut:
+    """Turn the user's synced calendar events into editable tasks in their list. Deduped, so calling
+    it repeatedly (e.g. after each sync) never creates duplicates. Imports a wide window covering the
+    synced range."""
+    user_id = await _get_user_id(current_user, db)
+    now = datetime.now(timezone.utc)
+    created = await CalendarImportService(db).import_window(
+        user_id, now - timedelta(days=1), now + timedelta(days=14)
+    )
+    await db.commit()
+    return CalendarImportOut(imported=len(created))
 
 
 @router.get("/synced/today", response_model=list[SyncedEventIn])

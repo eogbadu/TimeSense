@@ -25,6 +25,20 @@ class TaskRepository:
         await self.db.refresh(task)
         return task
 
+    async def existing_calendar_event_ids(
+        self, user_id: uuid.UUID, keys: list[str]
+    ) -> set[str]:
+        """Which of `keys` already have a task for this user (any status, so a deleted import isn't
+        resurrected) — used to dedup calendar-event imports."""
+        if not keys:
+            return set()
+        result = await self.db.execute(
+            select(Task.calendar_event_id).where(
+                Task.user_id == user_id, Task.calendar_event_id.in_(keys)
+            )
+        )
+        return {row[0] for row in result.all()}
+
     async def find_recent_duplicate(
         self, user_id: uuid.UUID, raw_input: str, since: datetime
     ) -> Task | None:

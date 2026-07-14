@@ -42,6 +42,9 @@ class Task(UUIDMixin, TimestampMixin, Base):
     # "Scheduled · Undo" affordance on Today.
     auto_scheduled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     raw_input: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # For tasks imported from a calendar event: "{source}:{external_id}" — the dedup key so a re-import
+    # (or re-sync) never creates a duplicate. Null for normal tasks.
+    calendar_event_id: Mapped[str | None] = mapped_column(String(300), nullable=True, index=True)
     # An explicit place for the task (e.g. an errand), chosen from saved places / maps — more reliable
     # than parsing "the mall" from the title, and lets the engine compute real travel.
     location_name: Mapped[str | None] = mapped_column(String(160), nullable=True)

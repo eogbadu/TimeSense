@@ -127,8 +127,16 @@ final class CalendarSyncService: ObservableObject {
             "/api/v1/calendar/synced", body: SyncPayload(source: "apple", events: payload)
         )
         lastSyncedCount = resp?.synced ?? payload.count
+        // Turn the synced events into editable tasks in the list (deduped server-side, so this is
+        // safe to call after every sync).
+        let _: ImportResponse? = try? await APIClient.shared.post(
+            "/api/v1/calendar/import", body: EmptyBody()
+        )
     }
 }
+
+private struct EmptyBody: Encodable {}
+private struct ImportResponse: Decodable { let imported: Int }
 
 private struct SyncEvent: Encodable {
     let external_id: String
