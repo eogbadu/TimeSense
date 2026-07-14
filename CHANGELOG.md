@@ -17,6 +17,10 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-14] TIME-222: Your calendar events now show up in the task list as editable tasks (with their time), so your whole day is in one place — synced automatically, no duplicates
+- [2026-07-14] TIME-221: Tapping the "Tasks" card on the Now screen jumps you to the Today task list
+- [2026-07-14] TIME-220: You can now swipe left/right to move between the bottom tabs, not just tap them
+- [2026-07-14] TIME-219: Now & Today got a color refresh — warmer, more varied accents (orange, red, amber, yellow across task types) on a lifted "warmer dark" background instead of flat black
 - [2026-07-14] TIME-214..217: Email → tasks (Gmail, v1) — connect your Gmail read-only, tap "Scan for tasks", and TimeSense suggests to-dos it finds in your recent unread email; you approve or dismiss each one (nothing is added automatically, and only the subject + preview is ever read — never the full email). Requires an explicit email-access consent. iOS first; Outlook, Android and web to follow
 - [2026-07-11] TIME-213: The confidence % on a recommendation now reflects how strong the pick actually is (its real score) and shows the same value everywhere — a clear best-thing reads high, a "nothing pressing" pick reads lower — instead of a fixed 70-ish number that ignored the score and disagreed between screens
 - [2026-07-11] TIME-212: The "Why this recommendation?" screen now shows the plain-language summary at the top instead of the bottom, so the takeaway is the first thing you read
