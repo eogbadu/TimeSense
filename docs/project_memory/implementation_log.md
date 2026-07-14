@@ -1,5 +1,9 @@
 # Implementation Log
 
+## 2026-07-14 — TIME-218 (Jira TIME-2252): Premium test allowlist
+
+Problem: premium = active sub OR 14-day intro trial, so once a test account ages out, premium-gated features (Connections, etc.) vanish from the app and their PremiumUser endpoints 403 — untestable. Fix: dev-only `premium_test_emails` config (comma-separated); `SubscriptionService.is_premium` also returns True when the account's email is in the allowlist (checked after sub + intro-trial; case-insensitive). Empty by default → no production effect. Unblocks both the app entitlement and every PremiumUser endpoint. To use: set `PREMIUM_TEST_EMAILS=you@example.com` in backend/.env and restart. Suite 526 (+2).
+
 ## 2026-07-14 — TIME-214..217: Email → task detection (Gmail v1 vertical slice)
 
 New capability: detect tasks from a user's Gmail, read-only, on-demand, approval-gated. Cloned the Slack pattern (fetch → shared ActionItemDetectionService → pending item → confirm/reject → Task). Approved decisions: Gmail first (Outlook fast-follow); recent unread/Primary (~7d); store subject+snippet+detected task only (never bodies); on-demand "Scan for tasks"; email_content consent; iOS review screen in v1.
