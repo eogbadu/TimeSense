@@ -8,6 +8,7 @@ from app.api.v1.integrations import router as integrations_router
 from app.api.v1.commutes import router as commutes_router
 from app.api.v1.consent import router as consent_router
 from app.api.v1.devices import router as devices_router
+from app.api.v1.email import router as email_router
 from app.api.v1.health import router as health_router
 from app.api.v1.insights import router as insights_router
 from app.api.v1.invites import router as invites_router
@@ -58,6 +59,7 @@ api_router.include_router(sleep_router)
 api_router.include_router(activity_router)
 api_router.include_router(insights_router)
 api_router.include_router(slack_router)
+api_router.include_router(email_router)
 api_router.include_router(teams_router)
 api_router.include_router(notion_router)
 api_router.include_router(capture_router)
