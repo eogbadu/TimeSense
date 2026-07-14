@@ -26,6 +26,7 @@ class ConsentRecord(UUIDMixin, TimestampMixin, Base):
       - health_data         : Apple Health / Google Fit data
       - calendar_details    : full calendar event details (vs free/busy only)
       - analytics           : anonymous usage analytics
+      - email_content       : read recent email (subject/snippet) to detect tasks
     """
     __tablename__ = "consent_records"
 

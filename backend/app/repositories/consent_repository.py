@@ -12,6 +12,7 @@ VALID_CONSENT_TYPES = frozenset({
     "health_data",
     "calendar_details",
     "analytics",
+    "email_content",
 })
 
 
