@@ -8,30 +8,42 @@ enum Cosmic {
     static let deep    = Color(red: 0.020, green: 0.027, blue: 0.055)  // #05070E darkest (bottom)
     static let surface = Color(red: 0.067, green: 0.078, blue: 0.122)  // #11141F dark slate card
 
+    // "Warmer dark" screen ground — lifted navy (top) into a deep navy (bottom), so Now/Today no
+    // longer read as flat black. Paired with warm corner glows in CosmicBackground.
+    static let baseWarm = Color(red: 0.071, green: 0.090, blue: 0.169)  // #12172B lifted navy
+    static let deepWarm = Color(red: 0.039, green: 0.055, blue: 0.110)  // #0A0E1C deep navy
+
     // Dark navy base for the hero card (blooms into the domain colour top-right).
     static let heroBaseTop = Color(red: 0.055, green: 0.086, blue: 0.165) // #0E162A
     static let heroBaseBot = Color(red: 0.035, green: 0.051, blue: 0.106) // #090D1B
 
-    // Semantic domain accents — the multiple colours the reference uses across the home screen.
-    static let green  = Color(red: 0.208, green: 0.839, blue: 0.627) // #35D6A0 energy/health
-    static let blue   = Color(red: 0.239, green: 0.545, blue: 1.000) // #3D8BFF focus/calendar
-    static let cyan   = Color(red: 0.141, green: 0.780, blue: 0.867) // #24C7DD errand/nearby
-    static let violet = Color(red: 0.604, green: 0.420, blue: 1.000) // #9A6BFF meeting/appointment/tasks
-    static let amber  = Color(red: 1.000, green: 0.706, blue: 0.302) // #FFB44D warnings/deadlines
+    // Semantic accents — a full warm→cool wheel used across the home screen (not just cool hues).
+    static let green  = Color(red: 0.208, green: 0.839, blue: 0.627) // #35D6A0 health/energy
+    static let blue   = Color(red: 0.239, green: 0.545, blue: 1.000) // #3D8BFF deep focus
+    static let cyan   = Color(red: 0.141, green: 0.780, blue: 0.867) // #24C7DD low-focus/nearby
+    static let violet = Color(red: 0.604, green: 0.420, blue: 1.000) // #9A6BFF meetings/appointments
+    static let amber  = Color(red: 1.000, green: 0.706, blue: 0.302) // #FFB44D deadlines/planning/email
+    static let orange = Color(red: 1.000, green: 0.549, blue: 0.259) // #FF8C42 errands/out & about
+    static let red    = Color(red: 1.000, green: 0.420, blue: 0.420) // #FF6B6B overdue/urgent
+    static let yellow = Color(red: 1.000, green: 0.835, blue: 0.310) // #FFD54F quick/personal
 
     static let glowBlue   = Color(red: 0.18, green: 0.39, blue: 1.00)
     static let glowViolet = Color(red: 0.48, green: 0.30, blue: 0.95)
+    static let glowWarm   = Color(red: 1.00, green: 0.55, blue: 0.26)
 }
 
 /// Recommendation category → its accent colour (drives the hero glow, icon, and pills).
 func heroAccent(_ descriptor: String) -> Color {
     switch descriptor {
-    case "Health break":         return Cosmic.green
-    case "Errand", "Chore":      return Cosmic.cyan
+    case "Health break":           return Cosmic.green
+    case "Errand":                 return Cosmic.orange
+    case "Chore":                  return Cosmic.yellow
     case "Appointment", "Meeting": return Cosmic.violet
-    case "Focus task":           return Cosmic.blue
-    case "Quick task":           return Cosmic.green
-    default:                     return Cosmic.blue
+    case "Focus task":             return Cosmic.blue
+    case "Quick task", "Personal": return Cosmic.yellow
+    case "Email":                  return Cosmic.amber
+    case "Deadline":               return Cosmic.red
+    default:                       return Cosmic.blue
     }
 }
 
@@ -39,21 +51,26 @@ func heroAccent(_ descriptor: String) -> Color {
 func domainAccent(_ domain: String) -> Color {
     switch domain {
     case "health":   return Cosmic.green
-    case "location": return Cosmic.cyan
+    case "location": return Cosmic.orange   // out & about → warm
     case "calendar": return Cosmic.violet
+    case "planning": return Cosmic.amber
+    case "fallback": return Cosmic.cyan
     default:         return Cosmic.blue
     }
 }
 
-/// The cosmic screen backdrop — near-black neutral navy with faint blue/violet corner glows.
+/// The cosmic screen backdrop — a "warmer dark" lifted navy with blue/violet corner glows and a warm
+/// amber bloom from the bottom, so Now/Today feel rich rather than flat black.
 struct CosmicBackground: View {
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Cosmic.base, Cosmic.deep], startPoint: .top, endPoint: .bottom)
-            RadialGradient(colors: [Cosmic.glowBlue.opacity(0.10), .clear],
-                           center: .topLeading, startRadius: 0, endRadius: 440)
-            RadialGradient(colors: [Cosmic.glowViolet.opacity(0.10), .clear],
-                           center: .topTrailing, startRadius: 0, endRadius: 440)
+            LinearGradient(colors: [Cosmic.baseWarm, Cosmic.deepWarm], startPoint: .top, endPoint: .bottom)
+            RadialGradient(colors: [Cosmic.glowBlue.opacity(0.16), .clear],
+                           center: .topLeading, startRadius: 0, endRadius: 460)
+            RadialGradient(colors: [Cosmic.glowViolet.opacity(0.15), .clear],
+                           center: .topTrailing, startRadius: 0, endRadius: 460)
+            RadialGradient(colors: [Cosmic.glowWarm.opacity(0.13), .clear],
+                           center: UnitPoint(x: 0.82, y: 1.04), startRadius: 0, endRadius: 480)
         }
         .ignoresSafeArea()
     }

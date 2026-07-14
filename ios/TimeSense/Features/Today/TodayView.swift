@@ -265,11 +265,12 @@ private struct SmartPlanCard: View {
     }
 
     private func groupColor(_ name: String) -> Color {
+        // Warm → cool across the day: sunrise yellow → midday orange → dusk violet.
         switch name {
-        case "Morning": return DesignTokens.Color.accentBlue
-        case "Afternoon": return DesignTokens.Color.accent
-        case "Evening": return Color(red: 0.65, green: 0.40, blue: 1.0)
-        default: return DesignTokens.Color.textSecondary
+        case "Morning": return Cosmic.yellow
+        case "Afternoon": return Cosmic.orange
+        case "Evening": return Cosmic.violet
+        default: return Cosmic.cyan   // "Anytime"
         }
     }
 
