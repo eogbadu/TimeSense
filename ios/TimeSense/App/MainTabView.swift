@@ -37,6 +37,23 @@ struct MainTabView: View {
                 .tag(AppState.Tab.settings)
         }
         .tint(DesignTokens.Color.accent)
+        // Swipe horizontally to move between tabs (in addition to tapping the bar). Low-priority +
+        // predominantly-horizontal + distance-thresholded so it doesn't fight vertical scrolling or
+        // Today's row swipe-to-reveal (a child gesture on a row wins over this parent gesture).
+        .gesture(
+            DragGesture(minimumDistance: 30, coordinateSpace: .local)
+                .onEnded { value in
+                    let dx = value.translation.width, dy = value.translation.height
+                    guard abs(dx) > 80, abs(dx) > abs(dy) * 1.6 else { return }
+                    let tabs = AppState.Tab.allCases
+                    guard let i = tabs.firstIndex(of: appState.selectedTab) else { return }
+                    if dx < 0, i < tabs.count - 1 {
+                        withAnimation(DesignTokens.Animation.standard) { appState.selectedTab = tabs[i + 1] }
+                    } else if dx > 0, i > 0 {
+                        withAnimation(DesignTokens.Animation.standard) { appState.selectedTab = tabs[i - 1] }
+                    }
+                }
+        )
         // Keep the backend's stored timezone in sync with the device — drives greetings, "today"
         // boundaries, working-hours windows, and scheduling.
         .task { await syncDeviceTimezone() }

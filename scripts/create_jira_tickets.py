@@ -9513,6 +9513,55 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("TIME-220: swipe between tabs."),
         ),
     },
+    {
+        "summary": "TIME-220: Swipe between bottom tabs",
+        "labels": ["ios", "navigation"],
+        "description": doc(
+            h2("Goal"), p("Let users swipe horizontally to move across the Now/Today/Capture/Insights/Settings tabs, in addition to tapping the tab bar."),
+            divider(), h2("Scope"), bullet_list([
+                "MainTabView: a low-priority horizontal DragGesture that moves to the adjacent tab (predominantly-horizontal, distance-thresholded, so it doesn't fight vertical scrolling or Today's row swipe-to-reveal)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No paged TabView (keeps the native tab bar)", "No wrap-around past the first/last tab"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/App/MainTabView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["A horizontal swipe changes tabs; vertical scroll + Today row swipe still work; iOS builds (gesture feel verified on device)"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("(none)"),
+            divider(), h2("Next Ticket"), p("TIME-221: Now tasks card -> Today."),
+        ),
+    },
+    {
+        "summary": "TIME-221: Now 'Tasks' card taps through to Today",
+        "labels": ["ios", "navigation"],
+        "description": doc(
+            h2("Goal"), p("Make the Tasks context card on Now tappable so it jumps to the Today task list."),
+            divider(), h2("Scope"), bullet_list([
+                "NowView/ContextGrid: wrap the 'Tasks' ContextCard in a tap that sets appState.selectedTab = .today",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to other context cards", "No deep link to a specific task"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Now/NowView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Tapping the Now Tasks card switches to the Today tab; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("(none)"),
+            divider(), h2("Next Ticket"), p("TIME-222: calendar events -> tasks."),
+        ),
+    },
+    {
+        "summary": "TIME-222: Calendar events become editable tasks in the list",
+        "labels": ["ios", "backend", "calendar", "tasks"],
+        "description": doc(
+            h2("Goal"), p("Bring the user's connected/synced calendar events into the task list as real editable tasks (with their start time), so the day lives in one place."),
+            divider(), h2("Scope"), bullet_list([
+                "Backend: endpoint to convert synced calendar events in a window into Tasks (title=event title, scheduled_start=event start, source='calendar'), deduped so re-import doesn't duplicate (store the source event id)",
+                "iOS: trigger import (on calendar sync / a control) so events show in Today as tasks",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No two-way write-back to the calendar", "No recurring-event expansion beyond the synced window"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/*, app/api/v1/calendar.py, app/models/task.py (source event id), migrations/, ios TodayView/CalendarSyncService, tests/"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["A synced event appears as an editable task with its start time; re-import doesn't duplicate; suite green; iOS builds"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest -q && cd .. && xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("Calendar sync (SyncedCalendarEvent)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 
