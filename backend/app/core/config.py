@@ -43,6 +43,9 @@ class Settings(BaseSettings):
 
     # Everyone gets Premium free for their first N days (intro trial), no payment required.
     intro_trial_days: int = 14
+    # Dev/testing only: comma-separated emails always treated as Premium (so premium features are
+    # testable on accounts past the intro trial). Empty in production → no effect.
+    premium_test_emails: str = ""
 
     # Stripe
     stripe_secret_key: str = ""
