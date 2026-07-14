@@ -9433,6 +9433,27 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("TIME-216: scan -> detect -> pending EmailActionItem + confirm/reject API."),
         ),
     },
+    {
+        "summary": "TIME-216: Email — scan -> detect -> pending EmailActionItem + confirm/reject API",
+        "labels": ["backend", "integrations", "email"],
+        "description": doc(
+            h2("Goal"), p("Turn fetched emails into pending task suggestions via the shared action-item detector, and expose the approval-gated confirm/reject API. Detected items NEVER become Tasks without user approval."),
+            divider(), h2("Scope"), bullet_list([
+                "EmailActionItem model (mirror SlackActionItem): message_id (dedup), thread_id, subject, sender, source_text(snippet), detected_title/priority/estimated_minutes, status, created_task_id; migration + repo",
+                "EmailService.scan(user_id): email_content consent-gated + connected check -> fetch_recent -> ActionItemDetectionService.detect(subject+snippet) -> dedup -> pending items; confirm()=only Task path (source='email'); reject()",
+                "Router /email/scan (Premium), /email/pending, /email/actions/{id}/confirm, /email/actions/{id}/reject; schemas; register router",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No client UI (TIME-217)", "No due-date extraction", "Never auto-create tasks"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/models/email_integration.py, app/repositories/email_repository.py, app/services/email_service.py, app/schemas/email.py, app/api/v1/email.py, app/api/v1/__init__.py, migrations/, tests/"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "scan creates pending items (not Tasks); confirm creates exactly one Task with source='email'; reject creates none; dedup on message_id",
+                "scan without email_content consent -> 403; without connection -> 404; premium-gated; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && alembic heads && pytest tests/test_email_scan.py -q"),
+            divider(), h2("Dependencies"), p("TIME-215 (fetch + consent), TIME-050 (detection)."),
+            divider(), h2("Next Ticket"), p("TIME-217: iOS Gmail connect + review screen."),
+        ),
+    },
 ]
 
 
