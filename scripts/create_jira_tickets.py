@@ -9475,6 +9475,26 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(follow-up) Outlook; Android + web review screens; background scan."),
         ),
     },
+    {
+        "summary": "TIME-218: Premium test allowlist (test premium features past the intro trial)",
+        "labels": ["backend", "subscriptions", "devx"],
+        "description": doc(
+            h2("Goal"), p("Let developers/testers use Premium-gated features regardless of the 14-day intro-trial window, so premium UI + PremiumUser-gated endpoints are testable on aged accounts."),
+            divider(), h2("Scope"), bullet_list([
+                "config: premium_test_emails (comma-separated, empty by default)",
+                "SubscriptionService.is_premium: also True when the user's email is in the allowlist (checked after sub + intro-trial); unblocks both the app entitlement and every PremiumUser endpoint",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to real subscription/billing logic", "Empty by default -> no production behavior change", "Not a client change"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/core/config.py, backend/app/services/subscription_service.py, backend/tests/"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "An allowlisted email is premium even with no subscription and an expired intro trial",
+                "Empty allowlist -> unchanged behavior; a non-listed, past-trial, no-sub user stays non-premium; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_subscriptions.py -q"),
+            divider(), h2("Dependencies"), p("TIME-178 (intro trial)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 

@@ -27,11 +27,23 @@ class SubscriptionService:
 
     async def is_premium(self, user_id: uuid.UUID) -> bool:
         """Premium if there's an active/trialing subscription, OR the account is still inside its
-        intro trial — everyone gets Premium free for their first `intro_trial_days`, no payment."""
+        intro trial — everyone gets Premium free for their first `intro_trial_days`, no payment.
+        Dev/testing: also premium if the account's email is in the `premium_test_emails` allowlist."""
         sub = await self.repo.get_by_user_id(user_id)
         if sub is not None and sub.is_premium:
             return True
-        return await self.in_intro_trial(user_id)
+        if await self.in_intro_trial(user_id):
+            return True
+        return await self._is_test_premium(user_id)
+
+    async def _is_test_premium(self, user_id: uuid.UUID) -> bool:
+        """Dev/testing override: emails listed in `premium_test_emails` are always Premium so
+        premium features can be tested past the intro trial. Empty by default → no production effect."""
+        allow = {e.strip().lower() for e in settings.premium_test_emails.split(",") if e.strip()}
+        if not allow:
+            return False
+        user = await self.user_repo.get_by_id(user_id)
+        return user is not None and (user.email or "").lower() in allow
 
     async def in_intro_trial(self, user_id: uuid.UUID) -> bool:
         """True while the account is younger than the intro-trial window."""

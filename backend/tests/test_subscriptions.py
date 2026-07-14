@@ -142,6 +142,77 @@ async def test_intro_trial_grace_by_account_age():
 
 
 @pytest.mark.anyio
+async def test_premium_test_allowlist_overrides_expired_trial(monkeypatch):
+    """An email in premium_test_emails is Premium even past the intro trial with no subscription —
+    so premium features stay testable. A non-listed, past-trial, no-sub user stays non-premium."""
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+    from app.core.config import settings
+    from app.core.database import Base
+    from app.models.user import User
+    from app.services.subscription_service import SubscriptionService
+    from tests.conftest import TEST_DATABASE_URL
+
+    monkeypatch.setattr(settings, "premium_test_emails", "Tester@Example.com, other@x.com")
+
+    engine = create_async_engine(TEST_DATABASE_URL)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_session() as session:
+        listed = User(firebase_uid="uid-listed", email="tester@example.com")   # case-insensitive
+        unlisted = User(firebase_uid="uid-unlisted", email="nope@example.com")
+        session.add_all([listed, unlisted])
+        await session.flush()
+        expired = datetime.now(UTC) - timedelta(days=settings.intro_trial_days + 1)
+        listed.created_at = expired
+        unlisted.created_at = expired
+        await session.commit()
+
+        svc = SubscriptionService(session)
+        assert await svc.is_premium(listed.id) is True     # allowlisted → premium despite expired trial
+        assert await svc.is_premium(unlisted.id) is False   # not listed → stays non-premium
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_empty_allowlist_has_no_effect(monkeypatch):
+    """The default empty allowlist doesn't grant premium to anyone."""
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+    from app.core.config import settings
+    from app.core.database import Base
+    from app.models.user import User
+    from app.services.subscription_service import SubscriptionService
+    from tests.conftest import TEST_DATABASE_URL
+
+    monkeypatch.setattr(settings, "premium_test_emails", "")
+
+    engine = create_async_engine(TEST_DATABASE_URL)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_session() as session:
+        user = User(firebase_uid="uid-none", email="anyone@example.com")
+        session.add(user)
+        await session.flush()
+        user.created_at = datetime.now(UTC) - timedelta(days=settings.intro_trial_days + 1)
+        await session.commit()
+        assert await SubscriptionService(session).is_premium(user.id) is False
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest.mark.anyio
 async def test_active_subscription_is_premium_regardless_of_age():
     """An active/paid subscription keeps Premium even after the intro trial would have expired."""
     import uuid
