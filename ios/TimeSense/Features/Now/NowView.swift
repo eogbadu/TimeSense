@@ -333,7 +333,7 @@ private struct BestNextActionCard: View {
 
             HStack(spacing: DesignTokens.Spacing.sm) {
                 HeroPill(icon: style.icon, text: style.descriptor, tint: accent)
-                if task.priority <= 2 { HeroPill(icon: "flag.fill", text: "High priority", tint: Cosmic.amber) }
+                if task.priority <= 2 { HeroPill(icon: "flag.fill", text: "High priority", tint: Cosmic.red) }
                 if let mins = task.estimatedMinutes { HeroPill(icon: "clock", text: "\(mins) min", tint: .white.opacity(0.8)) }
             }
         }
@@ -385,35 +385,39 @@ struct TaskCategoryStyle {
 func taskCategoryStyle(for title: String) -> TaskCategoryStyle {
     let t = " \(title.lowercased()) "
     func has(_ words: [String]) -> Bool { words.contains { t.contains($0) } }
-    if has(["revise", "paper", "write", "draft", "essay", "report", "document", "proposal", "read", "study", "research"]) {
+    // Deadlines / money / anything time-critical → red (checked first so it wins).
+    if has(["pay", "invoice", "bill", "rent", "tax", "taxes", "deadline", "due", "submit", "file ", "renew"]) {
+        return TaskCategoryStyle(icon: "exclamationmark.circle.fill", color: Cosmic.red, descriptor: "Deadline")
+    }
+    if has(["revise", "paper", "write", "draft", "essay", "report", "document", "proposal", "read", "study", "research", "deck", "slides"]) {
         return TaskCategoryStyle(icon: "doc.text.fill", color: Cosmic.blue, descriptor: "Focus task")
     }
     if has(["jira", "ticket", "review", "code", "bug", "pr ", "pull request"]) {
         return TaskCategoryStyle(icon: "checklist", color: Cosmic.blue, descriptor: "Focus task")
     }
     if has(["email", "reply", "respond", "inbox", "message", "slack"]) {
-        return TaskCategoryStyle(icon: "envelope.fill", color: Cosmic.cyan, descriptor: "Low focus")
+        return TaskCategoryStyle(icon: "envelope.fill", color: Cosmic.amber, descriptor: "Email")
     }
-    if has(["walk", "run", "gym", "exercise", "workout", "stretch", "yoga", "break"]) {
+    if has(["walk", "run", "gym", "exercise", "workout", "stretch", "yoga", "break", "meditate", "water"]) {
         return TaskCategoryStyle(icon: "figure.walk", color: Cosmic.green, descriptor: "Health break")
     }
-    if has(["call", "phone", "dial"]) {
-        return TaskCategoryStyle(icon: "phone.fill", color: Cosmic.green, descriptor: "Quick task")
+    if has(["call", "phone", "dial", "text ", "ping"]) {
+        return TaskCategoryStyle(icon: "phone.fill", color: Cosmic.yellow, descriptor: "Quick task")
     }
-    if has(["buy", "shop", "store", "groceries", "grocery", "home depot", "mall", "walmart", "target", "market", "errand", "gift"]) {
-        return TaskCategoryStyle(icon: "cart.fill", color: Cosmic.cyan, descriptor: "Errand", locationAware: true)
+    if has(["buy", "shop", "store", "groceries", "grocery", "home depot", "mall", "walmart", "target", "market", "errand", "gift", "pick up", "pickup", "pharmacy", "prescription"]) {
+        return TaskCategoryStyle(icon: "cart.fill", color: Cosmic.orange, descriptor: "Errand", locationAware: true)
     }
-    if has(["clean", "laundry", "dishes", "tidy", "vacuum", "organize"]) {
-        return TaskCategoryStyle(icon: "sparkles", color: Cosmic.cyan, descriptor: "Chore")
+    if has(["clean", "laundry", "dishes", "tidy", "vacuum", "organize", "trash", "chore"]) {
+        return TaskCategoryStyle(icon: "sparkles", color: Cosmic.yellow, descriptor: "Chore")
     }
-    if has(["meeting", "standup", "sync", "1:1"]) {
+    if has(["meeting", "standup", "sync", "1:1", "interview", "call with"]) {
         return TaskCategoryStyle(icon: "person.2.fill", color: Cosmic.violet, descriptor: "Meeting")
     }
-    if has(["doctor", "dentist", "appointment", "chiropractor"]) {
+    if has(["doctor", "dentist", "appointment", "chiropractor", "clinic", "checkup"]) {
         return TaskCategoryStyle(icon: "cross.case.fill", color: Cosmic.violet, descriptor: "Appointment", locationAware: true)
     }
-    if has(["family", "kids", "wife", "husband", "date night"]) {
-        return TaskCategoryStyle(icon: "house.fill", color: Cosmic.blue, descriptor: "Personal")
+    if has(["family", "kids", "wife", "husband", "date night", "birthday", "home"]) {
+        return TaskCategoryStyle(icon: "house.fill", color: Cosmic.yellow, descriptor: "Personal")
     }
     return TaskCategoryStyle(icon: "checkmark.circle.fill", color: Cosmic.blue, descriptor: "Task")
 }

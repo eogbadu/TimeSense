@@ -9495,6 +9495,24 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-219: Now/Today color refresh — warm variety + warmer-dark ground",
+        "labels": ["ios", "design"],
+        "description": doc(
+            h2("Goal"), p("Now & Today read as green/blue/violet on flat near-black. Add warm accents (orange/red/amber/yellow), spread them across task types, and lift the background to a 'warmer dark' ground."),
+            divider(), h2("Scope"), bullet_list([
+                "Cosmic palette: add orange/red/yellow; CosmicBackground -> lifted navy + warm amber glow (warmer-dark ground)",
+                "taskCategoryStyle (shared by Now+Today): map task types across the wheel (errand=orange, quick/personal=yellow, deadline=red, email=amber, focus=blue, health=green, meeting=violet)",
+                "heroAccent/domainAccent warm mappings; TodayView group colors warm->cool day arc; high-priority pill -> red",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No light theme", "No non-color layout changes", "Backend unchanged"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Core/Design/CosmicComponents.swift, ios/TimeSense/Features/Now/NowView.swift, ios/TimeSense/Features/Today/TodayView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Now/Today show varied warm+cool accents; background is warmer-dark (not flat black); iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-148..165 (cosmic palette)."),
+            divider(), h2("Next Ticket"), p("TIME-220: swipe between tabs."),
+        ),
+    },
 ]
 
 
