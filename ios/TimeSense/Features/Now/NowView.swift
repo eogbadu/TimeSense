@@ -822,6 +822,7 @@ private struct SecondaryAction: View {
 
 private struct ContextGrid: View {
     let cards: NowContextCards
+    @EnvironmentObject private var appState: AppState
     private let cols = [GridItem(.flexible(), spacing: DesignTokens.Spacing.md),
                         GridItem(.flexible(), spacing: DesignTokens.Spacing.md)]
 
@@ -831,8 +832,12 @@ private struct ContextGrid: View {
                 ContextCard(label: "Calendar", icon: "calendar", tint: Cosmic.blue,
                             value: eventTime, sub: eventSub(title))
             }
-            ContextCard(label: "Tasks", icon: "checkmark.circle.fill", tint: Cosmic.violet,
-                        value: "\(cards.tasksDueToday)", sub: taskSub)
+            // Tapping the Tasks card jumps to the Today task list.
+            Button { appState.selectedTab = .today } label: {
+                ContextCard(label: "Tasks", icon: "checkmark.circle.fill", tint: Cosmic.violet,
+                            value: "\(cards.tasksDueToday)", sub: taskSub)
+            }
+            .buttonStyle(.plain)
             if let steps = cards.steps {
                 ContextCard(label: "Steps", icon: "figure.walk", tint: Cosmic.blue,
                             value: steps.formatted(), sub: stepsSub(steps))
