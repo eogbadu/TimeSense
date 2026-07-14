@@ -9412,6 +9412,27 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("TIME-215: email_content consent + Gmail fetch + token refresh."),
         ),
     },
+    {
+        "summary": "TIME-215: Email — email_content consent + read-only Gmail fetch + token refresh",
+        "labels": ["backend", "integrations", "email", "privacy"],
+        "description": doc(
+            h2("Goal"), p("Fetch recent unread Primary emails read-only using the stored Gmail token (subject/sender/snippet only, never the body), gated on a new email_content consent, refreshing the access token when expired."),
+            divider(), h2("Scope"), bullet_list([
+                "Add email_content to VALID_CONSENT_TYPES + ConsentRecord docstring",
+                "EmailSourceProvider ABC + EmailMessage (subject/sender/snippet/message_id/thread_id); GmailEmailSource fetches is:unread newer_than:7d category:primary via format=metadata (no body)",
+                "EmailService: refresh access token via gmail_oauth.refresh_access_token when token_expires_at is past, then upsert; fetch_recent(user_id) -> list[EmailMessage]",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No detection/pending/approve yet (TIME-216)", "Never fetch or store the full body", "No background job"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/integrations/email_source_base.py, app/integrations/gmail_source.py, app/services/email_service.py, app/repositories/consent_repository.py, app/models/consent.py, tests/"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "GmailEmailSource returns EmailMessage(subject, sender, snippet, ids) from a mocked Gmail response; never requests the full body",
+                "EmailService refreshes an expired token before fetching; email_content is a valid consent type; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_email_fetch.py -q"),
+            divider(), h2("Dependencies"), p("TIME-214 (Gmail connect)."),
+            divider(), h2("Next Ticket"), p("TIME-216: scan -> detect -> pending EmailActionItem + confirm/reject API."),
+        ),
+    },
 ]
 
 
