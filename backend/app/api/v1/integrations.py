@@ -25,10 +25,11 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.entitlements import PremiumUser
 from app.core.oauth_state import OAuthStateError, sign_state, verify_state
-from app.integrations import google_oauth, microsoft_oauth, slack_oauth
+from app.integrations import gmail_oauth, google_oauth, microsoft_oauth, slack_oauth
 from app.integrations.slack_oauth import SlackOAuthError
 from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.services.calendar_service import CalendarService
+from app.services.email_service import EmailService
 from app.services.slack_service import SlackService
 from app.services.user_service import UserService
 
@@ -108,6 +109,45 @@ async def microsoft_callback(
 ):
     """Microsoft redirects here after consent."""
     return await _callback("microsoft", microsoft_oauth, code, state, error, db)
+
+
+@router.get("/gmail/authorize", response_model=AuthorizeResponse)
+async def gmail_authorize(current_user: PremiumUser, db: AsyncSession = Depends(get_db)):
+    """Return the Gmail (read-only) consent URL to open. Premium only."""
+    if not gmail_oauth.is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Gmail isn't configured on the server yet.",
+        )
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+    state = sign_state(str(user.id), "gmail")
+    return AuthorizeResponse(authorize_url=gmail_oauth.build_authorize_url(state))
+
+
+@router.get("/gmail/callback")
+async def gmail_callback(
+    code: str | None = None, state: str | None = None, error: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Gmail redirects here after consent. Exchange the code, store the tokens via EmailService."""
+    if error or not code:
+        return _failure()
+    try:
+        user_id = verify_state(state or "", "gmail")
+    except OAuthStateError:
+        return _failure()
+    try:
+        tokens = await gmail_oauth.exchange_code(code)
+    except (httpx.HTTPError, KeyError):
+        return _failure()
+
+    await EmailService(db).connect(
+        user_id=uuid.UUID(user_id), provider="gmail",
+        access_token=tokens.access_token, refresh_token=tokens.refresh_token,
+        token_expires_at=tokens.expires_at,
+    )
+    await db.commit()
+    return RedirectResponse(settings.oauth_success_redirect, status_code=status.HTTP_302_FOUND)
 
 
 @router.get("/slack/authorize", response_model=AuthorizeResponse)
