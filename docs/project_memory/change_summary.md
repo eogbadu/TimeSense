@@ -1,5 +1,15 @@
 # Change Summary
 
+## 2026-07-14 — TIME-214..217 (Email → task detection, Gmail v1)
+
+- New read-only Gmail integration: connect (OAuth + encrypted tokens + refresh), fetch recent
+  unread/Primary emails (subject/snippet only, never bodies), detect tasks via the shared detector,
+  and review/approve them. Gated on a new email_content consent + premium; never auto-creates tasks.
+- Backend: gmail_oauth, EmailIntegration/EmailActionItem, EmailService (connect/fetch/scan/confirm/
+  reject), /integrations/gmail/* + /email/* routers, migrations a4b5c6d7e8f9 + b5c6d7e8f9a0.
+- iOS: Gmail connect row + new EmailTasksView (consent → scan → approve/dismiss). Suite 524; iOS built.
+- Follow-ups: Outlook; Android/web review UIs; background polling; due-date extraction.
+
 ## 2026-07-11 — TIME-213 (score-based, consistent recommendation confidence)
 
 - Confidence now reflects the pick's real 0-100 engine score via one score_to_confidence() helper,

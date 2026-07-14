@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-14] TIME-214..217: Email → tasks (Gmail, v1) — connect your Gmail read-only, tap "Scan for tasks", and TimeSense suggests to-dos it finds in your recent unread email; you approve or dismiss each one (nothing is added automatically, and only the subject + preview is ever read — never the full email). Requires an explicit email-access consent. iOS first; Outlook, Android and web to follow
 - [2026-07-11] TIME-213: The confidence % on a recommendation now reflects how strong the pick actually is (its real score) and shows the same value everywhere — a clear best-thing reads high, a "nothing pressing" pick reads lower — instead of a fixed 70-ish number that ignored the score and disagreed between screens
 - [2026-07-11] TIME-212: The "Why this recommendation?" screen now shows the plain-language summary at the top instead of the bottom, so the takeaway is the first thing you read
 - [2026-07-11] TIME-211: Fixed inverted location alerts — leaving home now correctly says "You left Home" and arriving says "You're at Home" (they were swapped). Direction is now read from your actual position at the moment you cross, not a stale cached fix
