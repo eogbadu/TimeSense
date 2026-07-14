@@ -83,6 +83,8 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/api/v1/integrations/google/callback"
+    # Gmail (read-only email) reuses the Google OAuth app but has its own redirect + scope.
+    gmail_redirect_uri: str = "http://localhost:8000/api/v1/integrations/gmail/callback"
     microsoft_client_id: str = ""
     microsoft_client_secret: str = ""
     microsoft_redirect_uri: str = "http://localhost:8000/api/v1/integrations/microsoft/callback"

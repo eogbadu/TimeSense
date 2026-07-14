@@ -9389,6 +9389,29 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(optional) margin-over-runner-up nuance."),
         ),
     },
+    {
+        "summary": "TIME-214: Email integration — Gmail OAuth connect + EmailIntegration",
+        "labels": ["backend", "integrations", "email"],
+        "description": doc(
+            h2("Goal"), p("First slice of email->task detection: connect a user's Gmail account read-only via OAuth and store the tokens encrypted, reusing the existing integration/OAuth pattern."),
+            divider(), h2("Scope"), bullet_list([
+                "gmail_oauth.py: build_authorize_url/exchange_code/refresh_access_token, SCOPES=openid email gmail.readonly, reuses google_client_id/secret, own gmail_redirect_uri",
+                "EmailIntegration model (mirror SlackIntegration): provider, access_token/refresh_token (EncryptedString), token_expires_at, is_active, sync_cursor",
+                "EmailIntegrationRepository (get_active/upsert/deactivate); EmailService.connect/disconnect",
+                "Router: /integrations/gmail/authorize (PremiumUser) + /gmail/callback (stores via EmailService, mirrors the bespoke Slack callback)",
+                "Alembic migration for email_integrations; register model + config gmail_redirect_uri",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No fetching/scanning yet (TIME-215/216)", "No Outlook", "No client UI (TIME-217)", "Read-only — never send/modify mail"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/integrations/gmail_oauth.py, app/models/email_integration.py, app/repositories/email_repository.py, app/services/email_service.py, app/api/v1/integrations.py, app/core/config.py, app/models/__init__.py, migrations/, tests/"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "GET /integrations/gmail/authorize returns a Google consent URL (premium-gated; 503 if unconfigured)",
+                "Callback exchanges the code and stores an encrypted EmailIntegration; single alembic head; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && alembic heads && pytest tests/test_email_integration.py -q"),
+            divider(), h2("Dependencies"), p("TIME-177/181 (integration OAuth pattern), TIME-050 (action-item detection)."),
+            divider(), h2("Next Ticket"), p("TIME-215: email_content consent + Gmail fetch + token refresh."),
+        ),
+    },
 ]
 
 
