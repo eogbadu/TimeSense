@@ -53,6 +53,10 @@ struct CaptureView: View {
                 }
                 .padding(.horizontal, DesignTokens.Spacing.lg)
                 .padding(.bottom, DesignTokens.Spacing.xxl)
+                // Tap anywhere outside the input (empty space) to dismiss the keyboard. The field,
+                // chips, and buttons handle their own taps first, so only empty-space taps land here.
+                .contentShape(Rectangle())
+                .onTapGesture { isInputFocused = false }
             }
             .background(CosmicBackground())
             // Let the user swipe the keyboard down (the field is multi-line, so Return adds a
