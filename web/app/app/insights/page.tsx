@@ -28,10 +28,20 @@ interface LearnedPreference {
   part_of_day: string | null;
 }
 
+interface BehavioralPattern {
+  category: string; // workouts | movement | driving
+  icon: string;
+  title: string;
+  detail: string;
+}
+
+const PATTERN_EMOJI: Record<string, string> = { workouts: "🏃", movement: "🪑", driving: "🚗" };
+
 export default function InsightsPage() {
   const callApi = useApi();
   const [insight, setInsight] = useState<WeeklyInsight | null>(null);
   const [learned, setLearned] = useState<LearnedPreference[]>([]);
+  const [patterns, setPatterns] = useState<BehavioralPattern[]>([]);
   const [gated, setGated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +57,10 @@ export default function InsightsPage() {
     // Additive + best-effort: the learned-preferences section shouldn't affect the main load.
     callApi<{ preferences: LearnedPreference[] }>("/api/v1/recommendations/learned")
       .then((r) => setLearned(r.preferences))
+      .catch(() => {});
+    // Behavioral patterns (Apple Health + commutes) — also best-effort.
+    callApi<{ patterns: BehavioralPattern[] }>("/api/v1/insights/patterns")
+      .then((r) => setPatterns(r.patterns))
       .catch(() => {});
   }, [callApi]);
 
@@ -96,6 +110,23 @@ export default function InsightsPage() {
           </div>
         ))}
       </div>
+
+      {patterns.length > 0 && (
+        <div className="acard">
+          <p className="label" style={{ color: "var(--green)", marginBottom: 12 }}>What we&rsquo;ve learned about you</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {patterns.map((p) => (
+              <div key={`${p.category}-${p.title}`} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span aria-hidden style={{ flex: "none", fontSize: 18 }}>{PATTERN_EMOJI[p.category] ?? "✨"}</span>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>{p.title}</p>
+                  <p className="muted" style={{ margin: "2px 0 0", fontSize: 14, lineHeight: 1.5 }}>{p.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {learned.length > 0 && (
         <div className="acard">

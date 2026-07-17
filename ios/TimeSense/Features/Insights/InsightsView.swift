@@ -43,11 +43,65 @@ struct InsightsView: View {
             )
         case .loaded(let insight):
             ScrollView {
-                InsightsSummarySection(insight: insight)
-                    .padding(.horizontal, DesignTokens.Spacing.md)
-                    .padding(.top, DesignTokens.Spacing.sm)
-                    .padding(.bottom, DesignTokens.Spacing.xl)
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+                    InsightsSummarySection(insight: insight)
+                    if !viewModel.patterns.isEmpty {
+                        PatternsSection(patterns: viewModel.patterns)
+                    }
+                }
+                .padding(.horizontal, DesignTokens.Spacing.md)
+                .padding(.top, DesignTokens.Spacing.sm)
+                .padding(.bottom, DesignTokens.Spacing.xl)
             }
+        }
+    }
+}
+
+/// "What we've learned about you" — behavioral patterns from Apple Health + commutes.
+private struct PatternsSection: View {
+    let patterns: [BehavioralPattern]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            Text("WHAT WE'VE LEARNED ABOUT YOU")
+                .sectionHeaderStyle()
+            VStack(spacing: DesignTokens.Spacing.md) {
+                ForEach(patterns) { PatternRow(pattern: $0) }
+            }
+            .padding(DesignTokens.Spacing.md)
+            .cardStyle()
+        }
+    }
+}
+
+private struct PatternRow: View {
+    let pattern: BehavioralPattern
+
+    private var tint: Color {
+        switch pattern.category {
+        case "workouts": return Cosmic.green
+        case "movement": return Cosmic.amber
+        case "driving": return Cosmic.cyan
+        default: return DesignTokens.Color.accent
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+            Image(systemName: pattern.icon)
+                .font(.title3)
+                .foregroundColor(tint)
+                .frame(width: 34, alignment: .center)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(pattern.title)
+                    .font(DesignTokens.Typography.headline)
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                Text(pattern.detail)
+                    .font(DesignTokens.Typography.footnote)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
         }
     }
 }
