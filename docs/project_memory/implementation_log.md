@@ -1,5 +1,30 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-251: Pre-appointment push notifications (start + travel-aware departure)
+
+New feature (planned with 3 Explore agents + user decisions). Sends one push before a scheduled
+appointment: 10 min before start, or — if it has a location and drive time is computable — 10 min
+before the user needs to leave. Reuses the previously-unused `InternalReminder` model as a per-task
+ledger, driven by a new Celery beat task (`timesense.send_appointment_reminders`, every 2 min):
+- **Producer** (`AppointmentReminderService._schedule`): for each user with a device token, finds
+  upcoming timed appointments (any Task with `scheduled_start` in next 3h, via new
+  `TaskRepository.upcoming_appointments`) lacking a reminder; creates one pending `InternalReminder`.
+  Trigger computed once — geocode `location_name` via `MapsSkillService` (persist coords back onto
+  the Task), origin = current saved place (`UserLocationRepository.get_current` → name match) else
+  Home place, then traffic-aware drive estimate. `departure = start − drive − 10`; else `start − 10`.
+- **Consumer** (`_deliver`): delivers due pending rows via `get_push_sender()` to each device token,
+  records a `push_notifications` audit row, marks `delivered`; drops rows >15 min stale as `expired`.
+  No-op if APNs unavailable (rows stay pending). No cooldown (time-critical). No client change (uses
+  existing push deep-link `type="appointment_reminder"`).
+- **Decisions (user):** origin current-else-Home (else start reminder); located appts get the
+  departure reminder ONLY; scope = any task with a start time (calendar + manual).
+- New files: `internal_reminder_repository.py`, `appointment_reminder_service.py`,
+  `workers/reminder_tasks.py`; edits `celery_app.py` (include + `*/2` beat), `task_repository.py`.
+  Tests: `test_appointment_reminders.py` (6). Backend suite 552.
+- **Ops deps (not runnable here):** Celery beat+worker (deployed as timesense-worker), APNs configured,
+  and GOOGLE_MAPS_API_KEY for the travel path (without it → start reminder). Future: re-estimate
+  travel near departure; reschedule when an appt's time changes; quiet hours.
+
 ## 2026-07-17 — TIME-250: Capture — show what TimeSense actually detected
 
 The bottom "TimeSense can detect" tiles (Time/Priority/Task type/Schedule fit) were a static
