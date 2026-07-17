@@ -24,7 +24,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.entitlements import PremiumUser
-from app.core.oauth_state import OAuthStateError, sign_state, verify_state
+from app.core.oauth_state import (
+    OAuthStateError,
+    decode_state,
+    platform_from_state,
+    sign_state,
+)
 from app.integrations import gmail_oauth, google_oauth, microsoft_oauth, slack_oauth
 from app.integrations.slack_oauth import SlackOAuthError
 from app.llm.gateway import LLMGateway, get_llm_gateway
@@ -40,51 +45,71 @@ class AuthorizeResponse(BaseModel):
     authorize_url: str
 
 
-def _failure() -> RedirectResponse:
-    return RedirectResponse(settings.oauth_failure_redirect, status_code=status.HTTP_302_FOUND)
+def _redirect(url: str) -> RedirectResponse:
+    return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
 
 
-async def _authorize(provider: str, oauth_mod, current_user, db: AsyncSession) -> AuthorizeResponse:
+def _success(platform: str, provider: str) -> RedirectResponse:
+    """Return to the client that started the flow: the web companion (platform=web) or the app."""
+    if platform == "web":
+        base = settings.oauth_web_success_redirect
+        sep = "&" if "?" in base else "?"
+        return _redirect(f"{base}{sep}provider={provider}")
+    return _redirect(settings.oauth_success_redirect)
+
+
+def _failure(platform: str = "mobile") -> RedirectResponse:
+    if platform == "web":
+        return _redirect(settings.oauth_web_failure_redirect)
+    return _redirect(settings.oauth_failure_redirect)
+
+
+async def _authorize(
+    provider: str, oauth_mod, current_user, db: AsyncSession, platform: str = "mobile"
+) -> AuthorizeResponse:
     if not oauth_mod.is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"{provider.capitalize()} Calendar isn't configured on the server yet.",
         )
     user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
-    state = sign_state(str(user.id), provider)
+    state = sign_state(str(user.id), provider, platform=platform)
     return AuthorizeResponse(authorize_url=oauth_mod.build_authorize_url(state))
 
 
 async def _callback(
     provider: str, oauth_mod, code: str | None, state: str | None, error: str | None, db: AsyncSession
 ) -> RedirectResponse:
-    """Shared calendar OAuth callback: verify state → exchange code → store tokens → deep-link back."""
+    """Shared calendar OAuth callback: verify state → exchange code → store tokens → return to the
+    originating client (mobile deep link or the web app, per the state's platform)."""
     if error or not code:
-        return _failure()
+        return _failure(platform_from_state(state))
     try:
-        user_id = verify_state(state or "", provider)
+        st = decode_state(state or "", provider)
     except OAuthStateError:
-        return _failure()
+        return _failure(platform_from_state(state))
     try:
         tokens = await oauth_mod.exchange_code(code)
     except (httpx.HTTPError, KeyError):
-        return _failure()
+        return _failure(st.platform)
 
     await CalendarService(db).connect(
-        user_id=uuid.UUID(user_id),
+        user_id=uuid.UUID(st.user_id),
         provider=provider,
         access_token=tokens.access_token,
         refresh_token=tokens.refresh_token,
         token_expires_at=tokens.expires_at,
     )
     await db.commit()
-    return RedirectResponse(settings.oauth_success_redirect, status_code=status.HTTP_302_FOUND)
+    return _success(st.platform, provider)
 
 
 @router.get("/google/authorize", response_model=AuthorizeResponse)
-async def google_authorize(current_user: PremiumUser, db: AsyncSession = Depends(get_db)):
-    """Return the Google consent URL to open. Premium only."""
-    return await _authorize("google", google_oauth, current_user, db)
+async def google_authorize(
+    current_user: PremiumUser, db: AsyncSession = Depends(get_db), platform: str = "mobile"
+):
+    """Return the Google consent URL to open. Premium only. platform=web returns to the web app."""
+    return await _authorize("google", google_oauth, current_user, db, platform)
 
 
 @router.get("/google/callback")
@@ -97,9 +122,11 @@ async def google_callback(
 
 
 @router.get("/microsoft/authorize", response_model=AuthorizeResponse)
-async def microsoft_authorize(current_user: PremiumUser, db: AsyncSession = Depends(get_db)):
+async def microsoft_authorize(
+    current_user: PremiumUser, db: AsyncSession = Depends(get_db), platform: str = "mobile"
+):
     """Return the Microsoft/Outlook consent URL to open. Premium only."""
-    return await _authorize("microsoft", microsoft_oauth, current_user, db)
+    return await _authorize("microsoft", microsoft_oauth, current_user, db, platform)
 
 
 @router.get("/microsoft/callback")
@@ -112,7 +139,9 @@ async def microsoft_callback(
 
 
 @router.get("/gmail/authorize", response_model=AuthorizeResponse)
-async def gmail_authorize(current_user: PremiumUser, db: AsyncSession = Depends(get_db)):
+async def gmail_authorize(
+    current_user: PremiumUser, db: AsyncSession = Depends(get_db), platform: str = "mobile"
+):
     """Return the Gmail (read-only) consent URL to open. Premium only."""
     if not gmail_oauth.is_configured():
         raise HTTPException(
@@ -120,7 +149,7 @@ async def gmail_authorize(current_user: PremiumUser, db: AsyncSession = Depends(
             detail="Gmail isn't configured on the server yet.",
         )
     user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
-    state = sign_state(str(user.id), "gmail")
+    state = sign_state(str(user.id), "gmail", platform=platform)
     return AuthorizeResponse(authorize_url=gmail_oauth.build_authorize_url(state))
 
 
@@ -131,29 +160,31 @@ async def gmail_callback(
 ):
     """Gmail redirects here after consent. Exchange the code, store the tokens via EmailService."""
     if error or not code:
-        return _failure()
+        return _failure(platform_from_state(state))
     try:
-        user_id = verify_state(state or "", "gmail")
+        st = decode_state(state or "", "gmail")
     except OAuthStateError:
-        return _failure()
+        return _failure(platform_from_state(state))
     try:
         tokens = await gmail_oauth.exchange_code(code)
     except (httpx.HTTPError, KeyError):
-        return _failure()
+        return _failure(st.platform)
 
     await EmailService(db).connect(
-        user_id=uuid.UUID(user_id), provider="gmail",
+        user_id=uuid.UUID(st.user_id), provider="gmail",
         access_token=tokens.access_token, refresh_token=tokens.refresh_token,
         token_expires_at=tokens.expires_at,
     )
     await db.commit()
-    return RedirectResponse(settings.oauth_success_redirect, status_code=status.HTTP_302_FOUND)
+    return _success(st.platform, "gmail")
 
 
 @router.get("/slack/authorize", response_model=AuthorizeResponse)
-async def slack_authorize(current_user: PremiumUser, db: AsyncSession = Depends(get_db)):
+async def slack_authorize(
+    current_user: PremiumUser, db: AsyncSession = Depends(get_db), platform: str = "mobile"
+):
     """Return the Slack consent URL to open. Premium only."""
-    return await _authorize("slack", slack_oauth, current_user, db)
+    return await _authorize("slack", slack_oauth, current_user, db, platform)
 
 
 @router.get("/slack/callback")
@@ -164,16 +195,16 @@ async def slack_callback(
 ):
     """Slack redirects here after consent. Exchange the code, store the token via SlackService."""
     if error or not code:
-        return _failure()
+        return _failure(platform_from_state(state))
     try:
-        user_id = verify_state(state or "", "slack")
+        st = decode_state(state or "", "slack")
     except OAuthStateError:
-        return _failure()
+        return _failure(platform_from_state(state))
     try:
         tokens = await slack_oauth.exchange_code(code)
     except (httpx.HTTPError, KeyError, SlackOAuthError):
-        return _failure()
+        return _failure(st.platform)
 
-    await SlackService(db, gateway).connect(uuid.UUID(user_id), tokens.access_token, tokens.team_id)
+    await SlackService(db, gateway).connect(uuid.UUID(st.user_id), tokens.access_token, tokens.team_id)
     await db.commit()
-    return RedirectResponse(settings.oauth_success_redirect, status_code=status.HTTP_302_FOUND)
+    return _success(st.platform, "slack")

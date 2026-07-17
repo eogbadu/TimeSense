@@ -91,9 +91,12 @@ class Settings(BaseSettings):
     microsoft_client_id: str = ""
     microsoft_client_secret: str = ""
     microsoft_redirect_uri: str = "http://localhost:8000/api/v1/integrations/microsoft/callback"
-    # Where the /callback deep-links back to once tokens are stored (mobile app / web companion).
+    # Where the /callback returns to once tokens are stored. Mobile flows deep-link into the app;
+    # web-initiated flows (platform=web in the signed state) return to the web companion instead.
     oauth_success_redirect: str = "timesense://integrations/connected"
     oauth_failure_redirect: str = "timesense://integrations/failed"
+    oauth_web_success_redirect: str = "http://localhost:3000/app/connections?status=connected"
+    oauth_web_failure_redirect: str = "http://localhost:3000/app/connections?status=failed"
 
     # Slack
     slack_client_id: str = ""
