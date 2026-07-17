@@ -30,11 +30,19 @@ from app.core.oauth_state import (
     platform_from_state,
     sign_state,
 )
-from app.integrations import gmail_oauth, google_oauth, microsoft_oauth, slack_oauth
+from app.integrations import (
+    gmail_oauth,
+    google_oauth,
+    microsoft_oauth,
+    notion_oauth,
+    slack_oauth,
+)
+from app.integrations.notion_oauth import NotionOAuthError
 from app.integrations.slack_oauth import SlackOAuthError
 from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.services.calendar_service import CalendarService
 from app.services.email_service import EmailService
+from app.services.notion_service import NotionService
 from app.services.slack_service import SlackService
 from app.services.user_service import UserService
 
@@ -177,6 +185,36 @@ async def gmail_callback(
     )
     await db.commit()
     return _success(st.platform, "gmail")
+
+
+@router.get("/notion/authorize", response_model=AuthorizeResponse)
+async def notion_authorize(
+    current_user: PremiumUser, db: AsyncSession = Depends(get_db), platform: str = "mobile"
+):
+    """Return the Notion consent URL to open. Premium only."""
+    return await _authorize("notion", notion_oauth, current_user, db, platform)
+
+
+@router.get("/notion/callback")
+async def notion_callback(
+    code: str | None = None, state: str | None = None, error: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Notion redirects here after consent. Exchange the code, store the token via NotionService."""
+    if error or not code:
+        return _failure(platform_from_state(state))
+    try:
+        st = decode_state(state or "", "notion")
+    except OAuthStateError:
+        return _failure(platform_from_state(state))
+    try:
+        tokens = await notion_oauth.exchange_code(code)
+    except (httpx.HTTPError, KeyError, NotionOAuthError):
+        return _failure(st.platform)
+
+    await NotionService(db).connect(uuid.UUID(st.user_id), tokens.access_token, tokens.workspace_id)
+    await db.commit()
+    return _success(st.platform, "notion")
 
 
 @router.get("/slack/authorize", response_model=AuthorizeResponse)

@@ -111,6 +111,7 @@ class Settings(BaseSettings):
     # Notion
     notion_client_id: str = ""
     notion_client_secret: str = ""
+    notion_redirect_uri: str = "http://localhost:8000/api/v1/integrations/notion/callback"
 
     # Monitoring (Sentry-optional; empty DSN => disabled)
     sentry_dsn: str = ""

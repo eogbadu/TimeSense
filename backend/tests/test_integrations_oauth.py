@@ -426,3 +426,54 @@ async def test_slack_exchange_raises_on_ok_false():
     with patch.object(slack_oauth.httpx, "AsyncClient", return_value=_Client()):
         with pytest.raises(SlackOAuthError):
             await slack_oauth.exchange_code("bad")
+
+
+# ── Notion OAuth handshake (TIME-226) ─────────────────────────────────────────
+
+@pytest.mark.anyio
+async def test_notion_authorize_returns_url_when_configured(client):
+    from app.integrations import notion_oauth
+    with patch.object(notion_oauth.settings, "notion_client_id", "n-cid"), \
+         patch.object(notion_oauth.settings, "notion_client_secret", "n-secret"):
+        resp = await client.get("/api/v1/integrations/notion/authorize")
+    assert resp.status_code == 200
+    assert resp.json()["authorize_url"].startswith(notion_oauth.AUTHORIZE_ENDPOINT)
+
+
+@pytest.mark.anyio
+async def test_notion_authorize_503_when_unconfigured(client):
+    resp = await client.get("/api/v1/integrations/notion/authorize")
+    assert resp.status_code == 503
+
+
+@pytest.mark.anyio
+async def test_notion_callback_success_stores_token(client, db_session):
+    from app.integrations import notion_oauth
+    from app.integrations.notion_oauth import NotionTokenResult
+    from app.repositories.notion_repository import NotionIntegrationRepository
+
+    user = User(firebase_uid="uid-nt-cb", email="ntcb@example.com")
+    db_session.add(user)
+    await db_session.flush()
+    state = sign_state(str(user.id), "notion", platform="web")
+
+    fake = NotionTokenResult(access_token="secret_tok", workspace_id="ws-1")
+    with patch.object(notion_oauth, "exchange_code", AsyncMock(return_value=fake)):
+        resp = await client.get(
+            f"/api/v1/integrations/notion/callback?code=abc&state={state}", follow_redirects=False,
+        )
+    assert resp.status_code == 302
+    assert "status=connected" in resp.headers["location"] and "provider=notion" in resp.headers["location"]
+
+    integration = await NotionIntegrationRepository(db_session).get_active(user.id)
+    assert integration is not None and integration.access_token == "secret_tok"
+    assert integration.workspace_id == "ws-1"
+
+
+@pytest.mark.anyio
+async def test_notion_callback_bad_state_redirects_to_failure(client):
+    resp = await client.get(
+        "/api/v1/integrations/notion/callback?code=abc&state=nope", follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert resp.headers["location"].startswith("timesense://integrations/failed")

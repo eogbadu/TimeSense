@@ -9617,6 +9617,44 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-226: Notion OAuth handshake (connect via consent, not a pasted token)",
+        "labels": ["backend", "integrations", "notion"],
+        "description": doc(
+            h2("Goal"), p("Add the missing Notion OAuth handshake so a user can connect Notion by consent (the import flow already exists; today /notion/connect only accepts a pasted token)."),
+            divider(), h2("Scope"), bullet_list([
+                "notion_oauth.py (mirror slack_oauth): build_authorize_url / exchange_code (Basic-auth token endpoint) / is_configured; NotionTokenResult(access_token, workspace_id)",
+                "config: notion_redirect_uri",
+                "integrations.py: /integrations/notion/authorize (PremiumUser, platform-aware) + /notion/callback storing via NotionService.connect (platform-aware return, TIME-223)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to the existing scan/import approval flow", "No client UI here (TIME-227)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/integrations/notion_oauth.py, app/core/config.py, app/api/v1/integrations.py, tests/"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "GET /integrations/notion/authorize returns a Notion consent URL (premium, 503 if unconfigured)",
+                "callback exchanges the code and stores a NotionIntegration; platform=web returns to web; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_integrations_oauth.py tests/test_notion.py -q"),
+            divider(), h2("Dependencies"), p("TIME-051 (Notion import), TIME-223 (OAuth web-return)."),
+            divider(), h2("Next Ticket"), p("TIME-227: Notion in the Connect UIs (web + iOS)."),
+        ),
+    },
+    {
+        "summary": "TIME-227: Notion in the Connect UIs (web + iOS)",
+        "labels": ["web", "ios", "integrations", "notion"],
+        "description": doc(
+            h2("Goal"), p("Let users connect Notion from the web Connections page and the iOS Connections screen."),
+            divider(), h2("Scope"), bullet_list([
+                "web/app/app/connections/page.tsx: add a Notion provider row (uses the generic /integrations/{provider}/authorize?platform=web flow)",
+                "ios ConnectionsView: add a Notion connect row (generic authorize flow)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No Notion import-review UI (follow-up)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/app/connections/page.tsx, ios/TimeSense/Features/Settings/ConnectionsView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Notion appears on web + iOS Connections; Connect opens the consent flow; web build + iOS build clean"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build && cd .. && xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-226 (Notion handshake)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 
