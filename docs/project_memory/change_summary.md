@@ -1,5 +1,15 @@
 # Change Summary
 
+## 2026-07-17 — TIME-251 (pre-appointment push notifications)
+
+- New feature: a push 10 min before an appointment starts, or 10 min before the user needs to drive
+  there (departure = start − drive − 10) when it has a location and drive time is computable. Reuses
+  the unused InternalReminder model as a per-task ledger; new Celery beat task every 2 min
+  (producer creates pending reminders for upcoming timed appts; consumer delivers due ones via APNs).
+  Origin = current saved place else Home; falls back to the start reminder otherwise. Idempotent,
+  no client change. New service/repo/worker + upcoming_appointments query; 6 tests; suite 552.
+  Needs Celery worker + APNs + GOOGLE_MAPS_API_KEY (travel path) at runtime.
+
 ## 2026-07-17 — TIME-250 (Capture: live "detected" results)
 
 - The bottom Capture section now shows what TimeSense actually detected after a capture (time,

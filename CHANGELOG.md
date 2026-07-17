@@ -15,6 +15,10 @@ Format: `[DATE] TIME-### Short description`
 - [2026-07-05] TIME-055: Privacy — data export + account deletion — GET /api/v1/privacy/export (portable JSON bundle of all the user's data, OAuth tokens redacted) and DELETE /api/v1/privacy/account?confirm=true (erases the user + cascades all their data + deletes the Firebase Auth user); test conftest now enforces SQLite foreign keys so cascade is exercised
 - [2026-07-05] TIME-054: Error monitoring + analytics (backend) — Sentry-optional error monitoring (no-op without a DSN) wired into the error handlers; a privacy-respecting analytics pipeline (analytics_events table + AnalyticsService gated on the `analytics` consent), emits task_captured from /capture, GET /api/v1/admin/analytics event counts. Client analytics deferred
 
+### Features
+
+- [2026-07-17] TIME-251: Pre-appointment push notifications — you now get a push 10 minutes before an appointment starts, or 10 minutes before you need to leave (drive-time aware) when it has a location
+
 ### Fixes
 
 - [2026-07-17] TIME-250: The Capture screen now shows what TimeSense actually detected after a capture (time, priority, task type, schedule fit) instead of a static "can detect" poster
