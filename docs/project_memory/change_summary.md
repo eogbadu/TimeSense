@@ -1,5 +1,17 @@
 # Change Summary
 
+## 2026-07-17 — TIME-256..257 (fix the Privacy "Connected Signals" panel)
+
+- Bug: the panel was hardcoded (Calendar/Health "Off", Audio "Disabled"), and no client ever wrote
+  health_data/location_tracking/calendar_details consent — so signals read false AND backend gates
+  silently blocked features (the TIME-254 workout ingest 403'd; commute needs location_tracking).
+- (256) write consent when a signal is enabled: iOS posts health_data on Health connect (before the
+  gated syncs) + location_tracking on location auth change; backend writes calendar_details on calendar
+  connect/sync (new ConsentRepository.ensure_granted). (257) PrivacyConsentView now reads GET /consent/
+  + /integrations/status + device mic perm and shows real on/off for every signal, with audio split
+  into Voice capture + Raw audio storage. iOS built; calendar-consent tests pass. (3 pre-existing
+  time-dependent test failures on main are unrelated.)
+
 ## 2026-07-17 — TIME-252..255 (behavioral patterns from Apple Health + commutes, on Insights)
 
 - New feature: the Insights screen shows running (miles/duration/times), gym (frequency/days/times),

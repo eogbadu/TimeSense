@@ -1,5 +1,15 @@
 # Known Issues
 
+## OPEN (seen 2026-07-17): 3 time-of-day-dependent test failures on main
+- `tests/test_now_recommendation.py::test_recommendation_for_task_includes_related_task_id` (expects
+  domain `task`, gets `context_switch`) and `tests/test_push_service.py::test_pushes_after_cooldown_elapses`
+  + `::test_null_sender_records_nothing_delivered` (push returns None) fail depending on the wall-clock
+  hour the suite runs at — the engine picks a context_switch/wind-down candidate over the expected task,
+  so no push-eligible rec. **Reproduces on clean `main`** (verified by stashing changes), so it's
+  pre-existing flakiness, not caused by any recent change. Same class as the TIME-184 fix
+  (time-of-day scoring); these tests still assume a fixed `now`. Fix would be to pin `now`/timezone in
+  the tests (or extend the TIME-184-style suppression). Left open — surfaces intermittently in full runs.
+
 ## RESOLVED (2026-07-11): Jira project had 2,034 duplicate tickets
 - Symptom: the project held 2,239 issues but only **205 distinct tickets** — 2,034 duplicates, all in "To Do" (e.g. `TIME-108` had 65 copies).
 - Root cause: `scripts/create_jira_tickets.py` → `get_existing_tickets()` read only the FIRST page of the token-paginated `/rest/api/3/search/jql` endpoint (`maxResults:500` but never followed `nextPageToken`, which caps ~100/page). So the dedup was blind past the oldest ~100 issues and every full run re-created all tickets. Transitions only ever moved the first matching copy to Done, leaving the rest in To Do.

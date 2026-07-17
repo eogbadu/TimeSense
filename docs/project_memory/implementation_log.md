@@ -1,5 +1,32 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-256..257: Fix the Privacy & Consent "Connected Signals" panel
+
+Bug report: the panel showed wrong statuses (Calendar/Health/Audio "off" when on) and omitted signals.
+Two stacked bugs found (via 2 Explore agents): (1) the panel was hardcoded — Calendar/Health = literal
+"Off", Audio "Disabled", only Location live; Email/Analytics missing; (2) NO client ever wrote
+health_data / location_tracking / calendar_details consent (only email_content), so the underlying
+state was false everywhere AND backend gates silently blocked features — notably the TIME-254
+workout/hourly ingest 403'd on health_data, and commute detection needs location_tracking. User chose
+the full fix + splitting audio into two rows.
+- **TIME-256 (Jira TIME-2290, PR #286)**: write consent when a signal is enabled. iOS
+  `HealthService.connectAndSync` posts health_data=true right after authorization (BEFORE the gated
+  syncs, so workouts/hourly go through). iOS `LocationService.locationManagerDidChangeAuthorization`
+  mirrors the OS location permission into a location_tracking consent (posted only on change). Backend
+  writes calendar_details=true on calendar connect — `CalendarService.connect` (OAuth) + `PUT
+  /calendar/synced` (EventKit) — via new idempotent `ConsentRepository.ensure_granted`. Audio +
+  analytics stay explicit opt-in. Tests: calendar_details recorded by both paths. iOS built.
+- **TIME-257 (Jira TIME-2291, PR #287)**: `PrivacyConsentView` is now dynamic. New
+  `ConnectedSignalsViewModel` fetches GET /consent/ + GET /integrations/status on appear + reads the
+  device mic permission. Rows show real on/off: Calendar (calendar_details OR OAuth google/microsoft
+  OR CalendarSyncService connected), Apple Health (health_data), Location (device auth), Voice capture
+  (mic), Raw audio storage (audio_storage opt-in), Email (gmail OR email_content), Analytics
+  (analytics), + Slack/Notion when connected. Audio split into two rows per the raw-audio-opt-in rule.
+- NOTE: full suite has 3 pre-existing time-of-day-dependent failures (test_now_recommendation,
+  test_push_service) that ALSO fail on clean main — unrelated to this change (verified via stash).
+- Device-permission reads + the health_data-on-connect write need a real device to verify e2e; after
+  the fix, connecting Apple Health also unblocks the workout/step sync (no more 403).
+
 ## 2026-07-17 — TIME-252..255: Behavioral patterns from Apple Health + commutes (Insights screen)
 
 New feature (planned with 3 Explore agents + user decisions), delivered as 4 PRs. The Insights screen
