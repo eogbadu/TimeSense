@@ -39,7 +39,8 @@ struct ConnectionsView: View {
                             ConnectRow(
                                 provider: provider,
                                 state: viewModel.state(for: provider.id),
-                                onConnect: { Task { await viewModel.connect(provider.id) } }
+                                onConnect: { Task { await viewModel.connect(provider.id) } },
+                                onDisconnect: { Task { await viewModel.disconnect(provider.id) } }
                             )
                         }
 
@@ -82,6 +83,9 @@ struct ConnectionsView: View {
         .background(DesignTokens.Color.background)
         .navigationTitle("Connections")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if appState.isPremium { await viewModel.loadStatus() }
+        }
     }
 }
 
@@ -91,6 +95,7 @@ private struct ConnectRow: View {
     let provider: ConnectProvider
     let state: ConnectState
     let onConnect: () -> Void
+    let onDisconnect: () -> Void
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.md) {
@@ -119,13 +124,17 @@ private struct ConnectRow: View {
     @ViewBuilder
     private var trailing: some View {
         switch state {
-        case .connecting:
+        case .connecting, .disconnecting:
             ProgressView()
         case .connected:
-            Label("Connected", systemImage: "checkmark.circle.fill")
-                .labelStyle(.iconOnly)
-                .foregroundColor(.green)
-                .font(.title2)
+            Button(action: onDisconnect) {
+                Text("Disconnect")
+                    .font(DesignTokens.Typography.subheadline.weight(.semibold))
+                    .foregroundColor(provider.tint)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .background(Capsule().stroke(provider.tint.opacity(0.6), lineWidth: 1.5))
+            }
         default:
             Button(action: onConnect) {
                 Text("Connect")
@@ -153,6 +162,7 @@ enum ConnectState: Equatable {
     case idle
     case connecting
     case connected
+    case disconnecting
     case failed(String)
 
     var isError: Bool { if case .failed = self { return true }; return false }
@@ -161,6 +171,7 @@ enum ConnectState: Equatable {
         switch self {
         case .connected: return "Connected"
         case .connecting: return "Opening sign-in…"
+        case .disconnecting: return "Disconnecting…"
         case .failed(let message): return message
         case .idle: return nil
         }
@@ -175,6 +186,38 @@ final class ConnectionsViewModel: ObservableObject {
     private let authenticator = WebAuthenticator()
 
     func state(for provider: String) -> ConnectState { states[provider] ?? .idle }
+
+    /// Disconnect endpoints live on each provider's own router.
+    private func disconnectPath(_ provider: String) -> String {
+        switch provider {
+        case "google", "microsoft": return "/api/v1/calendar/disconnect/\(provider)"
+        case "gmail": return "/api/v1/email/disconnect"
+        case "slack": return "/api/v1/slack/disconnect"
+        case "notion": return "/api/v1/notion/disconnect"
+        default: return "/api/v1/integrations/\(provider)/disconnect"
+        }
+    }
+
+    /// On appear, ask the backend which providers are already connected so we show Disconnect (not
+    /// Connect) for those. Leaves any in-flight connecting/failed state untouched.
+    func loadStatus() async {
+        guard let status: IntegrationsStatus = try? await APIClient.shared.get("/api/v1/integrations/status") else { return }
+        for (provider, connected) in status.byProvider where connected {
+            if states[provider] == nil || states[provider] == .idle {
+                states[provider] = .connected
+            }
+        }
+    }
+
+    func disconnect(_ provider: String) async {
+        states[provider] = .disconnecting
+        do {
+            try await APIClient.shared.delete(disconnectPath(provider))
+            states[provider] = .idle
+        } catch {
+            states[provider] = .failed("Couldn't disconnect. Try again.")
+        }
+    }
 
     func connect(_ provider: String) async {
         states[provider] = .connecting
@@ -205,6 +248,18 @@ final class ConnectionsViewModel: ObservableObject {
 private struct AuthorizeResponse: Decodable {
     let authorizeUrl: String
     enum CodingKeys: String, CodingKey { case authorizeUrl = "authorize_url" }
+}
+
+private struct IntegrationsStatus: Decodable {
+    let google: Bool
+    let microsoft: Bool
+    let gmail: Bool
+    let slack: Bool
+    let notion: Bool
+
+    var byProvider: [String: Bool] {
+        ["google": google, "microsoft": microsoft, "gmail": gmail, "slack": slack, "notion": notion]
+    }
 }
 
 // MARK: - Web auth

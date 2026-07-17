@@ -21,10 +21,20 @@ const PROVIDERS: Provider[] = [
   { id: "notion", name: "Notion", color: "var(--green)", blurb: "Pull to-dos from a Notion database as tasks to approve." },
 ];
 
+// Disconnect endpoints live on each provider's own router.
+const DISCONNECT_PATH: Record<ProviderId, string> = {
+  google: "/api/v1/calendar/disconnect/google",
+  microsoft: "/api/v1/calendar/disconnect/microsoft",
+  gmail: "/api/v1/email/disconnect",
+  slack: "/api/v1/slack/disconnect",
+  notion: "/api/v1/notion/disconnect",
+};
+
 export default function ConnectionsPage() {
   const callApi = useApi();
   const [connected, setConnected] = useState<Set<ProviderId>>(new Set());
   const [connecting, setConnecting] = useState<ProviderId | null>(null);
+  const [disconnecting, setDisconnecting] = useState<ProviderId | null>(null);
   const [banner, setBanner] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   // The OAuth callback returns here with ?status=connected&provider=… (or ?status=failed).
@@ -40,6 +50,23 @@ export default function ConnectionsPage() {
     }
     if (status) window.history.replaceState({}, "", "/app/connections");
   }, []);
+
+  // Load which providers are already connected so we show Disconnect (not Connect) for those.
+  useEffect(() => {
+    callApi<Record<ProviderId, boolean>>("/api/v1/integrations/status")
+      .then((status) => {
+        setConnected((prev) => {
+          const next = new Set(prev);
+          (Object.keys(status) as ProviderId[]).forEach((id) => {
+            if (status[id]) next.add(id);
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        /* leave as-is — the page still works, just without pre-marked connections */
+      });
+  }, [callApi]);
 
   async function connect(id: ProviderId) {
     setConnecting(id);
@@ -58,6 +85,24 @@ export default function ConnectionsPage() {
       } else {
         setBanner({ kind: "err", text: "Couldn’t start sign-in. Try again." });
       }
+    }
+  }
+
+  async function disconnect(id: ProviderId) {
+    setDisconnecting(id);
+    setBanner(null);
+    try {
+      await callApi(DISCONNECT_PATH[id], { method: "DELETE" });
+      setConnected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setBanner({ kind: "ok", text: `${label(id)} disconnected.` });
+    } catch {
+      setBanner({ kind: "err", text: `Couldn’t disconnect ${label(id)}. Try again.` });
+    } finally {
+      setDisconnecting(null);
     }
   }
 
@@ -93,7 +138,16 @@ export default function ConnectionsPage() {
               )}
             </div>
             {connected.has(p.id) ? (
-              <span style={{ color: "var(--green)", fontWeight: 600, fontSize: 14, flex: "none" }}>✓ Connected</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
+                <span style={{ color: "var(--green)", fontWeight: 600, fontSize: 14 }}>✓ Connected</span>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => disconnect(p.id)}
+                  disabled={disconnecting === p.id}
+                >
+                  {disconnecting === p.id ? "Disconnecting…" : "Disconnect"}
+                </button>
+              </div>
             ) : (
               <button
                 className="btn btn-primary btn-sm"

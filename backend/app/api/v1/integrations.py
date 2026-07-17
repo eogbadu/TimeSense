@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.entitlements import PremiumUser
+from app.core.security import CurrentUser
 from app.core.oauth_state import (
     OAuthStateError,
     decode_state,
@@ -41,6 +42,10 @@ from app.integrations.notion_oauth import NotionOAuthError
 from app.integrations.slack_oauth import SlackOAuthError
 from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.services.calendar_service import CalendarService
+from app.repositories.calendar_repository import CalendarIntegrationRepository
+from app.repositories.email_repository import EmailIntegrationRepository
+from app.repositories.notion_repository import NotionIntegrationRepository
+from app.repositories.slack_repository import SlackIntegrationRepository
 from app.services.email_service import EmailService
 from app.services.notion_service import NotionService
 from app.services.slack_service import SlackService
@@ -51,6 +56,30 @@ router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 class AuthorizeResponse(BaseModel):
     authorize_url: str
+
+
+class IntegrationsStatus(BaseModel):
+    """Which providers the user currently has an active connection to (drives Connect vs Disconnect)."""
+    google: bool
+    microsoft: bool
+    gmail: bool
+    slack: bool
+    notion: bool
+
+
+@router.get("/status", response_model=IntegrationsStatus)
+async def integrations_status(
+    current_user: CurrentUser, db: AsyncSession = Depends(get_db)
+) -> IntegrationsStatus:
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+    cal = CalendarIntegrationRepository(db)
+    return IntegrationsStatus(
+        google=await cal.get_active(user.id, "google") is not None,
+        microsoft=await cal.get_active(user.id, "microsoft") is not None,
+        gmail=await EmailIntegrationRepository(db).get_active(user.id) is not None,
+        slack=await SlackIntegrationRepository(db).get_active(user.id) is not None,
+        notion=await NotionIntegrationRepository(db).get_active(user.id) is not None,
+    )
 
 
 def _redirect(url: str) -> RedirectResponse:
