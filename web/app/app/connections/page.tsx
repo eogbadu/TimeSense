@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiError, useApi } from "@/lib/api";
 
-type ProviderId = "google" | "microsoft" | "gmail" | "slack";
+type ProviderId = "google" | "microsoft" | "gmail" | "slack" | "notion";
 
 interface Provider {
   id: ProviderId;
@@ -18,6 +18,7 @@ const PROVIDERS: Provider[] = [
   { id: "microsoft", name: "Outlook Calendar", color: "var(--cyan)", blurb: "Schedule around your Outlook / Microsoft events." },
   { id: "gmail", name: "Gmail", color: "var(--amber)", blurb: "Find tasks in recent emails — read-only, you approve each one." },
   { id: "slack", name: "Slack", color: "var(--violet)", blurb: "Turn Slack messages into tasks you can approve." },
+  { id: "notion", name: "Notion", color: "var(--green)", blurb: "Pull to-dos from a Notion database as tasks to approve." },
 ];
 
 export default function ConnectionsPage() {

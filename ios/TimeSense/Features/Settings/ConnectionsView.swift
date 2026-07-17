@@ -19,6 +19,8 @@ struct ConnectionsView: View {
                         tint: .purple, blurb: "Turn Slack messages into tasks you can approve."),
         ConnectProvider(id: "gmail", name: "Gmail", systemImage: "envelope.fill",
                         tint: .red, blurb: "Find tasks in recent emails — read-only, you approve each one."),
+        ConnectProvider(id: "notion", name: "Notion", systemImage: "doc.text.fill",
+                        tint: .green, blurb: "Pull to-dos from a Notion database as tasks you can approve."),
     ]
 
     var body: some View {
