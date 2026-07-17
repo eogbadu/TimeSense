@@ -40,6 +40,19 @@ class ConsentRepository:
         await self.db.flush()
         return entry
 
+    async def ensure_granted(
+        self, user_id: uuid.UUID, consent_type: str, source: str | None = None
+    ) -> bool:
+        """Idempotently grant a consent when the user enables the underlying signal (e.g. connecting a
+        calendar). Records granted=True only if it isn't already effectively granted, so it can be wired
+        into a connect flow that runs repeatedly without appending a row each time. Returns True if a
+        new record was written."""
+        effective = await self.get_effective(user_id)
+        if effective.get(consent_type):
+            return False
+        await self.record(user_id, consent_type, True, source=source)
+        return True
+
     async def get_effective(self, user_id: uuid.UUID) -> dict[str, bool]:
         """Return the latest consent decision for each type as {consent_type: granted}."""
         result = await self.db.execute(

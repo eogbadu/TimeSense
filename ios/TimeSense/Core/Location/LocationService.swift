@@ -189,6 +189,22 @@ final class LocationService: NSObject, ObservableObject {
         return nil
     }
 
+    private var lastPostedLocationConsent: Bool?
+
+    /// Mirror the OS location permission into the backend `location_tracking` consent, so location-gated
+    /// features (commute detection) work and the Privacy panel reflects reality (TIME-256). Posts only
+    /// on a real change; best-effort (a no-op while signed out).
+    private func syncLocationConsent() async {
+        let authorized = authorizationStatus == .authorizedAlways || authorizationStatus == .authorizedWhenInUse
+        guard lastPostedLocationConsent != authorized else { return }
+        lastPostedLocationConsent = authorized
+        struct Body: Encodable { let consent_type: String; let granted: Bool }
+        struct Ack: Decodable { let granted: Bool }
+        _ = try? await APIClient.shared.post(
+            "/api/v1/consent/", body: Body(consent_type: "location_tracking", granted: authorized)
+        ) as Ack
+    }
+
     /// Tell the backend the user's current place (nil = away) so it can shape the recommendation.
     private func postPlace(placeName: String?, isHome: Bool) async {
         struct Body: Encodable { let place_name: String?; let is_home: Bool }
@@ -247,6 +263,7 @@ final class LocationService: NSObject, ObservableObject {
 extension LocationService: CLLocationManagerDelegate {
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorizationStatus = manager.authorizationStatus
+        Task { await syncLocationConsent() }
         start()
     }
 

@@ -10130,7 +10130,40 @@ TICKETS = [
             divider(), h2("Files Likely Changed"), bullet_list(["ios InsightsView.swift + InsightsViewModel.swift", "web/app/app/insights/page.tsx"]),
             divider(), h2("Acceptance Criteria"), bullet_list(["Patterns render grouped on iOS + web when present; absent gracefully; iOS builds; web builds"]),
             divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense && cd web && npm run build"),
-            divider(), h2("Dependencies"), p("TIME-253 (endpoint)."), divider(), h2("Next Ticket"), p("(none)"),
+            divider(), h2("Dependencies"), p("TIME-253 (endpoint)."), divider(), h2("Next Ticket"), p("TIME-256."),
+        ),
+    },
+    {
+        "summary": "TIME-256: Write consent when a signal is enabled (repairs silent gating)",
+        "labels": ["backend", "ios", "privacy", "bug"],
+        "description": doc(
+            h2("Goal"), p("No client writes health_data / location_tracking / calendar_details consent, so the Privacy panel shows them off AND the backend gates silently block features (the new workout/hourly ingest 403s on health_data; commute detection needs location_tracking). Write the consent when the user actually enables each signal."),
+            divider(), h2("Scope"), bullet_list([
+                "iOS HealthService.connectAndSync: after auth succeeds, POST /consent/ health_data=true",
+                "iOS LocationService: on authorization change to authorized, POST location_tracking=true (false on denied); only on change",
+                "Backend: write calendar_details=true when a calendar connects — CalendarService.connect (OAuth) + the PUT /calendar/synced handler (EventKit)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No auto-grant of audio_storage/audio_training/analytics (explicit opt-in); no new consent types"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios HealthService.swift, LocationService.swift", "backend services/calendar_service.py, api/v1/calendar.py", "tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Connecting a calendar records calendar_details; connecting Health grants health_data so /activity/workouts no longer 403s; suite green; iOS builds"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_calendar_sync.py tests/test_consent.py -q && pytest -q"),
+            divider(), h2("Dependencies"), p("TIME-252 (health gate), TIME-177 (calendar)."), divider(), h2("Next Ticket"), p("TIME-257."),
+        ),
+    },
+    {
+        "summary": "TIME-257: Accurate + complete Connected Signals panel (Privacy & Consent)",
+        "labels": ["ios", "privacy", "bug"],
+        "description": doc(
+            h2("Goal"), p("The Connected Signals panel is hardcoded (Calendar/Health show Off, Audio Disabled; only Location is live) and omits Email/Analytics. Make it read real state and show every signal."),
+            divider(), h2("Scope"), bullet_list([
+                "PrivacyConsentView view model: fetch GET /consent/ + GET /integrations/status; read device perms (Location auth, mic via AVAudioApplication, speech via SFSpeechRecognizer)",
+                "Rows with real status: Calendar (calendar_details/integrations/EventKit), Apple Health (health_data), Location (device auth), Voice capture (mic), Raw audio storage (audio_storage opt-in), Email (gmail/email_content), Analytics (analytics), Slack/Notion when connected",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No grant/revoke toggles on this panel (status display only)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Settings/SettingsScreens.swift (PrivacyConsentView)"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Each signal reflects real on/off; audio split into voice-capture + raw-audio-storage; Email/Analytics shown; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("TIME-256 (consent writes)."), divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
 ]

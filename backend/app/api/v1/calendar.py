@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.core.entitlements import PremiumUser
 from app.core.security import CurrentUser
 from app.integrations.calendar_base import CalendarEventCreate
+from app.repositories.consent_repository import ConsentRepository
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.schemas.calendar import (
     CalendarConnectIn,
@@ -62,6 +63,9 @@ async def sync_calendar(
     n = await SyncedCalendarEventRepository(db).replace_for_source(
         user_id, body.source, [e.model_dump() for e in body.events]
     )
+    # Syncing device (EventKit) calendar events is the user granting calendar visibility — record the
+    # consent so the Privacy panel reflects it (TIME-256).
+    await ConsentRepository(db).ensure_granted(user_id, "calendar_details", source="calendar_sync")
     await db.commit()
     return CalendarSyncOut(synced=n)
 

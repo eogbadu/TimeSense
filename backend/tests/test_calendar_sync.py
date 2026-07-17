@@ -163,3 +163,31 @@ async def test_all_day_events_do_not_drive_meeting_candidates(client, db_session
         r = await client.get("/api/v1/now/recommendation", headers={"Authorization": "Bearer t"})
     # no meeting candidate from an all-day event
     assert r.json()["action_type"] not in ("prepare_for_meeting", "join_meeting", "leave_for_event")
+
+
+# TIME-256 — connecting a calendar records the calendar_details consent (Privacy panel truth + gate).
+
+@pytest.mark.anyio
+async def test_synced_calendar_grants_calendar_details_consent(client, db_session):
+    now = datetime.now(timezone.utc)
+    with _verify():
+        await client.put("/api/v1/calendar/synced", headers={"Authorization": "Bearer t"}, json={
+            "source": "apple",
+            "events": [{"external_id": "e1", "title": "Standup",
+                        "starts_at": _iso(now + timedelta(hours=1)),
+                        "ends_at": _iso(now + timedelta(hours=1, minutes=30))}],
+        })
+        consent = await client.get("/api/v1/consent/", headers={"Authorization": "Bearer t"})
+    assert consent.json()["consents"].get("calendar_details") is True
+
+
+@pytest.mark.anyio
+async def test_oauth_connect_grants_calendar_details_consent(db_session):
+    from app.repositories.consent_repository import ConsentRepository
+    from app.services.calendar_service import CalendarService
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user("cal-oauth", "caloauth@example.com")
+    await CalendarService(db_session).connect(user.id, "google", "access-token")
+    effective = await ConsentRepository(db_session).get_effective(user.id)
+    assert effective.get("calendar_details") is True
