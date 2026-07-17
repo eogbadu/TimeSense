@@ -178,6 +178,7 @@ async def build_explanation(
     tz_name: str,
     gateway,
     score: float = 0.0,
+    alt_scores: dict[str, float] | None = None,
 ) -> dict:
     free_minutes, next_event = await _free_and_next(db, user, today_tasks, now, tz_name)
     local_now = _local(now, tz_name)
@@ -276,10 +277,18 @@ async def build_explanation(
     confidence = score_to_confidence(score)
 
     # ---- Alternatives considered ----
+    # `best` isn't always the top-ranked task — when the user opens the Why sheet for an alternative,
+    # the real top pick shows up here. Comparing purely against `best` then mislabelled that stronger,
+    # higher-scored task as "a slightly weaker fit" (TIME-247). So when we know an alternative outscored
+    # the explained task, say so instead of calling it weaker.
     alts = []
+    scores = alt_scores or {}
     for a in alternatives:
-        if a.priority > best.priority:
-            reason = "Lower priority than the top pick."
+        a_score = scores.get(str(a.id))
+        if a_score is not None and a_score > score:
+            reason = "Ranked higher overall — the stronger pick right now."
+        elif a.priority > best.priority:
+            reason = "Lower priority than this task."
         elif a.estimated_minutes and est and a.estimated_minutes < est:
             reason = "Fits a shorter block you can do later."
         elif a.due_at is None and best.due_at is not None:
