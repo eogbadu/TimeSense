@@ -9831,6 +9831,22 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-238: Add missing created_at/updated_at server defaults (Postgres insert 500)",
+        "labels": ["backend", "bug", "database"],
+        "description": doc(
+            h2("Goal"), p("Connecting Google Calendar 500'd: INSERT into calendar_integrations violated the NOT NULL created_at constraint. TimestampMixin uses server_default=now() (so the ORM omits the column), but several hand-written migrations created created_at/updated_at NOT NULL with no server_default — fine on SQLite (create_all) but broken on real Postgres. fix_timestamp_defaults only covered 4 tables."),
+            divider(), h2("Scope"), bullet_list([
+                "New migration: add server_default now() to created_at + updated_at for the 10 remaining affected tables (calendar_integrations, pending_calendar_actions, recommendation_events, notifications, replan_requests, waitlist_entries, invite_codes, referral_codes, referral_conversions, task_duration_estimates)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No model change (mixin already correct); no SQLite-testable change (tests use create_all)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/migrations/versions/*_fix_timestamp_defaults_2.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["single alembic head; migration parses; after deploy, connecting an integration inserts without a NOT NULL violation; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && alembic heads && pytest -q"),
+            divider(), h2("Dependencies"), p("TIME-235 (migrations run on deploy)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 
