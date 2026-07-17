@@ -1,5 +1,27 @@
 # Change Summary
 
+## 2026-07-17 — TIME-239..243 (post-deploy UX + reasoning bug batch)
+
+- Five on-device fixes after the first Render deploy: (243) scheduled tasks are now explained by
+  their own time, not a nonsensical free-before-next-meeting line; (242) opening an alternative in
+  the Why sheet no longer mislabels it as the recommended action (isTopPick flag); (241) email scan
+  shows a result banner (scanned/found counts) on iOS + web; (240) connected providers show a
+  Disconnect button — new GET /integrations/status + DELETE /email/disconnect; (239) tabs now slide
+  on tap/swipe via a horizontal pager + custom bottom bar (a stock TabView doesn't animate).
+- New tests: test_integrations_status.py (3), test_explanation_reasoning.py (2). iOS/web build clean.
+- Trade-off (239): all five screens mount at launch. Follow-up: on-device gesture-feel check.
+
+## 2026-07-17 — TIME-233..238 (Render deploy debugging — backend LIVE)
+
+- Fixed the deploy cascade on a real Render account; backend + Postgres + Redis + worker are LIVE at
+  https://timesense-api.onrender.com, Google Calendar OAuth works E2E, iOS works off-LAN.
+- (233) coerce postgres:// → postgresql+asyncpg:// + wire DATABASE_URL fromDatabase (zero hand-entered
+  DB secrets); (234) bind gunicorn to $PORT; (235) run migrations from the entrypoint not preDeploy
+  (Render preDeploy lacks the wired DATABASE_URL); (236) rename redis→cache to force a fresh Free
+  instance (Render blocks in-place Starter→Free); (237) iOS device builds point at the deployed API;
+  (238) migration d7e8f9a0b1c2 adds created_at/updated_at server_default now() to 10 tables that
+  broke INSERTs on Postgres (fixed the Google Calendar connect 500).
+
 ## 2026-07-14 — TIME-214..217 (Email → task detection, Gmail v1)
 
 - New read-only Gmail integration: connect (OAuth + encrypted tokens + refresh), fetch recent

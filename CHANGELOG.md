@@ -17,6 +17,12 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-17] TIME-239: Tabs now slide when you tap or swipe between them — the home shell is a horizontal pager with a custom bottom bar (a stock TabView showed no movement); all tabs keep their scroll/nav state
+- [2026-07-17] TIME-240: Connected apps now show a Disconnect button — new GET /integrations/status (per-user connected providers) + DELETE /email/disconnect; iOS + web load status on open and toggle Connect ↔ Disconnect
+- [2026-07-17] TIME-241: Scanning email for tasks now shows a result — "Scanned N emails · found M task(s)" (or none) on iOS + web
+- [2026-07-17] TIME-242: Opening an alternative in the "Why this recommendation?" sheet no longer mislabels it as the recommended action
+- [2026-07-17] TIME-243: The recommendation reasoning explains a scheduled task by its own time ("scheduled for 4:00 PM") instead of a nonsensical free-time-before-your-next-meeting line
+- [2026-07-17] TIME-233..238: Render deploy fixes — backend + Postgres + Redis + worker are LIVE (auto-wired DATABASE_URL with asyncpg driver, $PORT binding, migrations run from the entrypoint, a fresh Free Redis, iOS device builds point at the deployed API, and created_at/updated_at server defaults that fixed the Google Calendar connect 500)
 - [2026-07-17] TIME-228..231: Deployment groundwork — the app is now deploy-ready on Render (production backend container with migrations-on-deploy, a web container, a documented prod env template, and a one-file render.yaml + DEPLOY.md guide)
 - [2026-07-17] TIME-226..227: You can now connect Notion (with a real sign-in flow, no more pasting a token) from both the web app and iPhone — pulling to-dos from a Notion database as tasks you approve
 - [2026-07-17] TIME-223..225: The web app can now connect your integrations — a Connections page to link Google Calendar, Outlook, Gmail and Slack (OAuth now returns you to the web app, not just the phone), plus an Email‑tasks page to scan Gmail and approve the to‑dos it finds
