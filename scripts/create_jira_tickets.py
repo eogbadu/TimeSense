@@ -9995,6 +9995,23 @@ TICKETS = [
             divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Now/NowView.swift"]),
             divider(), h2("Acceptance Criteria"), bullet_list(["The five-chip row no longer appears; Now goes banner -> recommendation -> context cards with no gap; iOS builds clean"]),
             divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("None."), divider(), h2("Next Ticket"), p("TIME-249."),
+        ),
+    },
+    {
+        "summary": "TIME-249: Capture — tap outside the input to dismiss the keyboard",
+        "labels": ["ios", "capture", "polish"],
+        "description": doc(
+            h2("Goal"), p("On the Capture screen, tapping the text field raises the keyboard (good), but tapping outside the field doesn't lower it or deactivate the field. Tapping empty space should dismiss the keyboard and unfocus the input."),
+            divider(), h2("Scope"), bullet_list([
+                "CaptureView: add a tap gesture on the scroll content that sets isInputFocused=false; child controls (field, chips, buttons) keep handling their own taps so only empty-space taps dismiss",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No change to the existing swipe-to-dismiss or the keyboard 'Done' button; no change to the errand location field",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Capture/CaptureView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Tapping outside the input lowers the keyboard and unfocuses the field; the field, chips, and buttons still work; iOS builds clean"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
             divider(), h2("Dependencies"), p("None."), divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
