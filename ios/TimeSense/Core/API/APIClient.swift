@@ -38,7 +38,10 @@ final class APIClient {
         #elseif DEBUG
         return "http://ekeles-MacBook-Pro.local:8000"
         #else
-        return "https://api.timesense.app"  // TODO: real production URL
+        // Production API. Point your deployed backend's domain here (attach it to the Render service),
+        // or override per-build via the API_BASE_URL scheme env var. `aps-environment` in
+        // TimeSense.entitlements flips to `production` automatically for App Store / TestFlight builds.
+        return "https://api.timesense.app"
         #endif
     }
 
