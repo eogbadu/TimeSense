@@ -88,3 +88,18 @@ async def reject_email_item(
     rejected = await EmailService(db).reject(user_id, item_id)
     if rejected:
         await db.commit()
+
+
+# ── Disconnect ────────────────────────────────────────────────────────────────
+
+@router.delete("/disconnect", status_code=status.HTTP_204_NO_CONTENT)
+async def disconnect_email(
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+):
+    """Deactivate the user's Gmail connection (drops stored tokens). Idempotent."""
+    user_id = await _get_user_id(current_user, db)
+    disconnected = await EmailService(db).disconnect(user_id)
+    if not disconnected:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Email not connected.")
+    await db.commit()
