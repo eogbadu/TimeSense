@@ -36,6 +36,20 @@ struct WeeklyInsight: Decodable {
     }
 }
 
+/// A behavioral pattern from Apple Health + commutes (GET /insights/patterns).
+struct BehavioralPattern: Decodable, Identifiable {
+    let category: String   // workouts | movement | driving
+    let icon: String       // SF Symbol name
+    let title: String
+    let detail: String
+
+    var id: String { "\(category)-\(title)" }
+}
+
+private struct BehavioralPatternsResponse: Decodable {
+    let patterns: [BehavioralPattern]
+}
+
 enum InsightsUiState {
     case idle
     case loading
@@ -46,9 +60,14 @@ enum InsightsUiState {
 @MainActor
 final class InsightsViewModel: ObservableObject {
     @Published var uiState: InsightsUiState = .idle
+    @Published var patterns: [BehavioralPattern] = []
 
     func load() async {
         uiState = .loading
+        // Behavioral patterns are best-effort — a failure here shouldn't blank the weekly insight.
+        if let resp: BehavioralPatternsResponse = try? await APIClient.shared.get("/api/v1/insights/patterns") {
+            patterns = resp.patterns
+        }
         do {
             let insight: WeeklyInsight = try await APIClient.shared.get("/api/v1/insights/weekly")
             uiState = .loaded(insight)
