@@ -53,8 +53,18 @@ export default function EmailTasksPage() {
     setNotConnected(false);
     setScanning(true);
     try {
-      await callApi("/api/v1/email/scan", { method: "POST", body: JSON.stringify({}) });
+      const result = await callApi<{ scanned: number; detected: EmailItem[] }>(
+        "/api/v1/email/scan", { method: "POST", body: JSON.stringify({}) }
+      );
       await reloadPending();
+      const found = result.detected.length;
+      setNotice(
+        result.scanned === 0
+          ? "No recent unread emails to scan."
+          : found === 0
+            ? `Scanned ${result.scanned} email${result.scanned === 1 ? "" : "s"} — no tasks found.`
+            : `Scanned ${result.scanned} email${result.scanned === 1 ? "" : "s"} · found ${found} task${found === 1 ? "" : "s"}.`
+      );
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) setNotConnected(true);
       else if (err instanceof ApiError && err.status === 403) { setHasConsent(false); setNotice("Email access isn’t allowed yet."); }

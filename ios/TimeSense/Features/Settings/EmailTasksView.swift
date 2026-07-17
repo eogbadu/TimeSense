@@ -190,10 +190,11 @@ final class EmailTasksViewModel: ObservableObject {
         isScanning = true
         defer { isScanning = false }
         do {
-            let _: EmailScanResultDTO = try await APIClient.shared.post(
+            let result: EmailScanResultDTO = try await APIClient.shared.post(
                 "/api/v1/email/scan", body: ScanBody()
             )
             await reloadPending()
+            banner = Self.scanSummary(scanned: result.scanned, found: result.detected.count)
         } catch APIError.forbidden {
             banner = "Email access isn't allowed yet."
             hasConsent = false
@@ -227,6 +228,13 @@ final class EmailTasksViewModel: ObservableObject {
         if let c: EffectiveConsentDTO = try? await APIClient.shared.get("/api/v1/consent/") {
             hasConsent = c.consents["email_content"] ?? false
         }
+    }
+
+    private static func scanSummary(scanned: Int, found: Int) -> String {
+        if scanned == 0 { return "No recent unread emails to scan." }
+        let emails = "\(scanned) email\(scanned == 1 ? "" : "s")"
+        if found == 0 { return "Scanned \(emails) — no tasks found." }
+        return "Scanned \(emails) · found \(found) task\(found == 1 ? "" : "s")."
     }
 
     private func reloadPending() async {
