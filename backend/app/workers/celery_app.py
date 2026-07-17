@@ -12,6 +12,7 @@ celery_app = Celery(
         "app.workers.notification_tasks",
         "app.workers.insights_tasks",
         "app.workers.push_tasks",
+        "app.workers.reminder_tasks",
     ],
 )
 
@@ -41,6 +42,10 @@ celery_app.conf.update(
         "scan-and-push": {
             "task": "timesense.scan_and_push",
             "schedule": crontab(minute="*/30"),
+        },
+        "send-appointment-reminders": {
+            "task": "timesense.send_appointment_reminders",
+            "schedule": crontab(minute="*/2"),
         },
         "generate-weekly-insights": {
             "task": "timesense.generate_weekly_insights",

@@ -88,6 +88,25 @@ class TaskRepository:
         result = await self.db.execute(q)
         return list(result.scalars().all())
 
+    async def upcoming_appointments(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> list[Task]:
+        """Timed appointments starting in (start, end] that aren't done/cancelled — the input to the
+        appointment-reminder scheduler (TIME-251)."""
+        q = (
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.scheduled_start.is_not(None),
+                Task.scheduled_start > start,
+                Task.scheduled_start <= end,
+                Task.status.not_in(["done", "cancelled"]),
+            )
+            .order_by(Task.scheduled_start)
+        )
+        result = await self.db.execute(q)
+        return list(result.scalars().all())
+
     async def update(self, task_id: uuid.UUID, user_id: uuid.UUID, **kwargs) -> Task | None:
         task = await self.get_by_id(task_id, user_id)
         if task is None:
