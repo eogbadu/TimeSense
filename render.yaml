@@ -85,10 +85,14 @@ services:
     dockerContext: ./backend
     plan: starter
     healthCheckPath: /api/v1/health
-    preDeployCommand: "alembic upgrade head"   # migrations run once before the new version goes live
     envVars:
       - key: APP_ENV
         value: production
+      # Apply migrations from the entrypoint at container start — that's where the wired DATABASE_URL
+      # is present (Render's preDeployCommand doesn't get the fromDatabase env). Keep the api at 1
+      # instance so migrations don't race; scale via WEB_CONCURRENCY (workers per instance) instead.
+      - key: RUN_MIGRATIONS
+        value: "1"
       - key: WEB_CONCURRENCY
         value: "2"
       # Both come from the managed Postgres. The app coerces DATABASE_URL to the +asyncpg driver.

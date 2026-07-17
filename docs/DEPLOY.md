@@ -30,9 +30,11 @@ runs without them but features degrade (no auth without Firebase, no LLM without
 `SECRET_KEY` is auto-generated; `APP_ENV=production` and `APNS_USE_SANDBOX=false` are preset.
 
 ## 3. Migrations
-The API service runs `alembic upgrade head` as its **preDeployCommand** before each release goes live
-(the `RUN_MIGRATIONS=1` entrypoint path is the equivalent for plain Docker/compose). Verify the first
-deploy's logs show the migration ran. The worker runs beat embedded (`celery worker --beat`), so the
+The API container runs `alembic upgrade head` on startup (its `RUN_MIGRATIONS=1` env → the
+`entrypoint.sh` path) — this runs inside the container where the wired `DATABASE_URL` is present, so it
+hits the managed Postgres (Render's pre-deploy step does *not* get `fromDatabase` env, which is why
+migrations live in the entrypoint). Verify the first deploy's logs show the migration ran. Keep the api
+at **one instance** so concurrent starts don't race the migration. The worker runs beat embedded (`celery worker --beat`), so the
 scheduled jobs (morning check-ins, the ~30-min push scan, weekly insights) still run — just keep the
 worker at **one instance** while beat is embedded.
 
