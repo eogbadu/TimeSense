@@ -13,8 +13,13 @@ companion goes on **Vercel** (free, native Next.js) — see §6. A lean always-o
 1. Push this repo to GitHub (already there).
 2. Render → **New → Blueprint** → pick the repo. Render reads `render.yaml` and proposes: `timesense-api`
    (web), `timesense-worker` (runs the worker **with beat embedded** — keep it at 1 instance),
-   `timesense-redis` (Key Value, free), and `timesense-db` (Postgres).
-3. Apply. The DB + Redis come up; the services build from Docker.
+   `timesense-cache` (Key Value, free), and `timesense-db` (Postgres).
+3. Apply. The DB + cache come up; the services build from Docker.
+
+> **If a sync ever errors with "cannot downgrade redis instance from Starter to Free":** an older
+> Key Value exists on Starter and Render won't downgrade it in place. The blueprint's `timesense-cache`
+> is a *new* service (created on Free), so the sync will proceed — just **delete the orphaned old
+> `timesense-redis`** (Starter) afterward so it stops billing.
 
 ## 2. Set the secrets (the `timesense-secrets` group)
 The database + Redis URLs are wired automatically (from the managed Postgres and Redis), so **nothing is

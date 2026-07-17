@@ -9798,6 +9798,23 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-236: Rename Redis service to force a fresh Free instance (Render downgrade block)",
+        "labels": ["deployment", "infra"],
+        "description": doc(
+            h2("Goal"), p("Render won't downgrade the existing Starter Redis to Free in place, which blocks every blueprint sync. Rename the service so Render creates a NEW Free Key Value instead of trying to downgrade."),
+            divider(), h2("Scope"), bullet_list([
+                "render.yaml: rename timesense-redis -> timesense-cache (plan free) and update the fromService references on api + worker",
+                "DEPLOY.md: note to delete the orphaned old timesense-redis (Starter) after sync",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No app change; REDIS_URL still auto-wired from the new service"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["render.yaml, docs/DEPLOY.md"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Sync creates a Free timesense-cache; api/worker get its REDIS_URL; the downgrade error is gone; old redis deleted by user"]),
+            divider(), h2("Verification"), code_block("python -c \"import yaml; yaml.safe_load(open('render.yaml')); print('ok')\""),
+            divider(), h2("Dependencies"), p("TIME-232 (free Redis)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 

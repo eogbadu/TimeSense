@@ -74,7 +74,7 @@ envVarGroups:
 
 services:
   - type: keyvalue
-    name: timesense-redis
+    name: timesense-cache
     plan: free               # only used as the Celery queue; free tier is plenty at low volume
     ipAllowList: []          # reachable only by the services in this blueprint
 
@@ -107,7 +107,7 @@ services:
       - key: REDIS_URL
         fromService:
           type: keyvalue
-          name: timesense-redis
+          name: timesense-cache
           property: connectionString
       - fromGroup: timesense-secrets
 
@@ -135,7 +135,7 @@ services:
       - key: REDIS_URL
         fromService:
           type: keyvalue
-          name: timesense-redis
+          name: timesense-cache
           property: connectionString
       - fromGroup: timesense-secrets
 
