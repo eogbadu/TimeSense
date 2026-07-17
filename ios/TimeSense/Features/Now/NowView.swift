@@ -467,6 +467,8 @@ struct WhyThis: View {
 
 struct RecommendationExplanationSheet: View {
     let explanation: RecommendationExplanation
+    /// False when opened for one of the "other good options" — so it isn't mislabeled as the top pick.
+    var isTopPick: Bool = true
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -475,7 +477,8 @@ struct RecommendationExplanationSheet: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
                     RecommendedActionHeaderCard(
                         action: explanation.recommendedAction,
-                        confidence: explanation.confidence
+                        confidence: explanation.confidence,
+                        isTopPick: isTopPick
                     )
 
                     if !explanation.summary.isEmpty {
@@ -506,7 +509,7 @@ struct RecommendationExplanationSheet: View {
                 .padding(.vertical, DesignTokens.Spacing.md)
             }
             .background(CosmicBackground())
-            .navigationTitle("Why this recommendation?")
+            .navigationTitle(isTopPick ? "Why this recommendation?" : "About this option")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
@@ -526,6 +529,7 @@ struct RecommendationExplanationSheet: View {
 private struct RecommendedActionHeaderCard: View {
     let action: RecommendationExplanation.Action
     let confidence: Double
+    var isTopPick: Bool = true
 
     var body: some View {
         let style = taskCategoryStyle(for: action.title)
@@ -533,8 +537,8 @@ private struct RecommendedActionHeaderCard: View {
         HStack(alignment: .center, spacing: DesignTokens.Spacing.md) {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                 HStack(spacing: 6) {
-                    Image(systemName: "sparkles").font(.caption).foregroundStyle(accent)
-                    Text("Recommended action")
+                    Image(systemName: isTopPick ? "sparkles" : "list.bullet").font(.caption).foregroundStyle(accent)
+                    Text(isTopPick ? "Recommended action" : "Also a good option")
                         .font(DesignTokens.Typography.footnote.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.9))
                 }
@@ -739,7 +743,7 @@ private struct OptionRow: View {
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showSheet) {
-            if let explanation { RecommendationExplanationSheet(explanation: explanation) }
+            if let explanation { RecommendationExplanationSheet(explanation: explanation, isTopPick: false) }
         }
     }
 
