@@ -4,9 +4,8 @@
 # Next.js web companion. Secrets are marked `sync: false` — set their values in the Render dashboard,
 # never in git.
 #
-# NOTE on DATABASE_URL: the app's async engine needs the `postgresql+asyncpg://` driver, but Render's
-# managed-Postgres connection string is `postgresql://`. So DATABASE_URL is set manually (sync:false —
-# paste the Internal URL with the `+asyncpg` prefix), while DATABASE_URL_SYNC is auto-wired from the DB.
+# DATABASE_URL + DATABASE_URL_SYNC are wired automatically from the managed Postgres below (the app
+# coerces DATABASE_URL to the +asyncpg driver), so no database URL needs hand-entering.
 
 databases:
   - name: timesense-db
@@ -22,8 +21,6 @@ envVarGroups:
       - key: SECRET_KEY
         generateValue: true
       - key: TOKEN_ENCRYPTION_KEY
-        sync: false
-      - key: DATABASE_URL           # postgresql+asyncpg://…  (Internal URL + asyncpg driver)
         sync: false
       - key: CORS_ORIGINS
         sync: false
@@ -94,6 +91,11 @@ services:
         value: production
       - key: WEB_CONCURRENCY
         value: "2"
+      # Both come from the managed Postgres. The app coerces DATABASE_URL to the +asyncpg driver.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: timesense-db
+          property: connectionString
       - key: DATABASE_URL_SYNC
         fromDatabase:
           name: timesense-db
@@ -117,6 +119,11 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+      # Both come from the managed Postgres. The app coerces DATABASE_URL to the +asyncpg driver.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: timesense-db
+          property: connectionString
       - key: DATABASE_URL_SYNC
         fromDatabase:
           name: timesense-db

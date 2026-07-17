@@ -9744,6 +9744,26 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-233: Auto-wire DATABASE_URL from managed Postgres (fix failed deploy)",
+        "labels": ["backend", "deployment", "infra"],
+        "description": doc(
+            h2("Goal"), p("Remove the manual DATABASE_URL step that caused the Render API deploy to fail: coerce the async driver in config so the plain provider URL works, and wire DATABASE_URL from the managed Postgres in the blueprint."),
+            divider(), h2("Scope"), bullet_list([
+                "config.py: field_validator coerces postgres:// / postgresql:// -> postgresql+asyncpg:// for database_url (explicit +driver untouched)",
+                "render.yaml: set DATABASE_URL via fromDatabase (connectionString) on api + worker; remove it from the sync:false secrets group so nothing needs hand-entering to boot",
+                "test: the coercion",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No other behavior change"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/core/config.py, render.yaml, backend/tests/"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "settings.database_url is +asyncpg even when given a plain postgres:// URL; render.yaml wires DATABASE_URL from the DB; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_config.py -q"),
+            divider(), h2("Dependencies"), p("TIME-231/232 (blueprint)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 

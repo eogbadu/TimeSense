@@ -17,12 +17,11 @@ companion goes on **Vercel** (free, native Next.js) — see §6. A lean always-o
 3. Apply. The DB + Redis come up; the services build from Docker.
 
 ## 2. Set the secrets (the `timesense-secrets` group)
-In the dashboard, open the **timesense-secrets** env group and fill every `sync:false` value (they are
-listed with descriptions in the PRODUCTION block of `.env.example`). At minimum:
-- `DATABASE_URL` — copy the Postgres **Internal Database URL** and change the scheme to
-  `postgresql+asyncpg://…` (the async app needs that driver; `DATABASE_URL_SYNC` is auto-wired as plain
-  `postgresql://` for Alembic).
-- `TOKEN_ENCRYPTION_KEY` — a base64 32-byte Fernet key (`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`).
+The database + Redis URLs are wired automatically (from the managed Postgres and Redis), so **nothing is
+needed to make the API boot**. In the dashboard, open the **timesense-secrets** env group and fill the
+`sync:false` values you actually use (all listed in the PRODUCTION block of `.env.example`) — the app
+runs without them but features degrade (no auth without Firebase, no LLM without OpenAI, etc.):
+- `TOKEN_ENCRYPTION_KEY` — a base64 32-byte Fernet key (`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`); if unset it's derived from `SECRET_KEY`.
 - `CORS_ORIGINS` — your web origin, e.g. `https://app.yourdomain.com`.
 - `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT_JSON`, `OPENAI_API_KEY`, Stripe live keys,
   `GOOGLE_MAPS_API_KEY`, and the OAuth client id/secret + **prod HTTPS** `*_REDIRECT_URI` for each
