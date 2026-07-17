@@ -38,6 +38,8 @@ services:
     env_file:
       - .env
     environment:
+      # The web role applies migrations on start (worker/beat share the image but leave this unset).
+      - RUN_MIGRATIONS=1
       - DATABASE_URL=postgresql+asyncpg://timesense:timesense@postgres:5432/timesense
       - DATABASE_URL_SYNC=postgresql://timesense:timesense@postgres:5432/timesense
       - REDIS_URL=redis://redis:6379/0

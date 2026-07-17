@@ -9655,6 +9655,76 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-228: Deploy — backend container prod server + hardening + migrate-on-deploy",
+        "labels": ["backend", "deployment", "infra"],
+        "description": doc(
+            h2("Goal"), p("Make the backend image production-grade: a multi-worker server, non-root + healthcheck hardening, and migrations applied on the web role's startup."),
+            divider(), h2("Scope"), bullet_list([
+                "requirements.txt: add gunicorn; Dockerfile CMD -> gunicorn with uvicorn workers (WEB_CONCURRENCY)",
+                "Dockerfile: install curl (compose healthcheck), non-root USER, HEALTHCHECK on /api/v1/health",
+                "entrypoint.sh: if RUN_MIGRATIONS=1 run alembic upgrade head, then exec CMD (web migrates, worker/beat don't)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No app code change", "Docker build not run in this session (user verifies)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/Dockerfile, backend/entrypoint.sh, backend/requirements.txt"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Image runs gunicorn as non-root; RUN_MIGRATIONS=1 applies migrations then starts; pytest green; docker build succeeds (user-run)"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest -q   # app unaffected; docker build run by the user"),
+            divider(), h2("Dependencies"), p("Existing Dockerfile/compose."),
+            divider(), h2("Next Ticket"), p("TIME-229: web container."),
+        ),
+    },
+    {
+        "summary": "TIME-229: Deploy — web (Next.js) container",
+        "labels": ["web", "deployment", "infra"],
+        "description": doc(
+            h2("Goal"), p("Containerize the Next.js companion for deployment."),
+            divider(), h2("Scope"), bullet_list([
+                "next.config.ts: output: 'standalone'",
+                "web/Dockerfile: multi-stage (deps->build->runner), non-root, runs .next/standalone/server.js; NEXT_PUBLIC_API_BASE_URL + Firebase as build args (NEXT_PUBLIC_* baked at build)",
+                "web/.dockerignore",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No app code change", "Docker build run by the user"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/next.config.ts, web/Dockerfile, web/.dockerignore"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["npm run build clean (emits .next/standalone); docker build web succeeds (user-run)"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("(none)"),
+            divider(), h2("Next Ticket"), p("TIME-230: prod config + client URLs."),
+        ),
+    },
+    {
+        "summary": "TIME-230: Deploy — prod env template + client prod-URL wiring",
+        "labels": ["backend", "ios", "web", "deployment"],
+        "description": doc(
+            h2("Goal"), p("Document every prod override and point the clients at the prod API."),
+            divider(), h2("Scope"), bullet_list([
+                ".env.example: a 'PRODUCTION — override these' section (APP_ENV=production, real SECRET_KEY/TOKEN_ENCRYPTION_KEY, DATABASE_URL/REDIS_URL, CORS_ORIGINS, Firebase, OPENAI, Stripe live, APNS_USE_SANDBOX=false, OAuth *_REDIRECT_URI + OAUTH_WEB_* off localhost, GOOGLE_MAPS_API_KEY, SENTRY_DSN)",
+                "ios APIClient.swift: Release base URL -> prod domain (drop the TODO; keep API_BASE_URL override); note aps-environment flips at distribution",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No secret values (user sets)", "No behavior change"]),
+            divider(), h2("Files Likely Changed"), bullet_list([".env.example, ios/TimeSense/Core/API/APIClient.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Every must-set prod var documented; iOS Release URL is the prod domain; pytest green; iOS builds"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest -q && cd .. && xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-223 (oauth_web_* redirects)."),
+            divider(), h2("Next Ticket"), p("TIME-231: Render blueprint + DEPLOY.md."),
+        ),
+    },
+    {
+        "summary": "TIME-231: Deploy — Render blueprint + DEPLOY.md",
+        "labels": ["deployment", "infra", "docs"],
+        "description": doc(
+            h2("Goal"), p("A one-file Render Blueprint that stands up the whole backend (api + worker + beat + Postgres + Redis) and a step-by-step deploy guide."),
+            divider(), h2("Scope"), bullet_list([
+                "render.yaml: Docker web service (healthCheckPath /api/v1/health, RUN_MIGRATIONS=1) + worker + beat (celery) + managed Postgres + Redis; DATABASE_URL/REDIS_URL wired; secrets sync:false; optional Next web service",
+                "docs/DEPLOY.md: connect repo -> Blueprint -> set secrets -> domain/TLS -> register prod OAuth redirect URIs -> point clients -> user-owned checklist (rotate Android key, OpenAI billing, Maps key, store/legal), cross-linked to release_checklist.md",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No actual deploy (user runs it)", "No CI/CD (deferred)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["render.yaml, docs/DEPLOY.md"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["render.yaml is valid YAML referencing the real Dockerfiles/commands; DEPLOY.md matches the manifest and lists the user-owned steps"]),
+            divider(), h2("Verification"), code_block("python -c \"import yaml,sys; yaml.safe_load(open('render.yaml')); print('ok')\""),
+            divider(), h2("Dependencies"), p("TIME-228/229/230."),
+            divider(), h2("Next Ticket"), p("(follow-up) CI/CD; Redis-backed rate limiter."),
+        ),
+    },
 ]
 
 
