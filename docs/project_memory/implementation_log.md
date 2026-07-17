@@ -1,5 +1,17 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-248: Remove the non-functional signal-chip row from the Now screen
+
+Discussed in plan mode (user asked for the industry-standard/user-friendly call). The row of five
+capsule chips (Calendar/Routine/Location/Time/Tasks) near the top of Now looked tappable but was
+hard-coded `Text` with no action or live data — a false affordance — and duplicated the "analyzed
+your day" banner, the live context cards (ContextGrid/NowContextCards), and the "Why This
+Recommendation?" sheet. Removed the `ContextChipsRow()` call in `NowView.loadedBody` and the
+`private struct ContextChipsRow`. Now flows banner → recommendation → context cards. Jira TIME-2282;
+PR #273; iOS BUILD SUCCEEDED. Future option (not built): a live/tappable signal strip that reflects
+which signals drove the pick — would need per-signal state on the `/now` payload (today only on
+`/now/why`).
+
 ## 2026-07-17 — TIME-244..247: Second on-device feedback batch (Gmail, Disconnect, energy, alternatives)
 
 Four more device-verified fixes; all shipped and merged (PRs #267–#270; Jira TIME-2278..2281).
