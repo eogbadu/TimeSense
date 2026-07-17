@@ -29,8 +29,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         LocationService.shared.start()
         // Keep the backend's calendar mirror fresh (no-op unless calendar access was granted).
         Task { await CalendarSyncService.shared.syncIfAuthorized() }
-        // Refresh today's HealthKit activity (no-op / no data unless Health access was granted).
-        Task { await HealthService().syncActivity() }
+        // Refresh HealthKit activity + workouts + hourly steps (no-op / no data unless Health access
+        // was granted).
+        Task { await HealthService().syncBackground() }
         // Register for remote push UNCONDITIONALLY to obtain the APNs token — the token is separate
         // from alert permission, so we shouldn't gate it on the permission prompt. We request alert
         // permission separately (for showing the banners).
