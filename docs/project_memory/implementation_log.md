@@ -1,5 +1,37 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-252..255: Behavioral patterns from Apple Health + commutes (Insights screen)
+
+New feature (planned with 3 Explore agents + user decisions), delivered as 4 PRs. The Insights screen
+now shows running, gym, sitting-vs-moving, and commute patterns. Exploration found NONE of these were
+computable from stored data (only daily aggregates + confirmed commutes), so this adds new time-series
+collection + aggregation. Decisions: "times I work" = workout times (HKWorkout); gym via HKWorkout not
+geofencing; driving = confirmed-commute aggregate (labelled commute, no new location tracking); surface
+on the Insights screen (premium).
+- **TIME-252 (Jira TIME-2286, PR #281)**: new `WorkoutSession` (runs/gym: type, start/end, duration,
+  distance, energy; dedup by HealthKit `external_id`) + `HourlyActivity` (steps per clock hour) models,
+  repos, migration `e8f9a0b1c2d3` (single head). `POST /activity/workouts` + `/activity/hourly` (batch
+  upsert), gated on `health_data` consent (mirrors sleep 403); unknown workout types → "other". Suite 552.
+- **TIME-253 (Jira TIME-2287, PR #282)**: `BehavioralPatternsService.for_user(user_id, tz)` (28-day
+  window) → Running (miles/week, runs, typical time-of-day, avg duration), Gym (sessions/week, common
+  weekday, typical time), Sitting vs moving (% waking hours sedentary <250 steps/hr, when, avg streak),
+  Commute (min/day + h/week from confirmed CommuteEvents). Each item `{category, icon (SF Symbol),
+  title, detail}`, emitted past a data threshold. `GET /api/v1/insights/patterns` (premium). Added
+  `CommuteRepository.sum_confirmed_minutes_in_range`. Suite 558.
+- **TIME-254 (Jira TIME-2288, PR #283)**: iOS `HealthService` now reads `HKWorkout` +
+  `distanceWalkingRunning`, enumerates recent workouts (28d, maps HKWorkoutActivityType → our types,
+  distance/energy via `statistics(for:)`) → `/activity/workouts`, and per-hour step buckets (14d,
+  HKStatisticsCollectionQuery) → `/activity/hourly` (the intraday series previously discarded). New
+  `syncBackground()` runs on app launch; `connectAndSync` syncs both. iOS built (HealthKit reads need a
+  real device to exercise).
+- **TIME-255 (Jira TIME-2289, PR #284)**: iOS `InsightsView`/`InsightsViewModel` best-effort fetch +
+  a "What we've learned about you" card (category-tinted SF Symbol rows); web insights page adds the
+  same card (emoji per category). Renders only when patterns present. iOS + web build clean.
+
+Limits (noted): driving is commute-only; gym/running depend on the user logging workouts in Apple
+Health (Watch/phone); no background HKObserverQuery (sync stays launch + Settings tap); "how long you
+sit" is approximated from hourly buckets (streak length), not exact sessions.
+
 ## 2026-07-17 — TIME-251: Pre-appointment push notifications (start + travel-aware departure)
 
 New feature (planned with 3 Explore agents + user decisions). Sends one push before a scheduled

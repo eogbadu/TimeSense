@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Features
 
+- [2026-07-17] TIME-252..255: Behavioral patterns on the Insights screen — running (miles/duration/times), gym (frequency/days/times), sitting vs moving, and commute time, learned from Apple Health workouts + hourly steps and confirmed commutes
 - [2026-07-17] TIME-251: Pre-appointment push notifications — you now get a push 10 minutes before an appointment starts, or 10 minutes before you need to leave (drive-time aware) when it has a location
 
 ### Fixes

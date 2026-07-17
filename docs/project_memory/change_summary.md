@@ -1,5 +1,16 @@
 # Change Summary
 
+## 2026-07-17 — TIME-252..255 (behavioral patterns from Apple Health + commutes, on Insights)
+
+- New feature: the Insights screen shows running (miles/duration/times), gym (frequency/days/times),
+  sitting-vs-moving (ratio + typical sit windows + streak), and commute time. All net-new time-series:
+  (252) WorkoutSession + HourlyActivity models + consent-gated /activity/workouts + /activity/hourly;
+  (253) BehavioralPatternsService + GET /insights/patterns (premium); (254) iOS HealthKit reads HKWorkout
+  + hourly steps → sync; (255) iOS + web render a "What we've learned about you" card.
+- Decisions: workout times not work hours; gym via HKWorkout (not geofencing); driving = confirmed-
+  commute aggregate (commute-only, honest label). Backend suite 558; iOS + web build clean. HealthKit
+  reads need a real device to verify end-to-end.
+
 ## 2026-07-17 — TIME-251 (pre-appointment push notifications)
 
 - New feature: a push 10 min before an appointment starts, or 10 min before the user needs to drive
