@@ -18,6 +18,7 @@ from app.repositories.calendar_repository import (
     CalendarIntegrationRepository,
     PendingCalendarActionRepository,
 )
+from app.repositories.consent_repository import ConsentRepository
 
 _PROVIDERS: dict[str, CalendarProvider] = {
     "google": GoogleCalendarProvider(),
@@ -49,7 +50,7 @@ class CalendarService:
         token_expires_at: datetime | None = None,
         calendar_id: str = "primary",
     ) -> CalendarIntegration:
-        return await self.integration_repo.upsert(
+        integration = await self.integration_repo.upsert(
             user_id=user_id,
             provider=provider,
             access_token=access_token,
@@ -57,6 +58,10 @@ class CalendarService:
             token_expires_at=token_expires_at,
             calendar_id=calendar_id,
         )
+        # Connecting a calendar is the user granting us calendar visibility — record the consent so the
+        # Privacy panel and any calendar_details gate reflect it (TIME-256).
+        await ConsentRepository(self.db).ensure_granted(user_id, "calendar_details", source="calendar_oauth")
+        return integration
 
     async def disconnect(self, user_id: uuid.UUID, provider: str) -> bool:
         return await self.integration_repo.deactivate(user_id, provider)

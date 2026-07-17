@@ -72,10 +72,19 @@ final class HealthService: ObservableObject {
             state = .error("Couldn't access Apple Health.")
             return
         }
+        // Connecting Apple Health is the user granting health-data use — record the consent BEFORE the
+        // syncs, since /activity/workouts and /activity/hourly are gated on health_data (TIME-256).
+        await grantConsent("health_data")
         await syncActivity()
         await syncLatestSleep()
         await syncWorkouts()
         await syncHourlySteps()
+    }
+
+    private func grantConsent(_ type: String) async {
+        struct Body: Encodable { let consent_type: String; let granted: Bool }
+        struct Ack: Decodable { let granted: Bool }
+        _ = try? await APIClient.shared.post("/api/v1/consent/", body: Body(consent_type: type, granted: true)) as Ack
     }
 
     /// Opportunistic sync used on app launch (only succeeds if authorization was already granted):
