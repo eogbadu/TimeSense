@@ -178,9 +178,19 @@ async def build_explanation(
     est = best.estimated_minutes or 0
     fits = est <= free_minutes if est else True
 
+    # If the task itself is scheduled for a future time (e.g. an imported calendar event), lead with
+    # that instead of a generic "free before your next meeting" line — otherwise the reasoning reads
+    # nonsensically (e.g. a 4pm appointment explained by the free time before an 11am meeting).
+    task_start = _utc(best.scheduled_start) if getattr(best, "scheduled_start", None) else None
+    scheduled_at_label = (
+        _local(task_start, tz_name).strftime("%-I:%M %p") if task_start and task_start > now else None
+    )
+
     # ---- Context used (human bullets, only what we actually know) ----
     context_used: list[str] = []
-    if next_event:
+    if scheduled_at_label:
+        context_used.append(f"Calendar: this is scheduled for {scheduled_at_label}.")
+    elif next_event:
         context_used.append(f"Calendar: {free_minutes} minutes free before {next_event}.")
     else:
         context_used.append(f"Calendar: {free_minutes} minutes free before your workday ends.")
@@ -225,8 +235,12 @@ async def build_explanation(
     # ---- Signals analyzed (labeled rows for the "Why this recommendation?" screen) ----
     # available=True → we actually have the signal (green check); False → not connected yet.
     signals: list[dict] = []
-    cal = (f"You have a {free_minutes}-minute free block before {next_event}." if next_event
-           else f"You have {free_minutes} minutes free before your workday ends.")
+    if scheduled_at_label:
+        cal = f"This is on your calendar for {scheduled_at_label}."
+    elif next_event:
+        cal = f"You have a {free_minutes}-minute free block before {next_event}."
+    else:
+        cal = f"You have {free_minutes} minutes free before your workday ends."
     signals.append({"name": "Calendar", "detail": cal, "available": True})
     signals.append({"name": "Time of day", "detail": f"This is {tod_note} based on your routine.", "available": True})
     if place is not None and place.place_name:
