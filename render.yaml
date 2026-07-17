@@ -78,7 +78,7 @@ envVarGroups:
 services:
   - type: keyvalue
     name: timesense-redis
-    plan: starter
+    plan: free               # only used as the Celery queue; free tier is plenty at low volume
     ipAllowList: []          # reachable only by the services in this blueprint
 
   - type: web
@@ -105,13 +105,15 @@ services:
           property: connectionString
       - fromGroup: timesense-secrets
 
+  # One worker with beat embedded (--beat) to save a service. Keep this at a SINGLE instance — if you
+  # ever scale the worker to >1, split beat into its own service so the schedule isn't run multiple times.
   - type: worker
     name: timesense-worker
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: starter
-    dockerCommand: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    dockerCommand: celery -A app.workers.celery_app worker --beat --loglevel=info --concurrency=2
     envVars:
       - key: APP_ENV
         value: production
@@ -126,44 +128,5 @@ services:
           property: connectionString
       - fromGroup: timesense-secrets
 
-  - type: worker
-    name: timesense-beat
-    runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
-    plan: starter
-    dockerCommand: celery -A app.workers.celery_app beat --loglevel=info
-    envVars:
-      - key: APP_ENV
-        value: production
-      - key: DATABASE_URL_SYNC
-        fromDatabase:
-          name: timesense-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: timesense-redis
-          property: connectionString
-      - fromGroup: timesense-secrets
-
-  # Optional: the Next.js companion on Render. Simpler alternative: deploy web/ to Vercel (native Next).
-  # NEXT_PUBLIC_* are baked at BUILD time — set them so Render passes them as Docker build args (their
-  # names match the ARGs in web/Dockerfile). See docs/DEPLOY.md.
-  - type: web
-    name: timesense-web
-    runtime: docker
-    dockerfilePath: ./web/Dockerfile
-    dockerContext: ./web
-    plan: starter
-    envVars:
-      - key: NEXT_PUBLIC_API_BASE_URL
-        sync: false
-      - key: NEXT_PUBLIC_FIREBASE_API_KEY
-        sync: false
-      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-        sync: false
-      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-        sync: false
-      - key: NEXT_PUBLIC_FIREBASE_APP_ID
-        sync: false
+# The web companion is NOT on Render (to save a service) — deploy web/ to Vercel (free, native Next.js).
+# See docs/DEPLOY.md. Its Dockerfile (web/Dockerfile) still exists if you prefer to self-host it.

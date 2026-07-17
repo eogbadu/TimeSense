@@ -9725,6 +9725,25 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(follow-up) CI/CD; Redis-backed rate limiter."),
         ),
     },
+    {
+        "summary": "TIME-232: Slim the Render blueprint for cost (~$48 -> ~$20/mo)",
+        "labels": ["deployment", "infra", "cost"],
+        "description": doc(
+            h2("Goal"), p("Reduce the Render blueprint from 6 billable pieces to a lean always-on setup (~$20/mo) without losing functionality."),
+            divider(), h2("Scope"), bullet_list([
+                "Merge worker + beat into one worker service running embedded beat (celery worker --beat) — keep it at 1 instance",
+                "Redis -> free plan; remove the timesense-web service (deploy web on Vercel free instead)",
+                "Keep API + combined worker on Starter (always-on) + Postgres basic (durable)",
+                "DEPLOY.md: reflect merged worker/beat, Redis free, a short Vercel-for-web section, and the ~$20/mo note",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No app code change", "No functional loss (scheduled jobs still run via embedded beat)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["render.yaml, docs/DEPLOY.md"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["render.yaml valid YAML; worker runs embedded beat; web service removed; Redis free; DEPLOY.md updated with Vercel + cost"]),
+            divider(), h2("Verification"), code_block("python -c \"import yaml; yaml.safe_load(open('render.yaml')); print('ok')\""),
+            divider(), h2("Dependencies"), p("TIME-231 (blueprint)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 

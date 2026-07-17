@@ -1,8 +1,9 @@
 # Deploying TimeSense (Render)
 
-This deploys the **backend** (API + Celery worker + beat) with managed **Postgres** and **Redis**, and
-optionally the **web** companion, using the `render.yaml` Blueprint. The images are built from the
-existing `backend/Dockerfile` and `web/Dockerfile`.
+This deploys the **backend** (API + a single Celery worker with beat embedded) with managed **Postgres**
+and **Redis**, using the `render.yaml` Blueprint (images built from `backend/Dockerfile`). The **web**
+companion goes on **Vercel** (free, native Next.js) — see §6. A lean always-on setup is roughly
+**~$20/mo** (API Starter + worker Starter + small Postgres; Redis on the free tier; web free on Vercel).
 
 > **What only you can do:** create the Render account, attach a domain, and supply the secret *values*
 > + register prod OAuth redirect URIs. This repo makes everything else ready. Cross-check the launch
@@ -11,8 +12,8 @@ existing `backend/Dockerfile` and `web/Dockerfile`.
 ## 1. Create the Blueprint
 1. Push this repo to GitHub (already there).
 2. Render → **New → Blueprint** → pick the repo. Render reads `render.yaml` and proposes: `timesense-api`
-   (web), `timesense-worker`, `timesense-beat`, `timesense-redis` (Key Value), and `timesense-db`
-   (Postgres), plus the optional `timesense-web`.
+   (web), `timesense-worker` (runs the worker **with beat embedded** — keep it at 1 instance),
+   `timesense-redis` (Key Value, free), and `timesense-db` (Postgres).
 3. Apply. The DB + Redis come up; the services build from Docker.
 
 ## 2. Set the secrets (the `timesense-secrets` group)
@@ -32,7 +33,9 @@ listed with descriptions in the PRODUCTION block of `.env.example`). At minimum:
 ## 3. Migrations
 The API service runs `alembic upgrade head` as its **preDeployCommand** before each release goes live
 (the `RUN_MIGRATIONS=1` entrypoint path is the equivalent for plain Docker/compose). Verify the first
-deploy's logs show the migration ran.
+deploy's logs show the migration ran. The worker runs beat embedded (`celery worker --beat`), so the
+scheduled jobs (morning check-ins, the ~30-min push scan, weekly insights) still run — just keep the
+worker at **one instance** while beat is embedded.
 
 ## 4. Domain + TLS
 Attach your custom domain to `timesense-api` (e.g. `api.yourdomain.com`) and to `timesense-web`
@@ -44,18 +47,19 @@ provider's console and set the matching `*_REDIRECT_URI` secret:
 `https://api.yourdomain.com/api/v1/integrations/<provider>/callback`. (See
 [`integrations_setup.md`](integrations_setup.md).)
 
-## 6. Point the clients at prod
-- **Web** (`timesense-web`): set `NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com` and the
-  `NEXT_PUBLIC_FIREBASE_*` values. These are **build-time** args — Render must pass them as Docker
-  build args (their names match the `ARG`s in `web/Dockerfile`); a rebuild is needed after changing
-  them. *Simpler alternative:* deploy `web/` to **Vercel** (native Next.js, no build-arg juggling).
+## 6. Deploy the web companion on Vercel + point the clients at prod
+- **Web → Vercel** (free, native Next.js): New Project → import the repo → **Root Directory = `web`**.
+  Set env vars `NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com` and the `NEXT_PUBLIC_FIREBASE_*`
+  values, then deploy. Add your web domain (e.g. `app.yourdomain.com`) and set that origin in the
+  backend's `CORS_ORIGINS` + `OAUTH_WEB_*` redirects. (If you'd rather self-host it on Render instead,
+  `web/Dockerfile` is still there — add a `type: web` Docker service with the `NEXT_PUBLIC_*` build args.)
 - **iOS**: the Release build already points at `https://api.timesense.app` (`APIClient.swift`) — set it
   to your domain, or override per-build with the `API_BASE_URL` scheme env var. `aps-environment` flips
   to production for App Store/TestFlight automatically.
 
 ## 7. Verify
 - `GET https://api.yourdomain.com/api/v1/health` → healthy.
-- Worker + beat services show "running" (beat fires the schedule; the worker executes tasks).
+- The worker service shows "running" (it runs beat embedded — fires the schedule and executes tasks).
 - A round-trip: sign in on web → connect an integration (OAuth returns to the web app).
 
 ## Still your responsibility (from the release checklist)
