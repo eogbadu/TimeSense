@@ -9815,6 +9815,22 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-237: Point the iOS app at the deployed API (off-LAN device testing)",
+        "labels": ["ios", "deployment"],
+        "description": doc(
+            h2("Goal"), p("Let the iPhone app work without the Mac's LAN by pointing physical-device + Release builds at the deployed Render API."),
+            divider(), h2("Scope"), bullet_list([
+                "APIClient.resolveBaseURL: physical device (DEBUG or Release) -> https://timesense-api.onrender.com (prodBaseURL constant); simulator stays localhost; API_BASE_URL env override still wins",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No custom domain yet (can swap prodBaseURL later)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Core/API/APIClient.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["A device build hits the Render API over the internet (no Mac LAN); simulator unchanged; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-228..236 (deployed backend)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 
