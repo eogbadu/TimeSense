@@ -151,6 +151,51 @@ async def test_callback_success_stores_tokens(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_web_platform_callback_returns_to_web(client, db_session):
+    """A flow started with platform=web returns the browser to the web app, not the timesense:// deep link."""
+    user = User(firebase_uid="uid-web", email="web@example.com")
+    db_session.add(user)
+    await db_session.flush()
+    state = sign_state(str(user.id), "google", platform="web")
+
+    fake = TokenResult(access_token="acc", refresh_token="ref", expires_at=datetime.now(UTC))
+    with patch.object(google_oauth, "exchange_code", AsyncMock(return_value=fake)):
+        resp = await client.get(
+            f"/api/v1/integrations/google/callback?code=abc&state={state}", follow_redirects=False,
+        )
+    assert resp.status_code == 302
+    loc = resp.headers["location"]
+    assert loc.startswith("http") and "timesense://" not in loc
+    assert "status=connected" in loc and "provider=google" in loc
+
+
+@pytest.mark.anyio
+async def test_web_platform_failure_returns_to_web(client):
+    """A web-initiated flow that errors returns to the web failure page (browser can't open timesense://)."""
+    state = sign_state("00000000-0000-0000-0000-000000000000", "google", platform="web")
+    resp = await client.get(
+        f"/api/v1/integrations/google/callback?error=access_denied&state={state}",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    loc = resp.headers["location"]
+    assert loc.startswith("http") and "status=failed" in loc
+
+
+@pytest.mark.anyio
+async def test_authorize_platform_web_signs_web(client):
+    from urllib.parse import parse_qs, urlparse
+
+    from app.core.oauth_state import decode_state
+    with patch.object(google_oauth.settings, "google_client_id", "cid.apps"), \
+         patch.object(google_oauth.settings, "google_client_secret", "secret"):
+        resp = await client.get("/api/v1/integrations/google/authorize?platform=web")
+    assert resp.status_code == 200
+    state = parse_qs(urlparse(resp.json()["authorize_url"]).query)["state"][0]
+    assert decode_state(state, "google").platform == "web"
+
+
+@pytest.mark.anyio
 async def test_callback_bad_state_redirects_to_failure(client):
     with patch.object(google_oauth, "exchange_code", AsyncMock()) as ex:
         resp = await client.get(

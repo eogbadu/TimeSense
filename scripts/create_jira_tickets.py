@@ -9562,6 +9562,61 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-223: OAuth callback can return to the web app (platform-aware)",
+        "labels": ["backend", "integrations", "web"],
+        "description": doc(
+            h2("Goal"), p("Let a browser-initiated OAuth connect finish on the web app. Today the callback 302s to timesense://... (mobile deep link) which a browser can't follow."),
+            divider(), h2("Scope"), bullet_list([
+                "config: oauth_web_success_redirect / oauth_web_failure_redirect (default the web /app/connections page)",
+                "oauth_state: sign_state(platform='mobile'); OAuthState dataclass + decode_state (full verify) + platform_from_state (best-effort); verify_state stays backward-compatible (returns user_id)",
+                "integrations.py: authorize endpoints take platform query param; _success/_failure pick mobile deep link vs the web URL from the state's platform (default mobile → iOS unchanged)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No arbitrary return_to (platform enum + config target only — no open redirect)", "No web UI (TIME-224/225)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/core/config.py, app/core/oauth_state.py, app/api/v1/integrations.py, tests/"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "authorize?platform=web signs platform=web; a web-state callback 302s to the web URL (with &provider=)",
+                "mobile / no-platform callback still 302s to timesense://... (unchanged); suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_integrations_oauth.py -q"),
+            divider(), h2("Dependencies"), p("TIME-177/214 (OAuth handshakes)."),
+            divider(), h2("Next Ticket"), p("TIME-224: web Connections page."),
+        ),
+    },
+    {
+        "summary": "TIME-224: Web Connections page (connect Google/Outlook/Gmail/Slack)",
+        "labels": ["web", "integrations"],
+        "description": doc(
+            h2("Goal"), p("A web Connections page to connect the calendar/Slack/Gmail providers via OAuth."),
+            divider(), h2("Scope"), bullet_list([
+                "web/app/app/connections/page.tsx: provider rows; Connect -> GET /integrations/{provider}/authorize?platform=web -> window.location = authorize_url; handle ?status=connected return, 403 (premium), 503 (unconfigured)",
+                "Add a Connections tab to layout TABS; Gmail row links to the email review page",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No per-provider connected-state endpoint (infer from return param)", "No email review here (TIME-225)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/app/connections/page.tsx, web/app/app/layout.tsx"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Connect opens the provider consent URL; return shows connected; premium/unconfigured handled; npm run build clean"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-223 (web-return)."),
+            divider(), h2("Next Ticket"), p("TIME-225: web email review."),
+        ),
+    },
+    {
+        "summary": "TIME-225: Web Email-tasks review page (scan + approve)",
+        "labels": ["web", "integrations", "email"],
+        "description": doc(
+            h2("Goal"), p("A web page to grant email consent, scan Gmail for tasks, and approve/dismiss the detected ones."),
+            divider(), h2("Scope"), bullet_list([
+                "web/app/app/email/page.tsx: email_content consent gate (GET/POST /consent); Scan for tasks (POST /email/scan); pending list (GET /email/pending) with Add task (confirm) / Dismiss (reject)",
+                "Branch on 403 (consent/premium) and 404 (not connected -> link to Connections); reachable from the Gmail row on Connections",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No top-level Email tab (avoid nav crowding)", "No background scan"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["web/app/app/email/page.tsx"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Consent -> scan -> pending list -> approve creates a task / dismiss removes it; gates handled; npm run build clean"]),
+            divider(), h2("Verification"), code_block("cd web && npm run build"),
+            divider(), h2("Dependencies"), p("TIME-216 (email API), TIME-224 (connections)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 
