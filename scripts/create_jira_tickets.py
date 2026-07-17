@@ -9977,7 +9977,25 @@ TICKETS = [
             divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/recommendation_explainer.py", "backend/app/api/v1/now.py", "tests"]),
             divider(), h2("Acceptance Criteria"), bullet_list(["A higher-scored alternative is described as stronger/top, never 'weaker'; the top pick's own sheet is unchanged; suite green"]),
             divider(), h2("Verification"), code_block("cd backend && pytest tests/test_explanation_reasoning.py -q"),
-            divider(), h2("Dependencies"), p("TIME-242 (alternative sheet)."), divider(), h2("Next Ticket"), p("(none)"),
+            divider(), h2("Dependencies"), p("TIME-242 (alternative sheet)."), divider(), h2("Next Ticket"), p("TIME-248."),
+        ),
+    },
+    {
+        "summary": "TIME-248: Remove the non-functional signal-chip row from the Now screen",
+        "labels": ["ios", "now", "polish"],
+        "description": doc(
+            h2("Goal"), p("Near the top of the Now screen a row of five capsule chips (Calendar/Routine/Location/Time/Tasks) looks tappable but is hard-coded, does nothing, and duplicates the live context cards + the 'Why This Recommendation?' sheet already on the screen. Remove it (false-affordance + redundant noise)."),
+            divider(), h2("Scope"), bullet_list([
+                "NowView: remove the ContextChipsRow() call in loadedBody and delete the private ContextChipsRow struct",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No change to the real context cards (ContextGrid/NowContextCards), the analyzed banner, or the Why sheet",
+                "Not building the live/tappable signal-strip version (documented as a future option)",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Now/NowView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["The five-chip row no longer appears; Now goes banner -> recommendation -> context cards with no gap; iOS builds clean"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("None."), divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
 ]

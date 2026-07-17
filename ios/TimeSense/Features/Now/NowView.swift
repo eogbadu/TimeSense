@@ -55,7 +55,6 @@ struct NowView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
                 AnalysisBanner(lastLoaded: viewModel.lastLoaded)
-                ContextChipsRow()
 
                 // A full cross-domain engine suggestion (wind-down, prep-for-meeting, nearby errand…)
                 // supersedes the simpler local wind-down nudge when available.
@@ -148,29 +147,6 @@ private struct AnalysisBanner: View {
         if mins <= 0 { return "Re-evaluated just now" }
         if mins == 1 { return "Re-evaluated 1 min ago" }
         return "Re-evaluated \(mins) min ago"
-    }
-}
-
-/// The signal categories TimeSense weighs — all five fit on screen at once (no scrolling); each
-/// chip takes an equal share of the row.
-private struct ContextChipsRow: View {
-    private let chips = ["Calendar", "Routine", "Location", "Time", "Tasks"]
-
-    var body: some View {
-        HStack(spacing: DesignTokens.Spacing.xs) {
-            ForEach(chips, id: \.self) { chip in
-                Text(chip)
-                    .font(DesignTokens.Typography.caption.weight(.medium))
-                    .foregroundColor(DesignTokens.Color.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DesignTokens.Spacing.sm)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .background(Capsule().fill(Color.white.opacity(0.04)))
-                    .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 1))
-            }
-        }
     }
 }
 
