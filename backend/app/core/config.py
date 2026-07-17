@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # There is ONE .env for the whole project — at the repo root. The backend is usually launched from
@@ -123,6 +124,18 @@ class Settings(BaseSettings):
     rate_limit_capture_per_minute: int = 30
     rate_limit_account_delete_per_hour: int = 5
     notion_version: str = "2022-06-28"
+
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def _ensure_asyncpg_driver(cls, v: str) -> str:
+        """Managed Postgres (Render/Heroku/etc.) hands out `postgres://` or `postgresql://` URLs, but
+        the async engine needs the `+asyncpg` driver — coerce it so DATABASE_URL can be wired straight
+        from the provider with no manual editing. Leaves an explicit `+driver` untouched."""
+        if v.startswith("postgres://"):
+            v = "postgresql://" + v[len("postgres://"):]
+        if v.startswith("postgresql://"):
+            v = "postgresql+asyncpg://" + v[len("postgresql://"):]
+        return v
 
     @property
     def cors_origins_list(self) -> list[str]:
