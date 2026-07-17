@@ -1,0 +1,169 @@
+# TimeSense — Render Blueprint (starting template). Full walkthrough in docs/DEPLOY.md.
+#
+# Stands up the backend (API + Celery worker + beat), managed Postgres + Redis, and (optionally) the
+# Next.js web companion. Secrets are marked `sync: false` — set their values in the Render dashboard,
+# never in git.
+#
+# NOTE on DATABASE_URL: the app's async engine needs the `postgresql+asyncpg://` driver, but Render's
+# managed-Postgres connection string is `postgresql://`. So DATABASE_URL is set manually (sync:false —
+# paste the Internal URL with the `+asyncpg` prefix), while DATABASE_URL_SYNC is auto-wired from the DB.
+
+databases:
+  - name: timesense-db
+    databaseName: timesense
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+
+envVarGroups:
+  # Set every one of these in the dashboard (Environment → this group). See the PRODUCTION block in
+  # .env.example for what each is.
+  - name: timesense-secrets
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: DATABASE_URL           # postgresql+asyncpg://…  (Internal URL + asyncpg driver)
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: APNS_USE_SANDBOX
+        value: "false"
+      # OAuth (prod HTTPS callbacks + client creds) — set the ones you use:
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: GMAIL_REDIRECT_URI
+        sync: false
+      - key: MICROSOFT_CLIENT_ID
+        sync: false
+      - key: MICROSOFT_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_REDIRECT_URI
+        sync: false
+      - key: SLACK_CLIENT_ID
+        sync: false
+      - key: SLACK_CLIENT_SECRET
+        sync: false
+      - key: SLACK_REDIRECT_URI
+        sync: false
+      - key: NOTION_CLIENT_ID
+        sync: false
+      - key: NOTION_CLIENT_SECRET
+        sync: false
+      - key: NOTION_REDIRECT_URI
+        sync: false
+      - key: OAUTH_WEB_SUCCESS_REDIRECT
+        sync: false
+      - key: OAUTH_WEB_FAILURE_REDIRECT
+        sync: false
+
+services:
+  - type: keyvalue
+    name: timesense-redis
+    plan: starter
+    ipAllowList: []          # reachable only by the services in this blueprint
+
+  - type: web
+    name: timesense-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    healthCheckPath: /api/v1/health
+    preDeployCommand: "alembic upgrade head"   # migrations run once before the new version goes live
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: DATABASE_URL_SYNC
+        fromDatabase:
+          name: timesense-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: timesense-redis
+          property: connectionString
+      - fromGroup: timesense-secrets
+
+  - type: worker
+    name: timesense-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    dockerCommand: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL_SYNC
+        fromDatabase:
+          name: timesense-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: timesense-redis
+          property: connectionString
+      - fromGroup: timesense-secrets
+
+  - type: worker
+    name: timesense-beat
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    dockerCommand: celery -A app.workers.celery_app beat --loglevel=info
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL_SYNC
+        fromDatabase:
+          name: timesense-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: timesense-redis
+          property: connectionString
+      - fromGroup: timesense-secrets
+
+  # Optional: the Next.js companion on Render. Simpler alternative: deploy web/ to Vercel (native Next).
+  # NEXT_PUBLIC_* are baked at BUILD time — set them so Render passes them as Docker build args (their
+  # names match the ARGs in web/Dockerfile). See docs/DEPLOY.md.
+  - type: web
+    name: timesense-web
+    runtime: docker
+    dockerfilePath: ./web/Dockerfile
+    dockerContext: ./web
+    plan: starter
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        sync: false
