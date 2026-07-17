@@ -50,15 +50,16 @@ final class HealthService: ObservableObject {
     }
 
     private var readTypes: Set<HKObjectType> {
-        var types: Set<HKObjectType> = []
+        var types: Set<HKObjectType> = [HKObjectType.workoutType()]
         if let sleepType { types.insert(sleepType) }
-        for id in [HKQuantityTypeIdentifier.stepCount, .activeEnergyBurned, .appleExerciseTime] {
+        for id in [HKQuantityTypeIdentifier.stepCount, .activeEnergyBurned, .appleExerciseTime,
+                   .distanceWalkingRunning] {
             if let t = HKQuantityType.quantityType(forIdentifier: id) { types.insert(t) }
         }
         return types
     }
 
-    /// Requests read authorization for sleep + activity, then reads + syncs both.
+    /// Requests read authorization for sleep + activity + workouts, then reads + syncs everything.
     func connectAndSync() async {
         guard HKHealthStore.isHealthDataAvailable() else {
             state = .unavailable
@@ -73,6 +74,16 @@ final class HealthService: ObservableObject {
         }
         await syncActivity()
         await syncLatestSleep()
+        await syncWorkouts()
+        await syncHourlySteps()
+    }
+
+    /// Opportunistic sync used on app launch (only succeeds if authorization was already granted):
+    /// daily activity + workouts + hourly steps. Safe to call anytime.
+    func syncBackground() async {
+        await syncActivity()
+        await syncWorkouts()
+        await syncHourlySteps()
     }
 
     /// Reads the most recent sleep window and POSTs its wake time to the backend.
@@ -200,6 +211,106 @@ final class HealthService: ObservableObject {
         let sleepStart = sameNight.map(\.startDate).min() ?? latest.startDate
         return (sleepStart, latest.endDate)
     }
+
+    // MARK: - Workouts (runs / gym) — read-only, powers behavioral patterns
+
+    /// Read recent workouts (last 28d) and upsert them to the backend (deduped by their HealthKit id).
+    func syncWorkouts() async {
+        let items = await recentWorkouts()
+        guard !items.isEmpty else { return }
+        struct Body: Encodable { let workouts: [WorkoutSyncItem] }
+        struct Ack: Decodable { let accepted: Int }
+        _ = try? await APIClient.shared.post("/api/v1/activity/workouts", body: Body(workouts: items)) as Ack
+    }
+
+    private func recentWorkouts() async -> [WorkoutSyncItem] {
+        let start = Calendar.current.date(byAdding: .day, value: -28, to: Date()) ?? Date()
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+        let sort = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
+        let workouts: [HKWorkout] = await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: .workoutType(), predicate: predicate,
+                                      limit: 200, sortDescriptors: sort) { _, results, _ in
+                continuation.resume(returning: (results as? [HKWorkout]) ?? [])
+            }
+            store.execute(query)
+        }
+        let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)
+        let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)
+        return workouts.map { w in
+            let meters = distanceType.flatMap { w.statistics(for: $0)?.sumQuantity()?.doubleValue(for: .meter()) }
+            let kcal = energyType.flatMap { w.statistics(for: $0)?.sumQuantity()?.doubleValue(for: .kilocalorie()) }
+            return WorkoutSyncItem(
+                external_id: w.uuid.uuidString,
+                workout_type: Self.workoutType(w.workoutActivityType),
+                started_at: w.startDate, ended_at: w.endDate,
+                duration_minutes: Int(w.duration / 60.0),
+                distance_meters: meters, active_energy_kcal: kcal.map { Int($0) }
+            )
+        }
+    }
+
+    /// Map HealthKit's activity type to the small set the backend stores.
+    private static func workoutType(_ t: HKWorkoutActivityType) -> String {
+        switch t {
+        case .running: return "running"
+        case .walking, .hiking: return "walking"
+        case .cycling: return "cycling"
+        case .traditionalStrengthTraining, .functionalStrengthTraining: return "strength"
+        case .highIntensityIntervalTraining: return "hiit"
+        case .coreTraining, .crossTraining, .flexibility, .yoga, .pilates: return "functional"
+        default: return "other"
+        }
+    }
+
+    // MARK: - Hourly steps — read-only, powers the sit-vs-move pattern
+
+    /// Read per-hour step counts (last 14d) and upsert them — the intraday series we used to discard.
+    func syncHourlySteps() async {
+        let items = await hourlyStepBuckets()
+        guard !items.isEmpty else { return }
+        struct Body: Encodable { let hours: [HourlySyncItem] }
+        struct Ack: Decodable { let accepted: Int }
+        _ = try? await APIClient.shared.post("/api/v1/activity/hourly", body: Body(hours: items)) as Ack
+    }
+
+    private func hourlyStepBuckets() async -> [HourlySyncItem] {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return [] }
+        let start = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
+        let anchor = Calendar.current.startOfDay(for: start)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type, quantitySamplePredicate: predicate,
+                options: .cumulativeSum, anchorDate: anchor,
+                intervalComponents: DateComponents(hour: 1)
+            )
+            query.initialResultsHandler = { _, results, _ in
+                guard let results else { continuation.resume(returning: []); return }
+                var items: [HourlySyncItem] = []
+                results.enumerateStatistics(from: start, to: Date()) { stat, _ in
+                    let steps = Int(stat.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+                    items.append(HourlySyncItem(hour_start: stat.startDate, steps: steps))
+                }
+                continuation.resume(returning: items)
+            }
+            store.execute(query)
+        }
+    }
+}
+
+private struct WorkoutSyncItem: Encodable {
+    let external_id: String
+    let workout_type: String
+    let started_at: Date
+    let ended_at: Date
+    let duration_minutes: Int
+    let distance_meters: Double?
+    let active_energy_kcal: Int?
+}
+
+private struct HourlySyncItem: Encodable {
+    let hour_start: Date
+    let steps: Int
 }
 
 #else
@@ -211,6 +322,9 @@ final class HealthService: ObservableObject {
     func connectAndSync() async { state = .unavailable }
     func syncLatestSleep() async { state = .unavailable }
     func syncActivity() async {}
+    func syncWorkouts() async {}
+    func syncHourlySteps() async {}
+    func syncBackground() async {}
 }
 
 #endif
