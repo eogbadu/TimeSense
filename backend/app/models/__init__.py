@@ -3,6 +3,8 @@ from app.models.analytics_event import AnalyticsEvent  # noqa: F401
 from app.models.calendar import CalendarIntegration, PendingCalendarAction  # noqa: F401
 from app.models.commute import CommuteEvent  # noqa: F401
 from app.models.daily_activity import DailyActivity  # noqa: F401
+from app.models.hourly_activity import HourlyActivity  # noqa: F401
+from app.models.workout_session import WorkoutSession  # noqa: F401
 from app.models.consent import ConsentRecord  # noqa: F401
 from app.models.email_integration import EmailActionItem, EmailIntegration  # noqa: F401
 from app.models.insight import WeeklyInsight  # noqa: F401
