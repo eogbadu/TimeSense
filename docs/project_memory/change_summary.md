@@ -1,5 +1,12 @@
 # Change Summary
 
+## 2026-07-17 — TIME-250 (Capture: live "detected" results)
+
+- The bottom Capture section now shows what TimeSense actually detected after a capture (time,
+  priority, task type, schedule fit) instead of a static "can detect" poster; idle keeps the
+  capability tiles for onboarding. Uses fields the /capture response already returns (no backend
+  change). Expanded CapturedTask + lastCaptured; shared DetectTile. iOS built.
+
 ## 2026-07-17 — TIME-249 (Capture: tap outside to dismiss keyboard)
 
 - Tapping outside the Capture text field now lowers the keyboard and unfocuses the field

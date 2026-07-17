@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-250: Capture — show what TimeSense actually detected
+
+The bottom "TimeSense can detect" tiles (Time/Priority/Task type/Schedule fit) were a static
+capability poster. Made that space state-aware: idle keeps the tiles (onboarding); after a capture it
+swaps to a "TimeSense detected" card with the real parse — scheduled/due Time (e.g. "Tomorrow 2:00
+PM"), Priority label, Task type (via the shared `taskCategoryStyle`), Schedule fit ("Added to your
+day" / "In your list"). All from fields the `/capture` response (`TaskResponse`) already returns — no
+backend change. Expanded `CapturedTask` decoding (priority/scheduled_start/end/auto_scheduled) +
+`lastCaptured` on the view model (cleared on reset ~3s); shared `DetectTile` view + formatting
+helpers. Jira TIME-2284; PR #277; iOS BUILD SUCCEEDED. "Show, don't tell."
+
 ## 2026-07-17 — TIME-249: Capture — tap outside the input dismisses the keyboard
 
 Tapping the Capture text field raised the keyboard but tapping outside didn't lower it (only the
