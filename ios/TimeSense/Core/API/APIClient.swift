@@ -25,23 +25,24 @@ final class APIClient {
     /// Where the backend lives, resolved per environment:
     /// - `API_BASE_URL` env var always wins (set it in the Xcode scheme to override).
     /// - Simulator: localhost (the Mac's loopback).
-    /// - Physical device (DEBUG): the Mac's Bonjour `.local` name — the phone and Mac must be on the
-    ///   same Wi-Fi, and NSAllowsLocalNetworking is set (Info.plist). `localhost` on a device is the
-    ///   phone itself, so it can't reach the Mac.
-    /// - Release: the production API URL.
+    /// - Physical device (DEBUG or Release): the deployed production API, so the phone works off your
+    ///   Mac's LAN (over Wi-Fi/cellular). Override to a local Mac (`http://<mac>.local:8000`) per-build
+    ///   with the `API_BASE_URL` scheme env var when you want a device build to hit local dev.
+    /// - Release: the production API URL. `aps-environment` in TimeSense.entitlements flips to
+    ///   `production` automatically for App Store / TestFlight builds.
+    ///
+    /// Swap `prodBaseURL` for a custom domain (e.g. `https://api.yourdomain.com`) once one is attached
+    /// to the Render service.
+    private static let prodBaseURL = "https://timesense-api.onrender.com"
+
     private static func resolveBaseURL() -> String {
         if let env = ProcessInfo.processInfo.environment["API_BASE_URL"], !env.isEmpty {
             return env
         }
         #if targetEnvironment(simulator)
-        return "http://localhost:8000"
-        #elseif DEBUG
-        return "http://ekeles-MacBook-Pro.local:8000"
+        return "http://localhost:8000"   // local Mac backend for Simulator dev
         #else
-        // Production API. Point your deployed backend's domain here (attach it to the Render service),
-        // or override per-build via the API_BASE_URL scheme env var. `aps-environment` in
-        // TimeSense.entitlements flips to `production` automatically for App Store / TestFlight builds.
-        return "https://api.timesense.app"
+        return prodBaseURL               // physical device + Release → the deployed API
         #endif
     }
 
