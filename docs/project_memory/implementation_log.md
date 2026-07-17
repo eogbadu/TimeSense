@@ -1,5 +1,14 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-223..225: Web companion — Connections + Email-tasks review
+
+Brought the integration work to the web companion (web is companion-only, but OAuth is easiest in a browser).
+- **TIME-223 (Jira TIME-2257) OAuth web-return**: the callback 302'd to timesense://... (mobile deep link) which a browser can't follow. Now the signed OAuth state carries the originating platform: `sign_state(..., platform="mobile"|"web")`; new `OAuthState` + `decode_state` (full verify) + `platform_from_state` (best-effort for failure redirects); `verify_state` kept as a back-compat wrapper. config `oauth_web_success_redirect`/`oauth_web_failure_redirect` (default the web /app/connections page). integrations.py authorize endpoints take a `platform` query param; `_success`/`_failure` pick mobile deep link vs web URL (+`&provider=`). Default mobile → iOS unchanged. Enum + config target = no open redirect. Suite 531.
+- **TIME-224 (Jira TIME-2258) web Connections page**: `/app/connections` + a Connections nav tab. Each provider (Google Calendar/Outlook/Gmail/Slack) Connect → GET /integrations/{provider}/authorize?platform=web → browser navigates to consent; return `?status=connected&provider=…` shows a banner + marks connected; handles 403 (premium)/503 (unconfigured). Gmail row links to the email page.
+- **TIME-225 (Jira TIME-2259) web Email review**: `/app/email` — email_content consent gate (GET/POST /consent), Scan for tasks (POST /email/scan), pending list with Add task (confirm)/Dismiss (reject); 403 (consent/premium) + 404 (not connected → link to Connections). Mirrors iOS EmailTasksView.
+
+web builds clean throughout. Follow-ups: a per-user "which integrations connected" status endpoint (web infers from the return param only); Outlook e2e; background email scan.
+
 ## 2026-07-14 — TIME-219..222: Home UX batch (color, swipe, tap-through, calendar→tasks)
 
 User punch-list on the iOS home screens.

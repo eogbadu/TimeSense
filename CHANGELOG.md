@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-17] TIME-223..225: The web app can now connect your integrations — a Connections page to link Google Calendar, Outlook, Gmail and Slack (OAuth now returns you to the web app, not just the phone), plus an Email‑tasks page to scan Gmail and approve the to‑dos it finds
 - [2026-07-14] TIME-222: Your calendar events now show up in the task list as editable tasks (with their time), so your whole day is in one place — synced automatically, no duplicates
 - [2026-07-14] TIME-221: Tapping the "Tasks" card on the Now screen jumps you to the Today task list
 - [2026-07-14] TIME-220: You can now swipe left/right to move between the bottom tabs, not just tap them
