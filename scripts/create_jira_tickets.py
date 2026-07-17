@@ -9781,6 +9781,23 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-235: Run migrations from the entrypoint, not preDeployCommand (fix Render)",
+        "labels": ["backend", "deployment", "infra"],
+        "description": doc(
+            h2("Goal"), p("The preDeploy `alembic upgrade head` connected to localhost — Render's preDeployCommand didn't have the fromDatabase DATABASE_URL. Run migrations from the container entrypoint (RUN_MIGRATIONS=1) instead, where the full runtime env is present."),
+            divider(), h2("Scope"), bullet_list([
+                "render.yaml: remove preDeployCommand from the api service; add RUN_MIGRATIONS=1 to its envVars",
+                "DEPLOY.md: reflect entrypoint-based migrations",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No app/entrypoint change (entrypoint already supports RUN_MIGRATIONS)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["render.yaml, docs/DEPLOY.md"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["api starts, runs migrations against the wired DB, then serves; deploy succeeds (user re-syncs)"]),
+            divider(), h2("Verification"), code_block("python -c \"import yaml; yaml.safe_load(open('render.yaml')); print('ok')\""),
+            divider(), h2("Dependencies"), p("TIME-228/233."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 
