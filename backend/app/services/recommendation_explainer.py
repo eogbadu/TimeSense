@@ -61,7 +61,10 @@ def _time_of_day(local_now: datetime) -> tuple[str, str]:
 
 
 async def _health(db: AsyncSession, user_id, now: datetime, tz_name: str):
-    """Latest sleep/wake for today → (wake_time_local_str, sleep_hours, energy_estimate) or None."""
+    """Energy signal for the Why screen. Prefer a sleep/wake sample for today; if there's none, fall
+    back to today's HealthKit activity (steps) so connecting Apple Health actually powers the signal
+    even for users who don't track sleep. Returns a dict {energy, wake, sleep_hours, steps, source}
+    or None when we have neither."""
     today = _local(now, tz_name).date()
     rows = (await db.execute(
         select(SleepWakeEvent)
@@ -69,24 +72,31 @@ async def _health(db: AsyncSession, user_id, now: datetime, tz_name: str):
         .order_by(SleepWakeEvent.wake_time.desc())
         .limit(1)
     )).scalars().all()
-    if not rows:
-        return None
-    ev = rows[0]
-    wake_local = _local(_utc(ev.wake_time), tz_name)
-    if wake_local.date() != today:
-        return None
-    sleep_hours = None
-    if ev.sleep_start is not None:
-        sleep_hours = round((_utc(ev.wake_time) - _utc(ev.sleep_start)).total_seconds() / 3600, 1)
-    if sleep_hours is None:
-        energy = "moderate"
-    elif sleep_hours >= 7.5:
-        energy = "high"
-    elif sleep_hours >= 6:
-        energy = "moderate"
-    else:
-        energy = "low"
-    return wake_local.strftime("%-I:%M %p"), sleep_hours, energy
+    if rows:
+        ev = rows[0]
+        wake_local = _local(_utc(ev.wake_time), tz_name)
+        if wake_local.date() == today:
+            sleep_hours = None
+            if ev.sleep_start is not None:
+                sleep_hours = round((_utc(ev.wake_time) - _utc(ev.sleep_start)).total_seconds() / 3600, 1)
+            if sleep_hours is None:
+                energy = "moderate"
+            elif sleep_hours >= 7.5:
+                energy = "high"
+            elif sleep_hours >= 6:
+                energy = "moderate"
+            else:
+                energy = "low"
+            return {"energy": energy, "wake": wake_local.strftime("%-I:%M %p"),
+                    "sleep_hours": sleep_hours, "steps": None, "source": "sleep"}
+
+    # No sleep sample today → use today's HealthKit activity (steps) if it synced.
+    from app.repositories.daily_activity_repository import DailyActivityRepository
+    activity = await DailyActivityRepository(db).get_for_day(user_id, today)
+    if activity is not None:
+        return {"energy": "moderate", "wake": None, "sleep_hours": None,
+                "steps": activity.steps, "source": "activity"}
+    return None
 
 
 async def _current_place(db: AsyncSession, user_id, now: datetime):
@@ -201,9 +211,13 @@ async def build_explanation(
         else:
             context_used.append("Location: you're out and about right now.")
     if health:
-        wake_str, sleep_hours, energy = health
-        slp = f" on {sleep_hours}h of sleep" if sleep_hours else ""
-        context_used.append(f"Energy: estimated {energy} (woke at {wake_str}{slp}).")
+        if health["source"] == "sleep":
+            slp = f" on {health['sleep_hours']}h of sleep" if health["sleep_hours"] else ""
+            context_used.append(f"Energy: estimated {health['energy']} (woke at {health['wake']}{slp}).")
+        else:
+            context_used.append(
+                f"Energy: estimated {health['energy']} (based on today's activity — {health['steps'] or 0:,} steps)."
+            )
     if est:
         context_used.append(
             f"Task: {_priority_label(best.priority).lower()} priority, ~{est} min — "
@@ -215,8 +229,7 @@ async def build_explanation(
     if est:
         factors.append({"name": "Time fit", "rating": "Strong" if fits else ("Partial" if est <= free_minutes * 1.5 else "Tight")})
     if health:
-        energy = health[2]
-        factors.append({"name": "Energy match", "rating": "Good" if energy in ("high", "moderate") else "Low"})
+        factors.append({"name": "Energy match", "rating": "Good" if health["energy"] in ("high", "moderate") else "Low"})
     if place is not None:
         factors.append({"name": "Location fit", "rating": "Good"})
     # Urgency from deadline
@@ -251,10 +264,13 @@ async def build_explanation(
         signals.append({"name": "Location", "detail": "No location signal connected yet.", "available": False})
     signals.append({"name": "Priority", "detail": f"This task is marked {_priority_label(best.priority).lower()} priority.", "available": True})
     if health:
-        energy = health[2]
-        signals.append({"name": "Energy", "detail": f"{energy.capitalize()} energy — suitable for focused work.", "available": True})
+        if health["source"] == "sleep":
+            detail = f"{health['energy'].capitalize()} energy — suitable for focused work."
+        else:
+            detail = f"{health['energy'].capitalize()} energy — based on today's activity ({health['steps'] or 0:,} steps)."
+        signals.append({"name": "Energy", "detail": detail, "available": True})
     else:
-        signals.append({"name": "Energy", "detail": "No sleep or wake signal connected yet.", "available": False})
+        signals.append({"name": "Energy", "detail": "No sleep or activity signal connected yet.", "available": False})
 
     # ---- Confidence: reflects the pick's real engine score (shared source with /now + recommendation) ----
     confidence = score_to_confidence(score)
