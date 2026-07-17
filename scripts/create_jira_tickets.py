@@ -9847,6 +9847,78 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-239: Swipe between tabs has no visual transition",
+        "labels": ["ios", "navigation", "polish"],
+        "description": doc(
+            h2("Goal"), p("Swiping between tabs cuts instantly with no motion; add a slide transition so the swipe feels like navigation."),
+            divider(), h2("Scope"), bullet_list(["MainTabView: animate the tab content on swipe (slide in the direction of travel), keeping the native tab bar and existing gesture"]),
+            divider(), h2("Non-Goals"), bullet_list(["No new tabs; tap behaviour unchanged"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/App/MainTabView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["A swipe slides the outgoing/incoming screen; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-220 (swipe)."), divider(), h2("Next Ticket"), p("TIME-240."),
+        ),
+    },
+    {
+        "summary": "TIME-240: Connections — show Disconnect after connecting",
+        "labels": ["ios", "web", "backend", "integrations"],
+        "description": doc(
+            h2("Goal"), p("After connecting a provider, the Connect button should become a Disconnect button so the user can remove the connection."),
+            divider(), h2("Scope"), bullet_list([
+                "Backend: a per-user connected-integrations status endpoint (which providers are active); ensure a disconnect endpoint exists for each (calendar/slack/notion/email)",
+                "iOS ConnectionsView + web connections page: reflect connected state from the status endpoint; swap Connect->Disconnect (calls the disconnect endpoint)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No revoking the token at the provider (just deactivate locally)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/api/v1/integrations.py (status), disconnect routes, ios ConnectionsView, web connections/page.tsx, tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Connected providers show Disconnect; tapping it deactivates + reverts to Connect; status endpoint returns active providers; suite green; builds clean"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest -q && cd .. && npm --prefix web run build"),
+            divider(), h2("Dependencies"), p("TIME-177/214/224 (connect)."), divider(), h2("Next Ticket"), p("TIME-241."),
+        ),
+    },
+    {
+        "summary": "TIME-241: Gmail 'Scan for tasks' gives no feedback and generates no tasks",
+        "labels": ["backend", "ios", "email", "bug"],
+        "description": doc(
+            h2("Goal"), p("Scanning Gmail returns nothing visible and creates no pending tasks. Surface the scan result (scanned/found counts) and fix why detection yields nothing."),
+            divider(), h2("Scope"), bullet_list([
+                "Investigate the scan path end-to-end (fetch -> detect -> pending) on the live flow; confirm Gmail is connected + email_content consent",
+                "iOS EmailTasksView: show scan feedback (e.g. 'Scanned N emails, found M') incl. the zero case",
+                "Fix any bug preventing detection/pending creation",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No background scan"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios EmailTasksView, backend email_service/gmail_source as needed, tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Scan shows a result count; a scannable email yields a pending task; iOS builds; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_email_scan.py -q"),
+            divider(), h2("Dependencies"), p("TIME-215/216/217 (email)."), divider(), h2("Next Ticket"), p("TIME-242."),
+        ),
+    },
+    {
+        "summary": "TIME-242: 'Why this' from Other Good Options mislabels the alternative as the recommended action",
+        "labels": ["ios", "recommendations", "bug"],
+        "description": doc(
+            h2("Goal"), p("Tapping an item in Other Good Options opens the Why sheet but shows that alternative as THE recommended action. The sheet should explain the tapped task correctly, not relabel it as the top pick."),
+            divider(), h2("Scope"), bullet_list(["Trace how the Why sheet gets its explanation for an alternative vs the main pick (NowView OptionRow -> fetchExplanation(taskId) -> /now/why); fix so recommended_action reflects the tapped task's real standing"]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to ranking"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios NowView / NowViewModel, backend now/why + build_explanation as needed"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Opening Why for an alternative shows that task's explanation without calling it the recommended pick; iOS builds; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_now.py -q"),
+            divider(), h2("Dependencies"), p("TIME-117/175 (explanation)."), divider(), h2("Next Ticket"), p("TIME-243."),
+        ),
+    },
+    {
+        "summary": "TIME-243: Why-sheet free-time reasoning is wrong (free before a past/earlier meeting)",
+        "labels": ["backend", "recommendations", "bug"],
+        "description": doc(
+            h2("Goal"), p("The explanation says e.g. '180 minutes free before your 11am meeting' for a 4pm appointment — it references the wrong (earlier/past) event and the math doesn't fit. Fix the free-time / next-event reasoning to use the correct upcoming event relative to now."),
+            divider(), h2("Scope"), bullet_list(["build_explanation free-and-next / calendar signal: pick the next event AFTER now (not a past one) and compute free time correctly for the recommended task"]),
+            divider(), h2("Non-Goals"), bullet_list(["No ranking change"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/services/recommendation_explainer.py, tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["The Calendar/free-time line references the correct upcoming event with sensible minutes; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_now.py -q"),
+            divider(), h2("Dependencies"), p("TIME-141 (real free time)."), divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 
