@@ -10032,7 +10032,37 @@ TICKETS = [
             divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Capture/CaptureView.swift", "ios/TimeSense/Features/Capture/CaptureViewModel.swift"]),
             divider(), h2("Acceptance Criteria"), bullet_list(["After a capture, the section shows the real detected time/priority/type/schedule-fit; with no capture it shows the capability tiles; graceful when a field is absent; iOS builds clean"]),
             divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
-            divider(), h2("Dependencies"), p("TIME-249 (capture screen)."), divider(), h2("Next Ticket"), p("(none)"),
+            divider(), h2("Dependencies"), p("TIME-249 (capture screen)."), divider(), h2("Next Ticket"), p("TIME-251."),
+        ),
+    },
+    {
+        "summary": "TIME-251: Pre-appointment push notifications (start + travel-aware departure)",
+        "labels": ["backend", "notifications", "celery", "feature"],
+        "description": doc(
+            h2("Goal"), p("Send a push before a scheduled appointment: 10 minutes before it starts, or — if it has a location — 10 minutes before the user needs to start driving there. Exactly one reminder per appointment: departure if travel is computable, otherwise start."),
+            divider(), h2("Scope"), bullet_list([
+                "Reuse the unused InternalReminder model as the reminder ledger (one row per task; trigger_at, delivered_at, status)",
+                "New Celery beat task (every ~2 min): producer creates pending reminders for upcoming timed appointments (Tasks with scheduled_start in the next 3h); consumer fires due pending rows via APNs and marks them delivered",
+                "Departure time = scheduled_start - drive_minutes - 10; drive_minutes from MapsSkillService (geocode the location, origin = current saved-place location else Home). Persist geocoded coords back onto the Task",
+                "Fall back to the 10-min-before-start reminder when there's no location or travel can't be computed",
+                "New InternalReminderRepository + AppointmentReminderService + reminder_tasks worker; wire include + beat_schedule",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No re-estimating travel closer to departure (compute once); no quiet-hours/push-consent (time-critical); no reschedule when an appointment's time later changes; no client change (uses existing push deep-link)",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend/app/repositories/internal_reminder_repository.py (new)",
+                "backend/app/services/appointment_reminder_service.py (new)",
+                "backend/app/workers/reminder_tasks.py (new)",
+                "backend/app/workers/celery_app.py (include + beat)",
+                "backend/app/repositories/task_repository.py (upcoming-appointments query)",
+                "backend/tests/test_appointment_reminders.py (new)",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "Non-located appt -> a start reminder at start-10; located appt with travel -> a departure reminder at start-travel-10; origin falls back to Home; exactly one send per appointment (idempotent); stale rows skipped; no device tokens -> no send; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_appointment_reminders.py -q && pytest -q"),
+            divider(), h2("Dependencies"), p("TIME-222 (calendar->task), push infra, maps skill."), divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
 ]
