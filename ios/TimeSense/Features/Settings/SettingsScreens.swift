@@ -1,3 +1,5 @@
+import AVFoundation
+import Speech
 import SwiftUI
 import UIKit
 
@@ -423,9 +425,39 @@ struct WorkingHoursSettingsView: View {
 
 // MARK: - Privacy & Consent
 
+/// Backs the "Connected signals" panel — the real on/off state per signal, from effective consents
+/// + OAuth integration status + the device mic permission (Location comes straight from
+/// LocationService, Calendar sync from CalendarSyncService).
+@MainActor
+final class ConnectedSignalsViewModel: ObservableObject {
+    @Published var consents: [String: Bool] = [:]
+    @Published var integrations: SignalsIntegrationsStatus?
+    @Published var micGranted = false
+
+    func load() async {
+        if let c: EffectiveConsentsDTO = try? await APIClient.shared.get("/api/v1/consent/") {
+            consents = c.consents
+        }
+        integrations = try? await APIClient.shared.get("/api/v1/integrations/status")
+        micGranted = AVAudioSession.sharedInstance().recordPermission == .granted
+    }
+}
+
+private struct EffectiveConsentsDTO: Decodable { let consents: [String: Bool] }
+
+struct SignalsIntegrationsStatus: Decodable {
+    let google: Bool
+    let microsoft: Bool
+    let gmail: Bool
+    let slack: Bool
+    let notion: Bool
+}
+
 struct PrivacyConsentView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var location = LocationService.shared
+    @ObservedObject private var calendarSync = CalendarSyncService.shared
+    @StateObject private var viewModel = ConnectedSignalsViewModel()
     @State private var showDeleteConfirm = false
     @State private var deleting = false
     @State private var showExportSoon = false
@@ -441,13 +473,29 @@ struct PrivacyConsentView: View {
         default: return ("Off", DesignTokens.Color.textSecondary)
         }
     }
+    private func signal(_ icon: String, _ color: Color, _ name: String, _ detail: String, on: Bool) -> Signal {
+        Signal(icon: icon, color: color, name: name, detail: detail,
+               status: on ? "On" : "Off", statusColor: on ? .green : DesignTokens.Color.textSecondary)
+    }
     private var signals: [Signal] {
-        [
-            Signal(icon: "calendar", color: .blue, name: "Calendar", detail: "See events and availability", status: "Off", statusColor: DesignTokens.Color.textSecondary),
-            Signal(icon: "heart.fill", color: .red, name: "Health / Wake Signals", detail: "Energy & routine estimation", status: "Off", statusColor: DesignTokens.Color.textSecondary),
-            Signal(icon: "location.fill", color: .blue, name: "Location", detail: "Commute & errand timing", status: locationStatus.0, statusColor: locationStatus.1),
-            Signal(icon: "mic.fill", color: DesignTokens.Color.accent, name: "Audio (Voice Capture)", detail: "Speech is processed securely", status: "Disabled", statusColor: DesignTokens.Color.textSecondary),
+        let c = viewModel.consents
+        let ig = viewModel.integrations
+        let calendarOn = (c["calendar_details"] ?? false)
+            || (ig?.google ?? false) || (ig?.microsoft ?? false)
+            || calendarSync.status == .connected
+        var rows: [Signal] = [
+            signal("calendar", .blue, "Calendar", "See events and availability", on: calendarOn),
+            signal("heart.fill", .red, "Apple Health", "Energy & routine estimation", on: c["health_data"] ?? false),
+            Signal(icon: "location.fill", color: .blue, name: "Location", detail: "Commute & errand timing",
+                   status: locationStatus.0, statusColor: locationStatus.1),
+            signal("mic.fill", DesignTokens.Color.accent, "Voice capture", "Use the mic to capture tasks", on: viewModel.micGranted),
+            signal("waveform", DesignTokens.Color.accent, "Raw audio storage", "Store raw audio — opt-in", on: c["audio_storage"] ?? false),
+            signal("envelope.fill", .orange, "Email", "Find tasks in recent email", on: (ig?.gmail ?? false) || (c["email_content"] ?? false)),
+            signal("chart.bar.fill", .purple, "Analytics", "Improve TimeSense (anonymous)", on: c["analytics"] ?? false),
         ]
+        if ig?.slack == true { rows.append(signal("message.fill", .purple, "Slack", "Turn messages into tasks", on: true)) }
+        if ig?.notion == true { rows.append(signal("doc.text.fill", .green, "Notion", "Pull to-dos from Notion", on: true)) }
+        return rows
     }
 
     var body: some View {
@@ -501,6 +549,7 @@ struct PrivacyConsentView: View {
         .background(DesignTokens.Color.background)
         .navigationTitle("Privacy & Consent")
         .navigationBarTitleDisplayMode(.inline)
+        .task { await viewModel.load() }
         .alert("Delete your account?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete everything", role: .destructive) { Task { await deleteAccount() } }
