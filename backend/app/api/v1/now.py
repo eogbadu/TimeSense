@@ -399,6 +399,7 @@ async def get_now_why(
     explanation = await build_explanation(
         db, user, target, alternatives, today_tasks, now, user_tz, gateway,
         score=scores.get(str(target.id), 0.0),
+        alt_scores=scores,
     )
 
     # Audit trail (best-effort — never block the response on it).
