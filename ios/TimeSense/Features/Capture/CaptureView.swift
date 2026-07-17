@@ -95,6 +95,7 @@ struct CaptureView: View {
                 viewModel.placeResults = []
             }
             .animation(DesignTokens.Animation.standard, value: selectedChip)
+            .animation(DesignTokens.Animation.standard, value: viewModel.lastCaptured?.id)
         }
     }
 
@@ -281,29 +282,79 @@ struct CaptureView: View {
         .opacity(captureText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1.0)
     }
 
+    // Idle → what TimeSense can pull out of natural language (onboarding). After a capture → what it
+    // actually detected from that input, so the value is shown, not just promised.
+    @ViewBuilder
     private var detectSection: some View {
+        if let task = viewModel.lastCaptured {
+            detectedSection(task)
+        } else {
+            capabilitySection
+        }
+    }
+
+    private var capabilitySection: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Text("TimeSense can detect")
                 .font(DesignTokens.Typography.headline)
                 .foregroundColor(DesignTokens.Color.textPrimary)
-            HStack(spacing: DesignTokens.Spacing.sm) {
+            HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
                 ForEach(detectors, id: \.label) { d in
-                    VStack(spacing: DesignTokens.Spacing.sm) {
-                        RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
-                            .fill(d.color.opacity(0.16))
-                            .frame(width: 48, height: 48)
-                            .overlay(Image(systemName: d.icon).font(.title3).foregroundColor(d.color))
-                        Text(d.label)
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundColor(DesignTokens.Color.textSecondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity)
+                    DetectTile(icon: d.icon, color: d.color, primary: d.label, secondary: nil)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, DesignTokens.Spacing.sm)
+    }
+
+    private func detectedSection(_ task: CapturedTask) -> some View {
+        let style = taskCategoryStyle(for: task.title)
+        let items: [(icon: String, label: String, value: String, color: Color)] = [
+            ("clock.fill", "Time", detectedTimeText(task), Cosmic.blue),
+            ("gauge.medium", "Priority", priorityText(task.priority), Cosmic.amber),
+            (style.icon, "Task type", style.descriptor, style.color),
+            ("checkmark.seal.fill", "Schedule fit", scheduleFitText(task), Cosmic.green),
+        ]
+        return VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Text("TimeSense detected")
+                .font(DesignTokens.Typography.headline)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+            HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
+                ForEach(items, id: \.label) { it in
+                    DetectTile(icon: it.icon, color: it.color, primary: it.value, secondary: it.label)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, DesignTokens.Spacing.sm)
+        .transition(.opacity)
+    }
+
+    private func priorityText(_ p: Int) -> String {
+        p <= 2 ? "High" : (p == 3 ? "Medium" : "Low")
+    }
+
+    private func detectedTimeText(_ task: CapturedTask) -> String {
+        if let start = task.scheduledStart { return Self.dayTime(start, showTimeAtMidnight: true) }
+        if let due = task.dueAt { return Self.dayTime(due, showTimeAtMidnight: false) }
+        return "Anytime"
+    }
+
+    private func scheduleFitText(_ task: CapturedTask) -> String {
+        (task.autoScheduled || task.scheduledStart != nil) ? "Added to your day" : "In your list"
+    }
+
+    /// "Today 2:00 PM" / "Tomorrow 9:00 AM" / "Aug 3". Date-only dues (midnight) drop the time.
+    private static func dayTime(_ date: Date, showTimeAtMidnight: Bool) -> String {
+        let cal = Calendar.current
+        let day: String
+        if cal.isDateInToday(date) { day = "Today" }
+        else if cal.isDateInTomorrow(date) { day = "Tomorrow" }
+        else { day = date.formatted(.dateTime.month(.abbreviated).day()) }
+        let isMidnight = cal.component(.hour, from: date) == 0 && cal.component(.minute, from: date) == 0
+        if isMidnight && !showTimeAtMidnight { return day }
+        return "\(day) \(date.formatted(date: .omitted, time: .shortened))"
     }
 
     @ViewBuilder
@@ -355,6 +406,37 @@ struct CaptureView: View {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             viewModel.reset()
         }
+    }
+}
+
+/// One tile in the detect row. With no `secondary` it's the idle capability label (e.g. "Priority");
+/// with a `secondary` it shows the detected value on top ("High") and the category below ("Priority").
+private struct DetectTile: View {
+    let icon: String
+    let color: Color
+    let primary: String
+    let secondary: String?
+
+    var body: some View {
+        VStack(spacing: DesignTokens.Spacing.sm) {
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                .fill(color.opacity(0.16))
+                .frame(width: 48, height: 48)
+                .overlay(Image(systemName: icon).font(.title3).foregroundColor(color))
+            Text(primary)
+                .font(DesignTokens.Typography.caption.weight(secondary == nil ? .regular : .semibold))
+                .foregroundColor(secondary == nil ? DesignTokens.Color.textSecondary : DesignTokens.Color.textPrimary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+            if let secondary {
+                Text(secondary)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

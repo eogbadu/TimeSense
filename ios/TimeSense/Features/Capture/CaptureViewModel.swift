@@ -1,17 +1,24 @@
 import Foundation
 
-struct CapturedTask: Decodable {
+struct CapturedTask: Decodable, Equatable {
     let id: String
     let title: String
     let status: String
+    let priority: Int
     let estimatedMinutes: Int?
+    let scheduledStart: Date?
+    let scheduledEnd: Date?
     let dueAt: Date?
+    let autoScheduled: Bool
     let source: String
 
     enum CodingKeys: String, CodingKey {
-        case id, title, status, source
+        case id, title, status, priority, source
         case estimatedMinutes = "estimated_minutes"
+        case scheduledStart = "scheduled_start"
+        case scheduledEnd = "scheduled_end"
         case dueAt = "due_at"
+        case autoScheduled = "auto_scheduled"
     }
 }
 
@@ -57,6 +64,9 @@ enum CaptureUiState: Equatable {
 @MainActor
 final class CaptureViewModel: ObservableObject {
     @Published var uiState: CaptureUiState = .idle
+    /// The most recent capture — drives the "TimeSense detected" results shown after a capture.
+    /// Cleared on reset, returning the section to its idle capability tiles.
+    @Published private(set) var lastCaptured: CapturedTask?
 
     private let api = APIClient.shared
 
@@ -88,6 +98,7 @@ final class CaptureViewModel: ObservableObject {
                     locationLng: location?.longitude
                 )
             )
+            lastCaptured = task
             uiState = .success(title: task.title)
         } catch let error as APIError {
             uiState = .error(error.localizedDescription ?? "Capture failed.")
@@ -98,5 +109,6 @@ final class CaptureViewModel: ObservableObject {
 
     func reset() {
         uiState = .idle
+        lastCaptured = nil
     }
 }

@@ -10012,7 +10012,27 @@ TICKETS = [
             divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Capture/CaptureView.swift"]),
             divider(), h2("Acceptance Criteria"), bullet_list(["Tapping outside the input lowers the keyboard and unfocuses the field; the field, chips, and buttons still work; iOS builds clean"]),
             divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
-            divider(), h2("Dependencies"), p("None."), divider(), h2("Next Ticket"), p("(none)"),
+            divider(), h2("Dependencies"), p("None."), divider(), h2("Next Ticket"), p("TIME-250."),
+        ),
+    },
+    {
+        "summary": "TIME-250: Capture — show what TimeSense actually detected after a capture",
+        "labels": ["ios", "capture", "ux"],
+        "description": doc(
+            h2("Goal"), p("The 'TimeSense can detect' tiles (Time/Priority/Task type/Schedule fit) at the bottom of Capture are a static capability poster. Turn that space into live feedback: after a capture, show what TimeSense actually detected (time, priority, task type, schedule fit) from the data the /capture response already returns. Keep the static tiles as the idle/onboarding state."),
+            divider(), h2("Scope"), bullet_list([
+                "CaptureViewModel: expand CapturedTask to decode priority, scheduled_start/end, auto_scheduled; expose the last captured task",
+                "CaptureView detectSection: idle -> the current capability tiles; after a capture -> a 'TimeSense detected' card with real values (Time from scheduled_start/due_at, Priority label, Task type via taskCategoryStyle, Schedule fit from auto_scheduled)",
+                "Reset back to the idle tiles when the success state clears",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No backend change (TaskResponse already returns these fields)",
+                "No change to the capture parse itself",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Capture/CaptureView.swift", "ios/TimeSense/Features/Capture/CaptureViewModel.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["After a capture, the section shows the real detected time/priority/type/schedule-fit; with no capture it shows the capability tiles; graceful when a field is absent; iOS builds clean"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("TIME-249 (capture screen)."), divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
 ]
