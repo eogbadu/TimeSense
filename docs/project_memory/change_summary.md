@@ -1,5 +1,12 @@
 # Change Summary
 
+## 2026-07-17 — TIME-248 (remove Now screen's static signal-chip row)
+
+- Removed the five hard-coded, non-tappable chips (Calendar/Routine/Location/Time/Tasks) near the top
+  of the Now screen — a false affordance that duplicated the live context cards + the Why sheet. Now:
+  analyzed banner → recommendation → context cards. iOS built. (Future option, not built: a live
+  tappable signal strip.)
+
 ## 2026-07-17 — TIME-244..247 (second on-device feedback batch)
 
 - (244) Gmail scan found nothing — broadened the query from `is:unread newer_than:7d category:primary`
