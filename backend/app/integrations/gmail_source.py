@@ -1,9 +1,9 @@
 """
 Gmail email source (read-only).
 
-Fetches recent unread Primary-category messages via the Gmail REST API using `format=metadata`, so
-only headers (Subject/From) + Gmail's short `snippet` come back — the message body is never
-requested or stored. Query mirrors "recent inbox, read-only": `is:unread newer_than:7d category:primary`.
+Fetches recent unread inbox messages via the Gmail REST API using `format=metadata`, so only headers
+(Subject/From) + Gmail's short `snippet` come back — the message body is never requested or stored.
+Query mirrors "recent inbox, read-only": `in:inbox is:unread newer_than:30d`.
 """
 from __future__ import annotations
 
@@ -15,8 +15,10 @@ from fastapi import HTTPException, status
 from app.integrations.email_source_base import EmailMessage, EmailSourceProvider
 
 GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me"
-# Recent, unread, Primary inbox — deliberately narrow (privacy + noise).
-_QUERY = "is:unread newer_than:7d category:primary"
+# Recent unread inbox mail. Scoped to the inbox and last 30 days (privacy + noise) but NOT to the
+# Primary tab — many users keep unread mail in other tabs, and category:primary silently matched
+# nothing for them (the "no recent unread emails" bug, TIME-244).
+_QUERY = "in:inbox is:unread newer_than:30d"
 
 
 class GmailEmailSource(EmailSourceProvider):
