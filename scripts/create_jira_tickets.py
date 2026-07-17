@@ -9764,6 +9764,23 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-234: Bind the server to $PORT (fix Render web-service deploy)",
+        "labels": ["backend", "deployment", "infra"],
+        "description": doc(
+            h2("Goal"), p("Render assigns web services a $PORT and requires the app to bind to it; the Dockerfile hardcoded :8000, so Render found no open port and failed the api deploy (the worker has no port, so it was fine)."),
+            divider(), h2("Scope"), bullet_list([
+                "Dockerfile CMD: gunicorn -b 0.0.0.0:${PORT:-8000} (honors Render's PORT; 8000 locally)",
+                "HEALTHCHECK curl uses ${PORT:-8000}",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No app code change; compose unaffected (no PORT set -> 8000)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/Dockerfile"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Server binds $PORT when set; Render api deploy succeeds (user re-syncs)"]),
+            divider(), h2("Verification"), code_block("# user: Manual sync -> api deploys; hit /api/v1/health"),
+            divider(), h2("Dependencies"), p("TIME-228 (Dockerfile)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 
