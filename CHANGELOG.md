@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-17] TIME-228..231: Deployment groundwork — the app is now deploy-ready on Render (production backend container with migrations-on-deploy, a web container, a documented prod env template, and a one-file render.yaml + DEPLOY.md guide)
 - [2026-07-17] TIME-226..227: You can now connect Notion (with a real sign-in flow, no more pasting a token) from both the web app and iPhone — pulling to-dos from a Notion database as tasks you approve
 - [2026-07-17] TIME-223..225: The web app can now connect your integrations — a Connections page to link Google Calendar, Outlook, Gmail and Slack (OAuth now returns you to the web app, not just the phone), plus an Email‑tasks page to scan Gmail and approve the to‑dos it finds
 - [2026-07-14] TIME-222: Your calendar events now show up in the task list as editable tasks (with their time), so your whole day is in one place — synced automatically, no duplicates

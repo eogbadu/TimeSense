@@ -1,5 +1,15 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-228..231: Deployment / productionization (Render), deploy-ready core
+
+Made the repo deploy-ready on Render (deploy-ready core scope; CI/CD + Redis rate limiter deferred). Docker/Render can't run in this session, so verification = review + pytest + npm build + YAML; the user runs the actual build/deploy.
+- **TIME-228 (Jira TIME-2262)**: backend container prod-grade — requirements add gunicorn 23; Dockerfile CMD → `gunicorn -k uvicorn.workers.UvicornWorker -w $WEB_CONCURRENCY`; install curl + non-root appuser + HEALTHCHECK; new entrypoint.sh runs `alembic upgrade head` when RUN_MIGRATIONS=1 then execs the server (compose backend sets RUN_MIGRATIONS=1; worker/beat don't). Suite 535.
+- **TIME-229 (Jira TIME-2263)**: web container — next.config `output:"standalone"`; web/Dockerfile (node:20-alpine multi-stage, non-root, runs .next/standalone/server.js; NEXT_PUBLIC_* are build args); web/.dockerignore. npm build emits standalone.
+- **TIME-230 (Jira TIME-2264)**: prod config — a "PRODUCTION — override these" block in .env.example listing every must-set var (APP_ENV=production, SECRET_KEY/TOKEN_ENCRYPTION_KEY, DB/Redis, CORS, Firebase, OpenAI, Stripe live, APNS_USE_SANDBOX=false, all OAuth *_REDIRECT_URI + OAUTH_WEB_* off localhost, Maps, Sentry); iOS APIClient Release URL documented (dropped the TODO).
+- **TIME-231 (Jira TIME-2265)**: render.yaml Blueprint (web + worker + beat + Postgres + Redis + optional Next web; secrets in a sync:false env group; migrations via preDeployCommand; DATABASE_URL needs the +asyncpg prefix, documented) + docs/DEPLOY.md (full walkthrough + user-owned checklist + Vercel-for-web alternative).
+
+User still owns: Render account, domain/TLS, secret values, prod OAuth redirect URIs, rotate the exposed Android API key, store/legal (docs/launch/release_checklist.md).
+
 ## 2026-07-17 — TIME-226..227: Notion connect (OAuth handshake + Connect UIs)
 
 Notion's page→task import already existed but the only "connect" was pasting a token. Added the OAuth handshake so users connect by consent.
