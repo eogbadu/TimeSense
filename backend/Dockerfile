@@ -36,9 +36,10 @@ EXPOSE 8000
 
 # Set RUN_MIGRATIONS=1 on the web role so it applies Alembic migrations on start (worker/beat leave it unset).
 ENV WEB_CONCURRENCY=2
+# Hosts (Render, etc.) inject $PORT and require the server to bind to it; falls back to 8000 locally.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health || exit 1
+    CMD curl -f "http://localhost:${PORT:-8000}/api/v1/health" || exit 1
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 # Production server: gunicorn managing uvicorn workers (graceful reloads, multi-worker).
-CMD ["sh", "-c", "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w ${WEB_CONCURRENCY:-2} -b 0.0.0.0:8000"]
+CMD ["sh", "-c", "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w ${WEB_CONCURRENCY:-2} -b 0.0.0.0:${PORT:-8000}"]
