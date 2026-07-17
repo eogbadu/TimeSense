@@ -12,6 +12,7 @@ const TABS = [
   { href: "/app/today", label: "Today" },
   { href: "/app/capture", label: "Capture" },
   { href: "/app/insights", label: "Insights" },
+  { href: "/app/connections", label: "Connections" },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
