@@ -17,6 +17,10 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-17] TIME-244: Gmail "Scan for tasks" now finds unread inbox mail across all tabs (broadened the query to `in:inbox is:unread newer_than:30d`)
+- [2026-07-17] TIME-245: The Disconnect button no longer wraps to two lines on long provider rows (e.g. Google Calendar)
+- [2026-07-17] TIME-246: The "Why this recommendation?" Energy signal now uses Apple Health activity (steps) when there's no sleep sample, so connecting Health actually powers it
+- [2026-07-17] TIME-247: On an alternative's Why sheet, the higher-ranked top pick is described as the stronger pick instead of "a slightly weaker fit"
 - [2026-07-17] TIME-239: Tabs now slide when you tap or swipe between them — the home shell is a horizontal pager with a custom bottom bar (a stock TabView showed no movement); all tabs keep their scroll/nav state
 - [2026-07-17] TIME-240: Connected apps now show a Disconnect button — new GET /integrations/status (per-user connected providers) + DELETE /email/disconnect; iOS + web load status on open and toggle Connect ↔ Disconnect
 - [2026-07-17] TIME-241: Scanning email for tasks now shows a result — "Scanned N emails · found M task(s)" (or none) on iOS + web

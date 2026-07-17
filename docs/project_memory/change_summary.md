@@ -1,5 +1,15 @@
 # Change Summary
 
+## 2026-07-17 — TIME-244..247 (second on-device feedback batch)
+
+- (244) Gmail scan found nothing — broadened the query from `is:unread newer_than:7d category:primary`
+  to `in:inbox is:unread newer_than:30d`; (245) the Disconnect button no longer wraps on long provider
+  rows (lineLimit/fixedSize); (246) the Why-sheet Energy signal now uses Apple Health *activity*
+  (steps) when there's no sleep sample, so connecting Health actually powers it; (247) an alternative's
+  Why sheet no longer calls the higher-ranked top pick "a slightly weaker fit" — reasons are now
+  score-aware ("Ranked higher overall").
+- Tests: email 15, explainer +3 (activity energy ×2, rank-aware alt ×1). iOS build clean.
+
 ## 2026-07-17 — TIME-239..243 (post-deploy UX + reasoning bug batch)
 
 - Five on-device fixes after the first Render deploy: (243) scheduled tasks are now explained by

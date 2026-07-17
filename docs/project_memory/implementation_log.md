@@ -1,5 +1,15 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-244..247: Second on-device feedback batch (Gmail, Disconnect, energy, alternatives)
+
+Four more device-verified fixes; all shipped and merged (PRs #267–#270; Jira TIME-2278..2281).
+- **TIME-244 (PR #267)**: Gmail scan reported "No recent unread emails to scan" despite unread inbox mail. The query `is:unread newer_than:7d category:primary` was too narrow — `category:primary` silently matched nothing for accounts whose unread mail sits in other tabs, and 7 days was tight. Broadened `gmail_source._QUERY` to `in:inbox is:unread newer_than:30d` (still read-only, format=metadata).
+- **TIME-245 (PR #268)**: the "Disconnect" button wrapped to two lines next to a long provider name (Google Calendar). `ConnectionsView` button gets `lineLimit(1)` + `fixedSize` + `layoutPriority(1)`; provider name capped to 1 line / subtitle to 2 so the text column yields space.
+- **TIME-246 (PR #269)**: the Why-sheet **Energy** signal only read a today sleep/wake sample, so connecting Apple Health did nothing unless the user tracked sleep ("No sleep or wake signal connected yet"). The engine's context_builder already falls back to DailyActivity; the explainer's separate `_health` now mirrors it — no sleep sample → today's HealthKit activity (steps) → moderate-energy estimate; signal/context/factor wording reflects "based on today's activity (N steps)". `_health` now returns a dict {energy, wake, sleep_hours, steps, source}; +2 tests.
+- **TIME-247 (PR #270)**: on an alternative's Why sheet the real top pick appeared under "alternatives considered" mislabelled as "a slightly weaker fit" (the reason logic only compared against `best`, which isn't always the top pick). `build_explanation` now takes per-task `alt_scores`; an alternative that outscored the explained task → "Ranked higher overall — the stronger pick right now"; priority reason reworded to "than this task". `/now/why` passes the score map; +1 test.
+
+Verified: backend `pytest` (email 15, explainer 4→5, now suite — all green), iOS `xcodebuild` BUILD SUCCEEDED 0 errors (245).
+
 ## 2026-07-17 — TIME-239..243: Post-deploy UX + reasoning bug batch (device-verified feedback)
 
 After the first successful Render deploy the user tested on-device and filed five fixes; all shipped and merged (PRs #261–#265).
