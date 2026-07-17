@@ -109,9 +109,11 @@ private struct ConnectRow: View {
                 Text(provider.name)
                     .font(DesignTokens.Typography.headline)
                     .foregroundColor(DesignTokens.Color.textPrimary)
+                    .lineLimit(1)
                 Text(state.subtitle ?? provider.blurb)
                     .font(DesignTokens.Typography.footnote)
                     .foregroundColor(state.isError ? .red : DesignTokens.Color.textSecondary)
+                    .lineLimit(2)
             }
             Spacer(minLength: DesignTokens.Spacing.sm)
 
@@ -131,10 +133,13 @@ private struct ConnectRow: View {
                 Text("Disconnect")
                     .font(DesignTokens.Typography.subheadline.weight(.semibold))
                     .foregroundColor(provider.tint)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 16)
                     .background(Capsule().stroke(provider.tint.opacity(0.6), lineWidth: 1.5))
             }
+            .layoutPriority(1)
         default:
             Button(action: onConnect) {
                 Text("Connect")
