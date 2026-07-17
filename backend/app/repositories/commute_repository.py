@@ -71,3 +71,18 @@ class CommuteRepository:
             )
         )
         return result.scalar_one()
+
+    async def sum_confirmed_minutes_in_range(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> int:
+        """Total estimated minutes across confirmed commutes in the window (drives the driving/commute
+        behavioral pattern). 0 when there are none."""
+        result = await self.db.execute(
+            select(func.coalesce(func.sum(CommuteEvent.estimated_minutes), 0)).where(
+                CommuteEvent.user_id == user_id,
+                CommuteEvent.status == "confirmed",
+                CommuteEvent.detected_start >= start,
+                CommuteEvent.detected_start < end,
+            )
+        )
+        return int(result.scalar_one() or 0)
