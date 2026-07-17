@@ -46,6 +46,18 @@ URIs and different scopes.
    MICROSOFT_CLIENT_SECRET=...
    ```
 
+## Notion
+
+1. **notion.so/my-integrations** → create a **Public** integration (public is what enables OAuth;
+   an *internal* integration only gives a paste-in token).
+2. **Redirect URI**: `http://localhost:8000/api/v1/integrations/notion/callback` (or your https/tunnel
+   URL). Notion's token endpoint uses HTTP Basic auth and the token doesn't expire.
+3. `.env`:
+   ```
+   NOTION_CLIENT_ID=...
+   NOTION_CLIENT_SECRET=...
+   ```
+
 ## Slack
 
 1. **api.slack.com** → create an app → **OAuth & Permissions**.

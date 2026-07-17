@@ -1,5 +1,12 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-226..227: Notion connect (OAuth handshake + Connect UIs)
+
+Notion's page→task import already existed but the only "connect" was pasting a token. Added the OAuth handshake so users connect by consent.
+- **TIME-226 (Jira TIME-2260)**: `notion_oauth.py` (mirrors slack_oauth — build_authorize_url / exchange_code via Notion's Basic-auth token endpoint, non-expiring token / is_configured; NotionTokenResult{access_token, workspace_id}); config `notion_redirect_uri`; `/integrations/notion/{authorize,callback}` (premium authorize, platform-aware callback storing via NotionService.connect). Suite 535 (+4).
+- **TIME-227 (Jira TIME-2261)**: Notion row on the web Connections page + iOS ConnectionsView (generic /integrations/{provider}/authorize flow). web + iOS build clean.
+- Also: added a Notion section to docs/integrations_setup.md and NOTION_REDIRECT_URI to .env.example (needs a **Public** Notion integration for OAuth). Follow-up: a Notion import-review UI (like the email one).
+
 ## 2026-07-17 — TIME-223..225: Web companion — Connections + Email-tasks review
 
 Brought the integration work to the web companion (web is companion-only, but OAuth is easiest in a browser).
