@@ -1,5 +1,10 @@
 # Change Summary
 
+## 2026-07-17 — TIME-249 (Capture: tap outside to dismiss keyboard)
+
+- Tapping outside the Capture text field now lowers the keyboard and unfocuses the field
+  (contentShape + onTapGesture on the scroll content); controls still work. iOS built.
+
 ## 2026-07-17 — TIME-248 (remove Now screen's static signal-chip row)
 
 - Removed the five hard-coded, non-tappable chips (Calendar/Routine/Location/Time/Tasks) near the top

@@ -1,5 +1,13 @@
 # Implementation Log
 
+## 2026-07-17 — TIME-249: Capture — tap outside the input dismisses the keyboard
+
+Tapping the Capture text field raised the keyboard but tapping outside didn't lower it (only the
+existing swipe-to-dismiss + keyboard "Done" button did). Added `.contentShape(Rectangle())` +
+`.onTapGesture { isInputFocused = false }` on the Capture scroll content (`CaptureView`). Child
+controls (field, chips, buttons, errand field) handle their own taps first, so only empty-space taps
+dismiss. Jira TIME-2283; PR #275; iOS BUILD SUCCEEDED.
+
 ## 2026-07-17 — TIME-248: Remove the non-functional signal-chip row from the Now screen
 
 Discussed in plan mode (user asked for the industry-standard/user-friendly call). The row of five
