@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-17] TIME-249: On the Capture screen, tapping outside the input now dismisses the keyboard and deactivates the field
 - [2026-07-17] TIME-248: Removed the non-functional signal-chip row (Calendar/Routine/Location/Time/Tasks) from the top of the Now screen — it looked tappable but did nothing and duplicated the live context cards + the "Why This Recommendation?" sheet
 - [2026-07-17] TIME-244: Gmail "Scan for tasks" now finds unread inbox mail across all tabs (broadened the query to `in:inbox is:unread newer_than:30d`)
 - [2026-07-17] TIME-245: The Disconnect button no longer wraps to two lines on long provider rows (e.g. Google Calendar)
