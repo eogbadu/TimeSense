@@ -13,6 +13,21 @@ class DailyActivityRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
+    async def list_in_range(
+        self, user_id: uuid.UUID, start: date, end: date
+    ) -> list[DailyActivity]:
+        """All activity rows in [start, end], oldest first — powers the Insights daily charts."""
+        result = await self.db.execute(
+            select(DailyActivity)
+            .where(
+                DailyActivity.user_id == user_id,
+                DailyActivity.day >= start,
+                DailyActivity.day <= end,
+            )
+            .order_by(DailyActivity.day)
+        )
+        return list(result.scalars().all())
+
     async def get_for_day(self, user_id: uuid.UUID, day: date) -> DailyActivity | None:
         result = await self.db.execute(
             select(DailyActivity).where(
