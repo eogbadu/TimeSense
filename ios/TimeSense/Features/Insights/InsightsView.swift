@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 
 struct InsightsView: View {
@@ -45,6 +46,12 @@ struct InsightsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
                     InsightsSummarySection(insight: insight)
+                    TrendChartsSection(trends: viewModel.trends)
+                    ActivityChartsSection(
+                        activity: viewModel.activity,
+                        workouts: viewModel.workouts,
+                        hourly: viewModel.hourly
+                    )
                     if !viewModel.patterns.isEmpty {
                         PatternsSection(patterns: viewModel.patterns)
                     }
@@ -54,6 +61,228 @@ struct InsightsView: View {
                 .padding(.bottom, 96)   // clear the custom tab bar (content can scroll under it in the pager)
             }
         }
+    }
+}
+
+// MARK: - Charts (TIME-274)
+
+/// A titled card wrapping a single chart, matching the surrounding card language.
+private struct ChartCard<Content: View>: View {
+    let title: String
+    var caption: String? = nil
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+            Text(title)
+                .font(DesignTokens.Typography.headline)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+            if let caption {
+                Text(caption)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+            }
+            content()
+                .frame(height: 150)
+                .padding(.top, DesignTokens.Spacing.xs)
+        }
+        .padding(DesignTokens.Spacing.md)
+        .cardStyle()
+    }
+}
+
+/// Weekly trend charts from the insight history: completion rate, tasks, and how you're reacting
+/// to recommendations (acceptance + confidence).
+private struct TrendChartsSection: View {
+    let trends: [WeeklyTrendPoint]
+
+    private var hasCompletion: Bool { trends.filter { $0.completionPct != nil }.count >= 2 }
+    private var hasTasks: Bool { trends.contains { $0.tasksTotal > 0 } }
+    private var hasReactions: Bool {
+        trends.filter { $0.acceptancePct != nil || $0.confidencePct != nil }.count >= 2
+    }
+
+    var body: some View {
+        if trends.count >= 2 && (hasCompletion || hasTasks || hasReactions) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                Text("WEEKLY TRENDS").sectionHeaderStyle()
+                VStack(spacing: DesignTokens.Spacing.md) {
+                    if hasCompletion { completionCard }
+                    if hasTasks { tasksCard }
+                    if hasReactions { reactionsCard }
+                }
+            }
+        }
+    }
+
+    private var completionCard: some View {
+        ChartCard(title: "Completion rate", caption: "Share of each week's tasks you finished") {
+            Chart(trends) { pt in
+                if let v = pt.completionPct {
+                    AreaMark(x: .value("Week", pt.weekStart, unit: .weekOfYear), y: .value("Rate", v))
+                        .foregroundStyle(LinearGradient(colors: [Cosmic.blue.opacity(0.28), Cosmic.blue.opacity(0.02)],
+                                                        startPoint: .top, endPoint: .bottom))
+                        .interpolationMethod(.catmullRom)
+                    LineMark(x: .value("Week", pt.weekStart, unit: .weekOfYear), y: .value("Rate", v))
+                        .foregroundStyle(Cosmic.blue)
+                        .interpolationMethod(.catmullRom)
+                        .symbol(Circle().strokeBorder(lineWidth: 2))
+                }
+            }
+            .chartYScale(domain: 0...100)
+            .chartYAxis { percentAxis() }
+            .chartXAxis { weekAxis() }
+        }
+    }
+
+    private var tasksCard: some View {
+        ChartCard(title: "Tasks completed", caption: "Bars = completed · dashed line = total") {
+            Chart(trends) { pt in
+                BarMark(x: .value("Week", pt.weekStart, unit: .weekOfYear), y: .value("Completed", pt.tasksCompleted))
+                    .foregroundStyle(Cosmic.green.gradient)
+                    .cornerRadius(3)
+                LineMark(x: .value("Week", pt.weekStart, unit: .weekOfYear), y: .value("Total", pt.tasksTotal))
+                    .foregroundStyle(Cosmic.violet)
+                    .lineStyle(StrokeStyle(lineWidth: 2, dash: [4, 3]))
+                    .symbol(Circle())
+            }
+            .chartXAxis { weekAxis() }
+        }
+    }
+
+    private var reactionsCard: some View {
+        ChartCard(title: "How you're reacting", caption: "Recommendations you accepted vs. our confidence") {
+            Chart {
+                ForEach(trends) { pt in
+                    if let a = pt.acceptancePct {
+                        LineMark(x: .value("Week", pt.weekStart, unit: .weekOfYear),
+                                 y: .value("Percent", a), series: .value("Metric", "Accepted"))
+                            .foregroundStyle(by: .value("Metric", "Accepted"))
+                            .interpolationMethod(.catmullRom)
+                    }
+                }
+                ForEach(trends) { pt in
+                    if let c = pt.confidencePct {
+                        LineMark(x: .value("Week", pt.weekStart, unit: .weekOfYear),
+                                 y: .value("Percent", c), series: .value("Metric", "Confidence"))
+                            .foregroundStyle(by: .value("Metric", "Confidence"))
+                            .interpolationMethod(.catmullRom)
+                    }
+                }
+            }
+            .chartForegroundStyleScale(["Accepted": Cosmic.blue, "Confidence": Cosmic.amber])
+            .chartYScale(domain: 0...100)
+            .chartYAxis { percentAxis() }
+            .chartXAxis { weekAxis() }
+            .chartLegend(position: .top, alignment: .leading)
+        }
+    }
+}
+
+/// Apple Health charts: daily steps, weekly running mileage, and a sit-vs-move hourly profile.
+private struct ActivityChartsSection: View {
+    let activity: [DailyActivityPoint]
+    let workouts: [WeeklyWorkoutPoint]
+    let hourly: [HourlyStepsPoint]
+
+    private static let sitThreshold = 200   // an hour under this many steps reads as "sitting"
+
+    private var hasSteps: Bool { activity.filter { $0.steps > 0 }.count >= 2 }
+    private var hasMiles: Bool { workouts.contains { $0.runningMiles > 0 } }
+    private var hasHourly: Bool { hourly.contains { $0.avgSteps > 0 } }
+
+    var body: some View {
+        if hasSteps || hasMiles || hasHourly {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                Text("ACTIVITY").sectionHeaderStyle()
+                VStack(spacing: DesignTokens.Spacing.md) {
+                    if hasSteps { stepsCard }
+                    if hasMiles { milesCard }
+                    if hasHourly { hourlyCard }
+                }
+            }
+        }
+    }
+
+    private var stepsCard: some View {
+        ChartCard(title: "Daily steps", caption: "Last 30 days") {
+            Chart(activity) { pt in
+                AreaMark(x: .value("Day", pt.date, unit: .day), y: .value("Steps", pt.steps))
+                    .foregroundStyle(LinearGradient(colors: [Cosmic.cyan.opacity(0.28), Cosmic.cyan.opacity(0.02)],
+                                                    startPoint: .top, endPoint: .bottom))
+                    .interpolationMethod(.catmullRom)
+                LineMark(x: .value("Day", pt.date, unit: .day), y: .value("Steps", pt.steps))
+                    .foregroundStyle(Cosmic.cyan)
+                    .interpolationMethod(.catmullRom)
+            }
+            .chartXAxis { dayAxis() }
+        }
+    }
+
+    private var milesCard: some View {
+        ChartCard(title: "Running", caption: "Miles per week") {
+            Chart(workouts) { pt in
+                BarMark(x: .value("Week", pt.date, unit: .weekOfYear), y: .value("Miles", pt.runningMiles))
+                    .foregroundStyle(Cosmic.green.gradient)
+                    .cornerRadius(3)
+            }
+            .chartXAxis { weekAxis() }
+        }
+    }
+
+    private var hourlyCard: some View {
+        ChartCard(title: "Sit vs. move", caption: "Typical steps by hour · amber = sitting") {
+            Chart(hourly) { pt in
+                BarMark(x: .value("Hour", pt.hour), y: .value("Steps", pt.avgSteps))
+                    .foregroundStyle((pt.avgSteps < Self.sitThreshold ? Cosmic.amber : Cosmic.green).gradient)
+                    .cornerRadius(2)
+            }
+            .chartXScale(domain: -0.5...23.5)
+            .chartXAxis {
+                AxisMarks(values: [0, 6, 12, 18]) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let h = value.as(Int.self) { Text(Self.hourLabel(h)) }
+                    }
+                }
+            }
+        }
+    }
+
+    private static func hourLabel(_ h: Int) -> String {
+        switch h {
+        case 0: return "12a"
+        case 12: return "12p"
+        case let x where x < 12: return "\(x)a"
+        default: return "\(h - 12)p"
+        }
+    }
+}
+
+// Shared axis builders — kept free functions so both chart sections use the same look.
+@AxisContentBuilder
+private func percentAxis() -> some AxisContent {
+    AxisMarks(values: [0, 50, 100]) { value in
+        AxisGridLine()
+        AxisValueLabel {
+            if let i = value.as(Int.self) { Text("\(i)%") }
+        }
+    }
+}
+
+@AxisContentBuilder
+private func weekAxis() -> some AxisContent {
+    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+        AxisGridLine()
+        AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+    }
+}
+
+@AxisContentBuilder
+private func dayAxis() -> some AxisContent {
+    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+        AxisGridLine()
+        AxisValueLabel(format: .dateTime.month(.abbreviated).day())
     }
 }
 
