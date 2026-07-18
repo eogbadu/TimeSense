@@ -52,7 +52,7 @@ struct CaptureView: View {
                     detectSection
                 }
                 .padding(.horizontal, DesignTokens.Spacing.lg)
-                .padding(.bottom, DesignTokens.Spacing.xxl)
+                .padding(.bottom, 96)   // clear the custom tab bar (content can scroll under it in the pager)
                 // Tap anywhere outside the input (empty space) to dismiss the keyboard. The field,
                 // chips, and buttons handle their own taps first, so only empty-space taps land here.
                 .contentShape(Rectangle())

@@ -102,7 +102,7 @@ struct NowView: View {
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
             .padding(.top, DesignTokens.Spacing.sm)
-            .padding(.bottom, DesignTokens.Spacing.xxl)
+            .padding(.bottom, 96)   // clear the custom tab bar (content can scroll under it in the pager)
         }
         .refreshable { await viewModel.load() }
     }
