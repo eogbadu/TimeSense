@@ -65,9 +65,6 @@ struct CaptureView: View {
             .navigationTitle("Capture")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Image(systemName: "sparkles").foregroundColor(DesignTokens.Color.accent)
-                }
                 // A clear way to dismiss the keyboard so the Capture button + tab bar are reachable.
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()

@@ -92,7 +92,7 @@ private struct TabBar: View {
 
     private struct Item { let tab: AppState.Tab; let title: String; let icon: String }
     private let items: [Item] = [
-        .init(tab: .now, title: "Now", icon: "sparkles"),
+        .init(tab: .now, title: "Now", icon: "target"),
         .init(tab: .today, title: "Today", icon: "calendar"),
         .init(tab: .capture, title: "Capture", icon: "plus.circle.fill"),
         .init(tab: .insights, title: "Insights", icon: "chart.bar.fill"),

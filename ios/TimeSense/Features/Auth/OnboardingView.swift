@@ -14,7 +14,7 @@ struct OnboardingView: View {
                 Spacer()
 
                 VStack(spacing: DesignTokens.Spacing.md) {
-                    Image(systemName: "sparkles")
+                    Image(systemName: "calendar.badge.clock")
                         .font(.system(size: 64))
                         .foregroundColor(DesignTokens.Color.accent)
 

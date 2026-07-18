@@ -132,7 +132,7 @@ struct SubscriptionSettingsView: View {
                         .foregroundColor(.white)
                     ForEach(premiumFeatures, id: \.self) { f in
                         HStack(spacing: DesignTokens.Spacing.md) {
-                            Image(systemName: "sparkles").foregroundColor(.yellow).font(.footnote)
+                            Image(systemName: "checkmark.seal.fill").foregroundColor(.yellow).font(.footnote)
                             Text(f).font(DesignTokens.Typography.callout).foregroundColor(.white)
                             Spacer(minLength: 0)
                         }
