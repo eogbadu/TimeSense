@@ -194,6 +194,23 @@ Hand-written Alembic migrations must include server_default=now() on created_at/
 - Verification: `npx @devcontainers/cli up --workspace-folder .` then confirmed inside the container: DNS resolves, `https://example.com` is blocked, `https://api.github.com/zen` and `https://api.stripe.com` succeed, `claude --version` works, Postgres/Redis reachable.
 - Follow-up needed: None currently. If the `claude-code` feature is ever bumped or the Dockerfile base image changes, re-verify the firewall still runs cleanly (rebuild with `docker compose -p timesense_devcontainer -f .devcontainer/docker-compose.yml build --no-cache devcontainer`).
 
+## Issue: Calendar/Notion Smart-Plan integration — remaining follow-ups (TIME-275..278)
+- Date: 2026-07-18
+- Area: Smart Plan / calendar / recommendations
+- Symptom: After TIME-275..278, three known gaps remain (non-blocking).
+- Details:
+  1. **Calendar tasks still recommendable as "do now."** The legacy import still creates
+     `source="calendar"` tasks (kept for web/Android compatibility), and `candidate_gather` has no
+     source filter, so the Now screen could surface a meeting as the best next action (pre-existing
+     "G7"). Natural fix: exclude `source="calendar"` from `candidate_gather` candidates.
+  2. **Web/Android still show meetings as imported task rows**, not read-only blocks — only iOS moved
+     to the unified `GET /timeline/today/plan`. Bringing web/Android onto it (or a shared plan
+     endpoint) is a follow-up.
+  3. **OAuth-calendar sync (TIME-277) is unverified end-to-end** — it's covered by stubbed-provider
+     tests; the Celery beat job + token refresh need live Google/Outlook credentials and a running
+     worker to confirm in production.
+- Follow-up needed: (1) is the highest-value quick win; (2)/(3) are larger/ops-dependent.
+
 ## Format
 
 ```

@@ -1,5 +1,20 @@
 # Change Summary
 
+## 2026-07-18 — TIME-275..278 (Calendar + Notion/email → Smart Plan)
+
+- Your calendar and imported items now genuinely drive the plan. Calendar meetings block time
+  (usable-time no longer overstates free time; a new capture won't land on top of a meeting) (275) and
+  are woven into the Smart Plan as read-only blocks the plan schedules around — no more double-shown
+  "On your calendar" card, no meetings masquerading as checkable to-dos (276, iOS).
+- Google/Outlook calendars connected in-app (OAuth) now sync into the same store as device calendars,
+  so they show up in the plan, usable-time, capture, and recommendations — via a periodic job + an
+  on-demand sync, with token refresh (277).
+- Imported Notion items and confirmed email tasks are auto-scheduled like a capture: estimated in
+  length and placed into an open slot around your meetings, instead of piling up untimed (278).
+- Non-regressing: web/Android and the widgets keep the existing tasks-only timeline; only iOS moved to
+  the unified read-only-block plan. Tests added across usable-time, timeline, OAuth sync, and
+  auto-schedule; iOS builds.
+
 ## 2026-07-18 — TIME-265..274 (Now/Why/Insights 8-item device-feedback batch)
 
 - Now/Why fixes: calendar signal now names the real next commitment (due_at-only tasks included, local

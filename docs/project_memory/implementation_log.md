@@ -1,5 +1,42 @@
 # Implementation Log
 
+## 2026-07-18 — TIME-275..278: Calendar + Notion/email → Smart Plan integration
+
+User report: "items in your calendars, notion, etc need to be integrated into the smart plan." An
+Explore-agent investigation corrected the scope — device/Apple calendars were already imported as
+tasks (but double-shown), OAuth Google/Outlook calendars weren't integrated at all, and Notion/email
+tasks landed untimed. User chose (AskUserQuestion): weave calendar events in as **read-only blocks** +
+block time; **auto-schedule** Notion/email like captures. Four tickets (Jira TIME-2309..2312, PRs
+#309-312).
+
+- **TIME-275 (PR #309) — calendar meetings block usable time + capture auto-placement**:
+  `UsableTimeService.calculate` gained an `events` arg — timed (non-all-day) `SyncedCalendarEvent`s are
+  busy blocks, merged with task blocks (no double-count with an imported meeting). `candidate_gather`
+  (`/now` + push) and `RecommendationService.recommend` (`/recommendations`) fetch + pass today's synced
+  events; capture auto-placement adds them to the busy list before `find_slot`.
+- **TIME-276 (PR #310) — weave calendar into the Smart Plan as read-only blocks**: new
+  `GET /timeline/today/plan` → ordered `TimelineEntry` list (`kind=task|event`): actionable tasks +
+  read-only timed synced events; excludes legacy `source="calendar"` tasks (shown as events → no
+  double-listing). iOS Today renders one unified Smart Plan (`CalendarBlockRow` for meetings), dropped
+  the separate "On your calendar" card, widget next-event considers tasks+meetings. The old
+  `GET /timeline/today` (tasks-only) + `/calendar/import` were left **unchanged** so web/Android/widgets
+  don't regress.
+- **TIME-277 (PR #311) — sync OAuth Google/Outlook calendars into the plan**: new
+  `CalendarEventSyncService.sync_all()/sync_user()` fetches each active integration's events, refreshes
+  the token once on 401 (`refresh_access_token` added to `google_oauth`/`microsoft_oauth`), upserts into
+  `SyncedCalendarEvent` under a per-provider source via `replace_for_source` (idempotent, all-day
+  skipped). Providers now report `all_day`. Celery beat `timesense.sync_oauth_calendars` every 30 min +
+  on-demand `POST /calendar/oauth/sync`. `CalendarIntegrationRepository.list_all_active`/
+  `list_active_for_user`.
+- **TIME-278 (PR #312) — auto-schedule Notion/email imports**: new shared `autoschedule_task` helper
+  (estimate duration if missing → `find_slot` around tasks + meetings, else leave untimed) called by
+  `NotionService.import_item` and `EmailService.confirm`.
+
+Tests: usable-time +4, timeline +1, calendar_oauth_sync +4, task_autoschedule +5; broader suites green
+(calendar 52; capture/now/rec 64); iOS BUILD SUCCEEDED. Follow-ups: exclude `source="calendar"` from
+recommendation candidates (G7); bring web/Android to the read-only-block plan; verify OAuth sync +
+beat e2e with live creds/worker.
+
 ## 2026-07-18 — TIME-265..274: Now/Why/Insights 8-item device-feedback batch
 
 On-device feedback surfaced 8 issues across Now, the "Why this recommendation?" sheet, and Insights.
