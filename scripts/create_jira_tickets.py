@@ -10163,7 +10163,39 @@ TICKETS = [
             divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Settings/SettingsScreens.swift (PrivacyConsentView)"]),
             divider(), h2("Acceptance Criteria"), bullet_list(["Each signal reflects real on/off; audio split into voice-capture + raw-audio-storage; Email/Analytics shown; iOS builds"]),
             divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
-            divider(), h2("Dependencies"), p("TIME-256 (consent writes)."), divider(), h2("Next Ticket"), p("(none)"),
+            divider(), h2("Dependencies"), p("TIME-256 (consent writes)."), divider(), h2("Next Ticket"), p("TIME-258."),
+        ),
+    },
+    {
+        "summary": "TIME-258: Capture — keep the 'detected' results on screen long enough to read",
+        "labels": ["ios", "capture", "ux", "bug"],
+        "description": doc(
+            h2("Goal"), p("After a capture, the 'TimeSense detected' card reverts to the capability tiles after only ~3s — and that 3s overlaps the keyboard animating down over the bottom-of-screen card, so the user barely sees it. Keep the results visible until they start the next capture."),
+            divider(), h2("Scope"), bullet_list([
+                "CaptureView.submitCapture: drop the 3s sleep + reset; keep the detected results shown after success",
+                "Clear them (viewModel.reset) when the user starts typing a new capture (onChange captureText -> non-empty)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to what's detected"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Capture/CaptureView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Detected results stay visible after capture until the next input; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("TIME-250 (detected results)."), divider(), h2("Next Ticket"), p("TIME-259."),
+        ),
+    },
+    {
+        "summary": "TIME-259: Declare APNs credentials in render.yaml so push can be enabled in prod",
+        "labels": ["backend", "deploy", "push", "bug"],
+        "description": doc(
+            h2("Goal"), p("No push fires in prod (appointment reminders included) because render.yaml never declares APNS_KEY_ID / APNS_TEAM_ID / APNS_PRIVATE_KEY, so the backend falls back to NullPushSender. Declare them (sync:false) so the values can be set in the Render dashboard; document the Apple APNs Auth Key setup."),
+            divider(), h2("Scope"), bullet_list([
+                "render.yaml timesense-secrets: add APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY (sync:false) alongside APNS_USE_SANDBOX",
+                "DEPLOY.md / release checklist: note the Apple APNs Auth Key (.p8), Key ID, Team ID, and that the user sets them in Render",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No code change to the sender (already correct); user still must create the Apple key + grant device notification permission"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["render.yaml", "docs/DEPLOY.md"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["render.yaml declares the 3 APNS secrets; DEPLOY.md documents the setup; YAML valid"]),
+            divider(), h2("Verification"), code_block("python -c \"import yaml; yaml.safe_load(open('render.yaml'))\""),
+            divider(), h2("Dependencies"), p("TIME-251 (reminders), deploy track."), divider(), h2("Next Ticket"), p("TIME-260 (light mode) — separate."),
         ),
     },
 ]
