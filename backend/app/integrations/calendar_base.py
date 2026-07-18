@@ -18,6 +18,7 @@ class CalendarEvent:
     description: str | None = None
     event_id: str | None = None  # set by provider after creation
     provider: str = ""
+    all_day: bool = False
 
 
 @dataclass

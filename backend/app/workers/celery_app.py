@@ -13,6 +13,7 @@ celery_app = Celery(
         "app.workers.insights_tasks",
         "app.workers.push_tasks",
         "app.workers.reminder_tasks",
+        "app.workers.calendar_sync_tasks",
     ],
 )
 
@@ -50,6 +51,10 @@ celery_app.conf.update(
         "generate-weekly-insights": {
             "task": "timesense.generate_weekly_insights",
             "schedule": crontab(day_of_week=1, hour=5, minute=0),
+        },
+        "sync-oauth-calendars": {
+            "task": "timesense.sync_oauth_calendars",
+            "schedule": crontab(minute="*/30"),
         },
     },
 )

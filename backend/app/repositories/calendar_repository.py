@@ -25,6 +25,22 @@ class CalendarIntegrationRepository:
         )
         return result.scalar_one_or_none()
 
+    async def list_active_for_user(self, user_id: uuid.UUID) -> list[CalendarIntegration]:
+        result = await self.db.execute(
+            select(CalendarIntegration).where(
+                CalendarIntegration.user_id == user_id,
+                CalendarIntegration.is_active.is_(True),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def list_all_active(self) -> list[CalendarIntegration]:
+        """Every active integration across all users — drives the periodic OAuth-calendar sync."""
+        result = await self.db.execute(
+            select(CalendarIntegration).where(CalendarIntegration.is_active.is_(True))
+        )
+        return list(result.scalars().all())
+
     async def upsert(
         self,
         user_id: uuid.UUID,
