@@ -211,6 +211,8 @@ struct CaptureView: View {
                 .disabled(viewModel.uiState == .loading)
                 .onChange(of: captureText) { _, v in
                     if v.count > 2000 { captureText = String(v.prefix(2000)) }  // match the backend cap
+                    // Starting a new capture clears the previous "detected" results (back to the tiles).
+                    if !v.isEmpty && viewModel.lastCaptured != nil { viewModel.reset() }
                 }
             Button {
                 isInputFocused = false
@@ -403,8 +405,9 @@ struct CaptureView: View {
             locationQuery = ""
             includeTime = false
             isInputFocused = false
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            viewModel.reset()
+            // Leave the "TimeSense detected" results up so the user can actually read them — they're at
+            // the bottom of the screen and used to auto-revert in ~3s, while the keyboard was still
+            // animating down over them. They clear when the user starts the next capture (onChange below).
         }
     }
 }
