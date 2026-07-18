@@ -8,9 +8,12 @@ from app.core.database import get_db
 from app.core.entitlements import PremiumUser
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
+from datetime import date
+
 from app.repositories.insight_repository import InsightRepository
 from app.schemas.insight import WeeklyInsightResponse
 from app.services.behavioral_patterns_service import BehavioralPatternsService
+from app.services.insights_series_service import InsightsSeriesService
 from app.services.insights_service import InsightsService
 from app.services.user_service import UserService
 
@@ -66,3 +69,79 @@ async def get_insight_history(
     user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
     insights = await InsightRepository(db).list_recent(user.id, limit=limit)
     return [WeeklyInsightResponse.model_validate(i) for i in insights]
+
+
+# --- Chart-ready HealthKit series for the Insights charts (TIME-273) --------------------------
+
+
+class DailyActivityPoint(BaseModel):
+    day: date
+    steps: int
+    exercise_minutes: int
+
+
+class ActivitySeriesResponse(BaseModel):
+    points: list[DailyActivityPoint]
+
+
+class WeeklyWorkoutPoint(BaseModel):
+    week_start: date
+    running_miles: float
+    running_count: int
+    total_count: int
+
+
+class WorkoutSeriesResponse(BaseModel):
+    points: list[WeeklyWorkoutPoint]
+
+
+class HourlyStepsPoint(BaseModel):
+    hour: int            # 0..23, local
+    avg_steps: int
+
+
+class HourlySeriesResponse(BaseModel):
+    points: list[HourlyStepsPoint]
+    days: int
+
+
+@router.get("/activity", response_model=ActivitySeriesResponse)
+async def get_activity_series(
+    _premium: PremiumUser,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    days: int = Query(default=30, ge=1, le=90),
+) -> ActivitySeriesResponse:
+    """Daily steps + exercise minutes over the last `days` days (one point per day with data)."""
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+    tz = user.profile.timezone if user.profile else "UTC"
+    points = await InsightsSeriesService(db).daily_activity(user.id, days, tz)
+    return ActivitySeriesResponse(points=[DailyActivityPoint(**p) for p in points])
+
+
+@router.get("/workouts", response_model=WorkoutSeriesResponse)
+async def get_workout_series(
+    _premium: PremiumUser,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    weeks: int = Query(default=8, ge=1, le=52),
+) -> WorkoutSeriesResponse:
+    """Per-week running miles + run/total workout counts over the last `weeks` weeks."""
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+    tz = user.profile.timezone if user.profile else "UTC"
+    points = await InsightsSeriesService(db).weekly_workouts(user.id, weeks, tz)
+    return WorkoutSeriesResponse(points=[WeeklyWorkoutPoint(**p) for p in points])
+
+
+@router.get("/hourly", response_model=HourlySeriesResponse)
+async def get_hourly_series(
+    _premium: PremiumUser,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    days: int = Query(default=7, ge=1, le=30),
+) -> HourlySeriesResponse:
+    """Average steps by hour-of-day (0-23) over the last `days` days — the sit-vs-move profile."""
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+    tz = user.profile.timezone if user.profile else "UTC"
+    points = await InsightsSeriesService(db).hourly_steps(user.id, days, tz)
+    return HourlySeriesResponse(points=[HourlyStepsPoint(**p) for p in points], days=days)
