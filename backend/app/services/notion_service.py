@@ -20,6 +20,7 @@ from app.repositories.notion_repository import (
     NotionIntegrationRepository,
 )
 from app.repositories.task_repository import TaskRepository
+from app.services.task_autoschedule import autoschedule_task
 
 _PROVIDERS: dict[str, TaskSourceProvider] = {
     "notion": NotionTaskSource(),
@@ -97,6 +98,9 @@ class NotionService:
             source="notion",
             raw_input=item.notes,
         )
+        # Plan it in like a capture — estimate a duration and place it in an open slot (around
+        # meetings + tasks). Leaves it untimed if the day is full (TIME-278).
+        await autoschedule_task(self.db, task)
         item.status = "imported"
         item.created_task_id = task.id
         await self.db.flush()
