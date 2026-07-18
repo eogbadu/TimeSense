@@ -1,5 +1,24 @@
 # Implementation Log
 
+## 2026-07-18 — TIME-262..263: Light-mode verified (simulator) + Capture keyboard fix
+
+- **TIME-263 (Jira TIME-2297, PR #295)**: after tapping Capture the keyboard popped back up and covered
+  the bottom-of-screen "detected" results. Cause: the text field is `.disabled` during loading (loses
+  focus) and SwiftUI restores focus when it re-enables on success. Fix: dismiss `isInputFocused` at the
+  START of `submitCapture` (before the disable), so there's nothing to restore. iOS built.
+- **TIME-262 (Jira TIME-2296) — light mode VERIFIED**: actually ran the app in the iOS Simulator and
+  screenshotted the Now screen in light mode — it renders correctly (soft light backdrop, the hero card
+  stays rich & dark with white text, task rows are white cards with dark legible text, nav/tab chrome
+  light). Confirms the TIME-260 foundation works; no stragglers found. No code change needed.
+  - **Testing gotcha (for next time):** the app forces its theme via `@AppStorage("appTheme")`
+    (default "dark") → `.preferredColorScheme`. To flip a sandboxed sim app to light: write
+    `appTheme=light` into the app's *data-container* `Library/Preferences/<bundleid>.plist`
+    (via PlistBuddy) then **reboot the simulator** to clear the cfprefsd cache. `simctl spawn defaults
+    write <bundleid>` does NOT work (writes the sim's global prefs, not the app sandbox). The app was
+    logged in on the sim (persisted session), so all main screens are reachable. Couldn't auto-navigate
+    between tabs (no cliclick/idb; osascript lacks accessibility), so only the Now screen was
+    screenshot-verified; other tabs share the same adaptive components.
+
 ## 2026-07-18 — TIME-260..261: Proper light mode (foundation + token migration)
 
 The app is dark-first and light mode was broken. Exploration (2 agents) found the DesignTokens

@@ -22,6 +22,8 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-18] TIME-263: On Capture, the keyboard no longer pops back up after you tap Capture (it was covering the detected results)
+- [2026-07-18] TIME-262: Verified light mode renders correctly (foundation confirmed via simulator)
 - [2026-07-18] TIME-260/261: Light mode now works — the backdrop, nav/tab chrome, and cards adapt to light (soft light-cosmic look), with hero cards staying rich & dark in both themes; fixed the theme-default mismatch
 - [2026-07-18] TIME-259: Deploy config now declares the APNs credentials so push notifications (appointment reminders, nudges) can actually fire in production once the Apple key is set
 - [2026-07-18] TIME-258: The Capture "detected" results now stay on screen until your next capture (they used to vanish in ~3s, behind the dismissing keyboard)
