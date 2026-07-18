@@ -1,5 +1,52 @@
 # Implementation Log
 
+## 2026-07-18 — TIME-265..274: Now/Why/Insights 8-item device-feedback batch
+
+On-device feedback surfaced 8 issues across Now, the "Why this recommendation?" sheet, and Insights.
+Two Explore agents root-caused; user decisions via AskUserQuestion (Disagree→swap+ask-why+learn;
+charts→weekly-trends+activity/workouts; nav title→subtle-bar-on-scroll; sparkles→reduce). Shipped as
+one ticket/PR each (TIME-265..274, Jira TIME-2299..2308, PRs #298-307).
+
+- **TIME-265 (PR #298) — calendar next-commitment signal**: the "N minutes free before your workday
+  ends" line was effectively hardcoded because `today_tasks` filtered to `scheduled_start` in the UTC
+  day, dropping `due_at`-only tasks (email/Notion/manual). New `TaskRepository.upcoming_commitments`
+  (not done/cancelled AND scheduled_start-in-range OR due_at-in-range); `_free_and_next` now builds the
+  next commitment from those + timed calendar events in the user's LOCAL day and names it; workday-end
+  is only a true fallback.
+- **TIME-266 (PR #299) — vary Energy from activity**: `_health`'s activity path returned literal
+  "moderate". Added `_activity_energy` (high: exercise≥30 or steps≥8000; low: steps<2000 or
+  inactive≥180; else moderate), used in `_health` + `now._context_cards`.
+- **TIME-267 (PR #300) — dead chevron**: removed the non-tappable `chevron.right` on AlternativesCard.
+- **TIME-268 (PR #301) — tab-bar gap**: bottom padding 96 on the main scroll views (pager lets content
+  scroll under the custom tab bar).
+- **TIME-269 (PR #302) — nav title subtle bar on scroll**: standard/compact nav appearance now use a
+  default background (bar appears once scrolled); scrollEdge stays transparent (clear at top).
+- **TIME-270 (PR #303) — reduce sparkles**: ✨ (was ~16×) kept only as the AI-recommendation marker;
+  incidental uses swapped to domain SF Symbols (Now tab→target, Insights→hand.thumbsup.fill,
+  Settings→checkmark.seal.fill, Onboarding/Shortcuts→calendar.badge.clock, Capture/Now toolbar removed,
+  empty-state→checkmark.circle, default category→checklist).
+- **TIME-271 (PR #304) — Disagree backend**: disagree was only a −30 penalty a strong pick survived,
+  with no reason capture. Now recently-disagreed tasks are pushed BELOW non-disagreed picks in
+  `now._engine_rank_tasks` (never #1, still under "other options"); new `RecommendationFeedback.reason`
+  (migration `f9a0b1c2d3e4`) + `FeedbackRequest.reason`, stored on disagree; `not_relevant`/`too_big`
+  demote 24h vs the default 3h. +2 tests.
+- **TIME-272 (PR #305) — Disagree iOS**: tapping Disagree opens a "Why not this one?" confirmationDialog
+  (Wrong time · Not a priority · Not relevant · Too big · Just skip · Cancel) → `disagree(reason:)`
+  posts feedback with the reason; Just skip = no reason, Cancel aborts.
+- **TIME-273 (PR #306) — Insights chart series endpoints**: new `InsightsSeriesService` +
+  `DailyActivityRepository.list_in_range`; premium, tz-aware `GET /insights/activity` (daily
+  steps+exercise), `/insights/workouts` (per-week running miles + run/total counts, zero-filled weeks),
+  `/insights/hourly` (avg steps by hour-of-day). Weekly trends reuse the existing `/insights/history`.
+  +5 tests.
+- **TIME-274 (PR #307) — Insights Swift Charts**: `import Charts` (iOS 17). InsightsView now renders
+  WEEKLY TRENDS (completion-rate area/line, tasks-completed bars + dashed total, acceptance% vs
+  mean-confidence 2-line) and ACTIVITY (daily-steps line, running miles/week bars, sit-vs-move hourly
+  bars with amber=sitting) via `ChartCard`/`TrendChartsSection`/`ActivityChartsSection`; the VM loads
+  the 4 series best-effort; each card renders only when its series has data; theme-aware via Cosmic.
+
+Tests: feedback 15, now/rec regression 31, insights 24; iOS BUILD SUCCEEDED throughout. Follow-up:
+TIME-274 charts not yet eyeballed on a live sim (needs premium + seeded HealthKit + weeks of history).
+
 ## 2026-07-18 — TIME-262..263: Light-mode verified (simulator) + Capture keyboard fix
 
 - **TIME-263 (Jira TIME-2297, PR #295)**: after tapping Capture the keyboard popped back up and covered

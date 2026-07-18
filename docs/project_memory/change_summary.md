@@ -1,5 +1,21 @@
 # Change Summary
 
+## 2026-07-18 — TIME-265..274 (Now/Why/Insights 8-item device-feedback batch)
+
+- Now/Why fixes: calendar signal now names the real next commitment (due_at-only tasks included, local
+  day) instead of "free before your workday ends" (265); Energy varies with activity instead of always
+  "moderate" (266); removed a dead chevron on the Alternatives rows (267); more gap above the tab bar
+  (268); nav title gains a subtle bar only once scrolled (269); the ✨ sparkles icon reduced to just the
+  AI-recommendation marker, incidental uses → domain SF Symbols (270).
+- Disagree now works: recently-disagreed tasks are pushed below the other picks so a different best
+  action surfaces (never just refreshes), and tapping Disagree asks "why not this one?" — the reason is
+  stored and drives learning (not_relevant/too_big demote for 24h vs 3h) (271 backend, 272 iOS).
+- Insights charts: new premium tz-aware series endpoints (daily activity, weekly running, hourly
+  sit-vs-move) (273) feed real Swift Charts on the Insights screen — weekly trends (completion rate,
+  tasks, acceptance vs confidence) plus activity charts, each rendering only when it has data (274).
+- Tests: feedback 15, now/rec regression 31, insights 24; iOS BUILD SUCCEEDED. Follow-up: live-sim
+  eyeball of the charts (needs premium + seeded HealthKit history).
+
 ## 2026-07-17 — TIME-256..257 (fix the Privacy "Connected Signals" panel)
 
 - Bug: the panel was hardcoded (Calendar/Health "Off", Audio "Disabled"), and no client ever wrote
