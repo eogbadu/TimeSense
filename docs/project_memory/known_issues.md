@@ -199,17 +199,16 @@ Hand-written Alembic migrations must include server_default=now() on created_at/
 - Area: Smart Plan / calendar / recommendations
 - Symptom: After TIME-275..278, three known gaps remain (non-blocking).
 - Details:
-  1. **Calendar tasks still recommendable as "do now."** The legacy import still creates
-     `source="calendar"` tasks (kept for web/Android compatibility), and `candidate_gather` has no
-     source filter, so the Now screen could surface a meeting as the best next action (pre-existing
-     "G7"). Natural fix: exclude `source="calendar"` from `candidate_gather` candidates.
+  1. ~~**Calendar tasks still recommendable as "do now."**~~ **RESOLVED in TIME-279 (PR #314)** —
+     `candidate_gather` and `/recommendations` now exclude `source="calendar"` tasks from the candidate
+     pool (they still block time). Meetings can no longer be recommended as the next action.
   2. **Web/Android still show meetings as imported task rows**, not read-only blocks — only iOS moved
      to the unified `GET /timeline/today/plan`. Bringing web/Android onto it (or a shared plan
      endpoint) is a follow-up.
   3. **OAuth-calendar sync (TIME-277) is unverified end-to-end** — it's covered by stubbed-provider
      tests; the Celery beat job + token refresh need live Google/Outlook credentials and a running
      worker to confirm in production.
-- Follow-up needed: (1) is the highest-value quick win; (2)/(3) are larger/ops-dependent.
+- Follow-up needed: (1) done. (2)/(3) are larger/ops-dependent.
 
 ## Format
 

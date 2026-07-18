@@ -1,5 +1,14 @@
 # Implementation Log
 
+## 2026-07-18 — TIME-279: Exclude calendar-event tasks from recommendation candidates
+
+Follow-up #1 from the calendar batch. Legacy `source="calendar"` tasks (imported meetings, kept for
+web/Android) were still recommendation candidates, so Now could surface a meeting as the best "do now"
+action. `candidate_gather` (`/now` + push) and the `/recommendations` endpoint now drop
+`source="calendar"` from the candidate pool; they still block time (kept in `today_tasks` / the
+synced-events budget), so usable-time is unchanged. +2 tests (calendar-only pool → no recommendation;
+a real to-do wins over a co-existing meeting). PR #314 (Jira TIME-2313).
+
 ## 2026-07-18 — TIME-275..278: Calendar + Notion/email → Smart Plan integration
 
 User report: "items in your calendars, notion, etc need to be integrated into the smart plan." An
