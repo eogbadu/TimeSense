@@ -211,19 +211,19 @@ private struct AIRecommendedCard: View {
                     Image(systemName: "sparkles").font(.footnote).foregroundStyle(accent)
                     Text("AI Recommended")
                         .font(DesignTokens.Typography.footnote.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(DesignTokens.Color.onHero.opacity(0.9))
                     Spacer(minLength: 0)
                 }
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(task.title)
                             .font(DesignTokens.Typography.title.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(DesignTokens.Color.onHero)
                             .fixedSize(horizontal: false, vertical: true)
                         if let due = task.dueAt {
                             Text("before \(due.formatted(date: .omitted, time: .shortened))")
                                 .font(DesignTokens.Typography.title2.weight(.regular))
-                                .foregroundStyle(.white.opacity(0.82))
+                                .foregroundStyle(DesignTokens.Color.onHero.opacity(0.82))
                         }
                     }
                     Spacer(minLength: DesignTokens.Spacing.sm)
@@ -231,7 +231,7 @@ private struct AIRecommendedCard: View {
                 }
                 HStack(spacing: DesignTokens.Spacing.sm) {
                     HeroPill(icon: style.icon, text: style.descriptor, tint: accent)
-                    if let m = task.estimatedMinutes { HeroPill(icon: "clock", text: "\(m) min", tint: .white.opacity(0.8)) }
+                    if let m = task.estimatedMinutes { HeroPill(icon: "clock", text: "\(m) min", tint: DesignTokens.Color.onHero.opacity(0.8)) }
                 }
             }
             .padding(DesignTokens.Spacing.lg)
@@ -379,7 +379,7 @@ private struct SwipeableRow<Content: View>: View {
                 Image(systemName: icon).font(.body.weight(.semibold))
                 Text(title).font(.caption2.weight(.semibold))
             }
-            .foregroundColor(.white)
+            .foregroundColor(DesignTokens.Color.onHero)
             .frame(width: buttonWidth)
             .frame(maxHeight: .infinity)
             .background(color)

@@ -185,22 +185,22 @@ private struct SuggestionCard: View {
                 Image(systemName: "sparkles").font(.footnote).foregroundStyle(accent)
                 Text("TimeSense suggests")
                     .font(DesignTokens.Typography.footnote.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(DesignTokens.Color.onHero.opacity(0.9))
                 Spacer(minLength: 0)
                 Text("\(Int((suggestion.confidence * 100).rounded()))% match")
                     .font(DesignTokens.Typography.caption.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(DesignTokens.Color.onHero.opacity(0.9))
             }
 
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(suggestion.title)
                         .font(DesignTokens.Typography.title.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(DesignTokens.Color.onHero)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(suggestion.message)
                         .font(DesignTokens.Typography.subheadline)
-                        .foregroundStyle(.white.opacity(0.82))
+                        .foregroundStyle(DesignTokens.Color.onHero.opacity(0.82))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: DesignTokens.Spacing.sm)
@@ -282,25 +282,25 @@ private struct BestNextActionCard: View {
                 Image(systemName: "sparkles").font(.footnote).foregroundStyle(accent)
                 Text("Best Next Action")
                     .font(DesignTokens.Typography.footnote.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(DesignTokens.Color.onHero.opacity(0.9))
                 Spacer(minLength: 0)
                 Text("AI Recommended")
                     .font(DesignTokens.Typography.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(DesignTokens.Color.onHero.opacity(0.9))
                     .padding(.horizontal, DesignTokens.Spacing.sm).padding(.vertical, 4)
-                    .background(Capsule().fill(Color.white.opacity(0.10)))
+                    .background(Capsule().fill(DesignTokens.Color.onHero.opacity(0.10)))
             }
 
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
                         .font(DesignTokens.Typography.title.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(DesignTokens.Color.onHero)
                         .fixedSize(horizontal: false, vertical: true)
                     if let mins = task.estimatedMinutes {
                         Text("for \(mins) minutes")
                             .font(DesignTokens.Typography.title2.weight(.regular))
-                            .foregroundStyle(.white.opacity(0.82))
+                            .foregroundStyle(DesignTokens.Color.onHero.opacity(0.82))
                     }
                 }
                 Spacer(minLength: DesignTokens.Spacing.sm)
@@ -310,7 +310,7 @@ private struct BestNextActionCard: View {
             HStack(spacing: DesignTokens.Spacing.sm) {
                 HeroPill(icon: style.icon, text: style.descriptor, tint: accent)
                 if task.priority <= 2 { HeroPill(icon: "flag.fill", text: "High priority", tint: Cosmic.red) }
-                if let mins = task.estimatedMinutes { HeroPill(icon: "clock", text: "\(mins) min", tint: .white.opacity(0.8)) }
+                if let mins = task.estimatedMinutes { HeroPill(icon: "clock", text: "\(mins) min", tint: DesignTokens.Color.onHero.opacity(0.8)) }
             }
         }
         .padding(DesignTokens.Spacing.lg)
@@ -516,7 +516,7 @@ private struct RecommendedActionHeaderCard: View {
                     Image(systemName: isTopPick ? "sparkles" : "list.bullet").font(.caption).foregroundStyle(accent)
                     Text(isTopPick ? "Recommended action" : "Also a good option")
                         .font(DesignTokens.Typography.footnote.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(DesignTokens.Color.onHero.opacity(0.9))
                 }
                 HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: style.icon)
@@ -525,12 +525,12 @@ private struct RecommendedActionHeaderCard: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(action.title)
                             .font(DesignTokens.Typography.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(DesignTokens.Color.onHero)
                             .fixedSize(horizontal: false, vertical: true)
                         if let m = action.recommendedDurationMinutes {
                             Text("for \(m) minutes")
                                 .font(DesignTokens.Typography.footnote)
-                                .foregroundStyle(.white.opacity(0.8))
+                                .foregroundStyle(DesignTokens.Color.onHero.opacity(0.8))
                         }
                     }
                 }
@@ -559,7 +559,7 @@ struct ConfidenceRing: View {
                 .rotationEffect(.degrees(-90))
             Text("\(Int((value * 100).rounded()))%")
                 .font(DesignTokens.Typography.headline)
-                .foregroundStyle(onDark ? .white : DesignTokens.Color.textPrimary)
+                .foregroundStyle(onDark ? DesignTokens.Color.onHero : DesignTokens.Color.textPrimary)
                 .monospacedDigit()
         }
         .frame(width: 68, height: 68)
@@ -766,7 +766,7 @@ private struct PrimaryAction: View {
             Label(title, systemImage: systemImage)
                 .font(DesignTokens.Typography.subheadline.weight(.semibold))
                 .lineLimit(1)
-                .foregroundColor(.white)
+                .foregroundColor(DesignTokens.Color.onHero)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DesignTokens.Spacing.sm)
                 .background(DesignTokens.Color.accent)

@@ -230,7 +230,7 @@ private struct InsightsPremiumGate: View {
                 } label: {
                     Text("Upgrade to Premium")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(DesignTokens.Color.onHero)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DesignTokens.Spacing.md)
                         .background(Capsule().fill(DesignTokens.Color.accent))
@@ -253,16 +253,16 @@ private struct InsightsPremiumGate: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Your AI Insights")
                     .font(DesignTokens.Typography.title2)
-                    .foregroundColor(.white)
+                    .foregroundColor(DesignTokens.Color.onHero)
                 Text("Unlock AI insights that detect your best focus windows, routine patterns, and schedule risks.")
                     .font(DesignTokens.Typography.footnote)
-                    .foregroundColor(.white.opacity(0.9))
+                    .foregroundColor(DesignTokens.Color.onHero.opacity(0.9))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: DesignTokens.Spacing.md)
-            Image(systemName: "lock.fill").font(.subheadline).foregroundColor(.white)
+            Image(systemName: "lock.fill").font(.subheadline).foregroundColor(DesignTokens.Color.onHero)
                 .padding(10)
-                .background(Circle().fill(Color.white.opacity(0.18)))
+                .background(Circle().fill(DesignTokens.Color.onHero.opacity(0.18)))
         }
         .padding(DesignTokens.Spacing.lg)
         .background(
