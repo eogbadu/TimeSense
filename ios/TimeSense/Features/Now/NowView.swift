@@ -3,6 +3,8 @@ import SwiftUI
 struct NowView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = NowViewModel()
+    // Set when the user taps Disagree — drives the "why not this one?" reason prompt (TIME-272).
+    @State private var disagreeTaskId: String?
 
     var body: some View {
         NavigationStack {
@@ -44,6 +46,26 @@ struct NowView: View {
         } message: { _ in
             Text("This helps TimeSense learn your pace.")
         }
+        // "Why not this one?" — a light optional prompt after Disagree. Each reason (and Skip) records
+        // the disagree so a different pick surfaces; the reason feeds reason-based learning (TIME-272).
+        .confirmationDialog(
+            "Why not this one?",
+            isPresented: Binding(
+                get: { disagreeTaskId != nil },
+                set: { if !$0 { disagreeTaskId = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: disagreeTaskId
+        ) { taskId in
+            Button("Wrong time") { Task { await viewModel.disagree(taskId: taskId, reason: "wrong_time") } }
+            Button("Not a priority") { Task { await viewModel.disagree(taskId: taskId, reason: "not_priority") } }
+            Button("Not relevant") { Task { await viewModel.disagree(taskId: taskId, reason: "not_relevant") } }
+            Button("Too big right now") { Task { await viewModel.disagree(taskId: taskId, reason: "too_big") } }
+            Button("Just skip") { Task { await viewModel.disagree(taskId: taskId) } }
+            Button("Cancel", role: .cancel) { disagreeTaskId = nil }
+        } message: { _ in
+            Text("Optional — helps TimeSense pick better next time.")
+        }
     }
 
     private func loadedBody(ctx: NowContext) -> some View {
@@ -65,7 +87,7 @@ struct NowView: View {
                         confidence: ctx.confidence,
                         loadExplanation: { await viewModel.fetchExplanation(taskId: task.id) },
                         onAgree: { Task { await viewModel.agree(taskId: task.id) } },
-                        onDisagree: { Task { await viewModel.disagree(taskId: task.id) } },
+                        onDisagree: { disagreeTaskId = task.id },
                         onDone: { Task { await viewModel.markDone(taskId: task.id, title: task.title) } },
                         onSnooze: { Task { await viewModel.snooze(taskId: task.id) } }
                     )

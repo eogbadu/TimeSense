@@ -252,10 +252,11 @@ final class NowViewModel: ObservableObject {
         await sendFeedback(taskId: taskId, signal: "agree", snoozeUntil: nil, reload: false)
     }
 
-    /// User disagrees — record it and re-fetch so a different best action surfaces (the disagreed
-    /// task is demoted, not hidden).
-    func disagree(taskId: String) async {
-        await sendFeedback(taskId: taskId, signal: "disagree", snoozeUntil: nil)
+    /// User disagrees — record it (with an optional "why") and re-fetch so a different best action
+    /// surfaces (the disagreed task is demoted, not hidden). The reason drives reason-based learning
+    /// on the backend (TIME-271).
+    func disagree(taskId: String, reason: String? = nil) async {
+        await sendFeedback(taskId: taskId, signal: "disagree", snoozeUntil: nil, reason: reason)
     }
 
     /// Snooze the current best task for a few hours; it drops out of Now until then.
@@ -269,18 +270,21 @@ final class NowViewModel: ObservableObject {
         await sendFeedback(taskId: taskId, signal: "not_now", snoozeUntil: nil)
     }
 
-    private func sendFeedback(taskId: String, signal: String, snoozeUntil: String?, reload: Bool = true) async {
+    private func sendFeedback(taskId: String, signal: String, snoozeUntil: String?,
+                              reason: String? = nil, reload: Bool = true) async {
         guard case .loaded(let ctx) = uiState else { return }
         struct FeedbackBody: Encodable {
             let task_id: String
             let signal: String
             let snooze_until: String?
+            let reason: String?
             let recommendation_event_id: String?
         }
         do {
             let _: FeedbackResponse = try await APIClient.shared.post(
                 "/api/v1/recommendations/feedback",
                 body: FeedbackBody(task_id: taskId, signal: signal, snooze_until: snoozeUntil,
+                                   reason: reason,
                                    recommendation_event_id: ctx.recommendationEventId)
             )
         } catch {
