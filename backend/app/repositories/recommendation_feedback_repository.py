@@ -20,6 +20,11 @@ NOT_NOW_COOLDOWN = timedelta(hours=4)
 # later the same session once other candidates fade.
 DISAGREE_DEMOTE_WINDOW = timedelta(hours=3)
 
+# When the user gives a stronger reason ("not relevant" / "too big"), keep the task down longer —
+# a lightweight form of learning from the reason (TIME-271).
+LONG_DEMOTE_WINDOW = timedelta(hours=24)
+LONG_DEMOTE_REASONS = frozenset({"not_relevant", "too_big"})
+
 
 class RecommendationFeedbackRepository:
     def __init__(self, db: AsyncSession) -> None:
@@ -88,7 +93,8 @@ class RecommendationFeedbackRepository:
             created_at = fb.created_at
             if created_at.tzinfo is None:
                 created_at = created_at.replace(tzinfo=timezone.utc)
-            if now - created_at < DISAGREE_DEMOTE_WINDOW:
+            window = LONG_DEMOTE_WINDOW if fb.reason in LONG_DEMOTE_REASONS else DISAGREE_DEMOTE_WINDOW
+            if now - created_at < window:
                 demoted.add(task_id)
         return demoted
 

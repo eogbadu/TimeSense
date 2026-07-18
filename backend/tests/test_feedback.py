@@ -238,3 +238,40 @@ async def test_feedback_unauthenticated(client):
         json={"task_id": str(uuid.uuid4()), "signal": "not_now"},
     )
     assert r.status_code == 401
+
+
+# TIME-271 — disagree reliably removes the pick (shows the next-best) and captures a reason.
+
+@pytest.mark.anyio
+async def test_disagree_stores_reason(client, db_session):
+    from sqlalchemy import select
+    from app.models.recommendation_feedback import RecommendationFeedback
+
+    task_id = await _create_task(client, MOCK_USER, "Reason task")
+    with _mock_verify(MOCK_USER):
+        r = await client.post(
+            "/api/v1/recommendations/feedback", headers=_auth_headers(),
+            json={"task_id": task_id, "signal": "disagree", "reason": "not_relevant"},
+        )
+    assert r.status_code == 201
+    rows = (await db_session.execute(
+        select(RecommendationFeedback).where(RecommendationFeedback.signal == "disagree")
+    )).scalars().all()
+    assert rows and rows[-1].reason == "not_relevant"
+
+
+@pytest.mark.anyio
+async def test_disagree_demotes_current_best_from_the_top(client):
+    a = await _create_task(client, MOCK_USER, "Task A")
+    b = await _create_task(client, MOCK_USER, "Task B")
+    with _mock_verify(MOCK_USER):
+        first = await client.get("/api/v1/now", headers=_auth_headers())
+        best_before = (first.json().get("best_task") or {}).get("id")
+        assert best_before in (a, b)
+        await client.post(
+            "/api/v1/recommendations/feedback", headers=_auth_headers(),
+            json={"task_id": best_before, "signal": "disagree", "reason": "wrong_time"},
+        )
+        second = await client.get("/api/v1/now", headers=_auth_headers())
+        best_after = (second.json().get("best_task") or {}).get("id")
+    assert best_after is not None and best_after != best_before

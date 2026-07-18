@@ -107,6 +107,8 @@ class FeedbackRequest(BaseModel):
     # disagree = "not this one" → the task is demoted (not hidden) so a different rec surfaces.
     signal: Literal["done", "snooze", "not_now", "agree", "disagree"]
     snooze_until: datetime | None = None
+    # Optional reason for a disagree — drives reason-based learning (TIME-271).
+    reason: Literal["wrong_time", "not_priority", "not_relevant", "too_big"] | None = None
     # Optional: the impression this feedback reacts to (from NowResponse). Links outcome→impression.
     recommendation_event_id: uuid.UUID | None = None
 
@@ -139,6 +141,7 @@ async def submit_feedback(
         task_id=body.task_id,
         signal=body.signal,
         snooze_until=body.snooze_until,
+        reason=body.reason if body.signal == "disagree" else None,
     )
     db.add(fb)
     await db.flush()
