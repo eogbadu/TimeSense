@@ -24,6 +24,7 @@ from app.repositories.email_repository import (
 )
 from app.repositories.task_repository import TaskRepository
 from app.services.action_item_detection import ActionItemDetectionService
+from app.services.task_autoschedule import autoschedule_task
 
 # Read-only mail sources, keyed by provider (mirrors SlackService._PROVIDERS).
 _PROVIDERS: dict[str, EmailSourceProvider] = {
@@ -140,6 +141,9 @@ class EmailService:
             source="email",
             raw_input=item.source_text,
         )
+        # Plan it in like a capture — place it in an open slot (around meetings + tasks), estimating a
+        # duration if the detector didn't. Leaves it untimed if the day is full (TIME-278).
+        await autoschedule_task(self.db, task)
         item.status = "confirmed"
         item.created_task_id = task.id
         await self.db.flush()
