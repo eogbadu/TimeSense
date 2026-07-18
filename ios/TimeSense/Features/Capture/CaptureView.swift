@@ -387,6 +387,10 @@ struct CaptureView: View {
 
     private func submitCapture() async {
         let text = captureText
+        // Dismiss the keyboard UP FRONT — before the field disables during loading. Otherwise SwiftUI
+        // restores focus when the field re-enables on success (the keyboard "pops back up"), covering
+        // the "TimeSense detected" results at the bottom of the screen so you never see them appear.
+        isInputFocused = false
         // Explicit inputs win over the parse. Reminder/Schedule → time or date-only; Errand → place.
         var scheduledAt: Date?
         var dueAt: Date?
@@ -404,10 +408,8 @@ struct CaptureView: View {
             pickedLocation = nil
             locationQuery = ""
             includeTime = false
-            isInputFocused = false
-            // Leave the "TimeSense detected" results up so the user can actually read them — they're at
-            // the bottom of the screen and used to auto-revert in ~3s, while the keyboard was still
-            // animating down over them. They clear when the user starts the next capture (onChange below).
+            // The keyboard is already down (above), so the detected results animate in on a fully
+            // visible screen. They stay up until the user starts the next capture (onChange below).
         }
     }
 }

@@ -10246,7 +10246,20 @@ TICKETS = [
             divider(), h2("Files Likely Changed"), bullet_list(["ios design + feature views as needed"]),
             divider(), h2("Acceptance Criteria"), bullet_list(["Every screen looks correct in both Light and Dark; iOS builds"]),
             divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
-            divider(), h2("Dependencies"), p("TIME-261."), divider(), h2("Next Ticket"), p("(none)"),
+            divider(), h2("Dependencies"), p("TIME-261."), divider(), h2("Next Ticket"), p("TIME-263."),
+        ),
+    },
+    {
+        "summary": "TIME-263: Capture — keyboard pops back up after Capture, hiding the detected results",
+        "labels": ["ios", "capture", "bug"],
+        "description": doc(
+            h2("Goal"), p("After tapping Capture the keyboard pops back up and covers the bottom-of-screen 'detected' results, so the animation is never seen. Cause: the text field is disabled during loading (loses focus) then SwiftUI restores focus when it re-enables on success. Dismiss focus up front so there's nothing to restore."),
+            divider(), h2("Scope"), bullet_list(["CaptureView.submitCapture: set isInputFocused=false at the START (before submit/disable) instead of only on success"]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to detection or the persist-until-next-input behaviour"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Capture/CaptureView.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Keyboard stays down after Capture; the detected results animate in on a visible screen; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("TIME-258 (persist results)."), divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
 ]
