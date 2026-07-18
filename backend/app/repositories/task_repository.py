@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task
@@ -103,6 +103,29 @@ class TaskRepository:
                 Task.status.not_in(["done", "cancelled"]),
             )
             .order_by(Task.scheduled_start)
+        )
+        result = await self.db.execute(q)
+        return list(result.scalars().all())
+
+    async def upcoming_commitments(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> list[Task]:
+        """The user's next commitments in (start, end] — tasks with a scheduled_start OR a due_at in the
+        window (not done/cancelled). Unlike upcoming_appointments this also counts due-only tasks
+        (email/Notion/manually added), so the Why-sheet Calendar signal can name the real next thing
+        rather than defaulting to end-of-workday (TIME-265)."""
+        q = (
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.status.not_in(["done", "cancelled"]),
+                or_(
+                    and_(Task.scheduled_start.is_not(None),
+                         Task.scheduled_start > start, Task.scheduled_start <= end),
+                    and_(Task.due_at.is_not(None), Task.due_at > start, Task.due_at <= end),
+                ),
+            )
+            .order_by(Task.scheduled_start.nulls_last(), Task.due_at)
         )
         result = await self.db.execute(q)
         return list(result.scalars().all())
