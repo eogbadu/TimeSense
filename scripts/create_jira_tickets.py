@@ -10421,6 +10421,90 @@ TICKETS = [
             divider(), h2("Dependencies"), p("TIME-273."), divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
+    {
+        "summary": "TIME-275: Calendar events block usable time + capture auto-placement",
+        "labels": ["backend", "calendar", "scheduling"],
+        "description": doc(
+            h2("Goal"), p("Make the plan's time budget honest about meetings. Un-imported synced calendar events must count as busy in UsableTimeService and in capture auto-placement, so free time isn't overstated and a new capture isn't dropped on top of a meeting."),
+            divider(), h2("Scope"), bullet_list([
+                "UsableTimeService.calculate also subtracts timed SyncedCalendarEvents (today, from now), in addition to scheduled Task blocks",
+                "candidate_gather threads synced events into UsableTimeService; /now and /recommendations pass them",
+                "Capture auto-placement (capture.py) adds timed SyncedCalendarEvents to the busy list before find_slot (mirrors tasks.py suggested-slot and push_service)",
+                "Merge overlapping task+event blocks so a meeting the user already imported isn't double-counted",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No UI change", "No new sync/import; only reads existing SyncedCalendarEvent", "Routine/meal-block subtraction stays out of scope"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend usable_time_service.py, candidate_gather.py, capture.py, now.py, recommendations.py", "tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "usable_minutes drops by a meeting's duration when a timed synced event overlaps free time",
+                "Capture auto-placement never selects a slot overlapping a synced event",
+                "No double-count when an event is already an imported Task; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_usable_time.py tests/test_capture.py tests/test_now.py -q"),
+            divider(), h2("Dependencies"), p("None (reads existing SyncedCalendarEvent)."), divider(), h2("Next Ticket"), p("TIME-276."),
+        ),
+    },
+    {
+        "summary": "TIME-276: Weave calendar events into the Smart Plan as read-only blocks",
+        "labels": ["backend", "ios", "calendar", "smart-plan"],
+        "description": doc(
+            h2("Goal"), p("The Smart Plan should show meetings inline as read-only busy blocks the plan schedules around — not as checkable/deletable task rows, and not double-shown in a separate card. Stop importing calendar events as Tasks; render SyncedCalendarEvents as first-class read-only timeline entries."),
+            divider(), h2("Scope"), bullet_list([
+                "GET /timeline/today returns a merged, time-ordered list: tasks (actionable) + timed SyncedCalendarEvents (read-only busy blocks); new TimelineEntry schema (kind=task|event, id, title, start, end, source, task fields when kind=task)",
+                "Retire the import-events-as-Tasks path: /calendar/import + CalendarImportService no longer create source='calendar' Tasks (or become a no-op); iOS CalendarSyncService stops calling /calendar/import",
+                "iOS Today: render one unified Smart Plan (events as read-only rows, tasks as actionable rows); drop the separate 'On your calendar' card",
+                "One-time cleanup/dedup so previously-imported source='calendar' Tasks don't linger as duplicates",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No calendar writes (still approval-gated via the existing event editor)", "No drag-and-drop editing of blocks", "Android/web unchanged in this ticket"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend timeline.py + schemas, calendar.py/calendar_import_service.py", "ios TodayView.swift, TodayViewModel.swift, CalendarSyncService.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "Smart Plan shows meetings inline, time-ordered, read-only (no checkbox/delete/schedule affordance)",
+                "A meeting appears exactly once (no separate-card duplicate, no task duplicate)",
+                "Tasks remain fully actionable; suite green; iOS builds",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_timeline.py tests/test_calendar.py -q && xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense"),
+            divider(), h2("Dependencies"), p("TIME-275."), divider(), h2("Next Ticket"), p("TIME-277."),
+        ),
+    },
+    {
+        "summary": "TIME-277: Sync OAuth Google/Outlook calendars into the plan",
+        "labels": ["backend", "calendar", "integrations"],
+        "description": doc(
+            h2("Goal"), p("Calendars connected in-app via OAuth (Google/Outlook) are currently only fetched live for a display list (GET /calendar/events) — they never reach SyncedCalendarEvent, so the plan, usable-time, capture, and the recommendation engine don't see them. Sync connected OAuth calendars into SyncedCalendarEvent so they flow into everything TIME-275/276 built."),
+            divider(), h2("Scope"), bullet_list([
+                "New sync path: for each connected integration, fetch upcoming events via the provider (existing provider.list_events) and upsert them into SyncedCalendarEvent under a per-provider source (e.g. 'google'/'microsoft'), refreshing the token when expired",
+                "Trigger: a Celery beat job (periodic) and/or on-demand refresh; dedup by (source, external_id) via replace_for_source",
+                "Confirm the engine context window and timeline pick up the new source rows (they already read SyncedCalendarEvent)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No calendar writes", "No change to the OAuth connect handshake", "All-day events skipped (same as EventKit)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend new calendar sync service + workers/*, calendar_service.py, synced_calendar_event_repository.py, celery_app.py", "tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "A connected Google/Outlook event appears as a SyncedCalendarEvent and thus in the Smart Plan + usable-time + capture busy set",
+                "Re-sync is idempotent (no duplicates); expired tokens are refreshed; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_calendar.py tests/test_calendar_sync.py -q"),
+            divider(), h2("Dependencies"), p("TIME-275, TIME-276."), divider(), h2("Next Ticket"), p("TIME-278."),
+        ),
+    },
+    {
+        "summary": "TIME-278: Auto-schedule Notion and email imports (estimate + slot)",
+        "labels": ["backend", "notion", "email", "scheduling"],
+        "description": doc(
+            h2("Goal"), p("Imported Notion items and confirmed email tasks currently land untimed (no estimated_minutes, no scheduled_start) — they pile up as to-dos and are never placed in the plan. Give them the same treatment as a capture: estimate duration and auto-place a slot (calendar-aware)."),
+            divider(), h2("Scope"), bullet_list([
+                "NotionService.import_item and the EmailService confirm path run TaskDurationEstimator + SchedulingService.find_slot (respecting calendar busy from TIME-275) to set estimated_minutes + scheduled_start/end, mirroring capture.py",
+                "Respect approval rules: these set internal Task time blocks only (not calendar writes)",
+                "Graceful fallback: if no slot fits, leave the task untimed (as today) rather than error",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to the scan/detection step", "No calendar writes", "No auto-scheduling of tasks that already have a time"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend notion_service.py, email_service.py", "tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "Importing a Notion item / confirming an email task sets a duration estimate and an auto-placed slot that avoids meetings and existing blocks",
+                "Falls back to untimed when the day is full; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_notion.py tests/test_email_integration.py -q"),
+            divider(), h2("Dependencies"), p("TIME-275."), divider(), h2("Next Ticket"), p("(none)."),
+        ),
+    },
 ]
 
 

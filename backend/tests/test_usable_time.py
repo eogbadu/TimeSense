@@ -93,6 +93,43 @@ class TestUsableTimeService:
         assert result == 30
 
 
+def _event(start_offset_min: int, end_offset_min: int, anchor: datetime, all_day: bool = False):
+    """A calendar-event stand-in with only the fields UsableTimeService reads (TIME-275)."""
+    return SimpleNamespace(
+        starts_at=anchor + timedelta(minutes=start_offset_min),
+        ends_at=anchor + timedelta(minutes=end_offset_min),
+        all_day=all_day,
+    )
+
+
+class TestUsableTimeCalendarEvents:
+    """TIME-275: calendar meetings block usable time alongside scheduled tasks."""
+
+    svc = UsableTimeService()
+
+    def test_calendar_event_blocks_time_like_a_task(self) -> None:
+        # A meeting starting in 30 min, no tasks → 30 min usable (same as a task would give).
+        result = self.svc.calculate([], anchor=ANCHOR, events=[_event(30, 90, ANCHOR)])
+        assert result == 30
+
+    def test_all_day_event_ignored(self) -> None:
+        # An all-day event doesn't consume a working slot.
+        result = self.svc.calculate([], anchor=ANCHOR, events=[_event(0, 1440, ANCHOR, all_day=True)])
+        assert result == UsableTimeService.MAX_WINDOW_MINUTES
+
+    def test_event_overlapping_task_not_double_counted(self) -> None:
+        # Imported meeting exists as BOTH a task and an event over [+20,+60] → they merge → gap 20.
+        task = _task(20, 60, ANCHOR)
+        event = _event(20, 60, ANCHOR)
+        assert self.svc.calculate([task], anchor=ANCHOR, events=[event]) == 20
+
+    def test_event_soonest_wins_over_later_task(self) -> None:
+        # Task at +50, meeting at +25 → the meeting is the nearer block → gap 25.
+        task = _task(50, 80, ANCHOR)
+        event = _event(25, 45, ANCHOR)
+        assert self.svc.calculate([task], anchor=ANCHOR, events=[event]) == 25
+
+
 def test_end_of_day_cap_uses_local_midnight():
     """The 'time left today' cap follows the user's local midnight, not UTC midnight."""
     svc = UsableTimeService()

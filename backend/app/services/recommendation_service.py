@@ -33,15 +33,19 @@ class RecommendationService:
         scheduled_tasks: Sequence[Task],
         now: datetime | None = None,
         user_timezone: str = "UTC",
+        events: Sequence[object] | None = None,
     ) -> tuple[Task | None, list[Task], int, str | None]:
         """
         Returns (best_task, alternatives, usable_minutes, why).
         alternatives: up to 2 runner-up tasks.
         why: one/two-sentence LLM explanation that weighs the alternatives, time of day, likely
         energy, free time, and deadlines — or a deterministic fallback when the LLM is unavailable.
+        `events` (synced calendar meetings) are subtracted from usable time alongside scheduled tasks.
         """
         now = now or datetime.now(timezone.utc)
-        usable = _usable_svc.calculate(list(scheduled_tasks), anchor=now, user_timezone=user_timezone)
+        usable = _usable_svc.calculate(
+            list(scheduled_tasks), anchor=now, user_timezone=user_timezone, events=events
+        )
 
         candidates = [t for t in tasks if t.status in ("pending", "in_progress")]
         if not candidates:
