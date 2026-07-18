@@ -10521,7 +10521,30 @@ TICKETS = [
                 "Calendar tasks still subtract from usable time; suite green",
             ]),
             divider(), h2("Verification"), code_block("cd backend && pytest tests/test_now.py tests/test_recommendations.py tests/test_usable_time.py -q"),
-            divider(), h2("Dependencies"), p("TIME-276."), divider(), h2("Next Ticket"), p("(none)."),
+            divider(), h2("Dependencies"), p("TIME-276."), divider(), h2("Next Ticket"), p("TIME-280."),
+        ),
+    },
+    {
+        "summary": "TIME-280: Harden + document OAuth calendar sync verification",
+        "labels": ["backend", "calendar", "testing", "ops"],
+        "description": doc(
+            h2("Goal"), p("TIME-277's OAuth calendar sync was only tested with a stubbed provider, so the real HTTP parsing (Google/Graph JSON to CalendarEvent, all-day detection) and the token-refresh request/response shape were unverified — the main things that break in production. Close that offline gap with realistic HTTP-mocked tests, verify the worker/beat wiring, and give the user an exact runbook for the final live confirmation (which needs their OAuth creds + a running worker)."),
+            divider(), h2("Scope"), bullet_list([
+                "HTTP-shape tests (httpx.MockTransport) for google_calendar.list_events + microsoft_calendar.list_events: timed vs all-day parsing, request params, 401 -> HTTPException, non-2xx -> 502",
+                "HTTP-shape tests for google_oauth.refresh_access_token + microsoft_oauth.refresh_access_token: grant_type=refresh_token body, response parsing, keep-old-refresh-token, expires_at computed",
+                "Integration test: CalendarEventSyncService.sync_all() end-to-end over a real DB session with the HTTP layer mocked (integration row -> provider HTTP -> parse -> upsert SyncedCalendarEvent -> idempotent re-sync)",
+                "Assert the Celery beat schedule registers timesense.sync_oauth_calendars and the task resolves",
+                "docs runbook: exact steps for the user to confirm live (connect Google, POST /calendar/oauth/sync, check count + GET /timeline/today/plan; enable beat; note Microsoft creds needed for Outlook)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No live network calls in tests", "No change to the sync logic itself unless a test uncovers a bug", "Not handling the user's real OAuth secret values"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend tests/test_calendar_providers_http.py (new), tests/test_calendar_oauth_sync.py", "docs/runbooks/oauth_calendar_sync_verification.md (new)"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "Provider list_events + refresh are verified against realistic mocked HTTP payloads (timed/all-day, 401/5xx, refresh body+parse)",
+                "sync_all writes SyncedCalendarEvent rows through the full path with HTTP mocked; re-sync idempotent",
+                "Beat registration asserted; runbook doc committed; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_calendar_providers_http.py tests/test_calendar_oauth_sync.py tests/test_calendar.py -q"),
+            divider(), h2("Dependencies"), p("TIME-277."), divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
 ]
