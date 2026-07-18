@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Features
 
+- [2026-07-18] TIME-265..274: Now/Why/Insights device-feedback batch — the calendar signal names the real next commitment (incl. due-only email/Notion/manual tasks) instead of "free before your workday ends" (265); Energy varies with activity (266); removed a dead chevron (267) and added tab-bar breathing room (268); nav title shows a subtle bar only on scroll (269); reduced the ✨ sparkles icon to just the AI-recommendation marker (270); **Disagree** now reliably swaps to a different pick and asks "why not this one?", learning from the reason (271 backend / 272 iOS); and **Insights** gains real Swift Charts — weekly trends (completion rate, tasks, acceptance vs confidence) plus activity (daily steps, running miles/week, sit-vs-move) — backed by new premium series endpoints (273 backend / 274 iOS)
 - [2026-07-17] TIME-252..255: Behavioral patterns on the Insights screen — running (miles/duration/times), gym (frequency/days/times), sitting vs moving, and commute time, learned from Apple Health workouts + hourly steps and confirmed commutes
 - [2026-07-17] TIME-251: Pre-appointment push notifications — you now get a push 10 minutes before an appointment starts, or 10 minutes before you need to leave (drive-time aware) when it has a location
 
