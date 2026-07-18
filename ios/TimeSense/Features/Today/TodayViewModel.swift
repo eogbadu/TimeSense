@@ -20,10 +20,23 @@ struct TimelineTask: Decodable, Identifiable {
     }
 }
 
+/// One row of the unified Smart Plan: an actionable `task`, or a read-only calendar `event` block.
+struct TimelineEntry: Decodable, Identifiable {
+    let kind: String            // "task" | "event"
+    let id: String
+    let title: String
+    let start: Date?
+    let end: Date?
+    let location: String?
+    let task: TimelineTask?     // present when kind == "task"
+
+    var isEvent: Bool { kind == "event" }
+}
+
 enum TodayUiState {
     case idle
     case loading
-    case loaded([TimelineTask])
+    case loaded([TimelineEntry])
     case error(String)
 }
 
@@ -33,10 +46,13 @@ final class TodayViewModel: ObservableObject {
     /// The current best-next-action (same as Now) — shown in the "AI Recommended Now" card.
     @Published var recommendation: NowContext?
 
-    var tasks: [TimelineTask] {
+    var entries: [TimelineEntry] {
         if case .loaded(let items) = uiState { return items }
         return []
     }
+
+    /// Just the actionable task entries (calendar events are read-only and don't count toward totals).
+    var tasks: [TimelineTask] { entries.compactMap { $0.task } }
 
     var doneCount: Int { tasks.filter { $0.status == "done" }.count }
 
@@ -86,7 +102,7 @@ final class TodayViewModel: ObservableObject {
         uiState = .loading
         do {
             let today = DateFormatter.shortDate.string(from: Date())
-            let items: [TimelineTask] = try await APIClient.shared.get("/api/v1/timeline/today?date=\(today)")
+            let items: [TimelineEntry] = try await APIClient.shared.get("/api/v1/timeline/today/plan?date=\(today)")
             recommendation = try? await APIClient.shared.get("/api/v1/now")
             uiState = .loaded(items)
             updateWidgetSnapshot(with: items)
@@ -95,24 +111,22 @@ final class TodayViewModel: ObservableObject {
         }
     }
 
-    /// Updates only nextEvent, preserving whatever NowViewModel last wrote for
-    /// usableMinutes/bestTask, then asks WidgetKit to refresh.
-    private func updateWidgetSnapshot(with items: [TimelineTask]) {
+    /// Updates only nextEvent (a task OR a calendar meeting, whichever is soonest), preserving whatever
+    /// NowViewModel last wrote for usableMinutes/bestTask, then asks WidgetKit to refresh.
+    private func updateWidgetSnapshot(with items: [TimelineEntry]) {
         let now = Date()
-        let upcoming: [(task: TimelineTask, start: Date)] = items
-            .filter { $0.status != "done" }
-            .compactMap { task in
-                guard let start = task.scheduledStart else { return nil }
-                let end = task.scheduledEnd ?? start
+        let upcoming: [(title: String, start: Date, end: Date?)] = items
+            .filter { $0.task?.status != "done" }   // done tasks skip; events have no status
+            .compactMap { entry in
+                guard let start = entry.start else { return nil }
+                let end = entry.end ?? start
                 guard end >= now else { return nil }
-                return (task, start)
+                return (entry.title, start, entry.end)
             }
         let next = upcoming.min { $0.start < $1.start }
 
         var snapshot = WidgetSnapshot.load() ?? .empty
-        snapshot.nextEvent = next.map { entry in
-            WidgetSnapshot.Event(title: entry.task.title, start: entry.start, end: entry.task.scheduledEnd)
-        }
+        snapshot.nextEvent = next.map { WidgetSnapshot.Event(title: $0.title, start: $0.start, end: $0.end) }
         snapshot.updatedAt = Date()
         snapshot.save()
         WidgetCenter.shared.reloadAllTimelines()
