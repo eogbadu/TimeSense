@@ -131,12 +131,16 @@ async def _ranked_candidates(db: AsyncSession, user, now: datetime):
     candidates, usable_minutes, today_tasks = await _gather_candidate_tasks(db, user, now)
     if not candidates:
         return [], usable_minutes, today_tasks, None, {}
-    ranked, best_meta, scores = await _engine_rank_tasks(db, user, candidates, now, usable_minutes)
+    # A task the user just disagreed with must not be the top pick — surface the next-best instead
+    # (it can still appear under "other options"). See _engine_rank_tasks (TIME-271).
+    demoted = await RecommendationFeedbackRepository(db).get_recently_disagreed_task_ids(user.id, now)
+    ranked, best_meta, scores = await _engine_rank_tasks(db, user, candidates, now, usable_minutes, demoted)
     return ranked, usable_minutes, today_tasks, best_meta, scores
 
 
 async def _engine_rank_tasks(
-    db: AsyncSession, user, candidates: list, now: datetime, usable_minutes: int
+    db: AsyncSession, user, candidates: list, now: datetime, usable_minutes: int,
+    demoted_ids: set | None = None,
 ) -> tuple[list, dict | None, dict]:
     """Order candidate Tasks using the deterministic recommendation engine (task + location domains),
     then map the engine's ranked candidates back to the ORM Tasks. Any candidate the engine didn't
@@ -150,25 +154,28 @@ async def _engine_rank_tasks(
     actions = [apply_feedback_adjustments(a, summary) for a in actions]
     ranked = rank_candidates(actions, ctx)
 
+    demoted_str = {str(x) for x in (demoted_ids or set())}
     ordered: list = []
+    deferred: list = []            # recently-disagreed tasks — pushed below the non-disagreed picks
     seen: set = set()
-    best_meta: dict | None = None
     scores: dict = {}
+    meta_by_tid: dict = {}
     for scored in ranked:
         c = scored.candidate
         if c.domain not in ("task", "location") or not c.related_entity_ids:
             continue
         tid = c.related_entity_ids[0]
         if tid in task_map and tid not in seen:
-            if best_meta is None:  # metadata of the top-ranked pick, for the impression log
-                best_meta = {"action_type": c.type, "domain": c.domain, "score": scored.score}
             scores[tid] = scored.score
-            ordered.append(task_map[tid])
+            meta_by_tid[tid] = {"action_type": c.type, "domain": c.domain, "score": scored.score}
+            (deferred if tid in demoted_str else ordered).append(task_map[tid])
             seen.add(tid)
     for t in candidates:  # safety net — keep any task the engine didn't rank
         if str(t.id) not in seen:
             ordered.append(t)
-    return ordered, best_meta, scores
+    result = ordered + deferred    # so a just-disagreed task is never the #1 pick
+    best_meta = meta_by_tid.get(str(result[0].id)) if result else None
+    return result, best_meta, scores
 
 
 def _fmt_local(dt: datetime, tz_name: str) -> str:

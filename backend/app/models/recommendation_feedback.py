@@ -16,6 +16,8 @@ class RecommendationFeedback(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "recommendation_feedback"
 
     VALID_SIGNALS = frozenset({"done", "snooze", "not_now", "agree", "disagree"})
+    # Optional reason a user gives when they disagree — feeds reason-based learning (TIME-271).
+    VALID_REASONS = frozenset({"wrong_time", "not_priority", "not_relevant", "too_big"})
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -33,3 +35,5 @@ class RecommendationFeedback(UUIDMixin, TimestampMixin, Base):
     snooze_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Why the user disagreed (VALID_REASONS), when they told us — drives reason-based learning.
+    reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
