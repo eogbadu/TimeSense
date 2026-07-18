@@ -1,5 +1,26 @@
 # Implementation Log
 
+## 2026-07-18 — TIME-260..261: Proper light mode (foundation + token migration)
+
+The app is dark-first and light mode was broken. Exploration (2 agents) found the DesignTokens
+colorsets already adapt (light/dark) and the theme toggle is wired — the breakage was the dark-only
+layers on top. User direction: soft light-cosmic backdrop; hero cards stay rich & dark in both schemes.
+- **TIME-260 (Jira TIME-2294, PR #292)**: foundation. `CosmicBackground` (backdrop on all 5 main
+  screens) is now `@Environment(\.colorScheme)`-aware — soft near-white gradient + faint accent glows in
+  light, warm cosmic in dark. `cardStyle()` border/shadow scheme-aware (dark hairline + soft shadow on
+  light). `DesignTokens.Color.hairline` adaptive; added semantic `onHero` (=white) for text on
+  always-dark surfaces. `TimeSenseApp.init` UIKit chrome adaptive (nav title→UIColor.label, tab bg flips
+  navy↔systemBackground). Fixed the `appTheme` default mismatch (app "dark" vs settings "system" → both
+  "dark"). iOS built.
+- **TIME-261 (Jira TIME-2295, PR #293)**: found the remaining hardcoded `.white` all sit on the dark
+  hero cards / colored accent surfaces (correct) — none on the page background, so 260 already fixed the
+  substance. Migrated those `.white` in NowView/TodayView/InsightsView to `DesignTokens.Color.onHero`
+  (zero visual change; documents intent). Dark hero-card footers (`Cosmic.surface`) stay dark
+  intentionally; SignIn Apple button stays conventionally black.
+- **TIME-262 (Jira TIME-2296) OPEN — pending on-device verification**: the remaining work is visual QA
+  in both schemes (glow/shadow tuning, accent contrast). Can't be auto-verified (blocked at the Firebase
+  sign-in screen for screenshots); needs the user to eyeball light mode and report specific stragglers.
+
 ## 2026-07-18 — TIME-258..259: Capture detected-results timing + APNs prod config
 
 Two of a 4-item device-feedback batch (the other two: a sleep-data question answered — HealthService
