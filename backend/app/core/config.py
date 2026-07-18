@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     apns_key_id: str = ""
     apns_team_id: str = ""
     apns_private_key: str = ""          # contents of the .p8 (PEM), or with literal \n escapes
-    apns_bundle_id: str = "com.timesense.app"
+    apns_bundle_id: str = "com.aetheranalytics.timesense"   # the app's real bundle id (== APNs topic)
     apns_use_sandbox: bool = True       # sandbox for dev/TestFlight; set False for production
 
     # Maps (server-side geocoding / places / travel time). Empty → NullMapsProvider (location
