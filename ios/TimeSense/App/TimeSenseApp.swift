@@ -15,17 +15,25 @@ struct TimeSenseApp: App {
     @AppStorage("appTheme") private var appTheme = "dark"
 
     init() {
-        // Nav bar stays transparent (the cosmic background flows beneath the title). The title colour
-        // adapts (UIColor.label = near-black on light, near-white on dark); the tab-bar background
-        // flips navy↔light so no bar looks mismatched in either scheme.
-        let nav = UINavigationBarAppearance()
-        nav.configureWithTransparentBackground()
-        nav.backgroundColor = .clear
-        nav.titleTextAttributes = [.foregroundColor: UIColor.label]
-        nav.largeTitleTextAttributes = [.foregroundColor: UIColor.label]
-        UINavigationBar.appearance().standardAppearance = nav
-        UINavigationBar.appearance().scrollEdgeAppearance = nav
-        UINavigationBar.appearance().compactAppearance = nav
+        // At the top (scroll edge) the nav bar is transparent so the cosmic background flows behind the
+        // title; once you scroll, it gains a subtle adaptive material so content stops sliding under the
+        // fixed title. Title colour adapts (UIColor.label). Tab-bar background flips navy↔light.
+        let titleAttrs: [NSAttributedString.Key: Any] = [.foregroundColor: UIColor.label]
+
+        let atEdge = UINavigationBarAppearance()
+        atEdge.configureWithTransparentBackground()
+        atEdge.backgroundColor = .clear
+        atEdge.titleTextAttributes = titleAttrs
+        atEdge.largeTitleTextAttributes = titleAttrs
+
+        let scrolled = UINavigationBarAppearance()
+        scrolled.configureWithDefaultBackground()   // adaptive system material (blurred, light/dark aware)
+        scrolled.titleTextAttributes = titleAttrs
+        scrolled.largeTitleTextAttributes = titleAttrs
+
+        UINavigationBar.appearance().scrollEdgeAppearance = atEdge
+        UINavigationBar.appearance().standardAppearance = scrolled
+        UINavigationBar.appearance().compactAppearance = scrolled
 
         let barBackground = UIColor { trait in
             trait.userInterfaceStyle == .dark
