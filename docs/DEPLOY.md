@@ -31,6 +31,16 @@ runs without them but features degrade (no auth without Firebase, no LLM without
 - `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT_JSON`, `OPENAI_API_KEY`, Stripe live keys,
   `GOOGLE_MAPS_API_KEY`, and the OAuth client id/secret + **prod HTTPS** `*_REDIRECT_URI` for each
   provider you use, plus `OAUTH_WEB_SUCCESS_REDIRECT` / `OAUTH_WEB_FAILURE_REDIRECT`.
+- **Push notifications (`APNS_*`) — required for ANY push to fire** (appointment reminders, proactive
+  nudges). Without them the backend uses a no-op sender and delivers nothing. In the Apple Developer
+  portal → Certificates, Identifiers & Profiles → **Keys**, create an **APNs Auth Key** (`.p8`), then set:
+  - `APNS_KEY_ID` — the 10-char Key ID of that `.p8`.
+  - `APNS_TEAM_ID` — your 10-char Apple Team ID.
+  - `APNS_PRIVATE_KEY` — the full contents of the `.p8` file (PEM; you can paste it with literal `\n`).
+  - `APNS_BUNDLE_ID` — your app bundle id (defaults to `com.timesense.app`).
+  `APNS_USE_SANDBOX=false` is preset for production (App Store / release builds); use `true` for
+  TestFlight/dev builds. The device also must grant notification permission, and the worker must be
+  running (it hosts the reminder beat task).
 
 `SECRET_KEY` is auto-generated; `APP_ENV=production` and `APNS_USE_SANDBOX=false` are preset.
 
