@@ -632,9 +632,8 @@ private struct AlternativesCard: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote)
-                        .foregroundColor(DesignTokens.Color.textSecondary)
+                    // These rows are informational (why each wasn't picked) — no chevron, since they
+                    // aren't tappable. The tappable runner-ups live in "Other good options".
                 }
                 .padding(DesignTokens.Spacing.md)
                 if idx < alternatives.count - 1 { Divider().padding(.leading, 62) }
