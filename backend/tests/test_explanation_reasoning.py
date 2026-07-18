@@ -158,3 +158,22 @@ async def test_calendar_signal_falls_back_when_no_commitment(db_session):
     )
     cal_context = next(c for c in exp["context_used"] if c.startswith("Calendar"))
     assert "workday ends" in cal_context
+
+
+# TIME-266 — the activity-based energy varies (was constant "moderate").
+
+@pytest.mark.anyio
+async def test_energy_low_on_a_sedentary_day(db_session):
+    user, _ = await UserService(db_session).get_or_create_user("uid-expl-8", "expl8@example.com")
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=UTC)
+    await DailyActivityRepository(db_session).upsert(
+        user.id, now.date(), steps=700, active_energy_kcal=None, exercise_minutes=0, inactive_minutes=200
+    )
+    task = Task(user_id=user.id, title="Write the report", status="pending", priority=2, estimated_minutes=30)
+    db_session.add(task)
+    await db_session.flush()
+    exp = await build_explanation(
+        db_session, user, task, alternatives=[], today_tasks=[task],
+        now=now, tz_name="UTC", gateway=get_llm_gateway(),
+    )
+    assert "Low energy" in _energy_signal(exp)["detail"]

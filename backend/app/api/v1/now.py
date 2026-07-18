@@ -26,7 +26,7 @@ from app.services.recommendation.maps.factory import get_maps_provider
 from app.services.recommendation.maps.maps_skill_service import MapsSkillService
 from app.services.recommendation.selection.rank import rank_candidates
 from app.services.recommendation.scoring.score import score_to_confidence
-from app.services.recommendation_explainer import build_explanation
+from app.services.recommendation_explainer import _activity_energy, build_explanation
 from app.services.recommendation_service import RecommendationService
 from app.services.scheduling_service import SchedulingService
 from app.services.usable_time_service import UsableTimeService
@@ -256,6 +256,9 @@ async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCar
     # Today's HealthKit activity (steps / active energy / exercise)
     from app.repositories.daily_activity_repository import DailyActivityRepository
     activity = await DailyActivityRepository(db).get_for_day(user.id, local.date())
+    # No sleep sample → estimate energy from today's activity so the card isn't blank (TIME-266).
+    if energy is None and activity is not None:
+        energy = _activity_energy(activity)
 
     return NowContextCards(
         next_event_title=nxt.title if nxt else None,
