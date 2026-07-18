@@ -10198,6 +10198,57 @@ TICKETS = [
             divider(), h2("Dependencies"), p("TIME-251 (reminders), deploy track."), divider(), h2("Next Ticket"), p("TIME-260 (light mode) — separate."),
         ),
     },
+    {
+        "summary": "TIME-260: Light-mode foundation (adaptive backdrop, chrome, cards)",
+        "labels": ["ios", "design", "light-mode"],
+        "description": doc(
+            h2("Goal"), p("Light mode looks broken because the design tokens adapt but the dark-only layers on top don't. Make the foundation scheme-aware so light mode is legible. Direction: soft light-cosmic backdrop; hero cards stay rich & dark."),
+            divider(), h2("Scope"), bullet_list([
+                "CosmicBackground (+ HeroBackground if full-screen): @Environment(colorScheme) → light near-white gradient + faint accent-tinted glows; dark unchanged",
+                "cardStyle(): scheme-aware border + shadow (subtle dark hairline + soft shadow on light)",
+                "DesignTokens.Color.hairline: adaptive (dynamic UIColor)",
+                "TimeSenseApp.init UIKit chrome: nav/tab title + backgrounds adaptive (dynamic UIColor)",
+                "Fix the appTheme default mismatch (app 'dark' vs settings 'system') — align to 'dark'",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["Not the per-view white-text sweep (TIME-261); tokens/colorsets already correct — don't touch"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Core/Design/CosmicComponents.swift, ViewModifiers.swift, DesignTokens.swift", "ios/TimeSense/App/TimeSenseApp.swift", "ios/TimeSense/Features/Settings/SettingsScreens.swift"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["In light mode the backdrop + chrome + cards are light and legible; dark unchanged; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("None."), divider(), h2("Next Ticket"), p("TIME-261."),
+        ),
+    },
+    {
+        "summary": "TIME-261: Light-mode text/contrast sweep (Now/Today/Insights/SignIn)",
+        "labels": ["ios", "design", "light-mode"],
+        "description": doc(
+            h2("Goal"), p("Replace the ~20 hardcoded .white body-text / white-opacity fills that sit on the page background so they're legible in light mode. Keep white where it sits on the always-dark hero/accent surfaces."),
+            divider(), h2("Scope"), bullet_list([
+                "Add a semantic onHero color (=white) for text on dark hero/accent surfaces (or reuse the onDark flag)",
+                "NowView / TodayView / InsightsView / SignInView: white-on-background → DesignTokens.Color.textPrimary/textSecondary; white-on-hero → onHero",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to white-on-accent-capsule buttons (already correct)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios NowView.swift, TodayView.swift, InsightsView.swift, SignInView.swift, DesignTokens.swift (onHero)"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["No invisible/low-contrast text in light mode on Now/Today/Insights/SignIn; dark unchanged; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("TIME-260."), divider(), h2("Next Ticket"), p("TIME-262."),
+        ),
+    },
+    {
+        "summary": "TIME-262: Light-mode polish + verify all screens",
+        "labels": ["ios", "design", "light-mode"],
+        "description": doc(
+            h2("Goal"), p("Tune contrast/glow for light and verify every screen in both schemes."),
+            divider(), h2("Scope"), bullet_list([
+                "Soften glow/shadow intensity for light; check accent contrast on white (amber/yellow as text)",
+                "Walk Now/Today/Capture/Insights/Settings+subscreens/Onboarding/SignIn in Light + Dark; fix stragglers",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No new features"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["ios design + feature views as needed"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Every screen looks correct in both Light and Dark; iOS builds"]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("TIME-261."), divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 

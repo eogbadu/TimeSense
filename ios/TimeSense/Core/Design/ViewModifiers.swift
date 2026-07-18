@@ -3,29 +3,35 @@ import SwiftUI
 // MARK: – Card surface
 
 struct CardModifier: ViewModifier {
+    @Environment(\.colorScheme) private var scheme
+
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous)
+        let isDark = scheme == .dark
         content
-            // Dark slate card (matches the reference) with a faint glass sheen + top-light edge,
-            // and a subtle hairline — legible and consistent over the near-black background.
+            // Adaptive card: the surface token flips light/dark; the top-light sheen, hairline stroke,
+            // and drop shadow are tuned per scheme (a light card needs a dark hairline + soft shadow).
             .background(
                 ZStack {
                     shape.fill(DesignTokens.Color.surface)
                     shape.fill(.ultraThinMaterial).opacity(0.10)
                     shape.fill(
-                        LinearGradient(colors: [Color.white.opacity(0.04), .clear],
+                        LinearGradient(colors: [Color.white.opacity(isDark ? 0.04 : 0), .clear],
                                        startPoint: .top, endPoint: .bottom)
                     )
                 }
             )
             .overlay(
                 shape.stroke(
-                    LinearGradient(colors: [Color.white.opacity(0.14), Color.white.opacity(0.04)],
-                                   startPoint: .top, endPoint: .bottom),
+                    isDark
+                        ? LinearGradient(colors: [Color.white.opacity(0.14), Color.white.opacity(0.04)],
+                                         startPoint: .top, endPoint: .bottom)
+                        : LinearGradient(colors: [Color.black.opacity(0.08), Color.black.opacity(0.03)],
+                                         startPoint: .top, endPoint: .bottom),
                     lineWidth: 1
                 )
             )
-            .shadow(color: .black.opacity(0.30), radius: 16, x: 0, y: 8)
+            .shadow(color: .black.opacity(isDark ? 0.30 : 0.06), radius: isDark ? 16 : 10, x: 0, y: isDark ? 8 : 4)
     }
 }
 
