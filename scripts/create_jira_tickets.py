@@ -10259,7 +10259,20 @@ TICKETS = [
             divider(), h2("Files Likely Changed"), bullet_list(["ios/TimeSense/Features/Capture/CaptureView.swift"]),
             divider(), h2("Acceptance Criteria"), bullet_list(["Keyboard stays down after Capture; the detected results animate in on a visible screen; iOS builds"]),
             divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
-            divider(), h2("Dependencies"), p("TIME-258 (persist results)."), divider(), h2("Next Ticket"), p("(none)"),
+            divider(), h2("Dependencies"), p("TIME-258 (persist results)."), divider(), h2("Next Ticket"), p("TIME-264."),
+        ),
+    },
+    {
+        "summary": "TIME-264: Fix the APNs bundle-id default (wrong topic breaks push)",
+        "labels": ["backend", "push", "config", "bug"],
+        "description": doc(
+            h2("Goal"), p("config.apns_bundle_id defaults to com.timesense.app but the real app bundle id is com.aetheranalytics.timesense. If APNS_BUNDLE_ID isn't set in prod, pushes go to the wrong APNs topic and fail silently. Correct the default so push works out of the box."),
+            divider(), h2("Scope"), bullet_list(["config.py: apns_bundle_id default -> com.aetheranalytics.timesense (still overridable via APNS_BUNDLE_ID)"]),
+            divider(), h2("Non-Goals"), bullet_list(["No sender change"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend/app/core/config.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list(["Default bundle id matches the app; suite green"]),
+            divider(), h2("Verification"), code_block("cd backend && pytest -q"),
+            divider(), h2("Dependencies"), p("TIME-259 (APNs secrets)."), divider(), h2("Next Ticket"), p("(none)"),
         ),
     },
 ]
