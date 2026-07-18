@@ -53,7 +53,9 @@ async def get_recommendations(
     today_tasks = await repo.list_by_user(user_id=user.id, for_date=today, limit=200)
 
     suppressed_ids = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
-    all_pending = [t for t in all_pending if t.id not in suppressed_ids]
+    # Calendar meetings are commitments, not to-dos — drop them from the candidate pool (they still
+    # block time via today_tasks / the synced events below).
+    all_pending = [t for t in all_pending if t.id not in suppressed_ids and t.source != "calendar"]
 
     # Calendar meetings block usable time alongside scheduled tasks.
     events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(days=1))

@@ -218,3 +218,45 @@ async def test_recommendations_includes_task_after_snooze_expires(client):
     assert r.status_code == 200
     assert r.json()["best"] is not None
     assert r.json()["best"]["task"]["title"] == "Previously snoozed task"
+
+
+@pytest.mark.anyio
+async def test_calendar_tasks_excluded_from_recommendation_candidates(client, db_session):
+    """TIME-279: a source='calendar' task (an imported meeting) is a commitment, not a to-do — it
+    must never be recommended as the best action, even if it's the only pending task."""
+    from app.models.task import Task
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    db_session.add(Task(user_id=user.id, title="Team meeting", status="pending", priority=3,
+                        source="calendar"))
+    await db_session.flush()
+
+    with _mock_verify():
+        r = await client.get("/api/v1/recommendations", headers=_auth_headers())
+    assert r.status_code == 200
+    data = r.json()
+    assert data["best"] is None                                    # calendar task isn't a candidate
+    assert "Team meeting" not in [t["title"] for t in data["alternatives"]]
+
+
+@pytest.mark.anyio
+async def test_real_task_recommended_over_calendar_task(client, db_session):
+    """A genuine to-do is recommended; a co-existing calendar meeting is excluded from candidates."""
+    from app.models.task import Task
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    db_session.add(Task(user_id=user.id, title="Team meeting", status="pending", priority=3,
+                        source="calendar"))
+    db_session.add(Task(user_id=user.id, title="Draft the proposal", status="pending", priority=4,
+                        source="manual"))
+    await db_session.flush()
+
+    with _mock_verify():
+        r = await client.get("/api/v1/recommendations", headers=_auth_headers())
+    data = r.json()
+    assert data["best"] is not None
+    assert data["best"]["task"]["title"] == "Draft the proposal"
+    all_titles = [data["best"]["task"]["title"]] + [t["title"] for t in data["alternatives"]]
+    assert "Team meeting" not in all_titles

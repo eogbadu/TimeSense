@@ -41,5 +41,10 @@ async def gather_candidate_tasks(db: AsyncSession, user, now: datetime):
     )
 
     suppressed = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
-    candidates = [t for t in (pending + overdue + unscheduled) if t.id not in suppressed]
+    # Calendar meetings are commitments, not to-dos — never recommend them as the next action. They
+    # still block time via today_tasks above; we only drop them from the candidate pool.
+    candidates = [
+        t for t in (pending + overdue + unscheduled)
+        if t.id not in suppressed and t.source != "calendar"
+    ]
     return candidates, usable_minutes, today_tasks

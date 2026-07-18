@@ -10502,7 +10502,26 @@ TICKETS = [
                 "Falls back to untimed when the day is full; suite green",
             ]),
             divider(), h2("Verification"), code_block("cd backend && pytest tests/test_notion.py tests/test_email_integration.py -q"),
-            divider(), h2("Dependencies"), p("TIME-275."), divider(), h2("Next Ticket"), p("(none)."),
+            divider(), h2("Dependencies"), p("TIME-275."), divider(), h2("Next Ticket"), p("TIME-279."),
+        ),
+    },
+    {
+        "summary": "TIME-279: Don't recommend calendar-event tasks as 'do now'",
+        "labels": ["backend", "recommendations", "calendar"],
+        "description": doc(
+            h2("Goal"), p("Calendar meetings are commitments, not to-dos. After TIME-276 they show as read-only blocks in the plan, but the legacy source='calendar' tasks (kept for web/Android) are still recommendation candidates, so the Now screen can surface a meeting as the best 'do now' action. Exclude them from recommendation candidates while still letting them block time."),
+            divider(), h2("Scope"), bullet_list([
+                "candidate_gather: exclude source='calendar' tasks from the candidate pool (keep them in today_tasks so they still count toward usable time)",
+                "/recommendations endpoint: exclude source='calendar' from the candidate pool passed to RecommendationService.recommend (scheduled_tasks/usable-time unchanged)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to how meetings block time (they still do)", "No deletion of imported calendar tasks", "No client change"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend candidate_gather.py, api/v1/recommendations.py", "tests"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "A source='calendar' task is never returned as best_task or an alternative on /now or /recommendations",
+                "Calendar tasks still subtract from usable time; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_now.py tests/test_recommendations.py tests/test_usable_time.py -q"),
+            divider(), h2("Dependencies"), p("TIME-276."), divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
 ]
