@@ -1,9 +1,9 @@
 import SwiftUI
 import UIKit
+
 #if canImport(FirebaseCore)
 import FirebaseCore
 #endif
-
 @main
 struct TimeSenseApp: App {
     // Handles Firebase configure + LocationService init on launch (incl. background relaunch from a
@@ -15,22 +15,26 @@ struct TimeSenseApp: App {
     @AppStorage("appTheme") private var appTheme = "dark"
 
     init() {
-        // Make the nav bar transparent (the cosmic background flows continuously beneath the title)
-        // and the tab bar the same near-black navy as the background, so no bar looks mismatched.
-        let navy = UIColor(red: 0.031, green: 0.043, blue: 0.078, alpha: 1)   // == Cosmic.base
-
+        // Nav bar stays transparent (the cosmic background flows beneath the title). The title colour
+        // adapts (UIColor.label = near-black on light, near-white on dark); the tab-bar background
+        // flips navy↔light so no bar looks mismatched in either scheme.
         let nav = UINavigationBarAppearance()
         nav.configureWithTransparentBackground()
         nav.backgroundColor = .clear
-        nav.titleTextAttributes = [.foregroundColor: UIColor.white]
-        nav.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
+        nav.titleTextAttributes = [.foregroundColor: UIColor.label]
+        nav.largeTitleTextAttributes = [.foregroundColor: UIColor.label]
         UINavigationBar.appearance().standardAppearance = nav
         UINavigationBar.appearance().scrollEdgeAppearance = nav
         UINavigationBar.appearance().compactAppearance = nav
 
+        let barBackground = UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.031, green: 0.043, blue: 0.078, alpha: 1)   // Cosmic.base navy
+                : UIColor.systemBackground
+        }
         let tab = UITabBarAppearance()
         tab.configureWithOpaqueBackground()
-        tab.backgroundColor = navy
+        tab.backgroundColor = barBackground
         UITabBar.appearance().standardAppearance = tab
         UITabBar.appearance().scrollEdgeAppearance = tab
     }

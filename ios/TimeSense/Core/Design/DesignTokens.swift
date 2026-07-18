@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Centralised design tokens — all colours, type, spacing, radius, animation in one place.
 /// Never hardcode these values elsewhere; always reference via DesignTokens.
@@ -25,8 +26,12 @@ enum DesignTokens {
         static let success = SwiftUI.Color("Success")
         /// Semantic energy/health (same green as success)
         static let energy = SwiftUI.Color("Success")
-        /// Hairline border on translucent cards
-        static let hairline = SwiftUI.Color.white.opacity(0.08)
+        /// Hairline border on cards — subtle white on dark, subtle black on light.
+        static let hairline = SwiftUI.Color(uiColor: UIColor { trait in
+            trait.userInterfaceStyle == .dark ? UIColor(white: 1, alpha: 0.08) : UIColor(white: 0, alpha: 0.08)
+        })
+        /// Text/icons that sit on the always-dark hero & accent surfaces (white in both schemes).
+        static let onHero = SwiftUI.Color.white
     }
 
     // MARK: – Gradients & glow (the cosmic brand, sampled from the app icon)

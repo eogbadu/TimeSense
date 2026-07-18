@@ -247,7 +247,8 @@ struct NotificationsSettingsView: View {
 // MARK: - Appearance
 
 struct AppearanceSettingsView: View {
-    @AppStorage("appTheme") private var appTheme = "system"
+    // Default must match TimeSenseApp's @AppStorage("appTheme") default ("dark", the brand look).
+    @AppStorage("appTheme") private var appTheme = "dark"
 
     private let options: [(id: String, title: String)] = [
         ("system", "System"), ("light", "Light"), ("dark", "Dark"),

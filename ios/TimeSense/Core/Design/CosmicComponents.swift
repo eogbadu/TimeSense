@@ -62,15 +62,32 @@ func domainAccent(_ domain: String) -> Color {
 /// The cosmic screen backdrop — a "warmer dark" lifted navy with blue/violet corner glows and a warm
 /// amber bloom from the bottom, so Now/Today feel rich rather than flat black.
 struct CosmicBackground: View {
+    @Environment(\.colorScheme) private var scheme
+
+    // Soft light-cosmic ground: near-white gradient with very faint accent-tinted corner glows, so the
+    // brand's atmosphere carries into light mode rather than reading as a flat white screen.
+    private static let lightTop = Color(red: 0.968, green: 0.973, blue: 0.988)  // #F7F8FC
+    private static let lightBot = Color(red: 0.925, green: 0.937, blue: 0.976)  // #ECEFF9
+
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Cosmic.baseWarm, Cosmic.deepWarm], startPoint: .top, endPoint: .bottom)
-            RadialGradient(colors: [Cosmic.glowBlue.opacity(0.16), .clear],
-                           center: .topLeading, startRadius: 0, endRadius: 460)
-            RadialGradient(colors: [Cosmic.glowViolet.opacity(0.15), .clear],
-                           center: .topTrailing, startRadius: 0, endRadius: 460)
-            RadialGradient(colors: [Cosmic.glowWarm.opacity(0.13), .clear],
-                           center: UnitPoint(x: 0.82, y: 1.04), startRadius: 0, endRadius: 480)
+            if scheme == .light {
+                LinearGradient(colors: [Self.lightTop, Self.lightBot], startPoint: .top, endPoint: .bottom)
+                RadialGradient(colors: [Cosmic.glowBlue.opacity(0.06), .clear],
+                               center: .topLeading, startRadius: 0, endRadius: 460)
+                RadialGradient(colors: [Cosmic.glowViolet.opacity(0.05), .clear],
+                               center: .topTrailing, startRadius: 0, endRadius: 460)
+                RadialGradient(colors: [Cosmic.glowWarm.opacity(0.05), .clear],
+                               center: UnitPoint(x: 0.82, y: 1.04), startRadius: 0, endRadius: 480)
+            } else {
+                LinearGradient(colors: [Cosmic.baseWarm, Cosmic.deepWarm], startPoint: .top, endPoint: .bottom)
+                RadialGradient(colors: [Cosmic.glowBlue.opacity(0.16), .clear],
+                               center: .topLeading, startRadius: 0, endRadius: 460)
+                RadialGradient(colors: [Cosmic.glowViolet.opacity(0.15), .clear],
+                               center: .topTrailing, startRadius: 0, endRadius: 460)
+                RadialGradient(colors: [Cosmic.glowWarm.opacity(0.13), .clear],
+                               center: UnitPoint(x: 0.82, y: 1.04), startRadius: 0, endRadius: 480)
+            }
         }
         .ignoresSafeArea()
     }
