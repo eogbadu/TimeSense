@@ -119,3 +119,42 @@ async def test_higher_scored_alternative_is_not_called_weaker(db_session):
     top_reason = next(a for a in exp["alternatives_considered"] if a["title"] == "Finish the deck")["reason_not_selected"]
     assert "Ranked higher" in top_reason
     assert "weaker" not in top_reason
+
+
+# TIME-265 — the Calendar signal names the next commitment (a due-only email/manual/Notion task or a
+# calendar event), instead of always "free before your workday ends".
+
+@pytest.mark.anyio
+async def test_calendar_signal_names_a_due_only_task(db_session):
+    user, _ = await UserService(db_session).get_or_create_user("uid-expl-6", "expl6@example.com")
+    now = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)          # 9 AM
+    due_task = Task(user_id=user.id, title="Reply to boss", status="pending", priority=2,
+                    due_at=now + timedelta(hours=3))       # due at noon, no scheduled_start
+    focus = Task(user_id=user.id, title="Write the report", status="pending", priority=2,
+                 estimated_minutes=30)
+    db_session.add_all([due_task, focus])
+    await db_session.flush()
+
+    exp = await build_explanation(
+        db_session, user, focus, alternatives=[], today_tasks=[focus],
+        now=now, tz_name="UTC", gateway=get_llm_gateway(),
+    )
+    cal_context = next(c for c in exp["context_used"] if c.startswith("Calendar"))
+    assert "Reply to boss" in cal_context and "workday ends" not in cal_context
+
+
+@pytest.mark.anyio
+async def test_calendar_signal_falls_back_when_no_commitment(db_session):
+    user, _ = await UserService(db_session).get_or_create_user("uid-expl-7", "expl7@example.com")
+    now = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
+    focus = Task(user_id=user.id, title="Write the report", status="pending", priority=2,
+                 estimated_minutes=30)
+    db_session.add(focus)
+    await db_session.flush()
+
+    exp = await build_explanation(
+        db_session, user, focus, alternatives=[], today_tasks=[focus],
+        now=now, tz_name="UTC", gateway=get_llm_gateway(),
+    )
+    cal_context = next(c for c in exp["context_used"] if c.startswith("Calendar"))
+    assert "workday ends" in cal_context

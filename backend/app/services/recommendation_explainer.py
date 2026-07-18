@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.commute import CommuteEvent
 from app.models.sleep_wake import SleepWakeEvent
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+from app.repositories.task_repository import TaskRepository
 from app.services.recommendation.scoring.score import score_to_confidence
 from app.services.scheduling_service import SchedulingService
 
@@ -136,7 +137,16 @@ async def _free_and_next(db, user, today_tasks: Sequence, now: datetime, tz_name
     )
     _, window_end = sched._window(now, tz_name)
 
-    events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(hours=24))
+    # Search the whole local day for the next commitment (so evening tasks/events count too), but keep
+    # the free-time fallback at end-of-workday.
+    try:
+        local_now = now.astimezone(ZoneInfo(tz_name))
+        day_end = local_now.replace(hour=23, minute=59, second=59, microsecond=0).astimezone(timezone.utc)
+    except Exception:
+        day_end = now.replace(hour=23, minute=59, second=59, microsecond=0)
+
+    events = await SyncedCalendarEventRepository(db).list_window(user.id, now, day_end)
+    commitments = await TaskRepository(db).upcoming_commitments(user.id, now, day_end)
 
     # Busy blocks = scheduled tasks + timed calendar events.
     busy: list = [t for t in today_tasks if t.scheduled_start and t.scheduled_end]
@@ -145,17 +155,25 @@ async def _free_and_next(db, user, today_tasks: Sequence, now: datetime, tz_name
         for e in events if not e.all_day
     ]
 
-    # The next commitment (task or meeting) starting after now, within the working window.
+    # The next commitment (task or meeting) after now — a task's scheduled time, else its due time
+    # (so a due-only email/Notion/manual task is named), plus timed calendar events.
     starts: list[tuple[datetime, str]] = []
-    for t in today_tasks:
-        if t.scheduled_start and t.status != "done":
+    for t in commitments:
+        when: datetime | None = None
+        if t.scheduled_start:
             s = _utc(t.scheduled_start)
-            if now < s <= window_end:
-                starts.append((s, t.title))
+            if now < s <= day_end:
+                when = s
+        if when is None and t.due_at:
+            d = _utc(t.due_at)
+            if now < d <= day_end:
+                when = d
+        if when is not None:
+            starts.append((when, t.title))
     for e in events:
         if not e.all_day:
             s = _utc(e.starts_at)
-            if now < s <= window_end:
+            if now < s <= day_end:
                 starts.append((s, e.title))
 
     if starts:
