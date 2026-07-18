@@ -51,7 +51,7 @@ struct InsightsView: View {
                 }
                 .padding(.horizontal, DesignTokens.Spacing.md)
                 .padding(.top, DesignTokens.Spacing.sm)
-                .padding(.bottom, DesignTokens.Spacing.xl)
+                .padding(.bottom, 96)   // clear the custom tab bar (content can scroll under it in the pager)
             }
         }
     }
@@ -244,7 +244,7 @@ private struct InsightsPremiumGate: View {
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
             .padding(.top, DesignTokens.Spacing.sm)
-            .padding(.bottom, DesignTokens.Spacing.xxl)
+            .padding(.bottom, 96)   // clear the custom tab bar (content can scroll under it in the pager)
         }
     }
 
