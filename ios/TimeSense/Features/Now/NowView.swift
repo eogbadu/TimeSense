@@ -19,11 +19,6 @@ struct NowView: View {
             .background(CosmicBackground())
             .navigationTitle("Now")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Image(systemName: "sparkles").foregroundColor(DesignTokens.Color.accent)
-                }
-            }
         }
         .task { await viewModel.load() }
         // Tab views stay mounted, so reload whenever the user returns to the Now tab (e.g. after
@@ -89,7 +84,7 @@ struct NowView: View {
                     }
                 } else {
                     EmptyStateView(
-                        icon: "sparkles",
+                        icon: "checkmark.circle",
                         title: "You're all caught up",
                         message: "Nothing needs you right now. Capture a task and TimeSense will tell you what to do next."
                     )
@@ -384,7 +379,7 @@ func taskCategoryStyle(for title: String) -> TaskCategoryStyle {
         return TaskCategoryStyle(icon: "cart.fill", color: Cosmic.orange, descriptor: "Errand", locationAware: true)
     }
     if has(["clean", "laundry", "dishes", "tidy", "vacuum", "organize", "trash", "chore"]) {
-        return TaskCategoryStyle(icon: "sparkles", color: Cosmic.yellow, descriptor: "Chore")
+        return TaskCategoryStyle(icon: "checklist", color: Cosmic.yellow, descriptor: "Chore")
     }
     if has(["meeting", "standup", "sync", "1:1", "interview", "call with"]) {
         return TaskCategoryStyle(icon: "person.2.fill", color: Cosmic.violet, descriptor: "Meeting")

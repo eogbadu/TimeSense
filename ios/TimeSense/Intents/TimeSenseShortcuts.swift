@@ -11,7 +11,7 @@ struct TimeSenseShortcuts: AppShortcutsProvider {
                 "Ask \(.applicationName) what to do next",
             ],
             shortTitle: "What to do next",
-            systemImageName: "sparkles"
+            systemImageName: "calendar.badge.clock"
         )
         AppShortcut(
             intent: LogLunchIntent(),

@@ -156,7 +156,7 @@ private struct StatsGrid: View {
                 StatRow(icon: "car.fill", tint: Cosmic.cyan, label: "Commutes tracked", value: "\(insight.commuteConfirmedCount)")
             }
             if let rate = insight.recommendationAcceptanceRate {
-                StatRow(icon: "sparkles", tint: Cosmic.blue, label: "Recommendations accepted",
+                StatRow(icon: "hand.thumbsup.fill", tint: Cosmic.blue, label: "Recommendations accepted",
                         value: "\(Int((rate * 100).rounded()))%",
                         detail: "\(insight.recommendationsAccepted) of \(insight.recommendationsShown) shown")
             }
