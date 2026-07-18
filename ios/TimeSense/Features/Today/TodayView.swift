@@ -7,13 +7,6 @@ struct TodayView: View {
     @ObservedObject private var router = DeepLinkRouter.shared
     @State private var scheduleDraft: ScheduleDraft?
 
-    /// Today's timed calendar events (all-day excluded), sorted by start time.
-    private var todaysEvents: [CalendarSyncService.CalEvent] {
-        calendar.events
-            .filter { !$0.allDay && Calendar.current.isDateInToday($0.start) }
-            .sorted { $0.start < $1.start }
-    }
-
     var body: some View {
         NavigationStack {
             Group {
@@ -22,8 +15,8 @@ struct TodayView: View {
                     ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .error(let msg):
                     EmptyStateView(icon: "exclamationmark.circle", title: "Couldn't load today", message: msg)
-                case .loaded(let tasks):
-                    loadedBody(tasks: tasks)
+                case .loaded(let entries):
+                    loadedBody(entries: entries)
                 }
             }
             .background(CosmicBackground())
@@ -56,10 +49,10 @@ struct TodayView: View {
         }
     }
 
-    private func loadedBody(tasks: [TimelineTask]) -> some View {
+    private func loadedBody(entries: [TimelineEntry]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
-                DateSummaryRow(total: tasks.count, done: viewModel.doneCount)
+                DateSummaryRow(total: viewModel.tasks.count, done: viewModel.doneCount)
 
                 if let best = viewModel.recommendation?.bestTask {
                     sectionHeader("AI Recommended Now")
@@ -69,13 +62,8 @@ struct TodayView: View {
                     )
                 }
 
-                if !todaysEvents.isEmpty {
-                    sectionHeader("On your calendar")
-                    CalendarEventsCard(events: todaysEvents)
-                }
-
                 sectionHeader("Smart Plan")
-                if tasks.isEmpty {
+                if entries.isEmpty {
                     Text("Your day is open. Capture a task and TimeSense will plan it in.")
                         .font(DesignTokens.Typography.subheadline)
                         .foregroundColor(DesignTokens.Color.textSecondary)
@@ -84,7 +72,7 @@ struct TodayView: View {
                         .cardStyle()
                 } else {
                     SmartPlanCard(
-                        tasks: tasks,
+                        entries: entries,
                         onToggle: { id in Task { await viewModel.markDone(taskId: id) } },
                         onDelete: { id in Task { await viewModel.deleteTask(taskId: id) } },
                         onSchedule: { task in
@@ -136,46 +124,6 @@ private struct ScheduleDraft: Identifiable {
     let title: String
     let start: Date
     let end: Date
-}
-
-/// Read-only view of today's calendar events (from EventKit). Not actionable — these live in the
-/// user's calendar; TimeSense just reflects them.
-private struct CalendarEventsCard: View {
-    let events: [CalendarSyncService.CalEvent]
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(events.enumerated()), id: \.element.id) { idx, event in
-                HStack(spacing: DesignTokens.Spacing.md) {
-                    Image(systemName: "calendar")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundColor(DesignTokens.Color.accent)
-                        .frame(width: 28)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(event.title)
-                            .font(DesignTokens.Typography.callout.weight(.semibold))
-                            .foregroundColor(DesignTokens.Color.textPrimary)
-                            .lineLimit(1)
-                        Text(timeRange(event))
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundColor(DesignTokens.Color.textSecondary)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(DesignTokens.Spacing.md)
-                if idx < events.count - 1 { Divider().padding(.leading, 52) }
-            }
-        }
-        .cardStyle()
-    }
-
-    private func timeRange(_ event: CalendarSyncService.CalEvent) -> String {
-        let start = event.start.formatted(date: .omitted, time: .shortened)
-        let end = event.end.formatted(date: .omitted, time: .shortened)
-        var line = "\(start) – \(end)"
-        if let loc = event.location, !loc.isEmpty { line += "  ·  \(loc)" }
-        return line
-    }
 }
 
 private struct DateSummaryRow: View {
@@ -248,18 +196,18 @@ private struct AIRecommendedCard: View {
 }
 
 private struct SmartPlanCard: View {
-    let tasks: [TimelineTask]
+    let entries: [TimelineEntry]
     let onToggle: (String) -> Void
     let onDelete: (String) -> Void
     let onSchedule: (TimelineTask) -> Void
 
-    private var groups: [(name: String, tasks: [TimelineTask])] {
+    private var groups: [(name: String, entries: [TimelineEntry])] {
         let order = ["Morning", "Afternoon", "Evening", "Anytime"]
-        var buckets: [String: [TimelineTask]] = [:]
-        for t in tasks { buckets[bucket(for: t), default: []].append(t) }
+        var buckets: [String: [TimelineEntry]] = [:]
+        for e in entries { buckets[bucket(for: e), default: []].append(e) }
         return order.compactMap { name in
-            guard let ts = buckets[name], !ts.isEmpty else { return nil }
-            let sorted = ts.sorted { ($0.scheduledStart ?? .distantFuture) < ($1.scheduledStart ?? .distantFuture) }
+            guard let es = buckets[name], !es.isEmpty else { return nil }
+            let sorted = es.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
             return (name, sorted)
         }
     }
@@ -274,8 +222,8 @@ private struct SmartPlanCard: View {
         }
     }
 
-    private func bucket(for t: TimelineTask) -> String {
-        guard let start = t.scheduledStart else { return "Anytime" }
+    private func bucket(for e: TimelineEntry) -> String {
+        guard let start = e.start else { return "Anytime" }
         let hour = Calendar.current.component(.hour, from: start)
         if hour < 12 { return "Morning" }
         if hour < 17 { return "Afternoon" }
@@ -302,17 +250,22 @@ private struct SmartPlanCard: View {
                 .padding(.top, idx > 0 ? DesignTokens.Spacing.sm : 0)
 
                 VStack(spacing: DesignTokens.Spacing.md) {
-                    ForEach(group.tasks) { task in
-                        SwipeableRow(
-                            onDone: task.status == "done" ? nil : { onToggle(task.id) },
-                            onDelete: { onDelete(task.id) }
-                        ) {
-                            SmartPlanRow(task: task, onToggle: { onToggle(task.id) })
-                                .contextMenu {
-                                    Button { onSchedule(task) } label: {
-                                        Label("Find a time & add to calendar", systemImage: "calendar.badge.plus")
+                    ForEach(group.entries) { entry in
+                        if let task = entry.task {
+                            SwipeableRow(
+                                onDone: task.status == "done" ? nil : { onToggle(task.id) },
+                                onDelete: { onDelete(task.id) }
+                            ) {
+                                SmartPlanRow(task: task, onToggle: { onToggle(task.id) })
+                                    .contextMenu {
+                                        Button { onSchedule(task) } label: {
+                                            Label("Find a time & add to calendar", systemImage: "calendar.badge.plus")
+                                        }
                                     }
-                                }
+                            }
+                        } else {
+                            // Calendar meeting: read-only busy block (no swipe/toggle/schedule).
+                            CalendarBlockRow(entry: entry)
                         }
                     }
                 }
@@ -320,6 +273,50 @@ private struct SmartPlanCard: View {
         }
         .padding(DesignTokens.Spacing.lg)
         .cardStyle()
+    }
+}
+
+/// A read-only calendar meeting woven into the Smart Plan — the plan schedules around it, but the
+/// user manages it in their calendar, so there's no Done/Delete/Schedule affordance.
+private struct CalendarBlockRow: View {
+    let entry: TimelineEntry
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            ZStack {
+                Circle().fill(DesignTokens.Color.accent.opacity(0.12)).frame(width: 40, height: 40)
+                Image(systemName: "calendar")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.accent)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.title)
+                    .font(DesignTokens.Typography.callout.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                    .lineLimit(1)
+                Text(timeLine)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+            }
+            Spacer(minLength: 0)
+            Text("Calendar")
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(DesignTokens.Color.textSecondary)
+                .padding(.horizontal, DesignTokens.Spacing.sm)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(DesignTokens.Color.accent.opacity(0.10)))
+        }
+        .padding(.vertical, DesignTokens.Spacing.xs)
+    }
+
+    private var timeLine: String {
+        guard let start = entry.start else { return "" }
+        var line = start.formatted(date: .omitted, time: .shortened)
+        if let end = entry.end {
+            line += " – " + end.formatted(date: .omitted, time: .shortened)
+        }
+        if let loc = entry.location, !loc.isEmpty { line += "  ·  \(loc)" }
+        return line
     }
 }
 

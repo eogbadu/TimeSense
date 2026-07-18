@@ -174,3 +174,53 @@ async def test_today_includes_untimed_tasks_across_utc_boundary(client, db_sessi
         r = await client.get(f"/api/v1/timeline/today?date={yesterday}", headers=_auth_headers())
     assert r.status_code == 200
     assert "Go to Walmart" in [t["title"] for t in r.json()]
+
+
+@pytest.mark.anyio
+async def test_today_plan_weaves_events_and_excludes_calendar_tasks(client, db_session):
+    """TIME-276: the unified plan interleaves read-only calendar events with tasks, in time order,
+    and hides legacy source='calendar' tasks (they show as events instead — no double-listing)."""
+    from datetime import datetime, timezone
+    from app.models.synced_calendar_event import SyncedCalendarEvent
+    from app.models.task import Task
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    today = datetime.now(timezone.utc).date()
+
+    def _at(h, m):
+        return datetime(today.year, today.month, today.day, h, m, tzinfo=timezone.utc)
+
+    db_session.add(Task(user_id=user.id, title="Write report", status="pending", priority=3,
+                        scheduled_start=_at(14, 0), scheduled_end=_at(15, 0), source="manual"))
+    # Legacy imported meeting-as-task: must NOT appear as a task row.
+    db_session.add(Task(user_id=user.id, title="Imported meeting", status="pending", priority=3,
+                        scheduled_start=_at(9, 0), scheduled_end=_at(9, 30), source="calendar"))
+    db_session.add(SyncedCalendarEvent(
+        user_id=user.id, source="apple", external_id="evt1", title="Standup",
+        starts_at=_at(10, 0), ends_at=_at(10, 15), all_day=False))
+    db_session.add(SyncedCalendarEvent(
+        user_id=user.id, source="apple", external_id="allday", title="Holiday",
+        starts_at=_at(0, 0), ends_at=_at(23, 59), all_day=True))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get(f"/api/v1/timeline/today/plan?date={today.isoformat()}",
+                             headers=_auth_headers())
+    assert r.status_code == 200
+    data = r.json()
+    pairs = [(e["kind"], e["title"]) for e in data]
+    assert ("event", "Standup") in pairs
+    assert ("task", "Write report") in pairs
+    assert ("task", "Imported meeting") not in pairs   # excluded — shown as an event elsewhere
+    assert ("event", "Holiday") not in pairs           # all-day omitted
+
+    # Time-ordered: the 10:00 meeting comes before the 14:00 task.
+    titles = [e["title"] for e in data]
+    assert titles.index("Standup") < titles.index("Write report")
+
+    # Event rows are read-only (no task payload); task rows carry the full task.
+    event = next(e for e in data if e["kind"] == "event")
+    assert event["task"] is None
+    task = next(e for e in data if e["kind"] == "task")
+    assert task["task"]["title"] == task["title"]
