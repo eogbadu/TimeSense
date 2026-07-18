@@ -110,3 +110,66 @@ async def test_missing_refresh_token_gives_up_quietly(db_session, monkeypatch):
 
     assert n == 0  # 401 with no refresh token → skip this integration, no crash
     assert await _synced(db_session, user.id) == []
+
+
+# ── End-to-end through the real provider (HTTP mocked) + worker/beat wiring (TIME-280) ──────────
+
+@pytest.mark.anyio
+async def test_sync_all_end_to_end_with_mocked_http(db_session, monkeypatch):
+    """The full chain — integration row -> real GoogleCalendarProvider HTTP -> parse -> upsert
+    SyncedCalendarEvent — with only the network mocked. Exercises sync_all() (the worker's path)."""
+    import httpx
+    from app.models.calendar import CalendarIntegration
+    from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user("uid-e2e-cal", "e2e@example.com")
+    db_session.add(CalendarIntegration(
+        user_id=user.id, provider="google", access_token="AT",
+        refresh_token="RT", calendar_id="primary", is_active=True))
+    await db_session.flush()
+
+    now = datetime.now(timezone.utc)
+    s = (now + timedelta(hours=2)).replace(microsecond=0)
+
+    def handler(request):
+        return httpx.Response(200, json={"items": [
+            {"id": "g1", "summary": "Design review",
+             "start": {"dateTime": s.isoformat()},
+             "end": {"dateTime": (s + timedelta(minutes=45)).isoformat()}},
+            {"id": "g2", "summary": "Holiday",
+             "start": {"date": "2026-08-06"}, "end": {"date": "2026-08-07"}},  # all-day → skipped
+        ]})
+
+    transport = httpx.MockTransport(handler)
+    real = httpx.AsyncClient
+    monkeypatch.setattr("httpx.AsyncClient",
+                        lambda *a, **k: real(*a, **{**k, "transport": transport}))
+
+    from app.services.calendar_event_sync_service import CalendarEventSyncService
+    written = await CalendarEventSyncService(db_session).sync_all(now=now)
+
+    assert written == 1  # all-day skipped
+    rows = await SyncedCalendarEventRepository(db_session).list_window(
+        user.id, now, now + timedelta(hours=37))
+    assert len(rows) == 1
+    assert rows[0].source == "google"
+    assert rows[0].title == "Design review"
+    assert rows[0].external_id == "g1"
+
+    # Re-sync is idempotent (replace_for_source clears the source first).
+    await CalendarEventSyncService(db_session).sync_all(now=now)
+    rows = await SyncedCalendarEventRepository(db_session).list_window(
+        user.id, now, now + timedelta(hours=37))
+    assert len(rows) == 1
+
+
+def test_beat_registers_oauth_calendar_sync():
+    """The periodic job is wired into Celery beat and the task is importable/registered."""
+    import app.workers.calendar_sync_tasks  # noqa: F401 — registers the task
+    from app.workers.celery_app import celery_app
+
+    entry = celery_app.conf.beat_schedule.get("sync-oauth-calendars")
+    assert entry is not None
+    assert entry["task"] == "timesense.sync_oauth_calendars"
+    assert "timesense.sync_oauth_calendars" in celery_app.tasks
