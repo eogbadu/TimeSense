@@ -1,5 +1,21 @@
 # Implementation Log
 
+## 2026-07-18 — TIME-258..259: Capture detected-results timing + APNs prod config
+
+Two of a 4-item device-feedback batch (the other two: a sleep-data question answered — HealthService
+DOES read sleepAnalysis, "no sleep data" = no asleep samples logged in Apple Health; and light-mode
+polish deferred to a dedicated effort, TIME-260).
+- **TIME-258 (Jira TIME-2292, PR #289)**: the Capture "TimeSense detected" card auto-reverted after
+  ~3s, overlapping the keyboard animating down over it (bottom of screen) — user barely saw it.
+  Dropped the 3s sleep+reset in `submitCapture`; results now persist after a capture and clear on the
+  next input (`onChange(captureText)` → `viewModel.reset()` when non-empty). iOS built.
+- **TIME-259 (Jira TIME-2293, PR #290)**: no push fired in prod (appointment reminders included)
+  because `render.yaml` never declared `APNS_KEY_ID`/`APNS_TEAM_ID`/`APNS_PRIVATE_KEY` → backend used
+  the no-op NullPushSender. Declared them (+`APNS_BUNDLE_ID`) sync:false in `timesense-secrets` and
+  documented the Apple APNs Auth Key setup in DEPLOY.md. USER ACTION REQUIRED: create the `.p8`, set
+  the values in Render, redeploy, grant device notification permission. (The reminder capture path is
+  correct — reminder+time → scheduled_start → appointment reminder producer; APNs was the only gap.)
+
 ## 2026-07-17 — TIME-256..257: Fix the Privacy & Consent "Connected Signals" panel
 
 Bug report: the panel showed wrong statuses (Calendar/Health/Audio "off" when on) and omitted signals.
