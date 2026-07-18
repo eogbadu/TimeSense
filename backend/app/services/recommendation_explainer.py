@@ -61,6 +61,20 @@ def _time_of_day(local_now: datetime) -> tuple[str, str]:
     return "late", "a low-focus window"
 
 
+def _activity_energy(activity) -> str:
+    """Rough energy estimate from a day's HealthKit activity when there's no sleep sample — so the
+    signal actually varies instead of always reading 'moderate' (TIME-266). High when the user has
+    exercised or is well over a typical step count; low when barely moving / long sedentary stretch."""
+    steps = activity.steps or 0
+    exercise = activity.exercise_minutes or 0
+    inactive = activity.inactive_minutes or 0
+    if exercise >= 30 or steps >= 8000:
+        return "high"
+    if steps < 2000 or inactive >= 180:
+        return "low"
+    return "moderate"
+
+
 async def _health(db: AsyncSession, user_id, now: datetime, tz_name: str):
     """Energy signal for the Why screen. Prefer a sleep/wake sample for today; if there's none, fall
     back to today's HealthKit activity (steps) so connecting Apple Health actually powers the signal
@@ -91,11 +105,11 @@ async def _health(db: AsyncSession, user_id, now: datetime, tz_name: str):
             return {"energy": energy, "wake": wake_local.strftime("%-I:%M %p"),
                     "sleep_hours": sleep_hours, "steps": None, "source": "sleep"}
 
-    # No sleep sample today → use today's HealthKit activity (steps) if it synced.
+    # No sleep sample today → use today's HealthKit activity if it synced.
     from app.repositories.daily_activity_repository import DailyActivityRepository
     activity = await DailyActivityRepository(db).get_for_day(user_id, today)
     if activity is not None:
-        return {"energy": "moderate", "wake": None, "sleep_hours": None,
+        return {"energy": _activity_energy(activity), "wake": None, "sleep_hours": None,
                 "steps": activity.steps, "source": "activity"}
     return None
 
