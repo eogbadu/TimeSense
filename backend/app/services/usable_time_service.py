@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta, timezone
-from typing import Sequence
+from typing import Any, Sequence
 from zoneinfo import ZoneInfo
 
 from app.models.task import Task
@@ -13,12 +13,13 @@ class UsableTimeService:
     starting from `anchor` (defaults to now UTC).
 
     Algorithm:
-      1. Collect all scheduled tasks that overlap or start after anchor.
+      1. Collect all scheduled tasks — and any calendar events — that overlap or start after anchor.
       2. Merge overlapping/adjacent blocks into free windows.
       3. Return the size of the window that starts at (or contains) anchor,
          capped at MAX_WINDOW_MINUTES.
 
-    "Usable" means: no scheduled task is blocking the time.
+    "Usable" means: no scheduled task AND no calendar meeting is blocking the time. Overlapping
+    task/event blocks merge, so an imported meeting that also exists as a Task isn't double-counted.
     End-of-day cap: we never return more than the minutes remaining until the user's *local*
     midnight (so "time left today" reflects the user's day, not the UTC day).
     """
@@ -31,6 +32,7 @@ class UsableTimeService:
         tasks: Sequence[Task],
         anchor: datetime | None = None,
         user_timezone: str = "UTC",
+        events: Sequence[Any] | None = None,
     ) -> int:
         now = anchor or datetime.now(timezone.utc)
 
@@ -54,6 +56,17 @@ class UsableTimeService:
             if end <= now or start >= midnight:
                 continue
             # Clamp to [now, midnight]
+            blocks.append((max(start, now), min(end, midnight)))
+
+        # Calendar meetings block time too. Skip all-day events (they don't consume a working slot);
+        # overlapping task/event blocks merge below, so no double-count with an imported meeting.
+        for event in events or []:
+            if getattr(event, "all_day", False):
+                continue
+            start = _utc(event.starts_at)
+            end = _utc(event.ends_at)
+            if end <= now or start >= midnight:
+                continue
             blocks.append((max(start, now), min(end, midnight)))
 
         if not blocks:

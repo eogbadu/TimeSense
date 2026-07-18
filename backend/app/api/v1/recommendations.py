@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,6 +15,7 @@ from app.models.recommendation_feedback import RecommendationFeedback
 from app.repositories.meal_repository import MealRepository
 from app.repositories.recommendation_event_repository import RecommendationEventRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
+from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.learned_preferences_service import LearnedPreferencesService
@@ -54,6 +55,9 @@ async def get_recommendations(
     suppressed_ids = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
     all_pending = [t for t in all_pending if t.id not in suppressed_ids]
 
+    # Calendar meetings block usable time alongside scheduled tasks.
+    events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(days=1))
+
     user_tz = user.profile.timezone if user.profile else "UTC"
     svc = RecommendationService(gateway)
     best_task, alternatives, usable_minutes, why = await svc.recommend(
@@ -61,6 +65,7 @@ async def get_recommendations(
         scheduled_tasks=today_tasks,
         now=now,
         user_timezone=user_tz,
+        events=events,
     )
 
     meal_status = await MealRepository(db).get_today_status(user.id, now)

@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, status
@@ -10,6 +11,7 @@ from app.core.database import get_db
 from app.core.rate_limit import capture_rate_limit
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
+from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.analytics_service import AnalyticsService
@@ -163,6 +165,13 @@ async def capture(
     )
     if task_create.scheduled_start is None and task_create.estimated_minutes and due_today_or_none:
         today_scheduled = await TaskRepository(db).list_by_user(user_id=user.id, for_date=today, limit=200)
+        # Calendar meetings are busy too — otherwise a capture can be auto-placed on top of a meeting
+        # (mirrors the suggested-slot + push flows, which already avoid the calendar).
+        events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(days=1))
+        busy = list(today_scheduled) + [
+            SimpleNamespace(scheduled_start=e.starts_at, scheduled_end=e.ends_at)
+            for e in events if not e.all_day
+        ]
         user_tz = user.profile.timezone if user.profile else "UTC"
         prefs = user.preferences
         scheduler = SchedulingService(
@@ -170,7 +179,7 @@ async def capture(
             work_end_hour=prefs.work_end_hour if prefs else 21,
         )
         slot = scheduler.find_slot(
-            now, task_create.estimated_minutes, today_scheduled, user_tz
+            now, task_create.estimated_minutes, busy, user_tz
         )
         if slot is not None:
             task_create.scheduled_start = slot

@@ -3,11 +3,12 @@ endpoints and the proactive-push service so their inputs never drift."""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
+from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.task_repository import TaskRepository
 from app.services.usable_time_service import UsableTimeService
 
@@ -32,7 +33,12 @@ async def gather_candidate_tasks(db: AsyncSession, user, now: datetime):
     unscheduled = [t for t in all_pending if t.scheduled_start is None and t.id not in already]
 
     user_tz = user.profile.timezone if user.profile else "UTC"
-    usable_minutes = UsableTimeService().calculate(today_tasks, anchor=now, user_timezone=user_tz)
+    # Calendar meetings block usable time too — otherwise free time is overstated (the end-of-day cap
+    # clamps to local midnight, so fetching a 24h window is enough; later events are ignored).
+    events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(days=1))
+    usable_minutes = UsableTimeService().calculate(
+        today_tasks, anchor=now, user_timezone=user_tz, events=events
+    )
 
     suppressed = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
     candidates = [t for t in (pending + overdue + unscheduled) if t.id not in suppressed]
