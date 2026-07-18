@@ -22,6 +22,8 @@ Format: `[DATE] TIME-### Short description`
 
 ### Fixes
 
+- [2026-07-18] TIME-259: Deploy config now declares the APNs credentials so push notifications (appointment reminders, nudges) can actually fire in production once the Apple key is set
+- [2026-07-18] TIME-258: The Capture "detected" results now stay on screen until your next capture (they used to vanish in ~3s, behind the dismissing keyboard)
 - [2026-07-17] TIME-256/257: The Privacy & Consent "Connected Signals" panel now shows real, complete statuses (it was hardcoded) — and connecting a signal (Apple Health, Location, Calendar) records the consent, which also un-breaks the health-data-gated workout/step sync and commute detection that were silently off
 - [2026-07-17] TIME-250: The Capture screen now shows what TimeSense actually detected after a capture (time, priority, task type, schedule fit) instead of a static "can detect" poster
 - [2026-07-17] TIME-249: On the Capture screen, tapping outside the input now dismisses the keyboard and deactivates the field
