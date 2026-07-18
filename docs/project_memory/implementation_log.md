@@ -1,5 +1,17 @@
 # Implementation Log
 
+## 2026-07-18 — TIME-280: Harden + document OAuth calendar sync verification
+
+Follow-up #3 from the calendar batch. TIME-277's sync was only tested with a stubbed provider, so the
+real HTTP parsing + token-refresh shapes were unverified. Added `tests/test_calendar_providers_http.py`
+(httpx.MockTransport: google/microsoft `list_events` timed-vs-all-day, params, 401→HTTPException,
+5xx→502; `refresh_access_token` grant body, keep-old-vs-rotated refresh token, `expires_at`), an
+end-to-end `sync_all()` over a real DB session with only the network mocked (integration → real provider
+parse → upsert `SyncedCalendarEvent` → idempotent re-sync), and a Celery beat-registration assert. Wrote
+`docs/runbooks/oauth_calendar_sync_verification.md` for the final live sign-off (user-owned: needs OAuth
+creds + running worker; Google creds are set, Microsoft creds empty → Outlook inert). 20 tests green.
+PR #316 (Jira TIME-2314).
+
 ## 2026-07-18 — TIME-279: Exclude calendar-event tasks from recommendation candidates
 
 Follow-up #1 from the calendar batch. Legacy `source="calendar"` tasks (imported meetings, kept for

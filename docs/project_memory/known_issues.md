@@ -205,10 +205,15 @@ Hand-written Alembic migrations must include server_default=now() on created_at/
   2. **Web/Android still show meetings as imported task rows**, not read-only blocks — only iOS moved
      to the unified `GET /timeline/today/plan`. Bringing web/Android onto it (or a shared plan
      endpoint) is a follow-up.
-  3. **OAuth-calendar sync (TIME-277) is unverified end-to-end** — it's covered by stubbed-provider
-     tests; the Celery beat job + token refresh need live Google/Outlook credentials and a running
-     worker to confirm in production.
-- Follow-up needed: (1) done. (2)/(3) are larger/ops-dependent.
+  3. **OAuth-calendar sync (TIME-277) live verification** — **de-risked in TIME-280 (PR #316)**: real
+     HTTP-shape tests (httpx.MockTransport) now cover provider list_events (timed/all-day, 401/5xx) and
+     refresh_access_token, plus an end-to-end sync_all() over a real DB session with the network mocked,
+     and a beat-registration assert. The only thing left is the live round-trip, which needs the user's
+     OAuth creds + a running worker — steps in `docs/runbooks/oauth_calendar_sync_verification.md`.
+     NOTE: Google creds are configured; Microsoft CLIENT_ID/SECRET are empty, so Outlook sync is inert
+     until set.
+- Follow-up needed: (1) done; (3) de-risked (live sign-off is the user's, per the runbook). (2)
+  (web/Android read-only-block plan parity) is the remaining code follow-up.
 
 ## Format
 
