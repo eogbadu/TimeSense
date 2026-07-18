@@ -42,6 +42,8 @@ class GoogleCalendarProvider(CalendarProvider):
         for item in items:
             start_raw = item.get("start", {})
             end_raw = item.get("end", {})
+            # Google gives all-day events a "date" (no "dateTime").
+            all_day = "dateTime" not in start_raw
             dt_start = datetime.fromisoformat(start_raw.get("dateTime", start_raw.get("date", "")))
             dt_end = datetime.fromisoformat(end_raw.get("dateTime", end_raw.get("date", "")))
             events.append(CalendarEvent(
@@ -53,6 +55,7 @@ class GoogleCalendarProvider(CalendarProvider):
                 location=item.get("location"),
                 description=item.get("description"),
                 provider=self.name,
+                all_day=all_day,
             ))
         return events
 

@@ -18,6 +18,7 @@ from app.schemas.calendar import (
     CalendarIntegrationOut,
     PendingCalendarActionOut,
 )
+from app.services.calendar_event_sync_service import CalendarEventSyncService
 from app.services.calendar_import_service import CalendarImportService
 from app.services.calendar_service import CalendarService
 from app.services.user_service import UserService
@@ -88,6 +89,23 @@ async def import_calendar_events(
     )
     await db.commit()
     return CalendarImportOut(imported=len(created))
+
+
+class CalendarOAuthSyncOut(BaseModel):
+    synced: int
+
+
+@router.post("/oauth/sync", response_model=CalendarOAuthSyncOut)
+async def sync_oauth_calendars_now(
+    current_user: CurrentUser, db: AsyncSession = Depends(get_db)
+) -> CalendarOAuthSyncOut:
+    """Pull this user's connected OAuth calendars (Google/Outlook) into SyncedCalendarEvent now, so
+    they show up in the Smart Plan immediately (e.g. right after connecting) rather than waiting for
+    the periodic job. Read-only; no-op for users with no OAuth calendar connected."""
+    user_id = await _get_user_id(current_user, db)
+    synced = await CalendarEventSyncService(db).sync_user(user_id)
+    await db.commit()
+    return CalendarOAuthSyncOut(synced=synced)
 
 
 @router.get("/synced/today", response_model=list[SyncedEventIn])

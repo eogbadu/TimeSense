@@ -66,3 +66,26 @@ async def exchange_code(code: str) -> TokenResult:
         refresh_token=body.get("refresh_token"),
         expires_at=expires_at,
     )
+
+
+async def refresh_access_token(refresh_token: str) -> TokenResult:
+    """Exchange a stored refresh token for a fresh access token. Google usually doesn't return a new
+    refresh token, so we keep the existing one."""
+    data = {
+        "refresh_token": refresh_token,
+        "client_id": settings.google_client_id,
+        "client_secret": settings.google_client_secret,
+        "grant_type": "refresh_token",
+    }
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(TOKEN_ENDPOINT, data=data)
+        resp.raise_for_status()
+        body = resp.json()
+    expires_at = None
+    if body.get("expires_in"):
+        expires_at = datetime.now(UTC) + timedelta(seconds=int(body["expires_in"]))
+    return TokenResult(
+        access_token=body["access_token"],
+        refresh_token=body.get("refresh_token") or refresh_token,
+        expires_at=expires_at,
+    )

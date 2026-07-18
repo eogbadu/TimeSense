@@ -65,6 +65,7 @@ class MicrosoftCalendarProvider(CalendarProvider):
                 location=(item.get("location") or {}).get("displayName") or None,
                 description=item.get("bodyPreview"),
                 provider=self.name,
+                all_day=bool(item.get("isAllDay", False)),
             ))
         return events
 
