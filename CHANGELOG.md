@@ -17,6 +17,7 @@ Format: `[DATE] TIME-### Short description`
 
 ### Features
 
+- [2026-07-20] TIME-281: Fixed the Now screen's "tasks due today" count so it no longer counts calendar meetings as tasks — a day of only meetings now correctly reads "0 tasks due today" (matching Today's "0 of 0" and the empty recommendation), instead of contradicting itself
 - [2026-07-18] TIME-280: Hardened OAuth calendar sync — realistic HTTP-mocked tests for the Google/Outlook providers (event parsing incl. all-day, error mapping) and token refresh, an end-to-end sync test over a real DB session, beat-registration check, and a live-verification runbook (`docs/runbooks/oauth_calendar_sync_verification.md`)
 - [2026-07-18] TIME-279: Calendar meetings are no longer recommended as a "do now" action — `source="calendar"` tasks are excluded from recommendation candidates (they still block time), so the Now screen only ever suggests real to-dos
 - [2026-07-18] TIME-275..278: Calendar + Notion/email woven into the Smart Plan — calendar meetings now block usable time and can't be double-booked by a capture (275); they're woven into the Smart Plan as read-only busy blocks (no more duplicate "On your calendar" card) (276, iOS); OAuth-connected Google/Outlook calendars sync into the plan via a periodic job + on-demand sync with token refresh (277); and imported Notion / confirmed email tasks are auto-scheduled like captures — estimated and placed around your meetings instead of piling up untimed (278). Web/Android keep the existing tasks-only timeline (non-regressing)
