@@ -239,8 +239,11 @@ async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCar
                       key=lambda e: _u(e.starts_at))
     nxt = upcoming[0] if upcoming else None
 
-    # Tasks due today (pending, due or scheduled today) + completions today
-    pending = await TaskRepository(db).list_by_user(user_id=user.id, status="pending", limit=500)
+    # Tasks due today (pending, due or scheduled today) + completions today. Exclude source="calendar"
+    # meetings — they're read-only blocks (shown on Today as events, not recommendable), so counting
+    # them here would contradict the empty best-action + Today's "0 of 0" (TIME-281).
+    pending = [t for t in await TaskRepository(db).list_by_user(user_id=user.id, status="pending", limit=500)
+               if t.source != "calendar"]
     def _today(dt) -> bool:
         return dt is not None and start_utc <= _u(dt) < end_utc
     due_today = sum(1 for t in pending if _today(t.due_at) or _today(t.scheduled_start))
