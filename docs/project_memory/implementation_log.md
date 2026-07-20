@@ -1,5 +1,15 @@
 # Implementation Log
 
+## 2026-07-20 — TIME-281: Now 'tasks due today' count excludes calendar-event tasks
+
+On-device bug (from user screenshots): the Now TASKS card read "6 tasks due today" while the best-action
+was empty and Today showed "0 of 0" — the 6 were imported `source="calendar"` meetings.
+`now._context_cards` computed `tasks_due_today` from all pending tasks incl. calendar-sourced ones;
+after TIME-279 those aren't recommendable, so the count contradicted the recommendation + Today. Fix:
+exclude `source="calendar"` from the `pending` list used for the count (one filter). +2 tests
+(calendar-only day → `tasks_due_today == 0` + `best_task is None`; a real to-do alongside a meeting →
+counts only the to-do). PR #318 (Jira TIME-2315).
+
 ## 2026-07-18 — TIME-280: Harden + document OAuth calendar sync verification
 
 Follow-up #3 from the calendar batch. TIME-277's sync was only tested with a stubbed provider, so the
