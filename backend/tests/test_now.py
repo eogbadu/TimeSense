@@ -351,3 +351,47 @@ async def test_now_why_returns_structured_explanation(client, db_session):
     assert any(f["name"] == "Priority" for f in body["decision_factors"])
     assert isinstance(body["context_used"], list) and body["context_used"]
     assert body["summary"] and body["reason"] == body["summary"]
+
+
+@pytest.mark.anyio
+async def test_now_task_count_excludes_calendar_events(client, db_session):
+    """TIME-281: a day full of imported calendar meetings (source='calendar') but no real to-dos must
+    show tasks_due_today == 0 and no best_task — matching Today's '0 of 0' (not '6 tasks due today')."""
+    from datetime import datetime, timezone
+    from app.models.task import Task
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    now = datetime.now(timezone.utc)
+    for i in range(3):
+        start = now.replace(minute=0, second=0, microsecond=0)
+        db_session.add(Task(
+            user_id=user.id, title=f"Meeting {i}", status="pending", priority=3,
+            source="calendar", scheduled_start=start, scheduled_end=start))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers=_auth_headers())
+    data = r.json()
+    assert data["best_task"] is None                     # meetings aren't recommendable to-dos
+    assert data["context"]["tasks_due_today"] == 0       # ...and aren't counted as tasks
+
+
+@pytest.mark.anyio
+async def test_now_task_count_includes_real_todos(client, db_session):
+    """A genuine to-do due/scheduled today still counts, even alongside calendar meetings."""
+    from datetime import datetime, timezone
+    from app.models.task import Task
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    now = datetime.now(timezone.utc)
+    db_session.add(Task(user_id=user.id, title="Meeting", status="pending", priority=3,
+                        source="calendar", scheduled_start=now, scheduled_end=now))
+    db_session.add(Task(user_id=user.id, title="Pay the bill", status="pending", priority=4,
+                        source="manual", due_at=now))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        r = await client.get("/api/v1/now", headers=_auth_headers())
+    assert r.json()["context"]["tasks_due_today"] == 1   # only the real to-do

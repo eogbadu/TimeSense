@@ -10544,7 +10544,26 @@ TICKETS = [
                 "Beat registration asserted; runbook doc committed; suite green",
             ]),
             divider(), h2("Verification"), code_block("cd backend && pytest tests/test_calendar_providers_http.py tests/test_calendar_oauth_sync.py tests/test_calendar.py -q"),
-            divider(), h2("Dependencies"), p("TIME-277."), divider(), h2("Next Ticket"), p("(none)."),
+            divider(), h2("Dependencies"), p("TIME-277."), divider(), h2("Next Ticket"), p("TIME-281."),
+        ),
+    },
+    {
+        "summary": "TIME-281: Now 'tasks due today' count excludes calendar-event tasks",
+        "labels": ["backend", "now", "calendar", "bug"],
+        "description": doc(
+            h2("Goal"), p("On the Now screen the TASKS card shows '6 tasks due today' while the best-action is empty ('You're all caught up') and Today shows '0 of 0 complete'. The 6 are imported source='calendar' meetings — after TIME-279 they're correctly excluded from recommendations, but the Now count still tallies them, so the count contradicts the recommendation. Exclude calendar-event tasks from the Now tasks-due-today count so it matches Today and the recommendation."),
+            divider(), h2("Scope"), bullet_list([
+                "now._context_cards: exclude source='calendar' from the `pending` list used for tasks_due_today (meetings are read-only blocks, not to-dos)",
+                "Verify tasks_completed_today is unaffected (calendar tasks are never marked done)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list(["No change to how meetings block time or show on Today", "No client change", "No change to the recommendation logic (TIME-279 already correct)"]),
+            divider(), h2("Files Likely Changed"), bullet_list(["backend app/api/v1/now.py", "tests/test_now.py"]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "With only calendar-sourced tasks scheduled today, /now returns tasks_due_today == 0 (consistent with an empty best-action)",
+                "A real to-do due today still counts; suite green",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_now.py -q"),
+            divider(), h2("Dependencies"), p("TIME-279."), divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
 ]
