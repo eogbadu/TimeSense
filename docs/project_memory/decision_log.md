@@ -204,6 +204,70 @@
   Reason: Firebase 12.15.x's Package.swift declares Swift tools-version 6.1, which this environment's Xcode 16.0 / Swift 6.0 can't parse ("incompatible tools version") — so 12.x can't resolve here; 11.x (tools 5.9/6.0) does. GoogleSignIn is a distinct package from firebase-ios-sdk and the real AuthService imports it for signInWithGoogle, so it must be linked separately (surfaced as "no such module 'GoogleSignIn'" once Firebase compiled the previously-stubbed code). The plist follows the repo's existing .gitignore convention (client config is per-developer, downloaded from the console) — the committed reproducible bits are project.pbxproj (package refs/links) + Package.resolved.
   Date: 2026-07-05
 
+- Decision: Energy is a recovery BUDGET that depletes over the day, not a reading of activity
+  Reason: Two implementations disagreed — the scorer used sleep alone (hard-coding "medium" without
+  a sample) while the display treated 30+ min of exercise or 8000+ steps as HIGH energy, so a busy
+  day announced high energy at 8pm. Being busy leaves less capacity, not more. Sleep now sets a
+  morning budget which hours awake, finished effort and a sedentary stretch spend, with a circadian
+  shape on top. It never claims "high" without sleep evidence, because that claim invites starting
+  something demanding.
+  Date: 2026-08-28 (TIME-288)
+
+- Decision: Difficulty is a first-class task field, independent of duration
+  Reason: Required energy was inferred purely from estimated minutes (>= 45 = high), so a 180-minute
+  flight looked demanding and a 10-minute code review trivial. Difficulty is a property of the work.
+  It comes from the baseline library; duration survives only as a fallback for rows predating
+  classification.
+  Date: 2026-08-28 (TIME-284/290)
+
+- Decision: Duration learning is keyed on library TASK TYPE, never on the catch-all, and is shrunk
+  toward the baseline in proportion to evidence
+  Reason: Both halves of "everything takes 23 minutes". A coarse category whose catch-all swallowed
+  ~30% of real titles meant one number answered for most tasks; seeding the estimate to the FIRST
+  observation meant one coarse tap became the answer. An unclassified task teaches nothing
+  transferable, so it is never learned against at all.
+  Date: 2026-08-28 (TIME-286)
+
+- Decision: A nightly adaptation rollup, read by the engine, in preference to live recomputation
+  Reason: The previous "learned preferences" were recomputed per request over 28-30 day windows —
+  too expensive to consult on every recommendation, which is exactly why scoring didn't consult
+  them. Derived and never authoritative: everything in it can be rebuilt from the raw tables.
+  Date: 2026-08-28 (TIME-292)
+
+- Decision: Null, not zero, below every sample floor
+  Reason: "No evidence" and "evidence of nothing" are different claims. Reporting 0.0 for an hour
+  with two observations reads as "never completes then", which the data doesn't support. A new user
+  is scored neutrally on every learned factor, so ranking falls back to urgency and importance.
+  Date: 2026-08-28 (TIME-292/293)
+
+- Decision: Per-user adjustments may RELAX a requirement but never tighten one
+  Reason: Relaxing lets the engine offer something the user can decline. Tightening would silently
+  hide work from someone whose data merely looks unusual — a much worse failure mode.
+  Date: 2026-08-28 (TIME-290)
+
+- Decision: A swap ("not that, this instead") is recorded as a PAIR with a context snapshot, and the
+  chosen task is pinned
+  Reason: A rejection says a pick was wrong; a swap says what would have been right, in a known
+  context. Recording the preference without honouring it would be the worst of both worlds — the
+  user tells the app what they want and watches it argue back. The snapshot is stored because the
+  pairing only means something alongside when it happened, which can't be reconstructed later.
+  Date: 2026-08-28 (TIME-294/296)
+
+- Decision: The current location coordinates are stored (consent-gated, one overwritten row); a
+  movement HISTORY is still never persisted
+  Reason: Errand candidates need a real origin to compute travel from, and previously coordinates
+  were only back-filled on an exact place-name match, so any user standing anywhere unsaved produced
+  LOCATION_DATA_MISSING. The original "raw location points are never persisted" rule was about a
+  trail of movement, and that remains true.
+  Date: 2026-08-28 (TIME-291)
+
+- Decision: Entitlement is granted by a durable users.entitlement_override column, not an email
+  allowlist
+  Reason: The allowlist lived only in a local .env and was never declared in render.yaml, so it was
+  silently empty in production — the owner's own account was locked out with no way back. A column
+  doesn't depend on a Subscription row existing, on account age, or on an email string matching.
+  Date: 2026-08-28 (TIME-282)
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

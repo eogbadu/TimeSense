@@ -1,5 +1,20 @@
 # Change Summary
 
+## 2026-08-28 — TIME-282..297
+
+16 tickets, 16 PRs (#320-336), all merged. Backend suite 704 passing; iOS builds clean; alembic head
+`a1b2c3d4e5f9` (single head, applied to Postgres).
+
+New: `task_library.py`, `energy_service.py`, `localtime.py`, `scoring/fits.py`,
+`user_adaptation_service.py`, `TimezoneSyncService.swift`, plus models
+`task_duration_observations`, `energy_checkins`, `user_adaptation_profiles`,
+`recommendation_swaps` and columns `users.entitlement_override`, `tasks.task_type`,
+`tasks.difficulty`, `user_location_states.lat/lng`.
+
+New endpoints: `POST /energy/checkin`, `GET /energy`, `POST /recommendations/swap`,
+`PATCH /admin/users/{id}/entitlement`.
+
+
 ## 2026-07-18 — TIME-275..278 (Calendar + Notion/email → Smart Plan)
 
 - Your calendar and imported items now genuinely drive the plan. Calendar meetings block time

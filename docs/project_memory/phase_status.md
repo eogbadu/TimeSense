@@ -1,5 +1,19 @@
 # Phase Status
 
+## Recommendation quality (TIME-282..297) — COMPLETE 2026-08-28
+
+All 16 tickets merged. The 10 device-feedback items are addressed end to end: estimation, timezone,
+entitlement, location, energy, learning/adaptation, and disagree-to-swap.
+
+Outstanding and owned by the user: grant the entitlement override on the PRODUCTION database, deploy
+the backend, rebuild iOS, and run the on-device passes that a simulator can't cover (geofence and
+location permission flow, the duration sheet + timer, the swap picker).
+
+Deliberately not done, with reasons in `docs/architecture/learning_and_adaptation_spec.md`:
+energy-curve calibration from `energy_bias` (collected, not yet applied), per-user scoring weights,
+cross-user learning, a forgetting curve, and content-level (rather than type-level) understanding.
+
+
 ## Current Phase
 Phase 14: Beta Hardening & Launch Readiness. **Phase 13 (Integrations Expansion, TIME-049–053) is
 COMPLETE.** TIME-054 (Error Monitoring + Analytics, backend) done. Next: TIME-055 (Privacy Review &

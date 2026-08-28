@@ -1,5 +1,40 @@
 # Implementation Log
 
+## 2026-08-28 — TIME-282..297 Recommendation quality batch (Jira TIME-2316..2331, PRs #320-336)
+
+| Logical | Jira | PR | What |
+|---|---|---|---|
+| TIME-282 | TIME-2316 | #321 | Durable `users.entitlement_override`; render.yaml declares PREMIUM_TEST_EMAILS; Settings reads /subscriptions/me/entitlement; admin endpoint |
+| TIME-283 | TIME-2317 | #322 | TimezoneSyncService (launch/foreground/system change); `app/core/localtime.py`; 10 UTC day-boundary sites fixed; hourly per-user-local check-ins |
+| TIME-284 | TIME-2318 | #323 | Baseline task library: 79 types, typical minutes + difficulty; word-anchored matcher; Task.task_type/difficulty |
+| TIME-285 | TIME-2319 | #324 | Classification at the TaskRepository choke point; LLM suggests, library validates |
+| TIME-286 | TIME-2320 | #325 | Duration learning per task TYPE; catch-all never learned; confidence-weighted blend; raw observations table |
+| TIME-287 | TIME-2321 | #326 | iOS duration sheet (real minutes) + optional timer + type correction |
+| TIME-288 | TIME-2322 | #327 | One EnergyService; recovery budget that depletes; never claims "high" without sleep evidence |
+| TIME-289 | TIME-2323 | #328 | EnergyCheckIn, 4h override, tappable card, ask folded into the existing morning check-in |
+| TIME-290 | TIME-2324 | #332 | Required energy from difficulty; per-user adjustment that only relaxes |
+| TIME-291 | TIME-2325 | #329 | Location repair: onboarding ask, While-Using, coordinates (consent-gated, no history), refresh before stale |
+| TIME-292 | TIME-2326 | #330 | `user_adaptation_profiles` + nightly job |
+| TIME-293 | TIME-2327 | #331 | The four constant fits made real (38% of the weight) |
+| TIME-294 | TIME-2328 | #333 | RecommendationSwap + pin + context snapshot |
+| TIME-295 | TIME-2329 | #334 | iOS "What would you rather do?" picker |
+| TIME-296 | TIME-2330 | #335 | Swap-pair learning; each disagree reason gets a distinct effect |
+| TIME-297 | TIME-2331 | #336 | learning_and_adaptation_spec.md + memory close-out |
+
+**Measurements, not impressions.** Catch-all rate on an 89-title corpus of realistic captures: old
+15-category table 30%, new library 0%, distinct buckets 15 → 67. The 23-minute figure reproduced
+exactly from EWMA(0.3) over 15/30/30.
+
+**Two corrections made during the batch.** (1) The initial survey said 58% of the scoring weight was
+inert; it inverted the split — the verified figure is 38% inert / 62% varying, now pinned by a test.
+(2) The first energy tuning pass made an ordinary 2pm read "running low" and claimed high energy at
+3am; both fixed before commit.
+
+**Gotchas recorded in known_issues.md.** 11 test files HANG (not fail) on unreachable outbound
+network — reproduces on clean main. A `postgresql.JSONB` column deadlocks the SQLite test suite
+rather than erroring; use `JSON().with_variant(JSONB(), "postgresql")`.
+
+
 ## 2026-07-20 — TIME-281: Now 'tasks due today' count excludes calendar-event tasks
 
 On-device bug (from user screenshots): the Now TASKS card read "6 tasks due today" while the best-action
