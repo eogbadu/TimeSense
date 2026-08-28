@@ -24,6 +24,7 @@ from app.models.sleep_wake import SleepWakeEvent  # noqa: F401
 from app.models.subscription import Subscription  # noqa: F401
 from app.models.task import InternalReminder, Task  # noqa: F401
 from app.models.task_duration import TaskDurationEstimate  # noqa: F401
+from app.models.task_duration_observation import TaskDurationObservation  # noqa: F401
 from app.models.user import User, UserPreferences, UserProfile  # noqa: F401
 from app.models.user_location_state import UserLocationState  # noqa: F401
 from app.models.user_place import UserPlace  # noqa: F401

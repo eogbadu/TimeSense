@@ -5,28 +5,62 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.task_duration_repository import TaskDurationRepository
-from app.services.task_duration import infer_category, seed_duration
+from app.services.task_library import classify, get_type, is_known_type
 
 
 class TaskDurationEstimator:
-    """Estimates how long a task will take: the user's learned per-category estimate when we have
-    one, otherwise the seed lookup table. This is the assistant's sense of time, and it gets more
-    accurate as record_actual folds in real observations."""
+    """How long the assistant thinks a task will take.
+
+    Two layers: the baseline library (what this kind of task typically takes) and what this user's
+    own history says about this TYPE of task. The learned value is shrunk toward the baseline in
+    proportion to how much evidence there is, so a single answer nudges the estimate rather than
+    becoming it.
+
+    Both layers changed in TIME-286. Previously learning was keyed on a coarse category whose
+    catch-all bucket swallowed most real titles, and the learned value replaced the seed outright
+    from the very first observation — which is how every task came to read 23 minutes.
+    """
 
     def __init__(self, db: AsyncSession) -> None:
         self._repo = TaskDurationRepository(db)
 
-    async def estimate(self, user_id: uuid.UUID, title: str) -> tuple[int, str]:
-        """Return (estimated_minutes, category) for a task title."""
-        category = infer_category(title)
-        learned = await self._repo.get_minutes(user_id, category)
-        return (learned if learned is not None else seed_duration(category)), category
+    @staticmethod
+    def resolve_type(title: str, task_type: str | None = None) -> str:
+        """The type to estimate against: the task's stored classification when it has a valid one,
+        otherwise inferred from the title (rows predating classification stay usable)."""
+        return task_type if is_known_type(task_type) else classify(title).key
 
-    async def should_ask(self, user_id: uuid.UUID, title: str) -> tuple[bool, str]:
-        """Whether to prompt 'how long did that take?' for this task (only while still learning)."""
-        category = infer_category(title)
-        return await self._repo.learning_active(user_id, category), category
+    async def estimate(
+        self, user_id: uuid.UUID, title: str, task_type: str | None = None
+    ) -> tuple[int, str]:
+        """Return (estimated_minutes, task_type)."""
+        resolved = self.resolve_type(title, task_type)
+        learned = await self._repo.get_minutes(user_id, resolved)
+        return (learned if learned is not None else get_type(resolved).typical_minutes), resolved
 
-    async def record_actual(self, user_id: uuid.UUID, title: str, actual_minutes: int) -> None:
-        """Teach the estimator how long a task actually took (by its inferred category)."""
-        await self._repo.record_actual(user_id, infer_category(title), actual_minutes)
+    async def should_ask(
+        self, user_id: uuid.UUID, title: str, task_type: str | None = None
+    ) -> tuple[bool, str]:
+        """Whether to prompt 'how long did that take?' — only while this type is still being learned,
+        and never for a task we couldn't classify."""
+        resolved = self.resolve_type(title, task_type)
+        return await self._repo.learning_active(user_id, resolved), resolved
+
+    async def record_actual(
+        self,
+        user_id: uuid.UUID,
+        title: str,
+        actual_minutes: int,
+        task_type: str | None = None,
+        *,
+        task_id: uuid.UUID | None = None,
+        estimated_minutes: int | None = None,
+    ) -> str:
+        """Teach the estimator how long a task actually took. Returns the type it was recorded
+        against."""
+        resolved = self.resolve_type(title, task_type)
+        await self._repo.record_actual(
+            user_id, resolved, actual_minutes,
+            task_id=task_id, estimated_minutes=estimated_minutes,
+        )
+        return resolved

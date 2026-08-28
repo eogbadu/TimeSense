@@ -34,7 +34,8 @@ async def autoschedule_task(db: AsyncSession, task: Task, now: datetime | None =
         return False
 
     if not task.estimated_minutes:
-        minutes, _category = await TaskDurationEstimator(db).estimate(task.user_id, task.title)
+        minutes, _type = await TaskDurationEstimator(db).estimate(
+            task.user_id, task.title, task.task_type)
         task.estimated_minutes = minutes
         await db.flush()
     if not task.estimated_minutes:
