@@ -281,3 +281,75 @@ async def test_a_stored_classification_is_preferred_over_re_reading_the_title(db
     by_title, by_title_type = await est.estimate(user.id, "Buy groceries")
     assert corrected < get_type("code_review").typical_minutes
     assert by_title == get_type(by_title_type).typical_minutes, "shopping should be untouched"
+
+
+@pytest.mark.anyio
+async def test_duration_feedback_accepts_an_arbitrary_minute_value(client):
+    """The iOS sheet replaced three fixed buttons (15/30/60) with a real minute entry, so the
+    endpoint has to take any plausible value — not just the three it used to receive (TIME-287)."""
+    from unittest.mock import patch
+
+    claims = {"uid": "dur-any", "email": "any@example.com", "role": "user", "email_verified": True}
+    with patch("app.core.security.firebase_auth.verify_id_token", return_value=claims):
+        r = await client.post("/api/v1/capture", headers={"Authorization": "Bearer t"},
+                              json={"raw_input": "Buy groceries"})
+        task_id = r.json()["id"]
+
+        for value in (1, 7, 23, 137, 480):
+            f = await client.post(f"/api/v1/tasks/{task_id}/duration-feedback",
+                                  headers={"Authorization": "Bearer t"},
+                                  json={"actual_minutes": value})
+            assert f.status_code == 200, f.text
+
+        # Out of range is rejected rather than silently clamped — a 20-hour "task" is a stuck timer,
+        # and letting it through would poison the learned estimate.
+        for bad in (0, -5, 1441):
+            f = await client.post(f"/api/v1/tasks/{task_id}/duration-feedback",
+                                  headers={"Authorization": "Bearer t"},
+                                  json={"actual_minutes": bad})
+            assert f.status_code == 422, f"{bad} should have been rejected"
+
+
+@pytest.mark.anyio
+async def test_duration_feedback_applies_a_type_correction_before_learning(client, db_session):
+    """The sheet lets the user say "that wasn't shopping, it was a code review". The correction has
+    to be applied BEFORE the observation is recorded, or the wrong bucket learns from it."""
+    from unittest.mock import patch
+
+    claims = {"uid": "dur-fix", "email": "fix@example.com", "role": "user", "email_verified": True}
+    with patch("app.core.security.firebase_auth.verify_id_token", return_value=claims):
+        r = await client.post("/api/v1/capture", headers={"Authorization": "Bearer t"},
+                              json={"raw_input": "Buy groceries"})
+        task_id = r.json()["id"]
+        assert r.json()["task_type"] == "shop_groceries"
+
+        f = await client.post(f"/api/v1/tasks/{task_id}/duration-feedback",
+                              headers={"Authorization": "Bearer t"},
+                              json={"actual_minutes": 25, "task_type": "code_review"})
+        assert f.status_code == 200, f.text
+        assert f.json()["task_type"] == "code_review"
+
+        # An invented key must be ignored rather than stored.
+        f2 = await client.post(f"/api/v1/tasks/{task_id}/duration-feedback",
+                               headers={"Authorization": "Bearer t"},
+                               json={"actual_minutes": 25, "task_type": "not_a_real_type"})
+        assert f2.status_code == 200
+        assert f2.json()["task_type"] == "code_review", "an invalid correction must not take effect"
+
+
+@pytest.mark.anyio
+async def test_duration_prompt_reports_the_task_type_for_the_correction_ui(client):
+    """The sheet shows "counted as <type>" so a wrong guess can be corrected; the prompt endpoint
+    has to supply it."""
+    from unittest.mock import patch
+
+    claims = {"uid": "dur-ui", "email": "ui@example.com", "role": "user", "email_verified": True}
+    with patch("app.core.security.firebase_auth.verify_id_token", return_value=claims):
+        r = await client.post("/api/v1/capture", headers={"Authorization": "Bearer t"},
+                              json={"raw_input": "Go for a run"})
+        task_id = r.json()["id"]
+        p = await client.get(f"/api/v1/tasks/{task_id}/duration-prompt",
+                             headers={"Authorization": "Bearer t"})
+    assert p.status_code == 200
+    assert p.json()["task_type"] == "exercise_run"
+    assert p.json()["category"] == p.json()["task_type"]   # legacy alias

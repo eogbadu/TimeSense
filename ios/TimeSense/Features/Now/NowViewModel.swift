@@ -83,6 +83,15 @@ struct NowTask: Decodable, Identifiable {
 struct DurationPrompt: Identifiable, Equatable {
     let id: String   // the completed task's id
     let title: String
+    /// What the assistant predicted — the sheet opens on this so the common case ("about right")
+    /// is a single tap, and only a real disagreement costs any effort.
+    let estimatedMinutes: Int?
+    /// The library type this will teach. Shown so a wrong guess can be corrected, since a wrong
+    /// type teaches the wrong bucket (TIME-286).
+    let taskType: String?
+    /// Minutes measured by the in-app timer, when the user used it. Pre-fills the sheet with a real
+    /// figure rather than a guess.
+    let measuredMinutes: Int?
 }
 
 struct RecommendationExplanation: Decodable {
@@ -207,14 +216,41 @@ final class NowViewModel: ObservableObject {
     /// while the assistant is still learning that kind of task).
     @Published var durationPrompt: DurationPrompt?
 
-    func markDone(taskId: String, title: String) async {
+    /// When the user started the task in-app, per task id. Lets a real duration be captured with no
+    /// prompt at all — the best kind of learning signal, because it costs the user nothing.
+    @Published private(set) var startedAt: [String: Date] = [:]
+
+    func startTimer(taskId: String) {
+        startedAt[taskId] = Date()
+    }
+
+    func cancelTimer(taskId: String) {
+        startedAt[taskId] = nil
+    }
+
+    func elapsedMinutes(taskId: String) -> Int? {
+        guard let started = startedAt[taskId] else { return nil }
+        return Self.plausibleMinutes(Date().timeIntervalSince(started) / 60)
+    }
+
+    /// Guard against a timer left running overnight, or one stopped a few seconds after starting —
+    /// neither is a real observation, and feeding them in would poison the learned estimate.
+    static func plausibleMinutes(_ raw: Double) -> Int? {
+        let rounded = Int(raw.rounded())
+        return (1...480).contains(rounded) ? rounded : nil
+    }
+
+    func markDone(taskId: String, title: String, estimatedMinutes: Int? = nil) async {
         guard case .loaded = uiState else { return }
+        let measured = elapsedMinutes(taskId: taskId)
         struct StatusUpdate: Encodable { let status: String }
         do {
             let _: TaskPatchResponse = try await APIClient.shared.patch(
                 "/api/v1/tasks/\(taskId)", body: StatusUpdate(status: "done")
             )
-            await maybePromptDuration(taskId: taskId, title: title)
+            await maybePromptDuration(taskId: taskId, title: title,
+                                      estimatedMinutes: estimatedMinutes, measured: measured)
+            cancelTimer(taskId: taskId)
             await load()
         } catch {
             // Reload anyway so UI stays consistent
@@ -222,21 +258,34 @@ final class NowViewModel: ObservableObject {
         }
     }
 
-    private func maybePromptDuration(taskId: String, title: String) async {
-        struct PromptResp: Decodable { let ask: Bool }
-        if let resp: PromptResp = try? await APIClient.shared.get(
+    private func maybePromptDuration(taskId: String, title: String,
+                                     estimatedMinutes: Int?, measured: Int?) async {
+        struct PromptResp: Decodable { let ask: Bool; let task_type: String? }
+        guard let resp: PromptResp = try? await APIClient.shared.get(
             "/api/v1/tasks/\(taskId)/duration-prompt"
-        ), resp.ask {
-            durationPrompt = DurationPrompt(id: taskId, title: title)
+        ) else { return }
+
+        // A measured duration is worth recording even once the assistant has stopped asking about
+        // this type — it's free, and more observations only sharpen the estimate.
+        if let measured, !resp.ask {
+            await submitDuration(taskId: taskId, minutes: measured)
+            return
         }
+        guard resp.ask else { return }
+        durationPrompt = DurationPrompt(
+            id: taskId, title: title, estimatedMinutes: estimatedMinutes,
+            taskType: resp.task_type, measuredMinutes: measured
+        )
     }
 
-    /// Record how long the task actually took → teaches the per-user estimate.
-    func submitDuration(taskId: String, minutes: Int) async {
-        struct Body: Encodable { let actual_minutes: Int }
+    /// Record how long the task actually took → teaches the per-user estimate for its type.
+    /// `taskType` carries a correction when the user says the detected type was wrong.
+    func submitDuration(taskId: String, minutes: Int, taskType: String? = nil) async {
+        struct Body: Encodable { let actual_minutes: Int; let task_type: String? }
         struct Resp: Decodable { let estimated_minutes: Int }
         let _: Resp? = try? await APIClient.shared.post(
-            "/api/v1/tasks/\(taskId)/duration-feedback", body: Body(actual_minutes: minutes)
+            "/api/v1/tasks/\(taskId)/duration-feedback",
+            body: Body(actual_minutes: minutes, task_type: taskType)
         )
         durationPrompt = nil
     }
