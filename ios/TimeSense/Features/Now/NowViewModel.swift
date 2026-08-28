@@ -308,6 +308,39 @@ final class NowViewModel: ObservableObject {
         await sendFeedback(taskId: taskId, signal: "disagree", snoozeUntil: nil, reason: reason)
     }
 
+    /// Today's actionable tasks, for the "what would you rather do?" picker. Calendar meetings are
+    /// filtered out — they're read-only blocks and aren't recommendable anyway (TIME-279/281).
+    func swapCandidates(excluding taskId: String) async -> [TimelineTask] {
+        let today = DateFormatter.swapPickerDay.string(from: Date())
+        guard let entries: [TimelineEntry] = try? await APIClient.shared.get(
+            "/api/v1/timeline/today/plan?date=\(today)"
+        ) else { return [] }
+        return entries.compactMap { entry -> TimelineTask? in
+            guard !entry.isEvent, let task = entry.task else { return nil }
+            guard task.id != taskId, task.status != "done", task.status != "cancelled" else { return nil }
+            return task
+        }
+    }
+
+    /// "Not that — this instead." Records the swap and pins the chosen task, then reloads so the
+    /// user immediately sees their own choice as the recommendation (TIME-294/295).
+    func swap(rejectedTaskId: String, chosenTaskId: String, reason: String?) async {
+        guard case .loaded(let ctx) = uiState else { return }
+        struct Body: Encodable {
+            let rejected_task_id: String
+            let chosen_task_id: String
+            let reason: String?
+            let recommendation_event_id: String?
+        }
+        struct Resp: Decodable { let id: String }
+        let _: Resp? = try? await APIClient.shared.post(
+            "/api/v1/recommendations/swap",
+            body: Body(rejected_task_id: rejectedTaskId, chosen_task_id: chosenTaskId,
+                       reason: reason, recommendation_event_id: ctx.recommendationEventId)
+        )
+        await load()
+    }
+
     /// Snooze the current best task for a few hours; it drops out of Now until then.
     func snooze(taskId: String, hours: Int = 3) async {
         let until = ISO8601DateFormatter().string(from: Date().addingTimeInterval(Double(hours) * 3600))
@@ -346,3 +379,14 @@ final class NowViewModel: ObservableObject {
 // Minimal decodables for the mutation responses
 private struct TaskPatchResponse: Decodable { let id: String }
 private struct FeedbackResponse: Decodable { let id: String }
+
+
+private extension DateFormatter {
+    /// The device's local date, which is what the plan endpoint expects — the backend resolves the
+    /// day in the user's stored timezone (TIME-283).
+    static let swapPickerDay: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+}
