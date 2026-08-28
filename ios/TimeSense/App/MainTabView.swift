@@ -53,7 +53,11 @@ struct MainTabView: View {
         // every foreground, so travelling to any zone is picked up without a cold start.
         .task { timezoneSync.start() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { timezoneSync.syncIfNeeded() }
+            guard phase == .active else { return }
+            timezoneSync.syncIfNeeded()
+            // Renew the location fix before the backend's staleness cutoff. Without this the
+            // signal simply expired after six hours and nothing ever brought it back (TIME-291).
+            LocationService.shared.reportCurrentLocationIfNeeded()
         }
         // Route notification taps to the right tab. Today clears .scheduleTask after presenting the
         // scheduler; we clear .now here.

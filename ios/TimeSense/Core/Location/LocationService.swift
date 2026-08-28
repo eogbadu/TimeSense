@@ -27,6 +27,15 @@ final class LocationService: NSObject, ObservableObject {
     // — that inverted the arrive/leave message. So on a crossing we request a *fresh* fix and derive
     // inside/outside from the real distance to the place center, deduping on a genuine change.
     private var lastRegionState: [String: Bool] = [:]   // regionId -> isInside
+    /// Set while waiting on a fix requested by reportCurrentLocationIfNeeded (rather than by a
+    /// geofence crossing), so the delegate knows to post a plain current-position report.
+    private var pendingCurrentReport = false
+    private var lastPostedAt: Date?
+    /// Set from the backend's response when the stored fix is close to going stale.
+    private var needsRefresh = false
+    /// Don't re-report on every foreground — the position rarely matters at finer resolution than
+    /// this, and the point is to keep the signal alive, not to track the user.
+    private static let minReportInterval: TimeInterval = 15 * 60
     private var pendingEvents: [String: Bool] = [:]      // regionId -> the raw event's direction (true=enter), pending a fresh fix
 
     @Published private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -46,6 +55,13 @@ final class LocationService: NSObject, ObservableObject {
         if authorizationStatus == .authorizedAlways {
             manager.allowsBackgroundLocationUpdates = true
             reregisterGeofences()
+        }
+        // "While Using" used to fall through here and do NOTHING, so the backend never learned the
+        // user's place at all — and iOS rarely offers the Always upgrade prompt, so plenty of users
+        // sat in that state permanently. Now both authorised states report a position; only
+        // geofencing (which needs background access) stays Always-only (TIME-291).
+        if authorizationStatus == .authorizedAlways || authorizationStatus == .authorizedWhenInUse {
+            reportCurrentLocationIfNeeded(force: true)
         }
         if !places.isEmpty { syncPlaces() }   // keep the backend's copy in sync on launch
     }
@@ -206,12 +222,56 @@ final class LocationService: NSObject, ObservableObject {
     }
 
     /// Tell the backend the user's current place (nil = away) so it can shape the recommendation.
-    private func postPlace(placeName: String?, isHome: Bool) async {
-        struct Body: Encodable { let place_name: String?; let is_home: Bool }
-        struct Resp: Decodable { let place_name: String? }
-        let _: Resp? = try? await APIClient.shared.post(
-            "/api/v1/location/place", body: Body(place_name: placeName, is_home: isHome)
+    ///
+    /// Sends the current coordinates too when we have a fix. The backend stores them only with the
+    /// user's location consent, and only ever as the CURRENT position — it needs an origin to
+    /// compute travel time for errands, which it previously had no way to obtain unless the place
+    /// name happened to match a saved place exactly (TIME-291).
+    private func postPlace(placeName: String?, isHome: Bool, coordinate: CLLocationCoordinate2D? = nil) async {
+        struct Body: Encodable {
+            let place_name: String?
+            let is_home: Bool
+            let latitude: Double?
+            let longitude: Double?
+        }
+        struct Resp: Decodable { let place_name: String?; let refresh_soon: Bool? }
+        let fix = coordinate ?? manager.location?.coordinate
+        let resp: Resp? = try? await APIClient.shared.post(
+            "/api/v1/location/place",
+            body: Body(place_name: placeName, is_home: isHome,
+                       latitude: fix?.latitude, longitude: fix?.longitude)
         )
+        lastPostedAt = Date()
+        needsRefresh = resp?.refresh_soon ?? false
+    }
+
+    /// Report where the user is right now, without needing a geofence crossing.
+    ///
+    /// This is what makes the signal work for the two cases that previously produced nothing at
+    /// all: a user who granted only "While Using" (so no geofences are registered), and a user who
+    /// has never saved a place. It also renews the fix before the backend's staleness cutoff, which
+    /// used to let the signal silently disappear after six hours (TIME-291).
+    func reportCurrentLocationIfNeeded(force: Bool = false) {
+        guard authorizationStatus == .authorizedAlways || authorizationStatus == .authorizedWhenInUse
+        else { return }
+        if !force, let last = lastPostedAt, Date().timeIntervalSince(last) < Self.minReportInterval,
+           !needsRefresh {
+            return
+        }
+        manager.requestLocation()   // delegate posts once a fix arrives
+        pendingCurrentReport = true
+    }
+
+    /// Match a fix against the user's saved places so the report carries a name when we know one,
+    /// and `nil` (out and about) when we don't — the same shape geofence crossings produce.
+    private func placeName(for location: CLLocation) -> (String?, Bool) {
+        for place in places {
+            let centre = CLLocation(latitude: place.latitude, longitude: place.longitude)
+            if location.distance(from: centre) <= place.radius {
+                return (place.name, place.name.caseInsensitiveCompare("home") == .orderedSame)
+            }
+        }
+        return (nil, false)
     }
 
     /// Resolve a geofence crossing once we know the user's true inside/outside for the place: keep the
@@ -291,6 +351,15 @@ extension LocationService: CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         objectWillChange.send()
+
+        // A plain "where am I now" report — the path that keeps the signal alive for While-Using
+        // users, users with no saved places, and fixes about to go stale (TIME-291).
+        if pendingCurrentReport, let fix = locations.last {
+            pendingCurrentReport = false
+            let (name, isHome) = placeName(for: fix)
+            Task { await postPlace(placeName: name, isHome: isHome, coordinate: fix.coordinate) }
+        }
+
         guard !pendingEvents.isEmpty, let fix = locations.last else { return }
         // Only trust a genuinely fresh fix — a stale cached one is exactly what inverted the messages.
         guard abs(fix.timestamp.timeIntervalSinceNow) <= 60 else { return }
