@@ -1,6 +1,7 @@
 """Centralized location service. Reads the user's current derived place (UserLocationState — place
-name + is_home, never raw coordinates) and returns a typed snapshot. Never crashes the engine when
-location is unavailable; returns an "unknown" snapshot with low confidence instead."""
+name, is_home, and since TIME-291 the CURRENT coordinates when the user has consented; never a
+movement history) and returns a typed snapshot. Never crashes the engine when location is
+unavailable; returns an "unknown" snapshot with low confidence instead."""
 
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.user_location_repository import UserLocationRepository
-from app.services.recommendation.types import LocationCategory, UserLocationSnapshot
+from app.services.recommendation.types import Coordinates, LocationCategory, UserLocationSnapshot
 
 
 def _category(place_name: str | None, is_home: bool) -> LocationCategory:
@@ -47,5 +48,11 @@ async def get_user_location_snapshot(
         last_updated_at=updated.isoformat(),
         confidence=0.9,
         place_name=state.place_name,
-        coordinates=None,   # we never persist raw coordinates
+        # The current position, when the user has consented to location (TIME-291). Without this an
+        # errand could never be travel-checked unless the reported place name happened to match a
+        # saved place exactly, so location silently stopped influencing recommendations.
+        coordinates=(
+            Coordinates(latitude=state.latitude, longitude=state.longitude)
+            if state.latitude is not None and state.longitude is not None else None
+        ),
     )
