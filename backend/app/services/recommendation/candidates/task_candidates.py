@@ -11,6 +11,7 @@ from app.services.recommendation.candidates.common import (
     priority_importance,
     task_required_energy,
 )
+from app.services.recommendation.scoring.fits import apply_fits
 from app.services.recommendation.types import (
     ActionType,
     CandidateAction,
@@ -60,7 +61,7 @@ def generate_task_candidates(ctx: UserContext, now: datetime) -> list[CandidateA
         if task.id in ctx.recently_disagreed_task_ids:
             codes = codes + ["RECENTLY_DISAGREED"]
         req_energy = task_required_energy(task)
-        candidates.append(CandidateAction(
+        candidate = CandidateAction(
             id=f"task:{task.id}",
             type=action_type,
             domain="task",
@@ -69,17 +70,19 @@ def generate_task_candidates(ctx: UserContext, now: datetime) -> list[CandidateA
             estimated_minutes=task.estimated_minutes or 30,
             urgency=deadline_urgency(task.due_date, now),
             importance=priority_importance(task.priority),
-            context_fit=0.6,
             time_fit=duration_time_fit(task.estimated_minutes, free),
             energy_fit=energy_fit(req_energy, user_energy),
-            routine_fit=0.4,
-            user_preference_fit=0.5,
             confidence=0.8,
             required_energy=req_energy,
             interruption_level="low",
             reason_codes=codes,
             related_entity_ids=[task.id],
-        ))
+        )
+        # context_fit / routine_fit / user_preference_fit / location_fit were hard-coded constants
+        # here — identical for every task, and together 58% of the scoring weight. They are now
+        # computed per task, which is what lets the engine tell two tasks apart at all (TIME-293).
+        apply_fits(candidate, task, task.category or "general", ctx)
+        candidates.append(candidate)
 
     # Batch small tasks when several quick tasks exist.
     quick = [t for t in tc.quick_tasks if t.location_intent is None]

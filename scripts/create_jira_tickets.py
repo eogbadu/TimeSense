@@ -10912,10 +10912,10 @@ TICKETS = [
         ),
     },
     {
-        "summary": "TIME-293: Activate the inert 58% of the scoring weight",
+        "summary": "TIME-293: Activate the four constant scoring factors (38% of the weight)",
         "labels": ["backend", "recommendations", "scoring"],
         "description": doc(
-            h2("Goal"), p("Of the eight weighted scoring factors, context_fit (0.6), routine_fit (0.4), user_preference_fit (0.5) and location_fit (0.5) are hard-coded identical for every task candidate. Together they carry 58% of the scoring weight, so 58% of the score is constant across all tasks and only urgency, importance, time_fit and energy_fit actually differentiate. This is the single largest reason recommendations feel arbitrary, and it caps the benefit of every other fix in this batch. Make all four real."),
+            h2("Goal"), p("Of the eight weighted scoring factors, context_fit (0.6), routine_fit (0.4), user_preference_fit (0.5) and location_fit (0.5) are hard-coded identical for every task candidate. Together they carry 38% of the scoring weight (0.15 + 0.08 + 0.05 + 0.10), so better than a third of every task's score is the same constant and only urgency, importance, time_fit and energy_fit can tell two tasks apart. CORRECTION: an earlier survey reported this as 58%, which inverted the split; the real figure is 38% inert / 62% varying, and a test now pins it against WEIGHTS. It remains the single largest structural reason recommendations feel arbitrary. Make all four real."),
             divider(), h2("Scope"), bullet_list([
                 "context_fit computed from part-of-day, task category, current location category, and whether a commitment is imminent",
                 "routine_fit computed against RoutineAssumption blocks and the observed completion-hour distribution from the TIME-292 profile",
