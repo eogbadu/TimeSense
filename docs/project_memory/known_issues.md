@@ -1,5 +1,21 @@
 # Known Issues
 
+## GOTCHA (found 2026-08-28, TIME-292): a Postgres-only column type DEADLOCKS the tests, it doesn't error
+- Symptom: `pytest tests/test_user_adaptation.py` hung indefinitely — no failure, no traceback, no
+  output. A pure-Python test in the same file passed instantly, so it wasn't collection.
+- Cause: the new model declared `postgresql.JSONB` columns. Tests build their schema with
+  `Base.metadata.create_all` against **SQLite** (the long-standing gap already noted below), and
+  SQLite cannot render `JSONB`. The resulting error surfaces *inside the aiosqlite worker thread*,
+  where it deadlocks rather than propagating.
+- Fix: declare a dialect variant so both back-ends work —
+  ```python
+  _JSONMap = JSON().with_variant(JSONB(), "postgresql")
+  ```
+  Postgres still gets real JSONB; SQLite gets JSON.
+- **Rule for future models: never use a `postgresql.*` column type directly.** Wrap it in
+  `.with_variant()`. The failure mode is a hang, not an error, so it costs a lot of time to
+  diagnose.
+
 ## OPEN (2026-08-28, TIME-283): historical rows carry no timezone, so past patterns shift on relocation
 - `DailyActivity.day`, `HourlyActivity.hour_start` and the `created_at` timestamps behind the
   learned-preference / behavioural-pattern services are interpreted with the user's **current**
