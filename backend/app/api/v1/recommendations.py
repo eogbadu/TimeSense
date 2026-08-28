@@ -21,6 +21,11 @@ from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.learned_preferences_service import LearnedPreferencesService
 from app.services.recommendation_service import RecommendationService
+from app.core.localtime import resolve_zone
+from app.repositories.recommendation_swap_repository import RecommendationSwapRepository
+from app.repositories.user_location_repository import UserLocationRepository
+from app.services.energy_service import EnergyService
+from app.services.task_library import get_type
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -146,6 +151,11 @@ async def submit_feedback(
     if body.signal == "done":
         await repo.update(body.task_id, user.id, status="done")
 
+    # Acting on a pinned task means the user's choice has been honoured — the pin has done its job
+    # and shouldn't keep overriding the engine for the rest of its window (TIME-294).
+    if body.signal in ("done", "not_now", "snooze", "disagree"):
+        await RecommendationSwapRepository(db).release_pin(user.id, body.task_id)
+
     fb = RecommendationFeedback(
         user_id=user.id,
         task_id=body.task_id,
@@ -166,3 +176,85 @@ async def submit_feedback(
     await db.refresh(fb)
 
     return FeedbackResponse(id=fb.id, signal=fb.signal)
+
+
+class SwapRequest(BaseModel):
+    """"Not that — this instead." The user rejects the recommendation AND names the replacement."""
+
+    rejected_task_id: uuid.UUID
+    chosen_task_id: uuid.UUID
+    reason: Literal["wrong_time", "not_priority", "not_relevant", "too_big"] | None = None
+    recommendation_event_id: uuid.UUID | None = None
+
+
+class SwapResponse(BaseModel):
+    id: uuid.UUID
+    chosen_task_id: uuid.UUID
+    pinned_until: datetime | None
+
+
+@router.post("/swap", response_model=SwapResponse, status_code=201)
+async def submit_swap(
+    body: SwapRequest,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+) -> SwapResponse:
+    """Record a swap and make the user's choice the recommendation.
+
+    This is additive: the ordinary disagree+reason feedback is still written exactly as before, so
+    every existing learning path keeps working. What the swap adds is the PAIR — a rejection says a
+    pick was wrong, a swap says what would have been right, in a known context (TIME-294).
+
+    The chosen task is pinned for a few hours. Recording the preference without honouring it would
+    be the worst of both worlds: the user tells the app what they want and watches it argue back.
+    """
+    user, _ = await UserService(db).get_or_create_user(current_user.uid, current_user.email or "")
+
+    repo = TaskRepository(db)
+    rejected = await repo.get_by_id(body.rejected_task_id, user_id=user.id)
+    chosen = await repo.get_by_id(body.chosen_task_id, user_id=user.id)
+    if rejected is None or chosen is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if rejected.id == chosen.id:
+        raise HTTPException(status_code=400, detail="Cannot swap a task for itself")
+
+    now = datetime.now(timezone.utc)
+    tz = user_timezone_of(user)
+
+    # The disagree is recorded through the existing path, unchanged.
+    fb = RecommendationFeedback(
+        user_id=user.id, task_id=rejected.id, signal="disagree", reason=body.reason,
+    )
+    db.add(fb)
+    await db.flush()
+    if body.recommendation_event_id is not None:
+        await RecommendationEventRepository(db).set_outcome(
+            body.recommendation_event_id, user.id, outcome="disagree", feedback_id=fb.id
+        )
+
+    # The pairing only means something in context — "chose an errand over deep work" reads
+    # differently at 9am on good sleep than at 8pm when depleted, and the surrounding state cannot
+    # be reconstructed after the fact.
+    energy = await EnergyService(db).estimate(user.id, now=now, user_timezone=tz)
+    location = await UserLocationRepository(db).get_current(user.id, now)
+    snapshot = {
+        "local_hour": now.astimezone(resolve_zone(tz)).hour,
+        "energy": energy.level,
+        "location_category": (location.place_name if location else None),
+        "rejected_task_type": rejected.task_type,
+        "rejected_category": get_type(rejected.task_type).category if rejected.task_type else None,
+        "chosen_task_type": chosen.task_type,
+        "chosen_category": get_type(chosen.task_type).category if chosen.task_type else None,
+    }
+
+    swap = await RecommendationSwapRepository(db).create(
+        user_id=user.id,
+        rejected_task_id=rejected.id,
+        chosen_task_id=chosen.id,
+        reason=body.reason,
+        context_snapshot=snapshot,
+        now=now,
+    )
+    await db.commit()
+    await db.refresh(swap)
+    return SwapResponse(id=swap.id, chosen_task_id=chosen.id, pinned_until=swap.pinned_until)
