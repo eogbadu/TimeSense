@@ -144,11 +144,21 @@ class NotificationService:
         if await self.event_repo.has_sent_today(user_id, "morning_checkin"):
             return None
 
+        # Active Coach users are asked about their energy here rather than in a SEPARATE prompt.
+        # A second daily notification to ask one question is exactly the "another job to manage"
+        # the product rules forbid, and the answer is worth more when it costs nothing extra
+        # (TIME-289). Gentle and balanced users are never asked.
+        body = (
+            "Ready to start your day? Check Now for today's plan — and tap Energy to tell us how "
+            "you're feeling."
+            if mode == "active_coach"
+            else "Ready to start your day? Check Now for today's plan."
+        )
         notif = await self.send_notification(
             user_id=user_id,
             type="suggestion",
             title="Good morning",
-            body="Ready to start your day? Check Now for today's plan.",
+            body=body,
         )
         await self.event_repo.record(user_id, "morning_checkin", notif.id)
         return notif

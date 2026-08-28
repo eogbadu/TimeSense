@@ -34,12 +34,13 @@ and a typical wake time, which is strictly better than the old hard-coded "mediu
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.localtime import local_today, resolve_zone
+from app.repositories.energy_checkin_repository import EnergyCheckInRepository
 
 LOW, MEDIUM, HIGH = "low", "medium", "high"
 
@@ -265,7 +266,7 @@ class EnergyService:
             committed_minutes_today = await self._committed_minutes(user_id, today, now,
                                                                     user_timezone)
 
-        return compute_energy(
+        estimate = compute_energy(
             EnergyInputs(
                 local_hour=local.hour + local.minute / 60,
                 sleep_hours=sleep_hours,
@@ -276,6 +277,20 @@ class EnergyService:
                 committed_minutes_today=committed_minutes_today,
             )
         )
+
+        # A recent self-report beats inference. The user knows how they feel; the model is reading
+        # proxies (TIME-289). It stands for a bounded window so it can't keep steering the day after
+        # their state has plainly moved on.
+        checkin = await EnergyCheckInRepository(self.db).latest_valid(user_id, now)
+        if checkin is not None and checkin.reported in ENERGY_RANK:
+            return replace(
+                estimate,
+                level=checkin.reported,
+                score=_score_for_reported(checkin.reported),
+                reason="You told us how you're feeling.",
+                source="checkin",
+            )
+        return estimate
 
     async def _committed_minutes(
         self, user_id: uuid.UUID, today: date, now: datetime, user_timezone: str | None
@@ -321,3 +336,12 @@ class EnergyService:
 
 def _utc(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+# Representative scores for a self-reported level, so ordering and explanation still work when the
+# number didn't come from the model. Placed at the middle of each band rather than the edge.
+_REPORTED_SCORES = {LOW: 0.20, MEDIUM: 0.50, HIGH: 0.85}
+
+
+def _score_for_reported(level: str) -> float:
+    return _REPORTED_SCORES.get(level, 0.50)
