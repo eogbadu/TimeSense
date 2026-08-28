@@ -93,9 +93,15 @@ async def test_avoided_at_this_time_penalizes():
     assert compute_penalty(cand(["AVOIDED_AT_THIS_TIME"]), ctx) == compute_penalty(cand([]), ctx) + 20
 
 
-def test_user_preference_fit_scales_by_acceptance_rate():
-    """With enough reactions, user_preference_fit becomes the observed acceptance rate; below the
-    sample floor it stays neutral (0.5)."""
+def test_user_preference_fit_blends_the_acceptance_rate_with_the_category_signal():
+    """With enough reactions the observed action-type acceptance rate is BLENDED into
+    user_preference_fit; below the sample floor the candidate's own value is untouched.
+
+    This used to replace the value outright. Since TIME-293 the candidate already arrives carrying a
+    per-CATEGORY preference fit, and overwriting it here would throw that away — the two signals
+    answer different questions ("what kind of work does this user accept?" vs "how do they react to
+    this shape of suggestion?"), so both are kept (TIME-296).
+    """
     from app.services.recommendation.feedback.apply_feedback import (
         FeedbackSummary,
         apply_feedback_adjustments,
@@ -108,11 +114,18 @@ def test_user_preference_fit_scales_by_acceptance_rate():
             estimated_minutes=30, user_preference_fit=0.5,
         )
 
-    # 8 accepts / 2 rejects = 0.8 rate, and >= 5 samples → user_preference_fit becomes 0.8.
+    # 8 accepts / 2 rejects = 0.8 observed rate, >= 5 samples → blended with the candidate's own
+    # 0.5, giving 0.65. Still moves clearly in the right direction.
     strong = FeedbackSummary(accepts={"deep_work": 8}, rejects={"deep_work": 2})
-    assert apply_feedback_adjustments(cand(), strong).user_preference_fit == 0.8
+    blended = apply_feedback_adjustments(cand(), strong).user_preference_fit
+    assert blended == 0.65
+    assert blended > 0.5, "a strong acceptance history must raise the fit"
 
-    # Only 3 reactions (< 5) → stays neutral.
+    # A strong REJECTION history must lower it, symmetrically.
+    disliked = FeedbackSummary(accepts={"deep_work": 1}, rejects={"deep_work": 9})
+    assert apply_feedback_adjustments(cand(), disliked).user_preference_fit < 0.5
+
+    # Only 3 reactions (< 5) → the candidate's own value is left alone.
     weak = FeedbackSummary(accepts={"deep_work": 2}, rejects={"deep_work": 1})
     assert apply_feedback_adjustments(cand(), weak).user_preference_fit == 0.5
 
