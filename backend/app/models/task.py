@@ -30,6 +30,14 @@ class Task(UUIDMixin, TimestampMixin, Base):
     )
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     estimated_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # What KIND of task this is, from the baseline library (app/services/task_library.py). Duration
+    # learning is keyed on this rather than a broad category, so a learned value only ever applies
+    # to tasks genuinely like it (TIME-284/286). Null on rows created before classification existed;
+    # readers fall back to the library's own lookup by title.
+    task_type: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    # How demanding the task is: light | moderate | deep. Independent of duration — a 90-minute
+    # podcast is light, a 10-minute difficult call is not. Drives required-energy (TIME-290).
+    difficulty: Mapped[str | None] = mapped_column(String(16), nullable=True)
     scheduled_start: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
