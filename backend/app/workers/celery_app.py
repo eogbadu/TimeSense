@@ -14,6 +14,7 @@ celery_app = Celery(
         "app.workers.push_tasks",
         "app.workers.reminder_tasks",
         "app.workers.calendar_sync_tasks",
+        "app.workers.adaptation_tasks",
     ],
 )
 
@@ -54,6 +55,12 @@ celery_app.conf.update(
         "generate-weekly-insights": {
             "task": "timesense.generate_weekly_insights",
             "schedule": crontab(day_of_week=1, hour=5, minute=0),
+        },
+        # Nightly, off-peak: the engine reads this on every recommendation, so it must be cheap to
+        # read and is therefore computed ahead of time rather than per request (TIME-292).
+        "rebuild-adaptation-profiles": {
+            "task": "timesense.rebuild_adaptation_profiles",
+            "schedule": crontab(hour=3, minute=30),
         },
         "sync-oauth-calendars": {
             "task": "timesense.sync_oauth_calendars",

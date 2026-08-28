@@ -26,6 +26,7 @@ from app.models.task import InternalReminder, Task  # noqa: F401
 from app.models.task_duration import TaskDurationEstimate  # noqa: F401
 from app.models.task_duration_observation import TaskDurationObservation  # noqa: F401
 from app.models.user import User, UserPreferences, UserProfile  # noqa: F401
+from app.models.user_adaptation_profile import UserAdaptationProfile  # noqa: F401
 from app.models.user_location_state import UserLocationState  # noqa: F401
 from app.models.user_place import UserPlace  # noqa: F401
 from app.models.device_token import DeviceToken  # noqa: F401
