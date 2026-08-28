@@ -148,7 +148,8 @@ async def capture(
     # Every task gets a realistic duration: the LLM's explicit estimate wins; otherwise fall back to
     # the duration lookup table (seed defaults, refined by what we've learned about this user).
     if task_create.estimated_minutes is None:
-        minutes, _category = await TaskDurationEstimator(db).estimate(user.id, task_create.title)
+        minutes, _type = await TaskDurationEstimator(db).estimate(
+            user.id, task_create.title, task_create.task_type)
         task_create.estimated_minutes = minutes
 
     # A user-set time gets an end block from its duration (so it lands on the timeline correctly).

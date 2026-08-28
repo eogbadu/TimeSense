@@ -13,6 +13,7 @@ from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 from app.services.scheduling_service import SchedulingService
 from app.services.task_duration_service import TaskDurationEstimator
+from app.services.task_library import is_known_type
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
 
@@ -151,7 +152,10 @@ async def unschedule_task(
 
 class DurationPromptResponse(BaseModel):
     ask: bool
+    # `category` predates TIME-286 and is kept for existing clients; both fields now carry the
+    # library task_type.
     category: str
+    task_type: str
 
 
 @router.get("/{task_id}/duration-prompt", response_model=DurationPromptResponse)
@@ -163,22 +167,28 @@ async def duration_prompt(
     db: AsyncSession = Depends(get_db),
 ) -> DurationPromptResponse:
     """Whether to ask 'how long did that take?' after completing this task — only while the
-    assistant is still learning this category's typical duration."""
+    assistant is still learning this TYPE's typical duration, and never for a task it couldn't
+    classify (an unclassified answer teaches nothing transferable)."""
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
     task = await task_svc.get_task(task_id, user.id)
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
-    ask, category = await TaskDurationEstimator(db).should_ask(user.id, task.title)
-    return DurationPromptResponse(ask=ask, category=category)
+    ask, task_type = await TaskDurationEstimator(db).should_ask(user.id, task.title, task.task_type)
+    return DurationPromptResponse(ask=ask, category=task_type, task_type=task_type)
 
 
 class DurationFeedback(BaseModel):
     actual_minutes: int = Field(..., ge=1, le=1440)
+    # Optional correction of a wrong classification, sent alongside the real duration (TIME-287).
+    task_type: str | None = Field(default=None, max_length=40)
 
 
 class DurationFeedbackResponse(BaseModel):
+    # `category` is the pre-TIME-286 field name, kept so existing clients don't break; it now carries
+    # the library task_type, which `task_type` also reports under the clearer name.
     category: str
-    estimated_minutes: int  # the updated learned estimate after this observation
+    task_type: str
+    estimated_minutes: int  # the updated blended estimate after this observation
 
 
 @router.post("/{task_id}/duration-feedback", response_model=DurationFeedbackResponse)
@@ -196,10 +206,19 @@ async def duration_feedback(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
     estimator = TaskDurationEstimator(db)
-    await estimator.record_actual(user.id, task.title, body.actual_minutes)
-    minutes, category = await estimator.estimate(user.id, task.title)
+    # A client may also correct the classification at the same time — a wrong type would otherwise
+    # teach the wrong bucket, so the correction is applied BEFORE the observation is recorded.
+    if body.task_type and is_known_type(body.task_type):
+        task.task_type = body.task_type
+    task_type = await estimator.record_actual(
+        user.id, task.title, body.actual_minutes, task.task_type,
+        task_id=task.id, estimated_minutes=task.estimated_minutes,
+    )
+    minutes, task_type = await estimator.estimate(user.id, task.title, task.task_type)
     await db.commit()
-    return DurationFeedbackResponse(category=category, estimated_minutes=minutes)
+    return DurationFeedbackResponse(
+        category=task_type, task_type=task_type, estimated_minutes=minutes
+    )
 
 
 @router.patch("/{task_id}", response_model=TaskResponse)
