@@ -14,6 +14,7 @@ from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.repositories.consent_repository import ConsentRepository
 from app.repositories.recommendation_event_repository import RecommendationEventRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
+from app.repositories.recommendation_swap_repository import RecommendationSwapRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.recommendation.candidate_gather import gather_candidate_tasks
@@ -175,7 +176,20 @@ async def _engine_rank_tasks(
         if str(t.id) not in seen:
             ordered.append(t)
     result = ordered + deferred    # so a just-disagreed task is never the #1 pick
+
+    # An active pin beats scoring outright. The user has explicitly said "do this instead"; ranking
+    # them back down would mean the app arguing with a direct instruction (TIME-294). It expires on
+    # its own and is released as soon as they act on the task.
+    pin = await RecommendationSwapRepository(db).active_pin(user.id, now)
+    if pin is not None and pin.chosen_task_id is not None:
+        pinned_id = str(pin.chosen_task_id)
+        pinned = next((t for t in result if str(t.id) == pinned_id), None)
+        if pinned is not None:
+            result = [pinned] + [t for t in result if str(t.id) != pinned_id]
+
     best_meta = meta_by_tid.get(str(result[0].id)) if result else None
+    if pin is not None and result and str(result[0].id) == str(pin.chosen_task_id):
+        best_meta = {**(best_meta or {}), "pinned": True}
     return result, best_meta, scores
 
 
