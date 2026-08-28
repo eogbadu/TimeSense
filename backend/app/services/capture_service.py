@@ -12,6 +12,12 @@ from datetime import datetime, timedelta, timezone
 from app.llm.base import LLMRequest
 from app.llm.gateway import LLMGateway
 from app.schemas.task import TaskCreate
+from app.services.task_library import (
+    TASK_TYPES,
+    is_known_type,
+    normalize_difficulty,
+    resolve_classification,
+)
 from app.services.capture_date_parser import parse_datetime
 
 logger = logging.getLogger(__name__)
@@ -27,7 +33,9 @@ JSON schema:
   "estimated_minutes": <integer or null>,
   "scheduled_start": "<ISO 8601 UTC datetime or null>",
   "due_at": "<ISO 8601 UTC datetime or null>",
-  "priority": <1 to 5 integer, 3 if unclear>
+  "priority": <1 to 5 integer, 3 if unclear>,
+  "task_type": "<one key from the list below, or null if none fit>",
+  "difficulty": "<light | moderate | deep, or null if unclear>"
 }
 
 Rules:
@@ -41,8 +49,20 @@ Rules:
 - due_at: a deadline/date WITHOUT a specific do-time (e.g. "by Friday", "July 5th", "due tomorrow").
   Convert to absolute UTC. If a specific time is given, prefer scheduled_start and leave due_at null.
 - priority: 1=critical, 2=high, 3=normal, 4=low, 5=someday
+- task_type: the closest matching key from VALID TASK TYPES below. Use null rather than forcing a
+  bad fit — a wrong type is worse than none, because the assistant learns durations per type.
+- difficulty: how much focus the task demands, NOT how long it takes.
+  light = little concentration (errands, chores, admin); moderate = ordinary working attention;
+  deep = sustained concentration. A long flight is "light"; a short code review is "deep".
 - Respond with raw JSON only — no code fences, no explanation
 """
+
+
+def _valid_types_block() -> str:
+    """The allowed task_type keys, generated from the library itself so the prompt can never drift
+    out of sync with the code (TIME-285)."""
+    lines = [f"  {t.key} — {t.display_name}" for t in TASK_TYPES]
+    return "VALID TASK TYPES:\n" + "\n".join(lines)
 
 
 # Optional per-capture type hints from the Capture chips — bias the parse toward the user's intent.
@@ -79,10 +99,15 @@ class CaptureService:
             estimated = _clamp_minutes(_safe_int(parsed.get("estimated_minutes")))
             title = _clean_title(parsed.get("title")) or _clean_title(rb_title) or "New task"
             priority = _clamp(int(parsed.get("priority", 3)), 1, 5)
+            # Only accept a type the library actually knows — an invented key must not reach the DB
+            # and become a learning bucket of its own.
+            llm_type = parsed.get("task_type") if is_known_type(parsed.get("task_type")) else None
+            llm_difficulty = normalize_difficulty(parsed.get("difficulty"))
         except Exception as exc:
             logger.warning("Capture parse failed, using rule-based fallback: %s", exc)
             scheduled_start, due_at, estimated, priority = rb_start, rb_due, None, 3
             title = _clean_title(rb_title) or "New task"
+            llm_type, llm_difficulty = None, None
 
         # An "Idea" is a someday capture — never urgent, never auto-scheduled.
         if (type_hint or "").lower() == "idea":
@@ -94,10 +119,15 @@ class CaptureService:
             scheduled_start + timedelta(minutes=estimated or 30)
             if scheduled_start is not None else None
         )
+        # The deterministic matcher always has an answer, so classification never depends on the
+        # LLM being available or well-behaved; the LLM only refines it (TIME-285).
+        task_type, difficulty = resolve_classification(title, llm_type, llm_difficulty)
+
         return TaskCreate(
             title=title, estimated_minutes=estimated,
             scheduled_start=scheduled_start, scheduled_end=scheduled_end,
             due_at=due_at, priority=priority, source="capture", raw_input=raw_input,
+            task_type=task_type, difficulty=difficulty,
         )
 
 
@@ -111,6 +141,7 @@ def _build_parse_prompt(raw_input: str, user_timezone: str, type_hint: str | Non
         f"Today's UTC date and time: {datetime.now(timezone.utc).isoformat()}\n"
         f"User timezone: {user_timezone}\n"
         f"{hint_line}\n"
+        f"{_valid_types_block()}\n\n"
         f"<user_input>\n{fenced}\n</user_input>"
     )
 

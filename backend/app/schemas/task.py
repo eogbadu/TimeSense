@@ -22,6 +22,10 @@ class TaskCreate(BaseModel):
     location_name: str | None = Field(default=None, max_length=160)
     location_lat: float | None = None
     location_lng: float | None = None
+    # Baseline-library classification (TIME-284/285). Callers rarely set these by hand — capture and
+    # the import paths fill them in — but they're accepted so a client can correct a wrong guess.
+    task_type: str | None = Field(default=None, max_length=40)
+    difficulty: str | None = Field(default=None, max_length=16)
 
 
 class TaskUpdate(BaseModel):
@@ -33,6 +37,10 @@ class TaskUpdate(BaseModel):
     scheduled_start: datetime | None = None
     scheduled_end: datetime | None = None
     due_at: datetime | None = None
+    # A user correcting a wrong classification is a real signal, not just a display fix — it feeds
+    # the per-type duration learning (TIME-286).
+    task_type: str | None = Field(default=None, max_length=40)
+    difficulty: str | None = Field(default=None, max_length=16)
 
 
 class TaskResponse(BaseModel):
@@ -52,6 +60,8 @@ class TaskResponse(BaseModel):
     location_name: str | None = None
     location_lat: float | None = None
     location_lng: float | None = None
+    task_type: str | None = None
+    difficulty: str | None = None
     created_at: datetime
     updated_at: datetime
 
