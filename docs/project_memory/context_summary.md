@@ -22,34 +22,50 @@ Origin: 10 items of on-device feedback. All 10 addressed. What changed, and the 
 
 **State:** backend suite 704 passing (see known_issues.md for the 11 network-bound files that cannot run in this environment — they HANG rather than fail, and reproduce on clean main). iOS BUILD SUCCEEDED throughout. Alembic head `a1b2c3d4e5f9`, single head, applied to Postgres.
 
-**DEPLOYMENT REALITY (checked 2026-08-29 via GET /openapi.json):** production at
-https://timesense-api.onrender.com is UP but running PRE-BATCH code — none of `/api/v1/energy/checkin`,
-`/api/v1/recommendations/swap` or `/api/v1/admin/users/{user_id}/entitlement` exist there. So the seven
-migrations from this batch have NOT run on Render, and `users.entitlement_override` does not exist in
-production yet. Do not attempt the durable grant before deploying; it will fail with
-`column "entitlement_override" does not exist`.
+**DEPLOYMENT REALITY (re-verified 2026-08-29): the batch IS DEPLOYED and migrated.**
 
-**Two databases — the thing that caused the confusion.** The iOS Simulator talks to the Mac's local
-Postgres (`localhost:5432/timesense`); a PHYSICAL iPhone talks to Render (`APIClient.swift`
-`resolveBaseURL` → `prodBaseURL`). The repo-root `.env` therefore only ever affects the Simulator.
-That is exactly why the owner's account read Premium on the Mac and was gated on the phone: the local
-`.env` set `PREMIUM_TEST_EMAILS`, Render never had it, so prod fell through to `created_at + 14d`
-(account created 2026-07-05 → intro trial ended 2026-07-19).
+CORRECTION to an earlier entry in this file: it briefly claimed production was running pre-batch
+code. That was wrong. It was inferred from `GET /openapi.json` returning no paths — but that endpoint
+returns **404 in production** (docs are disabled), so the reading was meaningless, not evidence.
 
-**RESOLVED 2026-08-29:** the owner added `PREMIUM_TEST_EMAILS=ekele_r@yahoo.com` to the Render
-`timesense-secrets` env group. Confirmed no longer gated on device. Note this is the STRING-MATCH
+**How to actually check what's deployed** (no credentials needed): hit a route unauthenticated and
+read the status. `404` = the route does not exist; `401/403` = it exists and is auth-gated. Use a
+known-bad path as a control.
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://timesense-api.onrender.com/api/v1/definitely-not-real   # 404 control
+curl -s -o /dev/null -w '%{http_code}\n' https://timesense-api.onrender.com/api/v1/energy                # 401 => deployed
+```
+Confirmed 2026-08-29: `/api/v1/energy` and `/api/v1/recommendations/swap` both return 401, so the
+batch is live. Render auto-deploys from pushes to `main`.
+
+**Migrations definitely applied.** `backend/entrypoint.sh` uses `set -e` and runs
+`alembic upgrade head` BEFORE `exec`ing the server, with `RUN_MIGRATIONS=1` on the api service. A
+failed migration therefore prevents the server from starting at all. The API is up and serving the
+new routes, so all seven migrations succeeded — including `a1b2c3d4e5f8`, so
+`users.entitlement_override` EXISTS in production.
+
+**Two databases — the thing that caused the original confusion.** The iOS Simulator talks to the
+Mac's local Postgres (`localhost:5432/timesense`); a PHYSICAL iPhone talks to Render
+(`APIClient.resolveBaseURL` → `prodBaseURL`). The repo-root `.env` therefore only ever affects the
+Simulator. That is exactly why the owner's account read Premium on the Mac and was gated on the
+phone: the local `.env` set `PREMIUM_TEST_EMAILS`, Render never had it, so prod fell through to
+`created_at + 14d` (account created 2026-07-05 → intro trial ended 2026-07-19).
+
+**Unblocked 2026-08-29:** the owner added `PREMIUM_TEST_EMAILS=ekele_r@yahoo.com` to the Render
+`timesense-secrets` env group. Confirmed no longer gated on device. This is the STRING-MATCH
 mechanism, i.e. the thing TIME-282 exists to replace.
 
 **USER ACTION OUTSTANDING:**
-1. Deploy the backend (runs all seven migrations) and rebuild the iOS app — nothing from this batch
-   reaches the device otherwise. Note Insights/Connections un-gated WITHOUT a rebuild because they
-   read `/subscriptions/me/entitlement` server-side; only the Settings ▸ Subscription label (which
-   read the wrong endpoint) needs the new build.
-2. AFTER that deploy: set the durable grant
+1. Backend deploy: DONE (auto-deployed, migrations applied — see above). Nothing to do.
+2. Rebuild the iOS app — all the client-side work still needs it: the duration sheet + timer, the
+   swap picker, the energy check-in card, the timezone re-sync, the onboarding location ask, and the
+   Settings ▸ Subscription label. NOTE Insights/Connections already un-gated WITHOUT a rebuild,
+   because they read `/subscriptions/me/entitlement` server-side.
+3. Durable entitlement (the column now exists, so this works):
    `UPDATE users SET entitlement_override = 'comped' WHERE email = 'ekele_r@yahoo.com';`
-   (or the admin endpoint), then REMOVE `PREMIUM_TEST_EMAILS` from the Render env group so
-   entitlement stops depending on a string match.
-3. On-device passes still needed: geofence/location permission flow (can't be verified in a
+   or `PATCH /api/v1/admin/users/{user_id}/entitlement` with an admin token. Then REMOVE
+   `PREMIUM_TEST_EMAILS` from the Render env group so entitlement stops depending on a string match.
+4. On-device passes still needed: geofence/location permission flow (can't be verified in a
    simulator), the duration sheet + timer, and the swap picker.
 
 ---
