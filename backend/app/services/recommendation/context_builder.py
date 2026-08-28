@@ -13,6 +13,7 @@ from app.models.task import Task
 from app.models.user_place import UserPlace
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.sleep_wake_repository import SleepWakeRepository
+from app.services.energy_service import EnergyService
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.user_place_repository import UserPlaceRepository
 from app.services.recommendation.location_service import get_user_location_snapshot
@@ -112,28 +113,24 @@ async def _health(db: AsyncSession, user_id, now: datetime, tz: str = "UTC") -> 
         local_today = now.date()
     activity = await DailyActivityRepository(db).get_for_day(user_id, local_today)
 
-    if ev is None and activity is None:
-        return None
+    # Energy comes from EnergyService — the single implementation shared with the Now cards and the
+    # Why sheet. Previously this derived it from sleep alone and hard-coded "medium" without a sleep
+    # sample, while the display layer computed something different (and backwards) from activity
+    # (TIME-288).
+    estimate = await EnergyService(db).estimate(user_id, now=now, user_timezone=tz)
 
-    # Sleep → energy/quality (default medium when we only have activity).
-    sleep_hours = None
-    energy, quality = "medium", None
-    if ev is not None:
-        if ev.sleep_start is not None:
-            start = ev.sleep_start if ev.sleep_start.tzinfo else ev.sleep_start.replace(tzinfo=timezone.utc)
-            wake = ev.wake_time if ev.wake_time.tzinfo else ev.wake_time.replace(tzinfo=timezone.utc)
-            sleep_hours = round((wake - start).total_seconds() / 3600, 1)
-        if sleep_hours is not None:
-            if sleep_hours >= 7.5:
-                energy, quality = "high", "good"
-            elif sleep_hours >= 6:
-                energy, quality = "medium", "okay"
-            else:
-                energy, quality = "low", "poor"
+    if ev is None and activity is None:
+        # No health data at all: the energy estimate is still meaningful (time of day), but there's
+        # nothing else to populate, and the callers treat a null HealthContext as "no signal".
+        return HealthContext(
+            sleep_hours=None, sleep_quality=None, energy_estimate=estimate.level,
+            steps_today=None, step_goal=None, sedentary_minutes=None,
+        )
 
     steps = activity.steps if activity is not None else None
     return HealthContext(
-        sleep_hours=sleep_hours, sleep_quality=quality, energy_estimate=energy,
+        sleep_hours=estimate.sleep_hours, sleep_quality=estimate.sleep_quality,
+        energy_estimate=estimate.level,
         steps_today=steps,
         step_goal=10000 if steps is not None else None,
         sedentary_minutes=activity.inactive_minutes if activity is not None else None,

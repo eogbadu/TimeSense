@@ -26,7 +26,8 @@ from app.services.recommendation.maps.factory import get_maps_provider
 from app.services.recommendation.maps.maps_skill_service import MapsSkillService
 from app.services.recommendation.selection.rank import rank_candidates
 from app.services.recommendation.scoring.score import score_to_confidence
-from app.services.recommendation_explainer import _activity_energy, build_explanation
+from app.services.energy_service import EnergyService
+from app.services.recommendation_explainer import build_explanation
 from app.services.recommendation_service import RecommendationService
 from app.services.scheduling_service import SchedulingService
 from app.services.usable_time_service import UsableTimeService
@@ -223,7 +224,6 @@ async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCar
     from datetime import time as _time
     from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
     from app.repositories.user_location_repository import UserLocationRepository
-    from app.repositories.sleep_wake_repository import SleepWakeRepository
 
     try:
         tz = ZoneInfo(user_tz)
@@ -249,15 +249,11 @@ async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCar
     due_today = sum(1 for t in pending if _today(t.due_at) or _today(t.scheduled_start))
     completed = await TaskRepository(db).count_completed_in_range(user.id, start_utc, end_utc)
 
-    # Energy from last night's sleep
-    sleep = await SleepWakeRepository(db).get_latest_today(user.id, user_timezone=user_tz)
-    hours = None
-    energy = None
-    if sleep is not None:
-        if sleep.sleep_start is not None:
-            hours = round((_u(sleep.wake_time) - _u(sleep.sleep_start)).total_seconds() / 3600, 1)
-        energy = ("high" if (hours or 0) >= 7.5 else "moderate" if (hours or 0) >= 6 else "low") \
-            if hours is not None else "moderate"
+    # Energy — the same EnergyService the scorer and the Why sheet use, so the card can never show
+    # one thing while the recommendation is based on another (TIME-288).
+    estimate = await EnergyService(db).estimate(user.id, now=now, user_timezone=user_tz)
+    energy = estimate.display_label
+    hours = estimate.sleep_hours
 
     # Current place
     place = await UserLocationRepository(db).get_current(user.id, now)
@@ -266,9 +262,6 @@ async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCar
     # Today's HealthKit activity (steps / active energy / exercise)
     from app.repositories.daily_activity_repository import DailyActivityRepository
     activity = await DailyActivityRepository(db).get_for_day(user.id, local.date())
-    # No sleep sample → estimate energy from today's activity so the card isn't blank (TIME-266).
-    if energy is None and activity is not None:
-        energy = _activity_energy(activity)
 
     return NowContextCards(
         next_event_title=nxt.title if nxt else None,

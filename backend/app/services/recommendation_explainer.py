@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.commute import CommuteEvent
 from app.models.sleep_wake import SleepWakeEvent
+from app.services.energy_service import EnergyService
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.task_repository import TaskRepository
 from app.services.recommendation.scoring.score import score_to_confidence
@@ -61,26 +62,22 @@ def _time_of_day(local_now: datetime) -> tuple[str, str]:
     return "late", "a low-focus window"
 
 
-def _activity_energy(activity) -> str:
-    """Rough energy estimate from a day's HealthKit activity when there's no sleep sample — so the
-    signal actually varies instead of always reading 'moderate' (TIME-266). High when the user has
-    exercised or is well over a typical step count; low when barely moving / long sedentary stretch."""
-    steps = activity.steps or 0
-    exercise = activity.exercise_minutes or 0
-    inactive = activity.inactive_minutes or 0
-    if exercise >= 30 or steps >= 8000:
-        return "high"
-    if steps < 2000 or inactive >= 180:
-        return "low"
-    return "moderate"
-
-
 async def _health(db: AsyncSession, user_id, now: datetime, tz_name: str):
-    """Energy signal for the Why screen. Prefer a sleep/wake sample for today; if there's none, fall
-    back to today's HealthKit activity (steps) so connecting Apple Health actually powers the signal
-    even for users who don't track sleep. Returns a dict {energy, wake, sleep_hours, steps, source}
-    or None when we have neither."""
+    """Energy signal for the Why screen.
+
+    Delegates to EnergyService so the sheet and the scorer can never again disagree. They used to:
+    this module computed energy from ACTIVITY, where 30+ minutes of exercise or 8000+ steps read as
+    "high" — so a busy day announced high energy in the evening — while the engine used sleep alone
+    and hard-coded "medium" without a sample. They also used different vocabularies ("moderate" here
+    vs "medium" there), which would have raised a KeyError had the value ever reached the ranker
+    (TIME-288).
+
+    Returns {energy, wake, sleep_hours, steps, source, reason} or None when there is nothing to say.
+    """
     today = _local(now, tz_name).date()
+    estimate = await EnergyService(db).estimate(user_id, now=now, user_timezone=tz_name)
+
+    wake_label = None
     rows = (await db.execute(
         select(SleepWakeEvent)
         .where(SleepWakeEvent.user_id == user_id)
@@ -88,30 +85,29 @@ async def _health(db: AsyncSession, user_id, now: datetime, tz_name: str):
         .limit(1)
     )).scalars().all()
     if rows:
-        ev = rows[0]
-        wake_local = _local(_utc(ev.wake_time), tz_name)
+        wake_local = _local(_utc(rows[0].wake_time), tz_name)
         if wake_local.date() == today:
-            sleep_hours = None
-            if ev.sleep_start is not None:
-                sleep_hours = round((_utc(ev.wake_time) - _utc(ev.sleep_start)).total_seconds() / 3600, 1)
-            if sleep_hours is None:
-                energy = "moderate"
-            elif sleep_hours >= 7.5:
-                energy = "high"
-            elif sleep_hours >= 6:
-                energy = "moderate"
-            else:
-                energy = "low"
-            return {"energy": energy, "wake": wake_local.strftime("%-I:%M %p"),
-                    "sleep_hours": sleep_hours, "steps": None, "source": "sleep"}
+            wake_label = wake_local.strftime("%-I:%M %p")
 
-    # No sleep sample today → use today's HealthKit activity if it synced.
     from app.repositories.daily_activity_repository import DailyActivityRepository
     activity = await DailyActivityRepository(db).get_for_day(user_id, today)
-    if activity is not None:
-        return {"energy": _activity_energy(activity), "wake": None, "sleep_hours": None,
-                "steps": activity.steps, "source": "activity"}
-    return None
+
+    # With no health data at all the estimate is time-of-day only; say nothing rather than present
+    # a clock reading as a health signal.
+    if wake_label is None and activity is None and estimate.sleep_hours is None:
+        return None
+
+    return {
+        # `energy` keeps the human-facing wording the sheet already used; the canonical level the
+        # engine ranks on is `level`. One translation point, so they cannot drift apart again.
+        "energy": estimate.display_label,
+        "level": estimate.level,
+        "wake": wake_label,
+        "sleep_hours": estimate.sleep_hours,
+        "steps": activity.steps if activity is not None else None,
+        "source": estimate.source,
+        "reason": estimate.reason,
+    }
 
 
 async def _current_place(db: AsyncSession, user_id, now: datetime):
@@ -244,13 +240,11 @@ async def build_explanation(
         else:
             context_used.append("Location: you're out and about right now.")
     if health:
-        if health["source"] == "sleep":
-            slp = f" on {health['sleep_hours']}h of sleep" if health["sleep_hours"] else ""
-            context_used.append(f"Energy: estimated {health['energy']} (woke at {health['wake']}{slp}).")
-        else:
-            context_used.append(
-                f"Energy: estimated {health['energy']} (based on today's activity — {health['steps'] or 0:,} steps)."
-            )
+        # Say WHY, using the estimate's own reason. The old copy claimed energy was "based on
+        # today's activity", which is no longer true and was backwards when it was: activity spends
+        # capacity, it doesn't create it (TIME-288).
+        woke = f" You woke at {health['wake']}." if health.get("wake") else ""
+        context_used.append(f"Energy: {health['reason']}{woke}")
     if est:
         context_used.append(
             f"Task: {_priority_label(best.priority).lower()} priority, ~{est} min — "
@@ -297,10 +291,7 @@ async def build_explanation(
         signals.append({"name": "Location", "detail": "No location signal connected yet.", "available": False})
     signals.append({"name": "Priority", "detail": f"This task is marked {_priority_label(best.priority).lower()} priority.", "available": True})
     if health:
-        if health["source"] == "sleep":
-            detail = f"{health['energy'].capitalize()} energy — suitable for focused work."
-        else:
-            detail = f"{health['energy'].capitalize()} energy — based on today's activity ({health['steps'] or 0:,} steps)."
+        detail = f"{health['energy'].capitalize()} energy. {health['reason']}"
         signals.append({"name": "Energy", "detail": detail, "available": True})
     else:
         signals.append({"name": "Energy", "detail": "No sleep or activity signal connected yet.", "available": False})
