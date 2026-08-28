@@ -50,9 +50,61 @@ def energy_fit(required: Energy, user_energy: Energy | None) -> float:
     return 0.5 if gap == 1 else 0.2
 
 
-def task_required_energy(task: TaskItem) -> Energy:
-    if task.estimated_minutes is not None and task.estimated_minutes >= 45:
-        return "high"
-    if task.estimated_minutes is not None and task.estimated_minutes <= 15:
-        return "low"
-    return "medium"
+# How demanding a task is, translated into the energy it needs. Difficulty is a property of the
+# WORK; duration is not. A 90-minute flight is light, a 10-minute difficult call is not.
+_DIFFICULTY_TO_ENERGY: dict[str, Energy] = {
+    "light": "low",
+    "moderate": "medium",
+    "deep": "high",
+}
+
+
+def task_required_energy(task: TaskItem, adaptation: dict | None = None) -> Energy:
+    """How much capacity this task needs.
+
+    Was derived purely from estimated duration (>= 45 min counted as high energy, <= 15 as low), so
+    a 90-minute podcast looked demanding and a 10-minute code review trivial. Difficulty from the
+    baseline library (TIME-284) is the real signal; duration is now only a fallback for tasks that
+    predate classification (TIME-290).
+
+    The per-user adjustment: someone who reliably finishes demanding work while their energy is low
+    doesn't need to be protected from it. That evidence comes from the TIME-292 profile, and only
+    applies once there is enough of it — otherwise everyone gets the library's own mapping.
+    """
+    base = _DIFFICULTY_TO_ENERGY.get((task.difficulty or "").strip().lower())
+    if base is None:
+        # No classification (a row created before TIME-285): fall back to the old heuristic rather
+        # than guessing "medium" for everything.
+        if task.estimated_minutes is not None and task.estimated_minutes >= 45:
+            base = "high"
+        elif task.estimated_minutes is not None and task.estimated_minutes <= 15:
+            base = "low"
+        else:
+            base = "medium"
+
+    return _adjust_for_user(base, adaptation)
+
+
+# Below this many observed completions we don't claim to know anything about the user's tolerance.
+_TOLERANCE_MIN_SAMPLES = 8
+# The share of completed work that has to happen at low energy before we stop treating demanding
+# work as something to protect them from.
+_TOLERANCE_SHARE = 0.4
+
+
+def _adjust_for_user(required: Energy, adaptation: dict | None) -> Energy:
+    """Soften the requirement for a user who demonstrably works fine when depleted.
+
+    This is deliberately one-directional. Relaxing a requirement lets the engine offer something it
+    would otherwise have suppressed, which the user can decline. RAISING one would silently hide
+    work from someone whose data merely looks unusual, which is a much worse failure — so it isn't
+    done.
+    """
+    if required != "high" or not adaptation:
+        return required
+    counts = adaptation.get("completions_by_energy") or {}
+    total = sum(counts.values()) if counts else 0
+    if total < _TOLERANCE_MIN_SAMPLES:
+        return required
+    low_share = counts.get("low", 0) / total
+    return "medium" if low_share >= _TOLERANCE_SHARE else required

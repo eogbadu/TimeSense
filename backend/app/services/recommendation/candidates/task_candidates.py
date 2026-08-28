@@ -60,7 +60,7 @@ def generate_task_candidates(ctx: UserContext, now: datetime) -> list[CandidateA
         action_type, codes = _classify(task, now)
         if task.id in ctx.recently_disagreed_task_ids:
             codes = codes + ["RECENTLY_DISAGREED"]
-        req_energy = task_required_energy(task)
+        req_energy = task_required_energy(task, ctx.adaptation)
         candidate = CandidateAction(
             id=f"task:{task.id}",
             type=action_type,
