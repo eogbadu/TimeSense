@@ -7,6 +7,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.localtime import local_day_bounds
+from app.services.task_library import resolve_classification
 from app.models.task import Task
 
 
@@ -20,6 +21,18 @@ class TaskRepository:
         title: str,
         **kwargs,
     ) -> Task:
+        # Classify here rather than at each call site: tasks are created from capture, manual entry,
+        # and the Notion/email/Slack/Teams/calendar imports, and a path that forgot would silently
+        # produce unclassified rows that fall back to the catch-all forever (TIME-285).
+        # An explicit value always wins — the caller may have a better answer (e.g. the LLM's, or a
+        # user correcting a wrong guess).
+        if not kwargs.get("task_type") or not kwargs.get("difficulty"):
+            inferred_type, inferred_difficulty = resolve_classification(
+                title, kwargs.get("task_type"), kwargs.get("difficulty")
+            )
+            kwargs["task_type"] = kwargs.get("task_type") or inferred_type
+            kwargs["difficulty"] = kwargs.get("difficulty") or inferred_difficulty
+
         task = Task(user_id=user_id, title=title, **kwargs)
         self.db.add(task)
         await self.db.flush()

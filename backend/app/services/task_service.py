@@ -32,6 +32,8 @@ class TaskService:
             location_name=body.location_name,
             location_lat=body.location_lat,
             location_lng=body.location_lng,
+            task_type=body.task_type,
+            difficulty=body.difficulty,
         )
 
     async def get_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:

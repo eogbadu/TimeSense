@@ -305,3 +305,28 @@ def baseline_minutes(title: str) -> int:
 
 def baseline_difficulty(title: str) -> str:
     return classify(title).difficulty
+
+
+def resolve_classification(
+    title: str,
+    llm_type: str | None = None,
+    llm_difficulty: str | None = None,
+) -> tuple[str, str]:
+    """The single place that decides a task's (task_type, difficulty).
+
+    The deterministic matcher always produces an answer, so classification never depends on the LLM
+    being reachable or well-behaved. An LLM suggestion is layered on top only when it is actually
+    valid:
+
+      * an unknown/invented type key is discarded — it must not reach the DB and become a learning
+        bucket of its own (TIME-286 keys learned durations on this value);
+      * an unrecognised difficulty is discarded in favour of the library's own value for the type.
+
+    When the LLM does pick a type, that type's library difficulty becomes the default, so an
+    LLM-chosen "code_review" doesn't silently keep the keyword match's difficulty.
+    """
+    if is_known_type(llm_type):
+        chosen = get_type(llm_type)
+    else:
+        chosen = classify(title)
+    return chosen.key, (normalize_difficulty(llm_difficulty) or chosen.difficulty)
