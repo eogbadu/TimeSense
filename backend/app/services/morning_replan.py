@@ -6,9 +6,11 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sleep_wake import SleepWakeEvent
+from app.core.localtime import resolve_zone, user_timezone_of
 from app.repositories.consent_repository import ConsentRepository
 from app.repositories.routine_repository import RoutineAssumptionRepository
 from app.repositories.sleep_wake_repository import SleepWakeRepository
+from app.repositories.user_repository import UserRepository
 from app.services.notification_service import NotificationService
 
 LATE_WAKE_THRESHOLD_MINUTES = 45
@@ -22,18 +24,22 @@ def _utc(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
-def _minute_of_day(dt: datetime) -> int:
-    """UTC-only simplification: treats UTC minute-of-day as local minute-of-day,
-    matching RoutineAssumption/UsableTimeService/CommuteService until real
-    per-user timezone handling exists (see known_issues.md)."""
-    local = _utc(dt)
+def _minute_of_day(dt: datetime, user_timezone: str | None = None) -> int:
+    """Minute-of-day in the USER's timezone.
+
+    RoutineAssumption stores minutes since LOCAL midnight, so comparing a UTC minute-of-day against
+    it offset late-wake detection by the user's whole UTC offset — a 7am wake in Tokyo read as 22:00
+    the previous day. Now resolved against the stored profile timezone (TIME-283)."""
+    local = _utc(dt).astimezone(resolve_zone(user_timezone))
     return local.hour * 60 + local.minute
 
 
-def _late_wake_minutes(wake_time: datetime, assumed_wake_minute: int) -> int:
+def _late_wake_minutes(
+    wake_time: datetime, assumed_wake_minute: int, user_timezone: str | None = None
+) -> int:
     """How many minutes past the assumed wake time this wake_time falls, treating
     the sleep block's end_minute < start_minute wraparound as the normal case."""
-    actual = _minute_of_day(wake_time)
+    actual = _minute_of_day(wake_time, user_timezone)
     delta = actual - assumed_wake_minute
     if delta < -12 * 60:
         # actual wrapped past midnight relative to the assumed minute-of-day
@@ -73,11 +79,15 @@ class MorningReplanService:
             routines = await self.routine_repo.get_or_seed_defaults(user_id)
             sleep_routine = next(r for r in routines if r.routine_type == "sleep")
 
-        late_by = _late_wake_minutes(event.wake_time, sleep_routine.end_minute)
+        user = await UserRepository(self.db).get_by_id(user_id)
+        user_tz = user_timezone_of(user) if user is not None else "UTC"
+
+        late_by = _late_wake_minutes(event.wake_time, sleep_routine.end_minute, user_tz)
         if late_by < LATE_WAKE_THRESHOLD_MINUTES:
             return
 
-        wake_day = _utc(event.wake_time).date()
+        # The once-per-day guard also has to be the user's day, not the UTC one.
+        wake_day = _utc(event.wake_time).astimezone(resolve_zone(user_tz)).date()
         if await self.sleep_repo.has_replan_on_date(user_id, wake_day):
             return
 

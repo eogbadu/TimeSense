@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.localtime import local_day_bounds, local_today, user_timezone_of
 from app.core.security import CurrentUser
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.task_repository import TaskRepository
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/timeline", tags=["timeline"])
 @router.get("/today", response_model=list[TaskResponse])
 async def get_today_timeline(
     current_user: CurrentUser,
-    target_date: date | None = Query(default=None, alias="date", description="ISO date, defaults to today UTC"),
+    target_date: date | None = Query(default=None, alias="date", description="ISO date, defaults to the user's local today"),
     db: AsyncSession = Depends(get_db),
 ) -> list[TaskResponse]:
     """Today's tasks: everything scheduled for the day, plus (when viewing today) untimed pending
@@ -29,17 +30,17 @@ async def get_today_timeline(
     user_svc = UserService(db)
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
 
-    utc_today = datetime.now(timezone.utc).date()
-    for_date = target_date or utc_today
+    tz = user_timezone_of(user)
+    today = local_today(tz)
+    for_date = target_date or today
 
     repo = TaskRepository(db)
-    tasks = await repo.list_by_user(user_id=user.id, for_date=for_date, limit=200)
+    tasks = await repo.list_by_user(user_id=user.id, for_date=for_date, limit=200, user_timezone=tz)
 
     # Include untimed pending to-dos (just-captured tasks with no time) when the user is viewing
-    # "today". The client sends its LOCAL date, which can be a day off from the server's UTC date near
-    # midnight, so accept any date within a day of UTC-today (the client only ever asks for its own
-    # current date). Without this, late-evening users saw an empty "your day is open" screen.
-    if abs((for_date - utc_today).days) <= 1:
+    # "today". Now that the day window is resolved in the user's own timezone, "today" means the
+    # same date on both ends — the previous ±1-day UTC fudge is gone (TIME-283).
+    if for_date == today:
         scheduled_ids = {t.id for t in tasks}
         all_pending = await repo.list_by_user(user_id=user.id, status="pending", limit=200)
         untimed = [t for t in all_pending if t.scheduled_start is None and t.id not in scheduled_ids]
@@ -65,7 +66,7 @@ class TimelineEntry(BaseModel):
 @router.get("/today/plan", response_model=list[TimelineEntry])
 async def get_today_plan(
     current_user: CurrentUser,
-    target_date: date | None = Query(default=None, alias="date", description="ISO date, defaults to today UTC"),
+    target_date: date | None = Query(default=None, alias="date", description="ISO date, defaults to the user's local today"),
     db: AsyncSession = Depends(get_db),
 ) -> list[TimelineEntry]:
     """The unified Smart Plan for a day: actionable tasks woven together, in time order, with the
@@ -74,23 +75,27 @@ async def get_today_plan(
     user_svc = UserService(db)
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
 
-    utc_today = datetime.now(timezone.utc).date()
-    for_date = target_date or utc_today
+    tz = user_timezone_of(user)
+    today = local_today(tz)
+    for_date = target_date or today
 
     repo = TaskRepository(db)
     # Exclude source="calendar" tasks: those meetings are shown as read-only event blocks instead, so
     # they aren't double-listed (and aren't presented as checkable to-dos).
-    tasks = [t for t in await repo.list_by_user(user_id=user.id, for_date=for_date, limit=200)
+    tasks = [t for t in await repo.list_by_user(user_id=user.id, for_date=for_date, limit=200,
+                                                user_timezone=tz)
              if t.source != "calendar"]
 
-    if abs((for_date - utc_today).days) <= 1:
+    if for_date == today:
         scheduled_ids = {t.id for t in tasks}
         all_pending = await repo.list_by_user(user_id=user.id, status="pending", limit=200)
         tasks += [t for t in all_pending
                   if t.scheduled_start is None and t.id not in scheduled_ids and t.source != "calendar"]
 
-    day_start = datetime.combine(for_date, time.min, tzinfo=timezone.utc)
-    events = await SyncedCalendarEventRepository(db).list_window(user.id, day_start, day_start + timedelta(days=1))
+    # Meetings are fetched over the user's LOCAL day too, otherwise an evening meeting in Tokyo
+    # lands outside the UTC window and silently disappears from the plan.
+    day_start, day_end = local_day_bounds(for_date, tz)
+    events = await SyncedCalendarEventRepository(db).list_window(user.id, day_start, day_end)
 
     entries = [
         TimelineEntry(

@@ -7,6 +7,8 @@ import SwiftUI
 struct MainTabView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var router = DeepLinkRouter.shared
+    @ObservedObject private var timezoneSync = TimezoneSyncService.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     private let tabs = AppState.Tab.allCases
 
@@ -45,9 +47,14 @@ struct MainTabView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             TabBar(selected: $appState.selectedTab)
         }
-        // Keep the backend's stored timezone in sync with the device — drives greetings, "today"
-        // boundaries, working-hours windows, and scheduling.
-        .task { await syncDeviceTimezone() }
+        // Keep the backend's stored timezone matching the device — drives greetings, "today"
+        // boundaries, working-hours windows, scheduling and check-in times. Handled by
+        // TimezoneSyncService, which also listens for NSSystemTimeZoneDidChange and re-syncs on
+        // every foreground, so travelling to any zone is picked up without a cold start.
+        .task { timezoneSync.start() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { timezoneSync.syncIfNeeded() }
+        }
         // Route notification taps to the right tab. Today clears .scheduleTask after presenting the
         // scheduler; we clear .now here.
         .onChange(of: router.route) { _, route in
@@ -74,13 +81,6 @@ struct MainTabView: View {
         }
     }
 
-    private func syncDeviceTimezone() async {
-        struct Body: Encodable { let timezone: String }
-        struct Resp: Decodable { let timezone: String? }
-        let _: Resp? = try? await APIClient.shared.patch(
-            "/api/v1/users/me/profile", body: Body(timezone: TimeZone.current.identifier)
-        )
-    }
 }
 
 // MARK: - Bottom bar

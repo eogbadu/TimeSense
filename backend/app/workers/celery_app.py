@@ -28,17 +28,20 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     result_expires=3600,
     beat_schedule={
+        # Hourly, not once a day: each task processes only the users for whom it is currently
+        # their own local check-in hour. A fixed UTC hour sent "good morning" at 5pm in Tokyo
+        # (TIME-283). Beat itself stays on UTC; the per-user decision lives in the task.
         "send-morning-checkins": {
             "task": "timesense.send_morning_checkins",
-            "schedule": crontab(hour=8, minute=0),
+            "schedule": crontab(minute=0),
         },
         "send-learning-prompts": {
             "task": "timesense.send_learning_prompts",
-            "schedule": crontab(hour=10, minute=0),
+            "schedule": crontab(minute=0),
         },
         "send-evening-checkouts": {
             "task": "timesense.send_evening_checkouts",
-            "schedule": crontab(hour=21, minute=0),
+            "schedule": crontab(minute=0),
         },
         "scan-and-push": {
             "task": "timesense.scan_and_push",

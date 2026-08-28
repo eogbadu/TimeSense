@@ -105,7 +105,7 @@ async def _health(db: AsyncSession, user_id, now: datetime, tz: str = "UTC") -> 
     from zoneinfo import ZoneInfo
     from app.repositories.daily_activity_repository import DailyActivityRepository
 
-    ev = await SleepWakeRepository(db).get_latest_today(user_id)
+    ev = await SleepWakeRepository(db).get_latest_today(user_id, user_timezone=tz)
     try:
         local_today = now.astimezone(ZoneInfo(tz)).date()
     except Exception:

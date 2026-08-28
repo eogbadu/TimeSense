@@ -12,6 +12,7 @@ from app.core.rate_limit import capture_rate_limit
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+from app.core.localtime import local_today, resolve_zone, user_timezone_of
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.analytics_service import AnalyticsService
@@ -158,13 +159,18 @@ async def capture(
     # date), find the next open slot within working hours. The user can Undo on Today.
     auto_scheduled = False
     now = datetime.now(timezone.utc)
-    today = now.date()
+    user_tz = user_timezone_of(user)
+    today = local_today(user_tz, now)   # the user's local day (TIME-283)
+    # Compare the deadline in the user's own zone — see the note in task_autoschedule (TIME-283).
     due_today_or_none = (
         task_create.due_at is None
-        or (task_create.due_at if task_create.due_at.tzinfo else task_create.due_at.replace(tzinfo=timezone.utc)).date() == today
+        or (task_create.due_at if task_create.due_at.tzinfo
+            else task_create.due_at.replace(tzinfo=timezone.utc))
+        .astimezone(resolve_zone(user_tz)).date() == today
     )
     if task_create.scheduled_start is None and task_create.estimated_minutes and due_today_or_none:
-        today_scheduled = await TaskRepository(db).list_by_user(user_id=user.id, for_date=today, limit=200)
+        today_scheduled = await TaskRepository(db).list_by_user(
+            user_id=user.id, for_date=today, limit=200, user_timezone=user_tz)
         # Calendar meetings are busy too — otherwise a capture can be auto-placed on top of a meeting
         # (mirrors the suggested-slot + push flows, which already avoid the calendar).
         events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(days=1))
@@ -172,7 +178,6 @@ async def capture(
             SimpleNamespace(scheduled_start=e.starts_at, scheduled_end=e.ends_at)
             for e in events if not e.all_day
         ]
-        user_tz = user.profile.timezone if user.profile else "UTC"
         prefs = user.preferences
         scheduler = SchedulingService(
             work_start_hour=prefs.work_start_hour if prefs else 8,

@@ -134,3 +134,14 @@ class UserRepository:
         """Lightweight id-only query for batch/worker loops (e.g. daily notification tasks)."""
         result = await self.db.execute(select(User.id).where(User.is_active.is_(True)))
         return list(result.scalars().all())
+
+    async def list_active_ids_with_timezone(self) -> list[tuple[uuid.UUID, str]]:
+        """(user_id, timezone) for every active user — lets a worker that runs hourly decide which
+        users it's currently the right LOCAL hour for, instead of firing a fixed UTC hour at
+        everyone on the planet (TIME-283)."""
+        result = await self.db.execute(
+            select(User.id, UserProfile.timezone)
+            .join(UserProfile, UserProfile.user_id == User.id, isouter=True)
+            .where(User.is_active.is_(True))
+        )
+        return [(row[0], row[1] or "UTC") for row in result.all()]

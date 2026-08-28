@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.localtime import local_today, user_timezone_of
 from app.core.security import CurrentUser
 from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.models.recommendation_feedback import RecommendationFeedback
@@ -47,10 +48,13 @@ async def get_recommendations(
 
     repo = TaskRepository(db)
     now = datetime.now(timezone.utc)
-    today = now.date()
+    # "Today" is the user's local day, not the server's UTC day (TIME-283).
+    user_tz = user_timezone_of(user)
+    today = local_today(user_tz, now)
 
     all_pending = await repo.list_by_user(user_id=user.id, status="pending", limit=500)
-    today_tasks = await repo.list_by_user(user_id=user.id, for_date=today, limit=200)
+    today_tasks = await repo.list_by_user(user_id=user.id, for_date=today, limit=200,
+                                          user_timezone=user_tz)
 
     suppressed_ids = await RecommendationFeedbackRepository(db).get_suppressed_task_ids(user.id, now)
     # Calendar meetings are commitments, not to-dos — drop them from the candidate pool (they still
@@ -60,7 +64,6 @@ async def get_recommendations(
     # Calendar meetings block usable time alongside scheduled tasks.
     events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(days=1))
 
-    user_tz = user.profile.timezone if user.profile else "UTC"
     svc = RecommendationService(gateway)
     best_task, alternatives, usable_minutes, why = await svc.recommend(
         tasks=all_pending,
@@ -70,7 +73,7 @@ async def get_recommendations(
         events=events,
     )
 
-    meal_status = await MealRepository(db).get_today_status(user.id, now)
+    meal_status = await MealRepository(db).get_today_status(user.id, now, user_timezone=user_tz)
     skipped_meals = [meal for meal, status in meal_status.items() if status == "skipped"]
 
     return RecommendationResponse(
