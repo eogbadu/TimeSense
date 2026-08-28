@@ -13,7 +13,9 @@ from app.models.task import Task
 from app.models.user_place import UserPlace
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.sleep_wake_repository import SleepWakeRepository
+from app.repositories.user_adaptation_repository import UserAdaptationRepository
 from app.services.energy_service import EnergyService
+from app.services.task_library import classify, get_type
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.user_place_repository import UserPlaceRepository
 from app.services.recommendation.location_service import get_user_location_snapshot
@@ -90,6 +92,9 @@ def _to_task_item(task: Task) -> TaskItem:
         due = (task.due_at if task.due_at.tzinfo else task.due_at.replace(tzinfo=timezone.utc)).isoformat()
     src = getattr(task, "source", None)
     source = src if src in ("notion", "reminder", "calendar", "manual") else "manual"
+    # Carry the library classification through: the scoring fits reason about the broad category
+    # ("is an errand a good idea from the sofa?"), so it has to reach the engine (TIME-293).
+    library_type = get_type(task.task_type) if task.task_type else classify(task.title)
     return TaskItem(
         id=str(task.id),
         title=task.title,
@@ -99,6 +104,9 @@ def _to_task_item(task: Task) -> TaskItem:
         estimated_minutes=task.estimated_minutes,
         due_date=due,
         location_intent=_location_intent(task),
+        task_type=library_type.key,
+        category=library_type.category,
+        difficulty=task.difficulty or library_type.difficulty,
     )
 
 
@@ -222,4 +230,18 @@ async def build_user_context(
         ctx = dataclasses.replace(
             ctx, recently_disagreed_task_ids=frozenset(str(i) for i in disagreed)
         )
+
+    # The adaptation profile (TIME-292) — one indexed row, read on every recommendation. Absent for
+    # a new user, in which case every learned fit stays neutral.
+    profile = await UserAdaptationRepository(db).get(user.id)
+    if profile is not None:
+        ctx = dataclasses.replace(ctx, adaptation={
+            "completion_by_hour": profile.completion_by_hour,
+            "completion_by_weekday": profile.completion_by_weekday,
+            "acceptance_by_category": profile.acceptance_by_category,
+            "acceptance_by_action_type": profile.acceptance_by_action_type,
+            "estimate_ratio_by_type": profile.estimate_ratio_by_type,
+            "completions_by_energy": profile.completions_by_energy,
+            "energy_bias": profile.energy_bias,
+        })
     return ctx, task_map

@@ -241,6 +241,11 @@ class TaskItem:
     due_date: Optional[str] = None
     estimated_minutes: Optional[int] = None
     location_intent: Optional[LocationIntent] = None
+    # Baseline-library classification (TIME-284/285). `category` is the broad grouping the scoring
+    # fits reason about; task_type is the finer key duration learning uses.
+    task_type: Optional[str] = None
+    category: Optional[str] = None
+    difficulty: Optional[str] = None
 
 
 # --------------------------------------------------------------------------------------
@@ -319,6 +324,9 @@ class UserContext:
     health_context: Optional[HealthContext] = None
     # Task ids (as strings) the user recently "disagreed" with — demoted, not hidden.
     recently_disagreed_task_ids: frozenset = frozenset()
+    # The user's adaptation profile (TIME-292) as a plain dict, or None when they have none yet.
+    # Carried as a dict rather than the ORM row so the scoring layer stays free of DB types.
+    adaptation: Optional[dict] = None
 
 
 # --------------------------------------------------------------------------------------
