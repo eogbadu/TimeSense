@@ -15,12 +15,20 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.recommendation_event import RecommendationEvent
+from app.models.recommendation_feedback import RecommendationFeedback
+from app.models.recommendation_swap import RecommendationSwap
+from app.models.task import Task
 from app.repositories.recommendation_event_repository import (
     NEGATIVE_OUTCOMES,
     POSITIVE_OUTCOMES,
 )
-from app.services.recommendation.feedback.apply_feedback import FeedbackSummary
+from app.services.recommendation.feedback.apply_feedback import (
+    REASON_MIN_SAMPLES,
+    SWAP_MIN_SAMPLES,
+    FeedbackSummary,
+)
 from app.services.recommendation.time_service import part_of_day
+from app.services.task_library import get_type
 
 # How far back we count accept/reject history, and what counts as "recently" dismissed.
 HISTORY_WINDOW = timedelta(days=30)
@@ -76,7 +84,92 @@ async def build_feedback_summary(
                 rejects_at_current_pod[at] = rejects_at_current_pod.get(at, 0) + 1
 
     avoided_now = {at for at, n in rejects_at_current_pod.items() if n >= AVOID_AT_TIME_THRESHOLD}
+
+    swap_signals = await _swap_signals(db, user_id, since, current_pod, user_timezone)
+    reason_signals = await _reason_signals(db, user_id, since, current_pod, user_timezone)
+
     return FeedbackSummary(
         rejects=rejects, accepts=accepts,
         recently_dismissed=recently_dismissed, avoided_now=avoided_now,
+        **swap_signals, **reason_signals,
     )
+
+
+async def _swap_signals(db, user_id, since, current_pod, tz) -> dict:
+    """What the user has repeatedly chosen — and swapped away from — at THIS part of day.
+
+    A swap is a paired preference, so it carries more than a rejection does: it names both sides.
+    The context snapshot stored with each swap is what makes the pairing usable, since "chose an
+    errand over deep work" only means something alongside when it happened (TIME-294/296).
+    """
+    rows = (await db.execute(
+        select(RecommendationSwap).where(
+            RecommendationSwap.user_id == user_id,
+            RecommendationSwap.created_at >= since,
+        )
+    )).scalars().all()
+
+    chosen: dict[str, int] = {}
+    rejected: dict[str, int] = {}
+    for row in rows:
+        snapshot = row.context_snapshot or {}
+        hour = snapshot.get("local_hour")
+        pod = part_of_day(hour) if isinstance(hour, int) else \
+            part_of_day(_local_hour(row.created_at, tz))
+        if pod != current_pod:
+            continue
+        if (c := snapshot.get("chosen_category")):
+            chosen[c] = chosen.get(c, 0) + 1
+        if (r := snapshot.get("rejected_category")):
+            rejected[r] = rejected.get(r, 0) + 1
+
+    return {
+        "preferred_categories_now": {c for c, n in chosen.items() if n >= SWAP_MIN_SAMPLES},
+        # Only count a category as swapped-away-from if it isn't ALSO one they often choose then —
+        # otherwise a busy category that appears on both sides penalises itself.
+        "swapped_away_categories_now": {
+            r for r, n in rejected.items()
+            if n >= SWAP_MIN_SAMPLES and n > chosen.get(r, 0)
+        },
+    }
+
+
+async def _reason_signals(db, user_id, since, current_pod, tz) -> dict:
+    """Give each disagree reason a distinct effect.
+
+    Before TIME-296 the reason was read in exactly ONE place — to choose between a 3-hour and a
+    24-hour demote window — so "wrong time" and "not a priority" were indistinguishable to scoring
+    despite meaning completely different things.
+    """
+    rows = (await db.execute(
+        select(RecommendationFeedback, Task)
+        .join(Task, Task.id == RecommendationFeedback.task_id)
+        .where(
+            RecommendationFeedback.user_id == user_id,
+            RecommendationFeedback.signal == "disagree",
+            RecommendationFeedback.reason.is_not(None),
+            RecommendationFeedback.created_at >= since,
+        )
+    )).all()
+
+    wrong_time: dict[str, int] = {}
+    too_big: dict[str, int] = {}
+    not_priority: dict[str, int] = {}
+    for feedback, task in rows:
+        category = get_type(task.task_type).category if task.task_type else None
+        if not category:
+            continue
+        if feedback.reason == "wrong_time":
+            # Only counts against the part of day it was said in — that is the whole claim.
+            if part_of_day(_local_hour(feedback.created_at, tz)) == current_pod:
+                wrong_time[category] = wrong_time.get(category, 0) + 1
+        elif feedback.reason == "too_big":
+            too_big[category] = too_big.get(category, 0) + 1
+        elif feedback.reason == "not_priority":
+            not_priority[category] = not_priority.get(category, 0) + 1
+
+    return {
+        "wrong_time_categories_now": {c for c, n in wrong_time.items() if n >= REASON_MIN_SAMPLES},
+        "too_big_categories": {c for c, n in too_big.items() if n >= REASON_MIN_SAMPLES},
+        "not_priority_categories": {c for c, n in not_priority.items() if n >= REASON_MIN_SAMPLES},
+    }

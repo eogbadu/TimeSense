@@ -77,6 +77,7 @@ def generate_task_candidates(ctx: UserContext, now: datetime) -> list[CandidateA
             interruption_level="low",
             reason_codes=codes,
             related_entity_ids=[task.id],
+            task_category=task.category,
         )
         # context_fit / routine_fit / user_preference_fit / location_fit were hard-coded constants
         # here — identical for every task, and together 58% of the scoring weight. They are now

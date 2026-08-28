@@ -97,4 +97,28 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
     if "RECENTLY_DISMISSED_SIMILAR_ACTION" in codes:
         penalty += 35
 
+    # --- swap + reason learning (TIME-296) ---------------------------------------------------
+    # A swap names BOTH sides of a preference, so it is stronger evidence than a bare rejection —
+    # but it is still one user's habit, so the adjustments stay smaller than the hard safety rules
+    # above and can't override them.
+    if "USER_PREFERS_THIS_TYPE_NOW" in codes:
+        penalty -= 18      # they keep choosing this kind of thing at this hour
+    if "USER_SWAPS_AWAY_FROM_THIS_NOW" in codes:
+        penalty += 22      # ...and keep swapping away from that one
+
+    # Each disagree reason now has its own effect. Before this they were indistinguishable to
+    # scoring: the reason only ever chose between a 3-hour and a 24-hour demote window.
+    if "WRONG_TIME_FOR_THIS_CATEGORY" in codes:
+        penalty += 20      # "wrong time" is a claim about WHEN, so it only applies at this hour
+    if "TOO_BIG_WHEN_DEPLETED" in codes:
+        # "too big" is a claim about capacity — it should bite when they're depleted, not always.
+        h = ctx.health_context
+        depleted = h is not None and h.energy_estimate == "low"
+        if depleted and (c.required_energy == "high" or (c.estimated_minutes or 0) >= 45):
+            penalty += 25
+    if "USER_SAYS_NOT_A_PRIORITY" in codes:
+        # A claim about importance, so dampen the importance contribution rather than the whole
+        # score — an urgent deadline in that category must still be able to win.
+        penalty += 12 * c.importance
+
     return penalty

@@ -361,6 +361,10 @@ class CandidateAction:
 
     reason_codes: list[ReasonCode] = field(default_factory=list)
     related_entity_ids: list[str] = field(default_factory=list)
+    # The baseline-library category of the underlying task, when there is one. Carried on the
+    # candidate so the feedback layer can reason about task KIND without re-reading the DB
+    # (TIME-296).
+    task_category: Optional[str] = None
 
     requires_location: Optional[bool] = None
     relevant_location_id: Optional[str] = None
