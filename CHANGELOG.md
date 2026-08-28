@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-08-28 — Recommendation quality batch (TIME-282..297)
+
+Ten items of on-device feedback, all addressed.
+
+### Fixed
+- **Duration estimates no longer collapse to one number.** Learning is keyed on a 79-type baseline
+  library instead of a coarse category whose catch-all swallowed ~30% of real titles, is never
+  learned against for unclassified tasks, and is shrunk toward the library baseline in proportion to
+  the evidence behind it. Raw observations are persisted. The three coarse iOS buttons (15/30/60)
+  became real minute entry plus an optional timer.
+- **Timezone follows the device, anywhere.** iOS re-syncs on launch, on foreground, and on the
+  system timezone change; ten backend paths now compute "today" in the user's zone; check-in
+  notifications fire at each user's local hour instead of a fixed UTC hour.
+- **Energy is a recovery budget that depletes.** One implementation instead of two that disagreed;
+  a busy day now lowers energy rather than raising it; required energy comes from task difficulty
+  rather than duration; a one-tap check-in overrides the estimate.
+- **The location signal works again.** Onboarding asks for permission, "While Using" is supported,
+  the current position is stored (consent-gated, no history), and it refreshes before going stale.
+- **Own/comped accounts stay Premium** via a durable entitlement column rather than an email
+  allowlist that was empty in production.
+
+### Added
+- Baseline task library: 79 types with typical durations AND difficulty.
+- `user_adaptation_profiles` + nightly rollup — the first table whose purpose is adaptation.
+- Disagree → "What would you rather do?" → the chosen task is pinned and the pair is learned.
+- `docs/architecture/learning_and_adaptation_spec.md` — what is learned, and what is not.
+
+### Changed
+- Four scoring factors (38% of the weight) that were hard-coded identical for every task are now
+  computed per task, so the engine can tell two tasks apart.
+- Each disagree reason now has a distinct scoring effect; previously the reason only chose between
+  two demote-window lengths.
+
+
 All notable changes to TimeSense are documented here.
 
 Format: `[DATE] TIME-### Short description`
