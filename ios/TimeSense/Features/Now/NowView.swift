@@ -117,7 +117,8 @@ struct NowView: View {
                 }
 
                 if let cards = ctx.context {
-                    ContextGrid(cards: cards).padding(.top, DesignTokens.Spacing.xs)
+                    ContextGrid(cards: cards, onEnergyReported: { Task { await viewModel.load() } })
+                        .padding(.top, DesignTokens.Spacing.xs)
                 }
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
@@ -863,11 +864,40 @@ private struct SecondaryAction: View {
 
 private struct ContextGrid: View {
     let cards: NowContextCards
+    /// Called after a check-in so Now re-fetches — the correction should visibly change the
+    /// recommendation, not just the card.
+    var onEnergyReported: () -> Void = {}
+
     @EnvironmentObject private var appState: AppState
+    @State private var showEnergyCheckIn = false
     private let cols = [GridItem(.flexible(), spacing: DesignTokens.Spacing.md),
                         GridItem(.flexible(), spacing: DesignTokens.Spacing.md)]
 
     var body: some View {
+        grid
+            .confirmationDialog("How's your energy right now?",
+                                isPresented: $showEnergyCheckIn, titleVisibility: .visible) {
+                Button("Running low") { report("low") }
+                Button("Okay") { report("medium") }
+                Button("Good") { report("high") }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This overrides what we estimated, for the next few hours.")
+            }
+    }
+
+    private func report(_ level: String) {
+        Task {
+            struct Body: Encodable { let reported: String }
+            struct Resp: Decodable { let level: String }
+            let _: Resp? = try? await APIClient.shared.post(
+                "/api/v1/energy/checkin", body: Body(reported: level)
+            )
+            onEnergyReported()
+        }
+    }
+
+    private var grid: some View {
         LazyVGrid(columns: cols, spacing: DesignTokens.Spacing.md) {
             if let title = cards.nextEventTitle {
                 ContextCard(label: "Calendar", icon: "calendar", tint: Cosmic.blue,
@@ -883,9 +913,15 @@ private struct ContextGrid: View {
                 ContextCard(label: "Steps", icon: "figure.walk", tint: Cosmic.blue,
                             value: steps.formatted(), sub: stepsSub(steps))
             }
+            // Tapping Energy lets the user correct it in one tap. Inferred energy reads sleep,
+            // activity and the clock — proxies, not the person — so a correction has to be cheap
+            // and has to actually drive recommendations (TIME-289).
             if let energy = cards.energyLevel {
-                ContextCard(label: "Energy", icon: "bolt.fill", tint: Cosmic.green,
-                            value: energy.capitalized, sub: energySub)
+                Button { showEnergyCheckIn = true } label: {
+                    ContextCard(label: "Energy", icon: "bolt.fill", tint: Cosmic.green,
+                                value: energy.capitalized, sub: energySub)
+                }
+                .buttonStyle(.plain)
             }
             if let place = cards.currentPlace {
                 ContextCard(label: "Nearby", icon: "location.fill", tint: Cosmic.cyan,
