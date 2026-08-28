@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+from app.core.localtime import local_today, resolve_zone, user_timezone_of
 from app.repositories.task_repository import TaskRepository
 from app.services.scheduling_service import SchedulingService
 from app.services.task_duration_service import TaskDurationEstimator
@@ -39,20 +40,24 @@ async def autoschedule_task(db: AsyncSession, task: Task, now: datetime | None =
     if not task.estimated_minutes:
         return False
 
-    today = now.date()
+    user = await UserService(db).get_by_id(task.user_id)
+    if user is None:
+        return False
+    user_tz = user_timezone_of(user)
+    today = local_today(user_tz, now)   # the user's local day (TIME-283)
     due = task.due_at
+    # Compare the deadline in the user's own zone: a 9pm-local due date is the NEXT UTC day for a
+    # Tokyo user, so a naive .date() comparison would call it "not due today" (TIME-283).
     due_today_or_none = (
         due is None
-        or (due if due.tzinfo else due.replace(tzinfo=timezone.utc)).date() == today
+        or (due if due.tzinfo else due.replace(tzinfo=timezone.utc))
+        .astimezone(resolve_zone(user_tz)).date() == today
     )
     if not due_today_or_none:
         return False
 
-    user = await UserService(db).get_by_id(task.user_id)
-    if user is None:
-        return False
-
-    today_scheduled = await TaskRepository(db).list_by_user(user_id=task.user_id, for_date=today, limit=200)
+    today_scheduled = await TaskRepository(db).list_by_user(
+        user_id=task.user_id, for_date=today, limit=200, user_timezone=user_tz)
     events = await SyncedCalendarEventRepository(db).list_window(task.user_id, now, now + timedelta(days=1))
     busy = list(today_scheduled) + [
         SimpleNamespace(scheduled_start=e.starts_at, scheduled_end=e.ends_at)
@@ -64,7 +69,7 @@ async def autoschedule_task(db: AsyncSession, task: Task, now: datetime | None =
         work_start_hour=prefs.work_start_hour if prefs else 8,
         work_end_hour=prefs.work_end_hour if prefs else 21,
     )
-    user_tz = user.profile.timezone if user.profile else "UTC"
+
     slot = scheduler.find_slot(now, task.estimated_minutes, busy, user_tz)
     if slot is None:
         return False

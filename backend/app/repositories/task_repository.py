@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.localtime import local_day_bounds
 from app.models.task import Task
 
 
@@ -71,17 +72,19 @@ class TaskRepository:
         for_date: date | None = None,
         limit: int = 100,
         offset: int = 0,
+        user_timezone: str | None = None,
     ) -> list[Task]:
         q = select(Task).where(Task.user_id == user_id)
         if status:
             q = q.where(Task.status == status)
         if for_date:
-            day_start = datetime(for_date.year, for_date.month, for_date.day, tzinfo=timezone.utc)
-            day_end = datetime(for_date.year, for_date.month, for_date.day, 23, 59, 59, tzinfo=timezone.utc)
+            # The user's LOCAL day, not the UTC day — a Tokyo user's "today" starts at 15:00 UTC the
+            # previous date. Half-open so nothing in the final second of the day is dropped.
+            day_start, day_end = local_day_bounds(for_date, user_timezone)
             q = q.where(
                 and_(
                     Task.scheduled_start >= day_start,
-                    Task.scheduled_start <= day_end,
+                    Task.scheduled_start < day_end,
                 )
             )
         q = q.order_by(Task.scheduled_start.nulls_last(), Task.priority.asc()).limit(limit).offset(offset)

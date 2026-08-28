@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
+from app.core.localtime import local_today, user_timezone_of
 from app.repositories.task_repository import TaskRepository
 from app.services.usable_time_service import UsableTimeService
 
@@ -17,9 +18,13 @@ async def gather_candidate_tasks(db: AsyncSession, user, now: datetime):
     """Returns (candidate_tasks, usable_minutes, today_scheduled_tasks). Candidates = pending today +
     overdue + unscheduled, minus tasks suppressed by snooze / 'not now' feedback."""
     repo = TaskRepository(db)
-    today = now.date()
+    # The user's local day — a Tokyo evening otherwise falls outside the UTC "today" window and the
+    # engine sees an empty schedule (TIME-283).
+    user_tz = user_timezone_of(user)
+    today = local_today(user_tz, now)
 
-    today_tasks = await repo.list_by_user(user_id=user.id, for_date=today, limit=200)
+    today_tasks = await repo.list_by_user(user_id=user.id, for_date=today, limit=200,
+                                          user_timezone=user_tz)
     pending = [t for t in today_tasks if t.status in ("pending", "in_progress")]
 
     all_pending = await repo.list_by_user(user_id=user.id, status="pending", limit=200)
@@ -32,7 +37,6 @@ async def gather_candidate_tasks(db: AsyncSession, user, now: datetime):
     already |= {t.id for t in overdue}
     unscheduled = [t for t in all_pending if t.scheduled_start is None and t.id not in already]
 
-    user_tz = user.profile.timezone if user.profile else "UTC"
     # Calendar meetings block usable time too — otherwise free time is overstated (the end-of-day cap
     # clamps to local midnight, so fetching a 24h window is enough; later events are ignored).
     events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(days=1))

@@ -250,7 +250,7 @@ async def _context_cards(db, user, now: datetime, user_tz: str) -> NowContextCar
     completed = await TaskRepository(db).count_completed_in_range(user.id, start_utc, end_utc)
 
     # Energy from last night's sleep
-    sleep = await SleepWakeRepository(db).get_latest_today(user.id)
+    sleep = await SleepWakeRepository(db).get_latest_today(user.id, user_timezone=user_tz)
     hours = None
     energy = None
     if sleep is not None:

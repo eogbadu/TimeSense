@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.localtime import local_day_bounds, local_today
 from app.models.meal import MEAL_TYPES, MealEvent
 from app.repositories.routine_repository import RoutineAssumptionRepository
 
@@ -33,13 +34,16 @@ class MealRepository:
         return event
 
     async def get_today_status(
-        self, user_id: uuid.UUID, now: datetime | None = None
+        self, user_id: uuid.UUID, now: datetime | None = None,
+        user_timezone: str | None = None,
     ) -> dict[str, str]:
         """Latest logged status per meal today, else inferred 'skipped'/'pending'
-        from that meal's RoutineAssumption window (TIME-039)."""
+        from that meal's RoutineAssumption window (TIME-039).
+
+        "Today" is the user's local day (TIME-283) — meal windows are local-time concepts, so a
+        UTC day here put lunch on the wrong date for anyone far from UTC."""
         now = now or datetime.now(timezone.utc)
-        day_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
-        day_end = day_start + timedelta(days=1)
+        day_start, day_end = local_day_bounds(local_today(user_timezone, now), user_timezone)
 
         result = await self.db.execute(
             select(MealEvent)

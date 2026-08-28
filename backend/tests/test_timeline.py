@@ -157,10 +157,16 @@ async def test_today_includes_untimed_pending_tasks(client, db_session):
 
 
 @pytest.mark.anyio
-async def test_today_includes_untimed_tasks_across_utc_boundary(client, db_session):
-    """Regression: a late-evening user's LOCAL date lags UTC, so the client sends yesterday's date.
-    Untimed pending tasks must still show (this caused the empty 'your day is open' screen)."""
-    from datetime import datetime, timedelta, timezone
+@pytest.mark.parametrize("tz", ["America/Los_Angeles", "Asia/Tokyo", "Asia/Kolkata", "UTC"])
+async def test_today_includes_untimed_tasks_on_the_users_local_date(client, db_session, tz):
+    """Regression (originally: a late-evening user saw an empty "your day is open" screen).
+
+    The client sends its own LOCAL date. That used to disagree with the server's UTC date, and was
+    patched over with a "within ±1 day of UTC-today" fudge. Since TIME-283 the server resolves the
+    day in the user's stored timezone, so the two agree by construction and untimed pending tasks
+    show up — in every zone, not just those near UTC.
+    """
+    from app.core.localtime import local_today
     from app.services.user_service import UserService
     from app.models.task import Task
 
@@ -168,12 +174,37 @@ async def test_today_includes_untimed_tasks_across_utc_boundary(client, db_sessi
     db_session.add(Task(user_id=user.id, title="Go to Walmart", status="pending", priority=3))
     await db_session.flush()
 
-    # The client's local date is one day behind the server's UTC date.
-    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
     with _mock_verify(MOCK_USER):
-        r = await client.get(f"/api/v1/timeline/today?date={yesterday}", headers=_auth_headers())
+        await client.patch("/api/v1/users/me/profile", headers=_auth_headers(),
+                           json={"timezone": tz})
+        # Exactly what the device sends: the date it currently is where the user is.
+        r = await client.get(f"/api/v1/timeline/today?date={local_today(tz).isoformat()}",
+                             headers=_auth_headers())
     assert r.status_code == 200
     assert "Go to Walmart" in [t["title"] for t in r.json()]
+
+
+@pytest.mark.anyio
+async def test_untimed_tasks_do_not_leak_into_other_days(client, db_session):
+    """The flip side of dropping the ±1-day fudge: untimed to-dos belong to *today*, so browsing
+    another date must not silently show them (the old fudge did, for any date within a day)."""
+    from datetime import timedelta
+    from app.core.localtime import local_today
+    from app.services.user_service import UserService
+    from app.models.task import Task
+
+    user, _ = await UserService(db_session).get_or_create_user(MOCK_USER.uid, MOCK_USER.email)
+    db_session.add(Task(user_id=user.id, title="Go to Walmart", status="pending", priority=3))
+    await db_session.flush()
+
+    with _mock_verify(MOCK_USER):
+        await client.patch("/api/v1/users/me/profile", headers=_auth_headers(),
+                           json={"timezone": "UTC"})
+        other_day = (local_today("UTC") + timedelta(days=3)).isoformat()
+        r = await client.get(f"/api/v1/timeline/today?date={other_day}",
+                             headers=_auth_headers())
+    assert r.status_code == 200
+    assert "Go to Walmart" not in [t["title"] for t in r.json()]
 
 
 @pytest.mark.anyio
@@ -224,3 +255,124 @@ async def test_today_plan_weaves_events_and_excludes_calendar_tasks(client, db_s
     assert event["task"] is None
     task = next(e for e in data if e["kind"] == "task")
     assert task["task"]["title"] == task["title"]
+
+
+# ── TIME-283: the timeline day window follows the user's timezone, wherever they are ──────────
+
+
+async def _set_timezone(client, tz: str) -> None:
+    with _mock_verify(MOCK_USER):
+        r = await client.patch(
+            "/api/v1/users/me/profile", headers=_auth_headers(), json={"timezone": tz}
+        )
+    assert r.status_code == 200, r.text
+    assert r.json()["timezone"] == tz
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "tz,local_hour,utc_instant,expected_utc_date",
+    [
+        # East of UTC: an early-morning local task is the PREVIOUS date in UTC.
+        ("Asia/Tokyo", 7, "2026-08-27T22:00:00Z", "2026-08-27"),
+        ("Asia/Shanghai", 7, "2026-08-27T23:00:00Z", "2026-08-27"),
+        ("Australia/Sydney", 7, "2026-08-27T21:00:00Z", "2026-08-27"),
+        # Half-hour offset — the case a whole-hour assumption gets wrong.
+        ("Asia/Kolkata", 4, "2026-08-27T22:30:00Z", "2026-08-27"),
+        # West of UTC: a late-evening local task is the NEXT date in UTC.
+        ("America/Los_Angeles", 21, "2026-08-29T04:00:00Z", "2026-08-29"),
+        ("America/New_York", 21, "2026-08-29T01:00:00Z", "2026-08-29"),
+    ],
+)
+async def test_timeline_today_uses_the_users_local_day(
+    client, tz, local_hour, utc_instant, expected_utc_date
+):
+    """A task at `local_hour` on 2026-08-28 in `tz` must appear when asking for 2026-08-28, even
+    though the instant belongs to a different UTC date. This is the Japan bug, generalised: the
+    same code path has to work for a user in China, Australia, India or the US.
+    """
+    await _set_timezone(client, tz)
+    # Sanity: the fixture really does straddle the UTC date boundary, or the test proves nothing.
+    assert utc_instant.startswith(expected_utc_date)
+    assert expected_utc_date != "2026-08-28"
+
+    with _mock_verify(MOCK_USER):
+        created = await client.post(
+            "/api/v1/tasks",
+            headers=_auth_headers(),
+            json={"title": f"{tz} task", "scheduled_start": utc_instant, "source": "manual"},
+        )
+        assert created.status_code in (200, 201), created.text
+
+        r = await client.get(
+            "/api/v1/timeline/today", headers=_auth_headers(), params={"date": "2026-08-28"}
+        )
+    assert r.status_code == 200
+    titles = [t["title"] for t in r.json()]
+    assert f"{tz} task" in titles, f"{tz}: task at {local_hour}:00 local vanished from its own day"
+
+
+@pytest.mark.anyio
+async def test_timeline_excludes_a_task_from_the_neighbouring_local_day(client):
+    """The window must still exclude — a Tokyo task an hour BEFORE local midnight belongs to the
+    27th, not the 28th, even though both share a UTC date."""
+    await _set_timezone(client, "Asia/Tokyo")
+    with _mock_verify(MOCK_USER):
+        # 23:00 on the 27th in Tokyo == 14:00 UTC on the 27th.
+        await client.post(
+            "/api/v1/tasks",
+            headers=_auth_headers(),
+            json={"title": "previous day", "scheduled_start": "2026-08-27T14:00:00Z",
+                  "source": "manual"},
+        )
+        # 00:30 on the 28th in Tokyo == 15:30 UTC on the 27th — same UTC date, different local day.
+        await client.post(
+            "/api/v1/tasks",
+            headers=_auth_headers(),
+            json={"title": "just after local midnight", "scheduled_start": "2026-08-27T15:30:00Z",
+                  "source": "manual"},
+        )
+        r = await client.get(
+            "/api/v1/timeline/today", headers=_auth_headers(), params={"date": "2026-08-28"}
+        )
+    titles = [t["title"] for t in r.json()]
+    assert "just after local midnight" in titles
+    assert "previous day" not in titles
+
+
+@pytest.mark.anyio
+async def test_changing_timezone_moves_the_day_window(client):
+    """The traveller case end to end: the same stored task moves in and out of "today" purely
+    because the user's timezone changed — no data is rewritten."""
+    # 08:00 UTC on the 28th. In Tokyo that is 17:00 on the 28th; in Los Angeles, 01:00 on the 28th.
+    with _mock_verify(MOCK_USER):
+        await client.post(
+            "/api/v1/tasks",
+            headers=_auth_headers(),
+            json={"title": "travelling task", "scheduled_start": "2026-08-28T08:00:00Z",
+                  "source": "manual"},
+        )
+
+    for tz in ("Asia/Tokyo", "America/Los_Angeles", "Africa/Lagos", "UTC"):
+        await _set_timezone(client, tz)
+        with _mock_verify(MOCK_USER):
+            r = await client.get(
+                "/api/v1/timeline/today", headers=_auth_headers(), params={"date": "2026-08-28"}
+            )
+        assert "travelling task" in [t["title"] for t in r.json()], f"missing in {tz}"
+
+    # Now a zone where that instant is NOT the 28th: 08:00 UTC is 21:00 on the 28th in Auckland
+    # (+12), so still the 28th — use a task at 20:00 UTC instead, which is the 29th there.
+    with _mock_verify(MOCK_USER):
+        await client.post(
+            "/api/v1/tasks",
+            headers=_auth_headers(),
+            json={"title": "next day in Auckland", "scheduled_start": "2026-08-28T20:00:00Z",
+                  "source": "manual"},
+        )
+    await _set_timezone(client, "Pacific/Auckland")
+    with _mock_verify(MOCK_USER):
+        r = await client.get(
+            "/api/v1/timeline/today", headers=_auth_headers(), params={"date": "2026-08-29"}
+        )
+    assert "next day in Auckland" in [t["title"] for t in r.json()]

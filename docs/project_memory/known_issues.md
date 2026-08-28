@@ -1,5 +1,19 @@
 # Known Issues
 
+## OPEN (2026-08-28, TIME-283): historical rows carry no timezone, so past patterns shift on relocation
+- `DailyActivity.day`, `HourlyActivity.hour_start` and the `created_at` timestamps behind the
+  learned-preference / behavioural-pattern services are interpreted with the user's **current**
+  timezone every time they're read (`learned_preferences_service.py`, `behavioral_patterns_service.py`).
+- So after a user relocates, "you usually run in the morning" silently re-buckets by the offset
+  between their old and new zone. Rows written under the old zone sit next to rows written under the
+  new one with nothing recording which was which.
+- TIME-283 fixed the *forward* problem (today/now/scheduling follow the device anywhere). This is the
+  *backward* one and is deliberately out of its scope — fixing it means stamping a timezone on each
+  behavioural row and backfilling, which is a data-model change, not a boundary fix.
+- Impact is limited to long-range insight copy, not to scheduling or recommendations.
+- Follow-up: add a `timezone` column to the behavioural time-series tables and bucket using the
+  stamped value; consider it alongside the TIME-292 adaptation rollup, which will read these rows.
+
 ## OPEN (found 2026-08-28, TIME-282): 11 test files HANG in this environment (network-bound)
 - Symptom: `cd backend && pytest` never finishes. It is not a failure — 11 files block indefinitely
   on outbound network the sandbox can't reach. A per-file scan (45s cap) gives:

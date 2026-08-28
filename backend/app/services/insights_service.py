@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.localtime import local_day_bounds, local_today, user_timezone_of
 from app.llm.gateway import LLMGateway
 from app.models.insight import WeeklyInsight
 from app.repositories.commute_repository import CommuteRepository
@@ -14,6 +15,7 @@ from app.repositories.recommendation_event_repository import RecommendationEvent
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.sleep_wake_repository import SleepWakeRepository
 from app.repositories.task_repository import TaskRepository
+from app.repositories.user_repository import UserRepository
 
 _SUMMARY_SYSTEM = (
     "You are a calm, encouraging personal time assistant summarizing a user's past week. "
@@ -43,8 +45,16 @@ class InsightsService:
         self.commute_repo = CommuteRepository(db)
         self.event_repo = RecommendationEventRepository(db)
 
+    async def _user_timezone(self, user_id: uuid.UUID) -> str:
+        user = await UserRepository(self.db).get_by_id(user_id)
+        return user_timezone_of(user) if user is not None else "UTC"
+
     async def get_or_generate_latest(self, user_id: uuid.UUID) -> WeeklyInsight:
-        week_start, week_end = most_recently_completed_week(datetime.now(timezone.utc).date())
+        # Which week just ended depends on where the user is: near the week boundary the UTC date
+        # and the user's date disagree, so a Monday-morning user in Tokyo was being summarised for
+        # the wrong week (TIME-283).
+        tz = await self._user_timezone(user_id)
+        week_start, week_end = most_recently_completed_week(local_today(tz))
         return await self.get_or_generate_for_week(user_id, week_start, week_end)
 
     async def get_or_generate_for_week(
@@ -60,8 +70,11 @@ class InsightsService:
     async def _generate(
         self, user_id: uuid.UUID, week_start: date, week_end: date
     ) -> WeeklyInsight:
-        start_dt = datetime(week_start.year, week_start.month, week_start.day, tzinfo=timezone.utc)
-        end_dt = start_dt + timedelta(days=7)
+        # The week's window in the user's own timezone, so a task completed at 11pm Sunday local
+        # lands in the week it belongs to rather than the next one.
+        tz = await self._user_timezone(user_id)
+        start_dt, _ = local_day_bounds(week_start, tz)
+        _, end_dt = local_day_bounds(week_end, tz)
 
         tasks_total = await self.task_repo.count_created_in_range(user_id, start_dt, end_dt)
         tasks_completed = await self.task_repo.count_completed_in_range(user_id, start_dt, end_dt)

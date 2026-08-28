@@ -6,6 +6,7 @@ from datetime import date, datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.localtime import local_today, resolve_zone
 from app.models.sleep_wake import SleepWakeEvent
 
 
@@ -67,15 +68,18 @@ class SleepWakeRepository:
         )
         return result.scalar_one()
 
-    async def get_latest_today(self, user_id: uuid.UUID) -> SleepWakeEvent | None:
-        today = datetime.now(timezone.utc).date()
+    async def get_latest_today(
+        self, user_id: uuid.UUID, user_timezone: str | None = None
+    ) -> SleepWakeEvent | None:
+        """The most recent wake event falling on the user's LOCAL today (TIME-283)."""
+        today = local_today(user_timezone)
         result = await self.db.execute(
             select(SleepWakeEvent)
             .where(SleepWakeEvent.user_id == user_id)
             .order_by(SleepWakeEvent.wake_time.desc())
         )
         for event in result.scalars().all():
-            if _utc(event.wake_time).date() == today:
+            if _utc(event.wake_time).astimezone(resolve_zone(user_timezone)).date() == today:
                 return event
         return None
 
