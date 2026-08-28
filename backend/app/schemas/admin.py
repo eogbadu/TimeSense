@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -10,9 +11,16 @@ class AdminUserSummary(BaseModel):
     role: str
     is_active: bool
     onboarding_complete: bool
+    entitlement_override: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AdminEntitlementUpdate(BaseModel):
+    """Grant or clear a durable Premium entitlement. `override: null` clears it."""
+
+    override: Literal["comped", "staff"] | None = None
 
 
 class AdminUserListResponse(BaseModel):

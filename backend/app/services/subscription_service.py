@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.subscription import Subscription
+from app.models.user import VALID_ENTITLEMENT_OVERRIDES
 from app.repositories.subscription_repository import SubscriptionRepository
 from app.repositories.user_repository import UserRepository
 
@@ -26,15 +27,34 @@ class SubscriptionService:
         return await self.repo.get_by_user_id(user_id)
 
     async def is_premium(self, user_id: uuid.UUID) -> bool:
-        """Premium if there's an active/trialing subscription, OR the account is still inside its
-        intro trial — everyone gets Premium free for their first `intro_trial_days`, no payment.
-        Dev/testing: also premium if the account's email is in the `premium_test_emails` allowlist."""
+        """Premium if the account carries a durable entitlement override, OR has an active/trialing
+        subscription, OR is still inside its intro trial — everyone gets Premium free for their
+        first `intro_trial_days`, no payment. Dev/testing: also premium if the account's email is in
+        the `premium_test_emails` allowlist.
+
+        The override is checked FIRST and deliberately: it's the one grant that doesn't depend on a
+        Subscription row existing, on account age, or on an email string matching (TIME-282)."""
+        if await self.has_entitlement_override(user_id):
+            return True
         sub = await self.repo.get_by_user_id(user_id)
         if sub is not None and sub.is_premium:
             return True
         if await self.in_intro_trial(user_id):
             return True
         return await self._is_test_premium(user_id)
+
+    async def has_entitlement_override(self, user_id: uuid.UUID) -> bool:
+        """True when the account has been granted Premium directly (comped/staff)."""
+        return (await self.entitlement_override(user_id)) is not None
+
+    async def entitlement_override(self, user_id: uuid.UUID) -> str | None:
+        """The account's durable entitlement grant, or None. Unknown values are ignored rather than
+        trusted, so a stray string in the column can never silently grant Premium."""
+        user = await self.user_repo.get_by_id(user_id)
+        if user is None:
+            return None
+        value = (user.entitlement_override or "").strip().lower()
+        return value if value in VALID_ENTITLEMENT_OVERRIDES else None
 
     async def _is_test_premium(self, user_id: uuid.UUID) -> bool:
         """Dev/testing override: emails listed in `premium_test_emails` are always Premium so

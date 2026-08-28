@@ -9,6 +9,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
 
+# Durable Premium grants that don't depend on a Subscription row, account age, or an email match.
+# "comped" = a gifted/owner account; "staff" = internal. Anything else in the column is ignored.
+VALID_ENTITLEMENT_OVERRIDES = frozenset({"comped", "staff"})
+
 if TYPE_CHECKING:
     from app.models.calendar import CalendarIntegration, PendingCalendarAction
     from app.models.consent import ConsentRecord
@@ -27,6 +31,11 @@ class User(UUIDMixin, TimestampMixin, Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     onboarding_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Durable entitlement grant, independent of any Subscription row or the intro trial:
+    # "comped" (a gifted account) or "staff" (internal). Null for ordinary users, which is the
+    # normal case — entitlement then falls through to the subscription/intro-trial logic.
+    # This replaces email-string matching as the way to keep an account Premium (TIME-282).
+    entitlement_override: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     profile: Mapped[UserProfile] = relationship(
         "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"

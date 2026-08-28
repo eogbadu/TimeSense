@@ -42,6 +42,18 @@ class UserRepository:
         await self.db.refresh(user)
         return user
 
+    async def set_entitlement_override(
+        self, user_id: uuid.UUID, override: str | None
+    ) -> User | None:
+        """Grant or clear a durable Premium entitlement (comped/staff). Admin-only path."""
+        user = await self.get_by_id(user_id)
+        if user is None:
+            return None
+        user.entitlement_override = override
+        await self.db.flush()
+        await self.db.refresh(user)
+        return user
+
     async def update_profile(
         self,
         user_id: uuid.UUID,

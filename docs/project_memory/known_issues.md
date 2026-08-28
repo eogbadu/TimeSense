@@ -1,5 +1,33 @@
 # Known Issues
 
+## OPEN (found 2026-08-28, TIME-282): 11 test files HANG in this environment (network-bound)
+- Symptom: `cd backend && pytest` never finishes. It is not a failure — 11 files block indefinitely
+  on outbound network the sandbox can't reach. A per-file scan (45s cap) gives:
+  **61 files pass, 0 failures, 11 hang.**
+- The 11: `test_appointment_reminders`, `test_behavioral_patterns`, `test_calendar`, `test_insights`,
+  `test_insights_series`, `test_integrations_oauth`, `test_integrations_status`, `test_invites`,
+  `test_notification_orchestration`, `test_notifications`, `test_referrals`.
+- **Reproduces on clean `main`** (verified by stashing: `test_appointment_reminders` and
+  `test_invites` both hang with no local changes), so it is environmental, not a regression.
+  Related to the long-standing `test_referrals` Stripe-network issue documented further down, but
+  broader — these files reach Stripe, Google Maps, OAuth token endpoints and the LLM provider.
+- **Workaround for verification runs**, until the outbound calls are mocked:
+  ```bash
+  cd backend && pytest -q \
+    --ignore=tests/test_appointment_reminders.py --ignore=tests/test_behavioral_patterns.py \
+    --ignore=tests/test_calendar.py --ignore=tests/test_insights.py \
+    --ignore=tests/test_insights_series.py --ignore=tests/test_integrations_oauth.py \
+    --ignore=tests/test_integrations_status.py --ignore=tests/test_invites.py \
+    --ignore=tests/test_notification_orchestration.py --ignore=tests/test_notifications.py \
+    --ignore=tests/test_referrals.py
+  ```
+- Note: the previously-recorded "3 time-of-day-dependent failures" did NOT reproduce in this scan —
+  `test_now_recommendation` and `test_push_service` both passed. Left open below pending another sighting.
+- Follow-up: mock the outbound clients in these files (the repo already does this correctly in
+  `test_subscriptions.py` for Stripe and in `test_calendar_providers_http.py` via httpx.MockTransport)
+  so the suite is runnable offline end-to-end. Worth its own ticket.
+
+
 ## OPEN (seen 2026-07-17): 3 time-of-day-dependent test failures on main
 - `tests/test_now_recommendation.py::test_recommendation_for_task_includes_related_task_id` (expects
   domain `task`, gets `context_switch`) and `tests/test_push_service.py::test_pushes_after_cooldown_elapses`

@@ -5,7 +5,9 @@ but the data is access-controlled at the dependency level.
 """
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -16,7 +18,9 @@ from app.repositories.recommendation_event_repository import RecommendationEvent
 from app.repositories.invite_repository import InviteCodeRepository, WaitlistRepository
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.subscription_repository import SubscriptionRepository
+from app.repositories.user_repository import UserRepository
 from app.schemas.admin import (
+    AdminEntitlementUpdate,
     AdminFeedbackListResponse,
     AdminFeedbackSummary,
     AdminIntegrationProviderStatus,
@@ -51,6 +55,29 @@ async def list_users(
         offset=offset,
         limit=limit,
     )
+
+
+@router.patch(
+    "/users/{user_id}/entitlement",
+    response_model=AdminUserSummary,
+    summary="Grant or clear a durable Premium entitlement (admin)",
+)
+async def set_user_entitlement(
+    user_id: uuid.UUID,
+    body: AdminEntitlementUpdate,
+    _admin: AdminUser = None,  # type: ignore[assignment]  # populated by Annotated[..., Depends]
+    db: AsyncSession = Depends(get_db),
+) -> AdminUserSummary:
+    """Set `entitlement_override` to "comped"/"staff", or null to clear it.
+
+    This is the supported way to keep an account Premium past the intro trial — it doesn't depend on
+    a Subscription row existing or on the PREMIUM_TEST_EMAILS string match, both of which silently
+    fail in production (TIME-282).
+    """
+    user = await UserRepository(db).set_entitlement_override(user_id, body.override)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return AdminUserSummary.model_validate(user)
 
 
 @router.get(
