@@ -3,6 +3,9 @@ import SwiftUI
 struct NowView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = NowViewModel()
+    /// Set once a reason is chosen — drives the "what would you rather do?" picker (TIME-295).
+    @State private var swapPrompt: SwapPrompt?
+
     // Set when the user taps Disagree — drives the "why not this one?" reason prompt (TIME-272).
     @State private var disagreeTaskId: String?
 
@@ -54,15 +57,39 @@ struct NowView: View {
             titleVisibility: .visible,
             presenting: disagreeTaskId
         ) { taskId in
-            Button("Wrong time") { Task { await viewModel.disagree(taskId: taskId, reason: "wrong_time") } }
-            Button("Not a priority") { Task { await viewModel.disagree(taskId: taskId, reason: "not_priority") } }
-            Button("Not relevant") { Task { await viewModel.disagree(taskId: taskId, reason: "not_relevant") } }
-            Button("Too big right now") { Task { await viewModel.disagree(taskId: taskId, reason: "too_big") } }
+            // Each reason now opens the "what would you rather do?" picker rather than recording
+            // and moving on. Saying what you'd rather do is a far stronger signal than saying no
+            // (TIME-295) — but it stays optional: dismissing the picker still records the disagree.
+            Button("Wrong time") { offerSwap(taskId, reason: "wrong_time") }
+            Button("Not a priority") { offerSwap(taskId, reason: "not_priority") }
+            Button("Not relevant") { offerSwap(taskId, reason: "not_relevant") }
+            Button("Too big right now") { offerSwap(taskId, reason: "too_big") }
             Button("Just skip") { Task { await viewModel.disagree(taskId: taskId) } }
             Button("Cancel", role: .cancel) { disagreeTaskId = nil }
         } message: { _ in
             Text("Optional — helps TimeSense pick better next time.")
         }
+        .sheet(item: $swapPrompt) { prompt in
+            SwapPickerSheet(
+                prompt: prompt,
+                loadCandidates: { await viewModel.swapCandidates(excluding: prompt.rejectedTaskId) },
+                onPick: { chosenId in
+                    Task {
+                        await viewModel.swap(rejectedTaskId: prompt.rejectedTaskId,
+                                             chosenTaskId: chosenId, reason: prompt.reason)
+                    }
+                },
+                // Backing out must not lose the disagree the user already expressed.
+                onSkip: { Task { await viewModel.disagree(taskId: prompt.rejectedTaskId,
+                                                          reason: prompt.reason) } }
+            )
+        }
+    }
+
+    /// Record the reason and immediately ask what the user would rather do. The disagree itself is
+    /// only sent if they back out of the picker, so it is recorded exactly once either way.
+    private func offerSwap(_ taskId: String, reason: String) {
+        swapPrompt = SwapPrompt(rejectedTaskId: taskId, reason: reason)
     }
 
     private func loadedBody(ctx: NowContext) -> some View {
@@ -1215,6 +1242,101 @@ private struct TaskTypePickerSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Swap: "what would you rather do?"
+
+struct SwapPrompt: Identifiable, Equatable {
+    let rejectedTaskId: String
+    let reason: String?
+    var id: String { rejectedTaskId + (reason ?? "") }
+}
+
+/// After the user says why a recommendation is wrong, offer today's other tasks so they can say
+/// what they'd rather do.
+///
+/// Why this is worth a whole screen: a rejection tells the assistant a pick was wrong; a swap tells
+/// it what would have been RIGHT, in a known context. That pairing is the strongest feedback the
+/// product can collect (TIME-294/296).
+///
+/// It stays optional. "Not now" dismisses without choosing, and the disagree is still recorded —
+/// the user must never be made to answer a second question to register a simple no.
+struct SwapPickerSheet: View {
+    let prompt: SwapPrompt
+    let loadCandidates: () async -> [TimelineTask]
+    let onPick: (String) -> Void
+    let onSkip: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var candidates: [TimelineTask] = []
+    @State private var loading = true
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if loading {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if candidates.isEmpty {
+                    // Nothing else to offer — say so plainly instead of showing an empty list.
+                    VStack(spacing: DesignTokens.Spacing.md) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 44))
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                        Text("Nothing else on today")
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                        Text("We've recorded that this one wasn't right.")
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(DesignTokens.Spacing.xl)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(candidates) { task in
+                        Button {
+                            onPick(task.id)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: DesignTokens.Spacing.md) {
+                                let style = taskCategoryStyle(for: task.title)
+                                Image(systemName: style.icon)
+                                    .foregroundColor(style.color)
+                                    .frame(width: 24)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(task.title)
+                                        .font(DesignTokens.Typography.callout)
+                                        .foregroundColor(DesignTokens.Color.textPrimary)
+                                        .lineLimit(2)
+                                    if let minutes = task.estimatedMinutes {
+                                        Text("~\(minutes) min")
+                                            .font(DesignTokens.Typography.footnote)
+                                            .foregroundColor(DesignTokens.Color.textSecondary)
+                                    }
+                                }
+                                Spacer(minLength: 0)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .background(DesignTokens.Color.background)
+            .navigationTitle("What would you rather do?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Not now") { onSkip(); dismiss() }
+                }
+            }
+            .task {
+                candidates = await loadCandidates()
+                loading = false
             }
         }
     }
