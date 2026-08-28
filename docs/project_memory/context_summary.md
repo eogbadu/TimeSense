@@ -22,10 +22,35 @@ Origin: 10 items of on-device feedback. All 10 addressed. What changed, and the 
 
 **State:** backend suite 704 passing (see known_issues.md for the 11 network-bound files that cannot run in this environment — they HANG rather than fail, and reproduce on clean main). iOS BUILD SUCCEEDED throughout. Alembic head `a1b2c3d4e5f9`, single head, applied to Postgres.
 
+**DEPLOYMENT REALITY (checked 2026-08-29 via GET /openapi.json):** production at
+https://timesense-api.onrender.com is UP but running PRE-BATCH code — none of `/api/v1/energy/checkin`,
+`/api/v1/recommendations/swap` or `/api/v1/admin/users/{user_id}/entitlement` exist there. So the seven
+migrations from this batch have NOT run on Render, and `users.entitlement_override` does not exist in
+production yet. Do not attempt the durable grant before deploying; it will fail with
+`column "entitlement_override" does not exist`.
+
+**Two databases — the thing that caused the confusion.** The iOS Simulator talks to the Mac's local
+Postgres (`localhost:5432/timesense`); a PHYSICAL iPhone talks to Render (`APIClient.swift`
+`resolveBaseURL` → `prodBaseURL`). The repo-root `.env` therefore only ever affects the Simulator.
+That is exactly why the owner's account read Premium on the Mac and was gated on the phone: the local
+`.env` set `PREMIUM_TEST_EMAILS`, Render never had it, so prod fell through to `created_at + 14d`
+(account created 2026-07-05 → intro trial ended 2026-07-19).
+
+**RESOLVED 2026-08-29:** the owner added `PREMIUM_TEST_EMAILS=ekele_r@yahoo.com` to the Render
+`timesense-secrets` env group. Confirmed no longer gated on device. Note this is the STRING-MATCH
+mechanism, i.e. the thing TIME-282 exists to replace.
+
 **USER ACTION OUTSTANDING:**
-1. Grant the entitlement override on the PRODUCTION database — the code is live but the prod row isn't set: `UPDATE users SET entitlement_override = 'comped' WHERE email = '<sign-in email>';`
-2. Deploy the backend and rebuild the iOS app for any of this to reach the device.
-3. On-device passes still needed: geofence/location permission flow (can't be verified in a simulator), the duration sheet + timer, and the swap picker.
+1. Deploy the backend (runs all seven migrations) and rebuild the iOS app — nothing from this batch
+   reaches the device otherwise. Note Insights/Connections un-gated WITHOUT a rebuild because they
+   read `/subscriptions/me/entitlement` server-side; only the Settings ▸ Subscription label (which
+   read the wrong endpoint) needs the new build.
+2. AFTER that deploy: set the durable grant
+   `UPDATE users SET entitlement_override = 'comped' WHERE email = 'ekele_r@yahoo.com';`
+   (or the admin endpoint), then REMOVE `PREMIUM_TEST_EMAILS` from the Render env group so
+   entitlement stops depending on a string match.
+3. On-device passes still needed: geofence/location permission flow (can't be verified in a
+   simulator), the duration sheet + timer, and the swap picker.
 
 ---
 
