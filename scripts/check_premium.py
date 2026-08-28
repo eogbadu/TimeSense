@@ -2,9 +2,9 @@
 
     python scripts/check_premium.py you@example.com
 
-Prints: the loaded premium_test_emails allowlist, whether the user exists (and their exact stored
-email), subscription + intro-trial state, and the final is_premium result — so you can see exactly
-which check is (or isn't) granting Premium.
+Prints: any durable entitlement_override, the loaded premium_test_emails allowlist, whether the user
+exists (and their exact stored email), subscription + intro-trial state, and the final is_premium
+result — so you can see exactly which check is (or isn't) granting Premium.
 """
 from __future__ import annotations
 
@@ -41,9 +41,16 @@ async def main(email: str) -> None:
             return
         svc = SubscriptionService(db)
         print(f"\nuser found:  id={user.id}  email={user.email!r}  created_at={user.created_at}")
+        override = await svc.entitlement_override(user.id)
+        print(f"override:    {override or '(none)'}   <-- durable grant, beats everything below")
         print(f"has sub:     {(await svc.get_subscription(user.id)) is not None}")
         print(f"in trial:    {await svc.in_intro_trial(user.id)}")
+        print(f"trial ends:  {await svc.intro_trial_ends_at(user.id)}")
         print(f"is_premium:  {await svc.is_premium(user.id)}   <-- what the app's entitlement returns")
+        if not await svc.is_premium(user.id):
+            print("\nTo grant Premium durably (preferred over the email allowlist):")
+            print(f"  UPDATE users SET entitlement_override = 'comped' WHERE id = '{user.id}';")
+            print("  ...or PATCH /api/v1/admin/users/{id}/entitlement as an admin.")
 
 
 if __name__ == "__main__":

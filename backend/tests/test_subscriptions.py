@@ -288,3 +288,137 @@ async def test_subscription_service_invoice_paid_activates(client):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_entitlement_override_grants_premium_past_expired_trial(monkeypatch):
+    """A durable entitlement_override keeps an account Premium with no subscription row, an expired
+    intro trial, and an EMPTY email allowlist — the exact production situation that locked the
+    owner's own account out (TIME-282)."""
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+    from app.core.config import settings
+    from app.core.database import Base
+    from app.models.user import User
+    from app.services.subscription_service import SubscriptionService
+    from tests.conftest import TEST_DATABASE_URL
+
+    monkeypatch.setattr(settings, "premium_test_emails", "")  # as it is in production today
+
+    engine = create_async_engine(TEST_DATABASE_URL)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_session() as session:
+        comped = User(firebase_uid="uid-comped", email="owner@example.com",
+                      entitlement_override="comped")
+        staff = User(firebase_uid="uid-staff", email="staff@example.com",
+                     entitlement_override="staff")
+        plain = User(firebase_uid="uid-plain", email="plain@example.com")
+        session.add_all([comped, staff, plain])
+        await session.flush()
+        expired = datetime.now(UTC) - timedelta(days=settings.intro_trial_days + 1)
+        for u in (comped, staff, plain):
+            u.created_at = expired
+        await session.commit()
+
+        svc = SubscriptionService(session)
+        assert await svc.is_premium(comped.id) is True
+        assert await svc.is_premium(staff.id) is True
+        assert await svc.is_premium(plain.id) is False   # no override → unchanged behaviour
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_unknown_entitlement_override_value_is_ignored(monkeypatch):
+    """A stray string in the column must never silently grant Premium — only the known values do."""
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+    from app.core.config import settings
+    from app.core.database import Base
+    from app.models.user import User
+    from app.services.subscription_service import SubscriptionService
+    from tests.conftest import TEST_DATABASE_URL
+
+    monkeypatch.setattr(settings, "premium_test_emails", "")
+
+    engine = create_async_engine(TEST_DATABASE_URL)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_session() as session:
+        bogus = User(firebase_uid="uid-bogus", email="bogus@example.com",
+                     entitlement_override="vip")
+        cased = User(firebase_uid="uid-cased", email="cased@example.com",
+                     entitlement_override="  Comped ")   # tolerated: trimmed + case-insensitive
+        session.add_all([bogus, cased])
+        await session.flush()
+        expired = datetime.now(UTC) - timedelta(days=settings.intro_trial_days + 1)
+        bogus.created_at = expired
+        cased.created_at = expired
+        await session.commit()
+
+        svc = SubscriptionService(session)
+        assert await svc.entitlement_override(bogus.id) is None
+        assert await svc.is_premium(bogus.id) is False
+        assert await svc.entitlement_override(cased.id) == "comped"
+        assert await svc.is_premium(cased.id) is True
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_admin_can_grant_and_clear_entitlement(client, monkeypatch):
+    """PATCH /admin/users/{id}/entitlement grants and clears the override; non-admins get 403."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "premium_test_emails", "")
+
+    # Create the target user by authenticating as them once.
+    with _mock_verify(MOCK_USER):
+        me = await client.get("/api/v1/users/me", headers=_auth_headers())
+    assert me.status_code == 200
+    user_id = me.json()["id"]
+
+    admin = TokenUser(uid="admin-uid", email="admin@example.com", role="admin")
+
+    with _mock_verify(admin):
+        r = await client.patch(
+            f"/api/v1/admin/users/{user_id}/entitlement",
+            json={"override": "comped"},
+            headers=_auth_headers(),
+        )
+    assert r.status_code == 200, r.text
+    assert r.json()["entitlement_override"] == "comped"
+
+    with _mock_verify(MOCK_USER):
+        ent = await client.get("/api/v1/subscriptions/me/entitlement", headers=_auth_headers())
+    assert ent.json()["is_premium"] is True
+
+    # Clearing it puts the account back on the normal trial/subscription path.
+    with _mock_verify(admin):
+        r = await client.patch(
+            f"/api/v1/admin/users/{user_id}/entitlement",
+            json={"override": None},
+            headers=_auth_headers(),
+        )
+    assert r.status_code == 200, r.text
+    assert r.json()["entitlement_override"] is None
+
+    # A normal user cannot reach the endpoint at all.
+    with _mock_verify(MOCK_USER):
+        forbidden = await client.patch(
+            f"/api/v1/admin/users/{user_id}/entitlement",
+            json={"override": "comped"},
+            headers=_auth_headers(),
+        )
+    assert forbidden.status_code == 403

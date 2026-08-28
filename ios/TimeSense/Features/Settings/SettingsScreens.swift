@@ -83,6 +83,14 @@ struct SubscriptionSettingsView: View {
         let is_premium: Bool
     }
 
+    /// GET /subscriptions/me/entitlement — the authoritative answer. Unlike /subscriptions/me it
+    /// handles the rowless case (intro trial, comped account), where /me returns null.
+    private struct Entitlement: Decodable {
+        let is_premium: Bool
+        let status: String?
+        let platform: String?
+    }
+
     private let basicFeatures = [
         "Task capture & organization", "Daily task list", "Basic recommendations", "1 integration",
     ]
@@ -170,11 +178,19 @@ struct SubscriptionSettingsView: View {
     private func load() async {
         guard !loaded else { return }
         loaded = true
+        // Entitlement first: it is the only endpoint that answers correctly when the user has no
+        // subscription row — which is every account on the free intro trial and every comped
+        // account. Reading /subscriptions/me alone made this screen say "Basic (Free)" to users the
+        // rest of the app was treating as Premium (TIME-282).
+        if let ent: Entitlement = try? await APIClient.shared.get("/api/v1/subscriptions/me/entitlement") {
+            isPremium = ent.is_premium
+            status = ent.status
+        }
+        // Plan and trial-end details only exist when there IS a row; absence is not an error.
         if let sub: Sub? = try? await APIClient.shared.get("/api/v1/subscriptions/me"), let s = sub {
-            isPremium = s.is_premium
-            status = s.status
             plan = s.plan
             trialEnd = s.trial_end
+            if status == nil { status = s.status }
         }
     }
 }

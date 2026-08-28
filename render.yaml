@@ -30,6 +30,12 @@ envVarGroups:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      # Dev/testing allowlist of emails always treated as Premium. Empty means no effect. This was
+      # previously only ever set in the local .env, so it was silently empty in production and the
+      # only escape hatch past the intro trial didn't exist here (TIME-282). Prefer the durable
+      # users.entitlement_override for real comped accounts; this stays for quick testing.
+      - key: PREMIUM_TEST_EMAILS
+        sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
