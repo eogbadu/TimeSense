@@ -33,6 +33,9 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
         penalty += 45
 
     # Poor sleep / low energy → reduce demanding work unless there's a hard deadline today.
+    # Since TIME-288 `energy_estimate` is the depleting recovery budget rather than a sleep-only
+    # reading, so this rule now also fires late in a day that has already been spent — which is what
+    # the build spec asked for and what the old sleep-only value could never express.
     h = ctx.health_context
     if h is not None and not cal.has_hard_deadline_today:
         poor = h.sleep_quality == "poor" or (h.sleep_hours is not None and h.sleep_hours < 6)

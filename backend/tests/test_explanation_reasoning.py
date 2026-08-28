@@ -75,7 +75,11 @@ async def test_energy_signal_uses_activity_when_no_sleep(db_session):
     )
     energy = _energy_signal(exp)
     assert energy["available"] is True
-    assert "activity" in energy["detail"] and "8,200 steps" in energy["detail"]
+    # The signal is present and says something specific. It no longer claims to be "based on
+    # today's activity" — since TIME-288 activity SPENDS capacity rather than evidencing it, so
+    # quoting a step count as the reason for an energy level would be misleading.
+    assert energy["detail"].strip()
+    assert "8,200 steps" not in energy["detail"]
 
 
 @pytest.mark.anyio
@@ -160,20 +164,45 @@ async def test_calendar_signal_falls_back_when_no_commitment(db_session):
     assert "workday ends" in cal_context
 
 
-# TIME-266 — the activity-based energy varies (was constant "moderate").
+# TIME-266 made the energy signal vary with activity. TIME-288 established that it was varying the
+# WRONG WAY — a busy day was reported as high energy, which is the bug the user hit. These two
+# replace the old assertions with the corrected direction.
 
-@pytest.mark.anyio
-async def test_energy_low_on_a_sedentary_day(db_session):
-    user, _ = await UserService(db_session).get_or_create_user("uid-expl-8", "expl8@example.com")
-    now = datetime(2026, 8, 1, 14, 0, tzinfo=UTC)
-    await DailyActivityRepository(db_session).upsert(
-        user.id, now.date(), steps=700, active_energy_kcal=None, exercise_minutes=0, inactive_minutes=200
-    )
-    task = Task(user_id=user.id, title="Write the report", status="pending", priority=2, estimated_minutes=30)
+
+async def _explain_with_activity(db_session, uid, now, **activity):
+    user, _ = await UserService(db_session).get_or_create_user(uid, f"{uid}@example.com")
+    await DailyActivityRepository(db_session).upsert(user.id, now.date(), **activity)
+    task = Task(user_id=user.id, title="Write the report", status="pending", priority=2,
+                estimated_minutes=30)
     db_session.add(task)
     await db_session.flush()
-    exp = await build_explanation(
+    return await build_explanation(
         db_session, user, task, alternatives=[], today_tasks=[task],
         now=now, tz_name="UTC", gateway=get_llm_gateway(),
     )
-    assert "Low energy" in _energy_signal(exp)["detail"]
+
+
+@pytest.mark.anyio
+async def test_a_busy_day_does_not_report_high_energy_in_the_evening(db_session):
+    """THE REPORTED BUG. The old rule read 30+ min of exercise or 8000+ steps as HIGH energy, so a
+    full day announced high energy at 8pm and a demanding task was recommended on that basis."""
+    now = datetime(2026, 8, 1, 20, 0, tzinfo=UTC)
+    exp = await _explain_with_activity(
+        db_session, "uid-expl-busy", now,
+        steps=14000, active_energy_kcal=None, exercise_minutes=60, inactive_minutes=120,
+    )
+    detail = _energy_signal(exp)["detail"]
+    assert "High energy" not in detail, f"a busy evening still claimed high energy: {detail!r}"
+
+
+@pytest.mark.anyio
+async def test_a_quiet_day_is_not_called_low_energy_merely_for_low_steps(db_session):
+    """The mirror error. Barely moving is not evidence of low capacity — someone who rested all
+    morning may have plenty. The old rule called any day under 2000 steps "low energy"."""
+    now = datetime(2026, 8, 1, 10, 0, tzinfo=UTC)
+    exp = await _explain_with_activity(
+        db_session, "uid-expl-quiet", now,
+        steps=700, active_energy_kcal=None, exercise_minutes=0, inactive_minutes=60,
+    )
+    detail = _energy_signal(exp)["detail"]
+    assert "Low energy" not in detail, f"a quiet morning was called low energy: {detail!r}"
