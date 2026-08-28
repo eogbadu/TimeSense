@@ -30,21 +30,18 @@ struct NowView: View {
         }
         // "How long did that take?" — shown only while TimeSense is still learning this kind of
         // task, so it fades away once estimates are confident (never becomes a chore).
-        .confirmationDialog(
-            "How long did that take?",
-            isPresented: Binding(
-                get: { viewModel.durationPrompt != nil },
-                set: { if !$0 { viewModel.durationPrompt = nil } }
-            ),
-            titleVisibility: .visible,
-            presenting: viewModel.durationPrompt
-        ) { prompt in
-            Button("~15 min") { Task { await viewModel.submitDuration(taskId: prompt.id, minutes: 15) } }
-            Button("~30 min") { Task { await viewModel.submitDuration(taskId: prompt.id, minutes: 30) } }
-            Button("~1 hour") { Task { await viewModel.submitDuration(taskId: prompt.id, minutes: 60) } }
-            Button("Skip", role: .cancel) { viewModel.durationPrompt = nil }
-        } message: { _ in
-            Text("This helps TimeSense learn your pace.")
+        // A sheet rather than three fixed buttons: those buttons could only ever say 15 / 30 / 60,
+        // and feeding those coarse answers into the estimator is what produced the "everything
+        // takes 23 minutes" bug (TIME-286/287).
+        .sheet(item: $viewModel.durationPrompt) { prompt in
+            DurationFeedbackSheet(
+                prompt: prompt,
+                onSubmit: { minutes, correctedType in
+                    Task { await viewModel.submitDuration(taskId: prompt.id, minutes: minutes,
+                                                          taskType: correctedType) }
+                },
+                onSkip: { viewModel.durationPrompt = nil }
+            )
         }
         // "Why not this one?" — a light optional prompt after Disagree. Each reason (and Skip) records
         // the disagree so a different pick surfaces; the reason feeds reason-based learning (TIME-272).
@@ -88,7 +85,13 @@ struct NowView: View {
                         loadExplanation: { await viewModel.fetchExplanation(taskId: task.id) },
                         onAgree: { Task { await viewModel.agree(taskId: task.id) } },
                         onDisagree: { disagreeTaskId = task.id },
-                        onDone: { Task { await viewModel.markDone(taskId: task.id, title: task.title) } },
+                        onDone: {
+                            Task { await viewModel.markDone(taskId: task.id, title: task.title,
+                                                            estimatedMinutes: task.estimatedMinutes) }
+                        },
+                        elapsedMinutes: viewModel.elapsedMinutes(taskId: task.id),
+                        onStart: { viewModel.startTimer(taskId: task.id) },
+                        onCancelTimer: { viewModel.cancelTimer(taskId: task.id) },
                         onSnooze: { Task { await viewModel.snooze(taskId: task.id) } }
                     )
 
@@ -280,6 +283,9 @@ private struct BestNextActionCard: View {
     let onAgree: () -> Void
     let onDisagree: () -> Void
     let onDone: () -> Void
+    let elapsedMinutes: Int?
+    let onStart: () -> Void
+    let onCancelTimer: () -> Void
     let onSnooze: () -> Void
 
     var body: some View {
@@ -352,7 +358,9 @@ private struct BestNextActionCard: View {
             }
             Divider()
             WhyThis(load: loadExplanation)
-            QuickActionRow(onAgree: onAgree, onDisagree: onDisagree, onDone: onDone, onSnooze: onSnooze)
+            QuickActionRow(onAgree: onAgree, onDisagree: onDisagree, onDone: onDone,
+                           elapsedMinutes: elapsedMinutes, onStart: onStart,
+                           onCancelTimer: onCancelTimer, onSnooze: onSnooze)
                 .id(task.id)  // reset the Agree/Disagree stage whenever the recommendation changes
         }
         .padding(DesignTokens.Spacing.lg)
@@ -752,23 +760,60 @@ private struct QuickActionRow: View {
     let onAgree: () -> Void
     let onDisagree: () -> Void
     let onDone: () -> Void
+    let elapsedMinutes: Int?
+    let onStart: () -> Void
+    let onCancelTimer: () -> Void
     let onSnooze: () -> Void
 
     @State private var agreed = false
+    @State private var timing = false
+    // Drives the live elapsed label. The source of truth is the view model's start timestamp, so a
+    // backgrounded app still shows the right figure on return.
+    @State private var tick = Date()
+    private let ticker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        HStack(spacing: DesignTokens.Spacing.sm) {
-            if agreed {
-                PrimaryAction(title: "Done", systemImage: "checkmark.circle.fill", action: onDone)
-                SecondaryAction(title: "Snooze", systemImage: "clock.arrow.2.circlepath", action: onSnooze)
-            } else {
-                PrimaryAction(title: "Agree", systemImage: "hand.thumbsup.fill") {
-                    withAnimation(.easeInOut(duration: 0.18)) { agreed = true }
-                    onAgree()
+        VStack(spacing: DesignTokens.Spacing.sm) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                if agreed {
+                    PrimaryAction(title: "Done", systemImage: "checkmark.circle.fill", action: onDone)
+                    SecondaryAction(title: "Snooze", systemImage: "clock.arrow.2.circlepath",
+                                    action: onSnooze)
+                } else {
+                    PrimaryAction(title: "Agree", systemImage: "hand.thumbsup.fill") {
+                        withAnimation(.easeInOut(duration: 0.18)) { agreed = true }
+                        onAgree()
+                    }
+                    SecondaryAction(title: "Disagree", systemImage: "hand.thumbsdown",
+                                    action: onDisagree)
                 }
-                SecondaryAction(title: "Disagree", systemImage: "hand.thumbsdown", action: onDisagree)
+            }
+
+            // Optional timer. The point is a real duration captured with NO prompt at all — the
+            // best learning signal, because it costs the user nothing to give (TIME-287).
+            if agreed {
+                Button {
+                    if timing { onCancelTimer() } else { onStart() }
+                    withAnimation(.easeInOut(duration: 0.18)) { timing.toggle() }
+                } label: {
+                    Label(timerLabel, systemImage: timing ? "stop.circle" : "play.circle")
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .onReceive(ticker) { tick = $0 }
+                .accessibilityLabel(timing ? "Stop timing this task" : "Start timing this task")
             }
         }
+    }
+
+    private var timerLabel: String {
+        guard timing else { return "Start timer" }
+        _ = tick   // re-evaluated on each tick
+        guard let minutes = elapsedMinutes else { return "Timing…" }
+        return minutes < 60
+            ? "Timing · \(minutes) min"
+            : "Timing · \(minutes / 60)h \(minutes % 60)m"
     }
 }
 
@@ -905,5 +950,236 @@ private struct ContextCard: View {
         .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
         .padding(DesignTokens.Spacing.md)
         .cardStyle()
+    }
+}
+
+// MARK: - Duration feedback
+
+/// "How long did that take?" — the sheet that replaced three fixed buttons.
+///
+/// Those buttons could only ever offer 15 / 30 / 60 minutes, and feeding those coarse answers into
+/// the estimator is what produced the "everything takes 23 minutes" report: a 15 followed by two
+/// 30s blended to exactly 23, which then answered for nearly every task (TIME-286).
+///
+/// The design goals here, in order:
+///   1. Never become a chore. It opens on the assistant's own estimate (or the timed figure), so
+///      "that was about right" is one tap, and Skip is always available.
+///   2. Let a real number be given. A stepper reaches any value; the presets are shortcuts, not
+///      the only options.
+///   3. Let a wrong guess be corrected. A wrong type teaches the wrong bucket, so the detected type
+///      is shown and can be changed.
+struct DurationFeedbackSheet: View {
+    let prompt: DurationPrompt
+    let onSubmit: (Int, String?) -> Void
+    let onSkip: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var minutes: Int
+    @State private var correctedType: String?
+    @State private var showTypePicker = false
+
+    private static let presets = [5, 10, 15, 30, 45, 60, 90, 120]
+
+    init(prompt: DurationPrompt, onSubmit: @escaping (Int, String?) -> Void,
+         onSkip: @escaping () -> Void) {
+        self.prompt = prompt
+        self.onSubmit = onSubmit
+        self.onSkip = onSkip
+        // Open on the best figure available: what we timed, else what we predicted, else a neutral
+        // starting point. Anchoring on our own estimate keeps the common case to a single tap.
+        _minutes = State(initialValue: prompt.measuredMinutes ?? prompt.estimatedMinutes ?? 30)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+                    Text(prompt.title)
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundColor(DesignTokens.Color.textPrimary)
+
+                    if prompt.measuredMinutes != nil {
+                        Label("Timed in the app — adjust if it's not right",
+                              systemImage: "stopwatch")
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                    }
+
+                    // The value itself, big and directly adjustable.
+                    HStack {
+                        Stepper(value: $minutes, in: 1...480, step: 5) {
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text("\(minutes)")
+                                    .font(DesignTokens.Typography.title2)
+                                    .foregroundColor(DesignTokens.Color.textPrimary)
+                                    .monospacedDigit()
+                                Text("min")
+                                    .font(DesignTokens.Typography.callout)
+                                    .foregroundColor(DesignTokens.Color.textSecondary)
+                            }
+                        }
+                    }
+                    .padding(DesignTokens.Spacing.lg)
+                    .cardStyle()
+
+                    // Shortcuts, not the only options — the stepper above reaches any value.
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                        Text("Quick pick")
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4),
+                                  spacing: DesignTokens.Spacing.sm) {
+                            ForEach(Self.presets, id: \.self) { value in
+                                Button {
+                                    minutes = value
+                                } label: {
+                                    Text(label(for: value))
+                                        .font(DesignTokens.Typography.footnote)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, DesignTokens.Spacing.sm)
+                                        .background(
+                                            Capsule().fill(minutes == value
+                                                           ? DesignTokens.Color.accent
+                                                           : DesignTokens.Color.surface)
+                                        )
+                                        .foregroundColor(minutes == value
+                                                         ? DesignTokens.Color.onHero
+                                                         : DesignTokens.Color.textPrimary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    // A wrong type teaches the wrong bucket, so make it correctable here rather
+                    // than hiding the assistant's guess (TIME-285/286).
+                    if let detected = prompt.taskType {
+                        Button {
+                            showTypePicker = true
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Counted as")
+                                        .font(DesignTokens.Typography.footnote)
+                                        .foregroundColor(DesignTokens.Color.textSecondary)
+                                    Text(friendlyType(correctedType ?? detected))
+                                        .font(DesignTokens.Typography.callout)
+                                        .foregroundColor(DesignTokens.Color.textPrimary)
+                                }
+                                Spacer()
+                                Text("Change")
+                                    .font(DesignTokens.Typography.footnote)
+                                    .foregroundColor(DesignTokens.Color.accent)
+                            }
+                            .padding(DesignTokens.Spacing.lg)
+                            .cardStyle()
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Text("This is how TimeSense learns your pace for this kind of task.")
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                }
+                .padding(DesignTokens.Spacing.lg)
+            }
+            .background(DesignTokens.Color.background)
+            .navigationTitle("How long did that take?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Skip") { onSkip(); dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { onSubmit(minutes, correctedType); dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
+            .sheet(isPresented: $showTypePicker) {
+                TaskTypePickerSheet(selected: correctedType ?? prompt.taskType) { picked in
+                    correctedType = picked
+                    showTypePicker = false
+                }
+            }
+        }
+    }
+
+    private func label(for value: Int) -> String {
+        value < 60 ? "\(value)m" : (value % 60 == 0 ? "\(value / 60)h" : "\(value / 60)h\(value % 60)")
+    }
+}
+
+/// Turns a library key ("appt_dentist") into something readable ("Dentist appointment").
+/// The full catalogue lives on the server; the client only ever needs to render what it was given
+/// and offer a short list of common corrections, so this stays a presentation concern.
+func friendlyType(_ key: String) -> String {
+    TaskTypeOption.all.first { $0.key == key }?.label
+        ?? key.replacingOccurrences(of: "_", with: " ").capitalized
+}
+
+struct TaskTypeOption: Identifiable, Hashable {
+    let key: String
+    let label: String
+    var id: String { key }
+
+    /// A deliberately short list of the corrections people actually make. Offering all ~80 server
+    /// types would turn a two-second correction into a search problem — and the server still
+    /// accepts any valid key, so nothing is lost.
+    static let all: [TaskTypeOption] = [
+        .init(key: "meeting_generic", label: "Meeting"),
+        .init(key: "call_generic", label: "Phone call"),
+        .init(key: "email_reply", label: "Email"),
+        .init(key: "message_send", label: "Message"),
+        .init(key: "write_generic", label: "Writing"),
+        .init(key: "code_feature", label: "Build a feature"),
+        .init(key: "code_bugfix", label: "Fix a bug"),
+        .init(key: "code_review", label: "Code review"),
+        .init(key: "study_research", label: "Research"),
+        .init(key: "read_book", label: "Reading"),
+        .init(key: "plan_day", label: "Planning"),
+        .init(key: "admin_generic", label: "Admin"),
+        .init(key: "errand_generic", label: "Errand"),
+        .init(key: "shop_generic", label: "Shopping"),
+        .init(key: "chore_generic", label: "Household chore"),
+        .init(key: "cook_meal", label: "Cooking"),
+        .init(key: "exercise_gym", label: "Exercise"),
+        .init(key: "social_meetup", label: "Seeing someone"),
+        .init(key: "travel_generic", label: "Travel"),
+        .init(key: "hobby_practice", label: "Practice / hobby"),
+    ]
+}
+
+private struct TaskTypePickerSheet: View {
+    let selected: String?
+    let onPick: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List(TaskTypeOption.all) { option in
+                Button {
+                    onPick(option.key)
+                    dismiss()
+                } label: {
+                    HStack {
+                        Text(option.label)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                        Spacer()
+                        if option.key == selected {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(DesignTokens.Color.accent)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("What kind of task?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
     }
 }
