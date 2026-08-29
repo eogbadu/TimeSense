@@ -1,4 +1,5 @@
 """Tests for privacy data export + account deletion (TIME-055)."""
+import json
 from unittest.mock import patch
 
 import pytest
@@ -146,3 +147,84 @@ async def test_export_and_delete_cover_recommendation_events(client, db_session)
         )
     ).scalars().all()
     assert remaining == []
+
+
+# ── TIME-304: the export must not drift behind the schema again ──────────────────────────
+
+
+def test_every_user_scoped_table_is_in_the_export():
+    """The export had drifted badly: an audit found FIFTEEN user-scoped tables missing, not the two
+    the ticket assumed. Privacy policy section 8 promises "a portable copy of all your data", so a
+    table that stores something about a user and isn't here is a broken promise.
+
+    This test is the guard — add a user-scoped table without adding it to _USER_DATA and it fails.
+    """
+    from app.models.base import Base
+    from app.services.privacy_service import _USER_DATA
+
+    exported = {model.__tablename__ for _, model, _ in _USER_DATA}
+    missing = sorted(
+        mapper.class_.__tablename__
+        for mapper in Base.registry.mappers
+        if "user_id" in {c.name for c in mapper.columns}
+        and mapper.class_.__tablename__ not in exported
+    )
+    assert missing == [], (
+        f"these user-scoped tables are missing from the privacy export: {missing}. "
+        "Add them to _USER_DATA in privacy_service.py."
+    )
+
+
+def test_credentials_are_redacted_but_the_users_own_data_is_not():
+    """An export gets emailed, synced and shared, so a live credential inside one is a real leak —
+    even though the user requested it themselves.
+
+    Location coordinates are deliberately NOT redacted: they are the user's own data, and handing
+    it back is the entire point of the export.
+    """
+    from app.services.privacy_service import _REDACTED_COLUMNS
+
+    assert "access_token" in _REDACTED_COLUMNS
+    assert "refresh_token" in _REDACTED_COLUMNS
+    # The APNs push token — a credential, and it was NOT covered before TIME-304.
+    assert "token" in _REDACTED_COLUMNS
+    assert "latitude" not in _REDACTED_COLUMNS
+    assert "longitude" not in _REDACTED_COLUMNS
+
+
+@pytest.mark.anyio
+async def test_a_recorded_duration_observation_appears_in_the_export(db_session):
+    """End to end for the table that prompted this: TIME-286 added it and did not add it here."""
+    from app.services.privacy_service import PrivacyService
+    from app.services.task_duration_service import TaskDurationEstimator
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user("uid-exp", "exp@example.com")
+    await TaskDurationEstimator(db_session).record_actual(
+        user.id, "Buy groceries", 42, estimated_minutes=30
+    )
+    await db_session.flush()
+
+    bundle = await PrivacyService(db_session).export_data(user.id)
+
+    assert "task_duration_observations" in bundle
+    assert any(row["actual_minutes"] == 42 for row in bundle["task_duration_observations"])
+    assert "task_duration_estimates" in bundle
+    assert bundle["task_duration_estimates"], "the learned estimate should be exported too"
+
+
+@pytest.mark.anyio
+async def test_a_push_token_is_never_exported_in_the_clear(db_session):
+    from app.models.device_token import DeviceToken
+    from app.services.privacy_service import PrivacyService
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db_session).get_or_create_user("uid-tok", "tok@example.com")
+    db_session.add(DeviceToken(user_id=user.id, token="SECRET-APNS-TOKEN", platform="ios"))
+    await db_session.flush()
+
+    bundle = await PrivacyService(db_session).export_data(user.id)
+    rows = bundle["device_tokens"]
+    assert rows, "the device token row should still be exported"
+    assert rows[0]["token"] == "[redacted]"
+    assert "SECRET-APNS-TOKEN" not in json.dumps(bundle)

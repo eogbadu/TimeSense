@@ -11127,7 +11127,158 @@ TICKETS = [
                 "iOS BUILD SUCCEEDED",
             ]),
             divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO\n# on device: start a timer on a short-estimate task and confirm the prompt arrives at estimate+30"),
-            divider(), h2("Dependencies"), p("TIME-298."), divider(), h2("Next Ticket"), p("(none)."),
+            divider(), h2("Dependencies"), p("TIME-298."), divider(), h2("Next Ticket"), p("TIME-304."),
+        ),
+    },
+    # ── TASK LIBRARY: audit, fix, expand, recalibrate (2026-08-30) ───────────
+    {
+        "summary": "TIME-304: Duration tables are missing from the privacy export",
+        "labels": ["backend", "privacy", "bug"],
+        "description": doc(
+            h2("Goal"), p("privacy_service._USER_DATA lists 28 tables for the portable data export, but task_duration_observations and task_duration_estimates are not among them — even though recommendation_events and analytics_events are. Privacy policy section 8 promises the user can download a copy of ALL their data. This gap was introduced in TIME-286 when the observations table was added and the export was not updated. Deletion is unaffected (FK cascade on user_id); this is an export-only omission."),
+            divider(), h2("Scope"), bullet_list([
+                "Add task_duration_observations and task_duration_estimates to _USER_DATA in privacy_service.py",
+                "Confirm the export shape matches the existing entries (per-table list of row dicts)",
+                "Test asserting both tables appear in the export payload for a user who has recorded a duration",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No change to account deletion — the FK cascade already covers these tables",
+                "No new consent category",
+                "No admin audit logging (separate pre-existing gap)",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend app/services/privacy_service.py",
+                "backend tests/test_privacy.py",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "GET /api/v1/privacy/export includes both duration tables",
+                "A user with a recorded duration observation sees it in their export",
+                "Existing privacy tests still pass",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_privacy.py -q"),
+            divider(), h2("Dependencies"), p("TIME-286 (introduced the gap)."), divider(), h2("Next Ticket"), p("TIME-300."),
+        ),
+    },
+    {
+        "summary": "TIME-300: Classifier coverage audit script",
+        "labels": ["backend", "tooling", "estimation"],
+        "description": doc(
+            h2("Goal"), p("The task library's coverage was measured against a corpus the same author wrote, which reported 0% catch-all. Run against 30 REAL captured titles it is 13%, and it also silently misclassifies (e.g. 'Buy a textbook' matches the 'text' keyword and becomes a 5-minute message task). Make the measurement repeatable and honest so any expansion is driven by evidence rather than imagination."),
+            divider(), h2("Scope"), bullet_list([
+                "New scripts/audit_task_classification.py following the check_premium.py convention (sys.path insert to backend, no load_dotenv since app.core.config loads the single repo-root .env, plain print, never print credentials)",
+                "Report over every real Task.title: catch-all rate, the titles that fell through, the distribution across types",
+                "Report SUSPICIOUS matches: any title classified on a keyword that is a strict substring of a longer word in that title — the 'textbook' signature",
+                "Read-only; runs against whatever DATABASE_URL points at so it can target production",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No admin endpoint — this is a development tool and does not need an authenticated surface",
+                "No changes to the library itself (TIME-301 and TIME-302)",
+                "No writes of any kind",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "scripts/audit_task_classification.py (new)",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "Running the script prints the catch-all rate, the fall-through titles, and any suspicious substring matches",
+                "It makes no writes and prints no credentials",
+                "It runs cleanly against an empty database (no tasks) without erroring",
+            ]),
+            divider(), h2("Verification"), code_block("python scripts/audit_task_classification.py"),
+            divider(), h2("Dependencies"), p("TIME-284."), divider(), h2("Next Ticket"), p("TIME-301."),
+        ),
+    },
+    {
+        "summary": "TIME-301: Fix keyword matching — anchor every keyword, handle inflection explicitly",
+        "labels": ["backend", "bug", "estimation"],
+        "description": doc(
+            h2("Goal"), p("task_library anchors keywords by LENGTH: only keywords of 3 characters or fewer are anchored at both ends. This is backwards. Short keywords, where tolerating inflection would be relatively safe, are locked to whole words so '\\brun\\b' misses 'running'. Long keywords, where false substring matches are most likely, stay open at the end so '\\btext' matches 'textbook' and '\\bbook' matches 'booklet'. Real captured titles show both failure modes. A wrong type is worse than the catch-all, because the catch-all is never learned against (TIME-286) whereas a wrong type actively teaches the wrong duration bucket."),
+            divider(), h2("Scope"), bullet_list([
+                "Anchor every keyword at both ends; remove _WHOLE_WORD_MAX_LEN",
+                "Handle inflection explicitly with an optional suffix group, plus listing irregular forms (e.g. 'running') where English doubles a consonant",
+                "Preserve the ordering guarantee: first match wins, specific entries before general ones",
+                "Regression tests seeded from REAL captured titles, asserting both directions",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No new task types (TIME-302)",
+                "No change to durations or difficulties",
+                "No LLM-side classification change",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend app/services/task_library.py",
+                "backend tests/test_task_library.py",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "'Buy a textbook' classifies as shopping, not message_send",
+                "'Go running' classifies as exercise_run, not the catch-all",
+                "'Text rita about tax' still classifies as message_send",
+                "'Read the booklet' does not silently match read_book",
+                "The existing adversarial cases (ping / pr / chapter / book) still pass unchanged",
+                "The catch-all rate may RISE — that is correct, since a wrong type is worse than an honest 'don't know'",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_task_library.py tests/test_task_classification.py -q\npython scripts/audit_task_classification.py"),
+            divider(), h2("Dependencies"), p("TIME-300."), divider(), h2("Next Ticket"), p("TIME-302."),
+        ),
+    },
+    {
+        "summary": "TIME-302: Expand the task library to 120-150 types",
+        "labels": ["backend", "estimation"],
+        "description": doc(
+            h2("Goal"), p("The library has 79 types. The original TIME-284 ticket specified 120-150; the author stopped at 79 when a self-written corpus reported 0% catch-all, and did not flag the reduction. Measured against real captured titles the catch-all rate is 13%, with whole domains missing. The library is a shared prior for every future user, so a missing type silently degrades every estimate in that domain."),
+            divider(), h2("Scope"), bullet_list([
+                "Personal care: teeth, shower, skincare, medication — nothing covers 'brush my teeth' today",
+                "Relationship and family time: 'spend time with my wife' has no type; the social category is entirely outward-facing",
+                "Teaching / helping someone: 'teach X to make apps' falls through",
+                "Fill the thin categories (1-2 types each): message, health, call, email, planning, cooking, hobby",
+                "Add absent domains: pets, vehicle maintenance, home maintenance beyond chore_repair, childcare beyond one entry, finance beyond two, education and school admin",
+                "Keep every entry's difficulty honest — difficulty is about focus, not length",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "Ambiguous captures stay in the catch-all deliberately — a bare name like 'Ekele/Cynthia' is not classifiable and must not be guessed at",
+                "No matcher changes (TIME-301 lands first)",
+                "No automatic tuning of durations (TIME-303 is a report only)",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend app/services/task_library.py",
+                "backend tests/test_task_library.py",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "120-150 types, no duplicate keys, every entry has a duration and a valid difficulty",
+                "The previously failing real titles now classify sensibly (brush my teeth, spend time with my wife, teach X)",
+                "Catch-all rate on real titles drops, with the residue being genuinely unclassifiable captures",
+                "The library still contains both long-but-light and short-but-deep types, so difficulty has not collapsed into duration",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_task_library.py -q\npython scripts/audit_task_classification.py"),
+            divider(), h2("Dependencies"), p("TIME-301."), divider(), h2("Next Ticket"), p("TIME-303."),
+        ),
+    },
+    {
+        "summary": "TIME-303: Baseline recalibration report (no automatic tuning)",
+        "labels": ["backend", "estimation", "privacy"],
+        "description": doc(
+            h2("Goal"), p("The library's durations are hand-written judgement, not evidence. task_duration_observations now records every real 'this actually took N minutes' alongside the estimate shown at the time, so the baselines can be checked against reality. This ticket produces a REPORT and deliberately does not tune anything automatically: learning_and_adaptation_spec states as an invariant that there is no cross-user learning, and task_duration_observations is written WITHOUT the analytics consent gate that every other cross-user aggregate in the codebase respects. Correcting the baselines by hand, with the evidence recorded, keeps that invariant true."),
+            divider(), h2("Scope"), bullet_list([
+                "Aggregate actual/estimated per task_type, restricted to users who granted the analytics consent",
+                "Apply a sample floor as a k-anonymity threshold, reusing the MIN_SAMPLES_PER_BUCKET idiom from user_adaptation_service",
+                "Report which hand-written baselines are wrong and by how much, so they can be corrected by hand with evidence in the commit",
+                "Add an index on task_duration_observations.observed_at if the window scan is slow",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "Nothing writes back to task_library.py automatically — that would be cross-user learning and would contradict the spec",
+                "No new consent category (there is no general model-training consent; audio_training is scoped to audio)",
+                "No amendment to learning_and_adaptation_spec, because the invariant still holds",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "scripts/audit_task_classification.py or a sibling report script",
+                "backend app/repositories/task_duration_repository.py (a cross-user read, consent-filtered)",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "The report shows observed-vs-baseline ratios per task type, only for types above the sample floor",
+                "Only observations from analytics-consenting users are included",
+                "Nothing mutates task_library.py",
+                "The catch-all is absent from the report (record_actual already skips it)",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_task_duration.py -q\npython scripts/audit_task_classification.py --durations"),
+            divider(), h2("Dependencies"), p("TIME-286, TIME-302."), divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
 ]
