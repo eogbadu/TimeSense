@@ -216,21 +216,34 @@ final class NowViewModel: ObservableObject {
     /// while the assistant is still learning that kind of task).
     @Published var durationPrompt: DurationPrompt?
 
-    /// When the user started the task in-app, per task id. Lets a real duration be captured with no
-    /// prompt at all — the best kind of learning signal, because it costs the user nothing.
-    @Published private(set) var startedAt: [String: Date] = [:]
+    /// The running timer lives in TaskTimerStore, which persists it. It used to be an in-memory
+    /// dictionary here, mirrored in @State on the button row — so it was lost both when SwiftUI
+    /// recreated the row (tab switch, recommendation change) and when the app was force-quit
+    /// (TIME-298).
+    private var timers: TaskTimerStore { TaskTimerStore.shared }
 
-    func startTimer(taskId: String) {
-        startedAt[taskId] = Date()
+    func startTimer(taskId: String, title: String, estimatedMinutes: Int?) {
+        timers.start(taskId: taskId, title: title, estimatedMinutes: estimatedMinutes)
     }
 
     func cancelTimer(taskId: String) {
-        startedAt[taskId] = nil
+        timers.stopIfTiming(taskId: taskId)
     }
 
+    func isTiming(taskId: String) -> Bool { timers.isTiming(taskId: taskId) }
+
+    /// Raw elapsed seconds, for the live display. Deliberately NOT clamped: the user should see the
+    /// first seconds tick by, which is the only evidence the timer is actually running.
+    func elapsedSeconds(taskId: String) -> TimeInterval? {
+        timers.elapsed(taskId: taskId)
+    }
+
+    /// Whole minutes, for SUBMISSION. The plausibility guard applies here and only here — a timer
+    /// left running overnight must not poison the learned estimate, but it also shouldn't stop the
+    /// display from working in the first minute.
     func elapsedMinutes(taskId: String) -> Int? {
-        guard let started = startedAt[taskId] else { return nil }
-        return Self.plausibleMinutes(Date().timeIntervalSince(started) / 60)
+        guard let seconds = timers.elapsed(taskId: taskId) else { return nil }
+        return Self.plausibleMinutes(seconds / 60)
     }
 
     /// Guard against a timer left running overnight, or one stopped a few seconds after starting —
@@ -250,7 +263,7 @@ final class NowViewModel: ObservableObject {
             )
             await maybePromptDuration(taskId: taskId, title: title,
                                       estimatedMinutes: estimatedMinutes, measured: measured)
-            cancelTimer(taskId: taskId)
+            timers.stopIfTiming(taskId: taskId)
             await load()
         } catch {
             // Reload anyway so UI stays consistent
