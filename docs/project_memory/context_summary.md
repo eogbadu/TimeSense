@@ -55,18 +55,28 @@ phone: the local `.env` set `PREMIUM_TEST_EMAILS`, Render never had it, so prod 
 `timesense-secrets` env group. Confirmed no longer gated on device. This is the STRING-MATCH
 mechanism, i.e. the thing TIME-282 exists to replace.
 
-**USER ACTION OUTSTANDING:**
-1. Backend deploy: DONE (auto-deployed, migrations applied — see above). Nothing to do.
-2. Rebuild the iOS app — all the client-side work still needs it: the duration sheet + timer, the
-   swap picker, the energy check-in card, the timezone re-sync, the onboarding location ask, and the
-   Settings ▸ Subscription label. NOTE Insights/Connections already un-gated WITHOUT a rebuild,
-   because they read `/subscriptions/me/entitlement` server-side.
-3. Durable entitlement (the column now exists, so this works):
-   `UPDATE users SET entitlement_override = 'comped' WHERE email = 'ekele_r@yahoo.com';`
-   or `PATCH /api/v1/admin/users/{user_id}/entitlement` with an admin token. Then REMOVE
-   `PREMIUM_TEST_EMAILS` from the Render env group so entitlement stops depending on a string match.
-4. On-device passes still needed: geofence/location permission flow (can't be verified in a
-   simulator), the duration sheet + timer, and the swap picker.
+**STATUS 2026-08-29 — the batch is fully delivered and live.**
+- Backend: deployed to Render, all seven migrations applied (`alembic_version` = `a1b2c3d4e5f9`).
+- iOS: built signed for the device, installed and launched on the owner's iPhone
+  (`com.aetheranalytics.timesense`, Debug build → talks to Render, not the Mac).
+- Entitlement: `users.entitlement_override = 'comped'` on the owner's production account. Verified
+  with `premium_test_emails` forced empty, so the COLUMN is what grants Premium — no subscription
+  row, intro trial expired 2026-07-31, `is_premium` still True. `PREMIUM_TEST_EMAILS` has been
+  removed from Render, so the string-match mechanism is gone entirely.
+- Database credential rotated (`timesense_user` → `timesense_user_20260829`) and the old role
+  revoked — it now fails with `role ... is not permitted to log in`. See
+  `docs/runbooks/database_credential_rotation.md`; the non-obvious part is recorded in
+  known_issues.md (render.yaml says `fromDatabase`, the services hold literal values).
+
+**REMAINING — on-device passes only, which a simulator cannot cover:**
+1. Geofence / location permission flow (grant location in Settings ▸ Places; geofences need
+   `Always`), then walk between saved places.
+2. The duration sheet + the Start-timer path, after completing a task.
+3. The swap picker: Now ▸ Disagree ▸ reason ▸ choose a replacement, and confirm it becomes the
+   recommendation.
+
+Note the onboarding location ask only appears on a fresh sign-in, so an already-onboarded account
+has to grant location via Settings ▸ Places.
 
 ---
 
