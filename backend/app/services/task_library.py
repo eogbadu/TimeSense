@@ -76,6 +76,16 @@ TASK_TYPES: list[TaskType] = [
     _t("appt_vet", "Vet appointment", "appointment", 45, LIGHT, "vet", "veterinar"),
     _t("appt_haircut", "Haircut", "appointment", 45, LIGHT,
        "haircut", "barber", "salon", "hair appointment"),
+    _t("appt_scan", "Scan or test", "appointment", 45, LIGHT,
+       "x-ray", "xray", "mri", "ultrasound", "blood test", "bloods", "scan appointment", "biopsy"),
+    _t("appt_vaccine", "Vaccination", "appointment", 20, LIGHT,
+       "vaccine", "vaccination", "jab", "flu shot", "booster", "immunisation", "immunization"),
+    _t("health_medication", "Medication", "health", 5, LIGHT,
+       "medication", "meds", "take my pill", "pills", "tablet", "inhaler", "prescription refill"),
+    _t("health_physio_exercises", "Physio exercises", "health", 20, MODERATE,
+       "physio exercises", "rehab exercises", "stretches", "stretching", "mobility"),
+    _t("health_mental", "Mental health time", "health", 30, MODERATE,
+       "journal", "journalling", "journaling", "gratitude", "reflect on", "check in with myself"),
     _t("appt_generic", "Appointment", "appointment", 60, LIGHT, "appointment"),
 
     # ── meetings & calls ────────────────────────────────────────────────────────────────
@@ -101,6 +111,14 @@ TASK_TYPES: list[TaskType] = [
        "inbox", "clear email", "email triage", "check email", "unread"),
     _t("email_reply", "Reply to email", "email", 10, LIGHT,
        "email", "e-mail", "reply to", "respond to", "follow up with", "follow-up with"),
+    _t("email_write", "Write an email", "email", 20, MODERATE,
+       "write an email", "draft an email", "compose", "send an email"),
+    _t("email_unsubscribe", "Tidy the inbox", "email", 15, LIGHT,
+       "unsubscribe", "spam", "archive email", "delete emails"),
+    _t("message_reply", "Reply to a message", "message", 5, LIGHT,
+       "reply to", "respond to the message", "get back to"),
+    _t("message_group", "Post to a group", "message", 10, LIGHT,
+       "group chat", "post in", "announce", "share with the team"),
     _t("message_send", "Send a message", "message", 5, LIGHT,
        "message", "text", "dm", "slack", "whatsapp", "imessage", "ping"),
 
@@ -135,6 +153,19 @@ TASK_TYPES: list[TaskType] = [
     # noun, so the noun sense has to carry its own context or it steals every reservation task.
     _t("read_book", "Read a book", "reading", 45, MODERATE,
        "read", "chapter", "my book", "the book", "book club", "finish the novel"),
+    _t("teach_someone", "Teach or tutor someone", "teaching", 60, DEEP,
+       "teach", "tutor", "tutoring", "coach", "mentor", "walk through", "show them how",
+       "explain to", "onboard"),
+    _t("help_someone", "Help someone with something", "teaching", 45, MODERATE,
+       "help with", "give a hand", "assist", "support with", "sort out for"),
+    _t("study_assignment", "Assignment or coursework", "education", 90, DEEP,
+       "assignment", "coursework", "essay due", "problem set", "lab report", "submit the paper"),
+    _t("study_exam", "Exam or test", "education", 120, DEEP,
+       "exam", "final", "midterm", "sit the test", "take the test"),
+    _t("study_enrol", "School or course admin", "education", 30, MODERATE,
+       "enrol", "enroll", "registration for", "tuition", "school forms", "parent portal"),
+    _t("plan_review", "Weekly review", "planning", 30, MODERATE,
+       "weekly review", "review the week", "retrospective on", "look back at the week"),
     _t("plan_day", "Plan the day", "planning", 15, MODERATE,
        "plan my day", "plan the day", "plan tomorrow", "daily plan", "prioritise", "prioritize"),
     _t("plan_project", "Plan a project", "planning", 60, DEEP,
@@ -148,7 +179,7 @@ TASK_TYPES: list[TaskType] = [
     _t("admin_pay_bill", "Pay a bill", "admin", 10, LIGHT,
        "pay the", "pay bill", "bill", "invoice", "rent", "utility"),
     _t("admin_book", "Book something", "admin", 20, MODERATE,
-       "book a", "book the", "book flight", "book appointment", "booking", "rebook",
+       "book a", "book flight", "book appointment", "booking", "rebook",
        "reserve", "reservation"),
     _t("admin_form", "Fill in a form", "admin", 30, MODERATE,
        "form", "paperwork", "application", "register for", "sign up for", "renew"),
@@ -156,6 +187,14 @@ TASK_TYPES: list[TaskType] = [
        "cancel", "unsubscribe", "close account"),
     _t("admin_insurance", "Insurance / claims", "admin", 45, MODERATE,
        "insurance", "claim", "policy"),
+    _t("finance_invest", "Investments or savings", "admin", 45, DEEP,
+       "invest", "investment", "portfolio", "savings", "pension", "401k", "isa", "stocks"),
+    _t("finance_expenses", "Expenses or reimbursement", "admin", 25, MODERATE,
+       "expenses", "expense report", "reimbursement", "receipts", "timesheet"),
+    _t("admin_subscription", "Review a subscription", "admin", 15, LIGHT,
+       "subscription", "renew the plan", "downgrade", "upgrade the plan"),
+    _t("admin_appointment_book", "Make an appointment", "admin", 10, LIGHT,
+       "make an appointment", "schedule an appointment", "call to book"),
     _t("admin_generic", "Admin task", "admin", 20, MODERATE,
        "admin", "sort out", "deal with", "chase up"),
 
@@ -178,6 +217,18 @@ TASK_TYPES: list[TaskType] = [
     _t("errand_bank", "Bank errand", "errand", 30, LIGHT, "bank", "atm", "deposit"),
     _t("errand_fuel", "Fuel / charge the car", "errand", 15, LIGHT,
        "gas station", "petrol", "fuel", "charge the car", "car wash"),
+    _t("pet_walk", "Walk the dog", "pet", 30, LIGHT,
+       "walk the dog", "dog walk", "take the dog out"),
+    _t("pet_care", "Look after a pet", "pet", 15, LIGHT,
+       "feed the dog", "feed the cat", "feed the pet", "litter", "clean the tank", "groom the dog"),
+    _t("pet_groomer", "Pet grooming or boarding", "pet", 60, LIGHT,
+       "groomer", "kennel", "cattery", "pet sitter", "boarding"),
+    _t("vehicle_service", "Car service or MOT", "vehicle", 120, LIGHT,
+       "car service", "mot", "service the car", "mechanic", "garage appointment", "inspection"),
+    _t("vehicle_tyres", "Tyres or repairs", "vehicle", 60, LIGHT,
+       "tyre", "tire", "puncture", "brakes", "oil change", "battery replace"),
+    _t("vehicle_admin", "Vehicle admin", "vehicle", 25, MODERATE,
+       "road tax", "car insurance", "registration renewal", "dvla", "dmv", "license plate"),
     _t("errand_generic", "Errand", "errand", 30, LIGHT, "errand", "drop by", "stop by", "swing by"),
 
     # ── home & chores ───────────────────────────────────────────────────────────────────
@@ -190,6 +241,14 @@ TASK_TYPES: list[TaskType] = [
        "garden", "mow", "lawn", "yard", "weeding", "plants"),
     _t("chore_repair", "Fix something at home", "chore", 60, MODERATE,
        "repair", "fix the sink", "diy", "assemble", "install the", "handyman"),
+    _t("home_tradesperson", "Arrange a tradesperson", "home", 30, MODERATE,
+       "plumber", "electrician", "handyman", "boiler", "hvac", "contractor", "get a quote"),
+    _t("home_decorate", "Decorating", "home", 120, LIGHT,
+       "paint the", "painting the room", "wallpaper", "decorate", "put up shelves"),
+    _t("home_beds", "Change the bedding", "chore", 15, LIGHT,
+       "change the sheets", "bedding", "make the bed", "strip the bed"),
+    _t("home_admin", "Household admin", "home", 25, MODERATE,
+       "utility bill", "council tax", "mortgage", "landlord", "meter reading", "broadband"),
     _t("chore_generic", "Household chore", "chore", 30, LIGHT, "chore", "housework"),
 
     # ── cooking & meals ─────────────────────────────────────────────────────────────────
@@ -212,6 +271,14 @@ TASK_TYPES: list[TaskType] = [
        "practice", "practise", "rehearse", "piano", "guitar", "instrument", "drills"),
     _t("hobby_creative", "Creative project", "hobby", 60, MODERATE,
        "paint", "draw", "sketch", "knit", "sew", "woodwork", "photography", "edit the video"),
+    _t("care_teeth", "Brush teeth", "personal_care", 5, LIGHT,
+       "brush my teeth", "brush teeth", "floss", "mouthwash"),
+    _t("care_shower", "Shower or bath", "personal_care", 20, LIGHT,
+       "shower", "bath", "wash my hair"),
+    _t("care_skincare", "Skincare or grooming", "personal_care", 10, LIGHT,
+       "skincare", "shave", "moisturise", "moisturize", "nails", "makeup"),
+    _t("care_getready", "Get ready", "personal_care", 25, LIGHT,
+       "get ready", "get dressed", "getting ready"),
     _t("selfcare_rest", "Rest / recharge", "health", 20, LIGHT,
        "rest", "nap", "break", "recharge", "meditate", "meditation", "breathe"),
 
@@ -223,6 +290,18 @@ TASK_TYPES: list[TaskType] = [
        "party", "wedding", "birthday", "concert", "game night", "dinner party"),
     _t("family_childcare", "Kids / childcare", "social", 45, LIGHT,
        "school run", "pick up the kids", "daycare", "nursery", "playdate", "parents evening"),
+    _t("family_partner_time", "Time with my partner", "family", 90, LIGHT,
+       "with my wife", "with my husband", "with my partner", "with my girlfriend",
+       "with my boyfriend", "date night", "time together", "spend time with my"),
+    _t("family_time", "Family time", "family", 90, LIGHT,
+       "family time", "with the family", "with my kids", "with the kids", "with my son",
+       "with my daughter", "with my mum", "with my mom", "with my dad"),
+    _t("family_homework", "Help with homework", "family", 45, MODERATE,
+       "homework", "reading practice", "spellings", "help them with school"),
+    _t("family_bedtime", "Bedtime routine", "family", 45, LIGHT,
+       "bedtime", "bath and bed", "put the kids to bed", "bedtime story"),
+    _t("family_appointment", "Appointment for someone else", "family", 60, LIGHT,
+       "kids appointment", "kids cut", "take them to", "drop them at"),
     _t("social_call_family", "Call family", "social", 30, LIGHT,
        "call mum", "call mom", "call dad", "call grandma", "call my"),
 
@@ -269,7 +348,8 @@ def normalize_difficulty(value: str | None) -> str | None:
 
 
 @lru_cache(maxsize=1)
-def _compiled_patterns() -> list[tuple[re.Pattern[str], TaskType]]:
+def _compiled_patterns() -> tuple[list[tuple[re.Pattern[str], TaskType]],
+                                  list[tuple[re.Pattern[str], TaskType]]]:
     """One whole-word pattern per keyword, in library order.
 
     EVERY keyword is anchored at both ends. The previous rule anchored by LENGTH — only keywords of
@@ -288,27 +368,51 @@ def _compiled_patterns() -> list[tuple[re.Pattern[str], TaskType]]:
     common English suffix (plural, gerund, past tense). Forms that double a final consonant
     ("run" -> "running") can't be derived by rule and are listed in the library instead.
     """
-    patterns: list[tuple[re.Pattern[str], TaskType]] = []
+    phrases: list[tuple[re.Pattern[str], TaskType]] = []
+    words: list[tuple[re.Pattern[str], TaskType]] = []
     for task_type in TASK_TYPES:
         for keyword in task_type.keywords:
             kw = keyword.strip()
             if not kw:
                 continue
+            is_phrase = " " in kw
             # A multi-word phrase is already specific enough that suffixing it adds nothing.
-            suffix = "" if " " in kw else _INFLECTION_SUFFIX
-            patterns.append((re.compile(rf"\b{re.escape(kw)}{suffix}\b"), task_type))
-    return patterns
+            suffix = "" if is_phrase else _INFLECTION_SUFFIX
+            compiled = re.compile(rf"\b{re.escape(kw)}{suffix}\b")
+            (phrases if is_phrase else words).append((compiled, task_type))
+    return phrases, words
 
 
 def classify(title: str) -> TaskType:
     """Best-effort type for a task title, by keyword. Deterministic and LLM-free — this is the
-    fallback whenever the model is unavailable or returns something unusable."""
+    fallback whenever the model is unavailable or returns something unusable.
+
+    A multi-word PHRASE beats a single-word keyword; within each class, library order decides.
+
+    It used to be plain first-match-wins, which meant a type's position in the file decided the
+    answer. That held while the library was small and broke as soon as it grew (TIME-302): "Submit
+    the expense report" matched `report` before `expense report`, and "Book the car service" matched
+    a generic booking keyword before `car service`, purely because the writing and admin sections
+    appear earlier in the file.
+
+    Ranking by keyword LENGTH was tried and is worse: it makes "appointment" (11 chars, generic)
+    beat "dentist" (7 chars, specific), so "Book dentist appointment" stops resolving to the dentist
+    type. Length measures verbosity, not specificity.
+
+    A multi-word phrase, though, is a genuinely more specific claim about the title than a single
+    word — it had to match more of it. So phrases are tried first, in library order, and single
+    words second. That keeps the deliberate specific-before-general ordering within each section
+    working exactly as before, while letting a cross-domain phrase win over an unrelated section's
+    generic word.
+    """
     text = (title or "").lower().strip()
     if not text:
         return GENERAL_TYPE
-    for pattern, task_type in _compiled_patterns():
-        if pattern.search(text):
-            return task_type
+    phrases, words = _compiled_patterns()
+    for group in (phrases, words):
+        for pattern, task_type in group:
+            if pattern.search(text):
+                return task_type
     return GENERAL_TYPE
 
 

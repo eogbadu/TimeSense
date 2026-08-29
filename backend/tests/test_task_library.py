@@ -125,7 +125,9 @@ def test_specific_keywords_beat_general_ones(title, expected_key):
          "'pr' (code review) start-anchored matches 'PRactice'"),
         ("Booking a table", "admin_book", "'book a' does not cover the -ing form"),
         ("Read chapter 4", "read_book", "'chapter' read as writing, not reading"),
-        ("Write chapter 3 of the thesis", "write_report", "the writing sense must still win"),
+        ("Write chapter 3 of the thesis", "write_essay",
+         "the WRITING sense must win over reading; write_essay and write_report are both 90 min "
+         "deep work, so which of the two wins does not change the estimate"),
         ("Book a table for Friday", "admin_book", "'book' as a verb, not a noun"),
         ("Read a book", "read_book", "'book' as a noun"),
         ("Book dentist appointment", "appt_dentist", "the appointment is more specific than booking"),
@@ -228,7 +230,8 @@ def test_no_keyword_can_begin_inside_another_word():
     sampling titles — a keyword must never match starting mid-word."""
     from app.services.task_library import _compiled_patterns
 
-    for pattern, task_type in _compiled_patterns():
+    phrases, words = _compiled_patterns()
+    for pattern, task_type in phrases + words:
         assert pattern.pattern.startswith(r"\b"), f"{task_type.key}: {pattern.pattern}"
         assert pattern.pattern.endswith(r"\b"), (
             f"{task_type.key}: {pattern.pattern} is open at the end, so it can match inside a "
@@ -242,8 +245,72 @@ def test_inflections_match_without_opening_the_keyword_up():
     from app.services.task_library import _compiled_patterns
 
     # A real single-word keyword from the library (chore_clean), not an invented one.
-    pattern = next(p for p, t in _compiled_patterns() if p.pattern == r"\bclean(?:s|es|ed|d|ing)?\b")
+    _phrases, words = _compiled_patterns()
+    pattern = next(p for p, t in words if p.pattern == r"\bclean(?:s|es|ed|d|ing)?\b")
     for should in ("clean", "cleans", "cleaned", "cleaning"):
         assert pattern.search(should), f"{should!r} should match"
     for should_not in ("cleanser", "cleanliness", "unclean"):
         assert not pattern.search(should_not), f"{should_not!r} must not match"
+
+
+# ── TIME-302: coverage of the domains real captures actually hit ─────────────────────────
+
+
+@pytest.mark.parametrize(
+    "title,expected_category",
+    [
+        # The three classifiable titles that fell through before the expansion.
+        ("Brush my teeth", "personal_care"),
+        ("Spend time with my wife today.", "family"),
+        ("Teach Leanne and Jordyn to make apps", "teaching"),
+        # Domains that were entirely absent.
+        ("Walk the dog", "pet"),
+        ("Book the car service", "vehicle"),
+        ("Boiler service on Tuesday", "home"),
+        # "help with" is a phrase and beats the single word "homework" — helping someone IS the
+        # task here, which is a fairer reading than filing it as the child's study session.
+        ("Help with homework", "teaching"),
+        ("Take my medication", "health"),
+        ("Submit the expense report", "admin"),
+    ],
+)
+def test_previously_uncovered_domains_now_classify(title, expected_category):
+    assert classify(title).category == expected_category
+
+
+def test_a_bare_name_stays_in_the_catch_all():
+    """"Ekele/Cynthia" is a real capture and is genuinely not classifiable. Guessing at it would be
+    worse than admitting we don't know — the catch-all exists for exactly this, and is never
+    learned against (TIME-286)."""
+    assert classify("Ekele/Cynthia").key == GENERAL_KEY
+    assert classify("Thing").key == GENERAL_KEY
+
+
+def test_the_expansion_did_not_collapse_difficulty_into_duration():
+    """Guard against the library drifting toward 'long = hard' as it grows, which would make
+    difficulty a redundant restatement of duration."""
+    long_light = [t for t in TASK_TYPES if t.typical_minutes >= 60 and t.difficulty == "light"]
+    short_deep = [t for t in TASK_TYPES if t.typical_minutes <= 30 and t.difficulty == "deep"]
+    assert len(long_light) >= 5, "no meaningful set of long-but-light types"
+    assert short_deep, "no short-but-deep types"
+
+
+def test_the_library_is_large_enough_to_be_a_real_prior():
+    """TIME-284 specified 120-150 and shipped 79 without flagging the reduction; TIME-302 restores
+    it. The floor matters more than the exact number — a thin library silently degrades every
+    estimate in the domains it misses."""
+    assert len(TASK_TYPES) >= 110, f"only {len(TASK_TYPES)} types"
+
+
+def test_a_phrase_beats_an_unrelated_sections_single_word():
+    """The ordering rule the expansion forced (TIME-302). With plain first-match-wins these all
+    resolved to whichever section happened to appear earlier in the file."""
+    assert classify("Submit the expense report").key == "finance_expenses"   # not write_report
+    assert classify("Book the car service").key == "vehicle_service"          # not admin_book
+
+
+def test_specific_types_still_win_within_a_section():
+    """Phrase-first must not disturb the deliberate specific-before-general ordering. Ranking by
+    keyword LENGTH broke exactly this — "appointment" (11 chars, generic) beat "dentist" (7)."""
+    assert classify("Book dentist appointment").key == "appt_dentist"
+    assert classify("Grocery shopping at Aldi").key == "shop_groceries"
