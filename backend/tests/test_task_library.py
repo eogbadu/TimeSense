@@ -190,3 +190,60 @@ def test_empty_or_junk_titles_do_not_raise():
         t = classify(title)  # type: ignore[arg-type]
         assert t.key == GENERAL_KEY
         assert t.typical_minutes > 0
+
+
+# ── TIME-301: the matcher, checked against REAL captured titles ──────────────────────────
+#
+# The cases below are not invented. They come from titles actually captured in the app, run
+# through the audit script (TIME-300). That distinction matters: the library's original 0%
+# fall-through was measured against a corpus written by the same author as the library, and
+# against real data it was 13% with a silent misclassification.
+
+
+@pytest.mark.parametrize(
+    "title,expected,why",
+    [
+        # The reported bug. "text" is 4 chars, so the old length rule left it open at the end and
+        # it matched inside "textbook" — turning a shopping trip into a 5-minute message task.
+        ("Buy a textbook", "shop_generic", "'text' must not match inside 'textbook'"),
+        # ...while the genuine word match still works.
+        ("Text rita my love about tax strategy", "message_send", "'text' as a word still matches"),
+        # The mirror failure: short keywords were locked to whole words, so inflections missed.
+        ("Go running", "exercise_run", "'running' doubles the consonant; listed explicitly"),
+        ("Went for a jog", "exercise_run", "the base form still matches"),
+        ("Go swimming", "exercise_swim", "same doubling case"),
+        # Inflection derived by rule rather than by leaving the keyword open-ended.
+        ("Cleaned the kitchen", "chore_clean", "'clean' + 'ed' via the suffix rule"),
+        ("Cleaning the kitchen", "chore_clean", "'clean' + 'ing' via the suffix rule"),
+        # Ordering must still hold: a more specific type wins over a general one.
+        ("Buy running shoes", "shop_generic", "shopping beats exercise for a purchase"),
+    ],
+)
+def test_real_capture_regressions(title, expected, why):
+    assert classify(title).key == expected, why
+
+
+def test_no_keyword_can_begin_inside_another_word():
+    """The structural guarantee, asserted directly against every compiled pattern rather than by
+    sampling titles — a keyword must never match starting mid-word."""
+    from app.services.task_library import _compiled_patterns
+
+    for pattern, task_type in _compiled_patterns():
+        assert pattern.pattern.startswith(r"\b"), f"{task_type.key}: {pattern.pattern}"
+        assert pattern.pattern.endswith(r"\b"), (
+            f"{task_type.key}: {pattern.pattern} is open at the end, so it can match inside a "
+            "longer word (this is the 'textbook' bug)"
+        )
+
+
+def test_inflections_match_without_opening_the_keyword_up():
+    """Both halves of the fix in one assertion: a keyword matches its common inflections, and still
+    cannot match as a prefix of an unrelated word."""
+    from app.services.task_library import _compiled_patterns
+
+    # A real single-word keyword from the library (chore_clean), not an invented one.
+    pattern = next(p for p, t in _compiled_patterns() if p.pattern == r"\bclean(?:s|es|ed|d|ing)?\b")
+    for should in ("clean", "cleans", "cleaned", "cleaning"):
+        assert pattern.search(should), f"{should!r} should match"
+    for should_not in ("cleanser", "cleanliness", "unclean"):
+        assert not pattern.search(should_not), f"{should_not!r} must not match"
