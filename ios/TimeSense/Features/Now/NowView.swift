@@ -5,6 +5,8 @@ struct NowView: View {
     @StateObject private var viewModel = NowViewModel()
     /// Set once a reason is chosen — drives the "what would you rather do?" picker (TIME-295).
     @State private var swapPrompt: SwapPrompt?
+    /// Observed so an overrunning timer surfaces its prompt as soon as Now is shown (TIME-299).
+    @ObservedObject private var timers = TaskTimerStore.shared
 
     // Set when the user taps Disagree — drives the "why not this one?" reason prompt (TIME-272).
     @State private var disagreeTaskId: String?
@@ -103,6 +105,23 @@ struct NowView: View {
                     SuggestionCard(suggestion: suggestion)
                 } else if let moment = ctx.moment, !moment.isEmpty {
                     MomentCard(text: moment)
+                }
+
+                // "Still on this?" — shown when a timer has run well past its estimate. The
+                // notification may never have been seen (or permission declined), so the in-app
+                // prompt is the reliable path, not a duplicate (TIME-299).
+                if let running = timers.running, running.needsOverrunPrompt {
+                    TimerOverrunCard(
+                        timer: running,
+                        onDone: {
+                            Task {
+                                await viewModel.markDone(taskId: running.taskId,
+                                                         title: running.taskTitle,
+                                                         estimatedMinutes: running.estimatedMinutes)
+                            }
+                        },
+                        onStillGoing: { timers.acknowledgeOverrun() }
+                    )
                 }
 
                 if let task = ctx.bestTask {
@@ -1374,5 +1393,62 @@ struct SwapPickerSheet: View {
                 loading = false
             }
         }
+    }
+}
+
+// MARK: - Timer overrun
+
+/// "Still on this?" — shown when a running timer has passed its estimate by a clear margin.
+///
+/// A timer with no end condition is the real problem it solves: a task finished without stopping
+/// the timer keeps counting, and eventually either submits nothing (the plausibility guard discards
+/// it) or a wildly inflated duration that poisons the learned estimate for that task type.
+///
+/// It asks rather than acting. Auto-completing the task would be the same trust violation as
+/// writing to someone's calendar without approval — the assistant suggests, the user decides. And
+/// it appears once per timer: "Still going" is remembered, because the product rule against nagging
+/// applies to this as much as to notifications.
+struct TimerOverrunCard: View {
+    let timer: RunningTaskTimer
+    let onDone: () -> Void
+    let onStillGoing: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: "stopwatch")
+                    .foregroundColor(Cosmic.orange)
+                Text("Still on “\(timer.taskTitle)”?")
+                    .font(DesignTokens.Typography.headline)
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                    .lineLimit(2)
+            }
+
+            Text("You've been timing this for \(formatElapsed(timer.elapsed)) — we expected about \(timer.expectedMinutes) min.")
+                .font(DesignTokens.Typography.footnote)
+                .foregroundColor(DesignTokens.Color.textSecondary)
+
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Button(action: onDone) {
+                    Label("It's done", systemImage: "checkmark.circle.fill")
+                        .font(DesignTokens.Typography.subheadline.weight(.semibold))
+                        .foregroundColor(DesignTokens.Color.onHero)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DesignTokens.Spacing.sm)
+                        .background(DesignTokens.Color.accent)
+                        .clipShape(Capsule())
+                }
+                Button(action: onStillGoing) {
+                    Text("Still going")
+                        .font(DesignTokens.Typography.subheadline)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DesignTokens.Spacing.sm)
+                        .overlay(Capsule().stroke(DesignTokens.Color.hairline, lineWidth: 1))
+                }
+            }
+        }
+        .padding(DesignTokens.Spacing.lg)
+        .cardStyle()
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 /// A running "how long is this actually taking?" timer, persisted outside view state.
 ///
@@ -25,10 +26,36 @@ struct RunningTaskTimer: Codable, Equatable {
     /// pre-fill the duration sheet.
     let estimatedMinutes: Int?
 
+    /// Set once the user has answered the "are you still on this?" prompt, so we ask only once.
+    /// The product rule is explicit: no nagging.
+    var overrunAcknowledged: Bool = false
+
     var elapsed: TimeInterval { Date().timeIntervalSince(startedAt) }
 
     /// Whole minutes, for submission. Sub-minute time is a display concern only.
     var elapsedMinutes: Int { Int((elapsed / 60).rounded()) }
+
+    /// How long we'll let this run past its estimate before asking whether it's actually finished.
+    /// A timer with no end condition is the real problem: a task the user finished without stopping
+    /// it keeps counting, and eventually either submits nothing (the plausibility guard discards it)
+    /// or a wildly inflated duration that poisons the learned estimate for that type (TIME-299).
+    static let overrunGrace: TimeInterval = 30 * 60
+
+    /// Every task has an estimate (the TIME-284 library guarantees one), but fall back to a sane
+    /// default rather than never prompting if one is somehow missing.
+    static let fallbackEstimateMinutes = 30
+
+    var expectedMinutes: Int { estimatedMinutes ?? Self.fallbackEstimateMinutes }
+
+    /// When the "still going?" prompt becomes due.
+    var overrunAt: Date {
+        startedAt.addingTimeInterval(Double(expectedMinutes) * 60 + Self.overrunGrace)
+    }
+
+    var isOverrunning: Bool { Date() >= overrunAt }
+
+    /// Show the in-app prompt only once per timer.
+    var needsOverrunPrompt: Bool { isOverrunning && !overrunAcknowledged }
 }
 
 @MainActor
@@ -55,11 +82,54 @@ final class TaskTimerStore: ObservableObject {
                                      startedAt: Date(), estimatedMinutes: estimatedMinutes)
         running = timer
         persist(timer)
+        scheduleOverrunNudge(for: timer)
     }
 
     func stop() {
         running = nil
         defaults.removeObject(forKey: key)
+        cancelOverrunNudge()
+    }
+
+    /// The user answered the prompt and is still working — don't ask again for this timer.
+    func acknowledgeOverrun() {
+        guard var timer = running else { return }
+        timer.overrunAcknowledged = true
+        running = timer
+        persist(timer)
+        cancelOverrunNudge()
+    }
+
+    // MARK: - Overrun nudge
+    //
+    // A LOCAL notification, not a push. The timer is client-side state, so a local one works
+    // offline, needs no APNs configuration, and can't disagree with what the app is showing.
+
+    private static let nudgeID = "task-timer-overrun"
+
+    private func scheduleOverrunNudge(for timer: RunningTaskTimer) {
+        cancelOverrunNudge()
+        let delay = timer.overrunAt.timeIntervalSinceNow
+        guard delay > 0 else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Still on “\(timer.taskTitle)”?"
+        content.body = "That's past the \(timer.expectedMinutes) min we expected. "
+            + "Mark it done and we'll learn how long it really takes."
+        content.sound = .default
+        content.userInfo = ["type": "timer_overrun", "task_id": timer.taskId]
+
+        let request = UNNotificationRequest(
+            identifier: Self.nudgeID,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private func cancelOverrunNudge() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [Self.nudgeID])
     }
 
     /// Clear the timer only if it belongs to `taskId` — so completing some OTHER task can't silently
