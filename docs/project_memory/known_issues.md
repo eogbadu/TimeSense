@@ -1,5 +1,17 @@
 # Known Issues
 
+## GOTCHA (found 2026-08-29): render.yaml's `fromDatabase` wiring is NOT what the services actually use
+- `render.yaml` declares `DATABASE_URL` via `fromDatabase: {property: connectionString}`, but the
+  running `timesense-api` and `timesense-worker` hold **literal** `DATABASE_URL` /
+  `DATABASE_URL_SYNC` values in their dashboard environment. Blueprint wiring resolves at service
+  creation / blueprint sync; after that the dashboard value wins and never re-resolves.
+- Symptom: rotating the database credential and redeploying changes nothing — the service re-reads
+  the same literal string and reconnects as the old role. Cost about an hour and three redeploys
+  before it was spotted.
+- Also note `DATABASE_URL_SYNC` is declared in `app/core/config.py` and **read nowhere**;
+  `migrations/env.py` builds alembic's URL from `database_url`.
+- Full procedure + verification queries: `docs/runbooks/database_credential_rotation.md`.
+
 ## GOTCHA (found 2026-08-28, TIME-292): a Postgres-only column type DEADLOCKS the tests, it doesn't error
 - Symptom: `pytest tests/test_user_adaptation.py` hung indefinitely — no failure, no traceback, no
   output. A pure-Python test in the same file passed instantly, so it wasn't collection.
