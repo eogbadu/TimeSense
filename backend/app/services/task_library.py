@@ -56,8 +56,10 @@ def _t(key, name, category, minutes, difficulty, *keywords) -> TaskType:
 # not contribute its duration to a bucket that then answers for every other unclassified task.
 GENERAL_KEY = "general"
 
-# Keywords at or below this length must match a whole word (see _compiled_patterns).
-_WHOLE_WORD_MAX_LEN = 3
+# Common English inflections a keyword is allowed to match, so "order" also matches "ordered" and
+# "orders" without the keyword being able to start inside another word. Irregular forms that double
+# a consonant (run -> running) cannot be derived this way and are listed explicitly in the library.
+_INFLECTION_SUFFIX = r"(?:s|es|ed|d|ing)?"
 
 TASK_TYPES: list[TaskType] = [
     # ── health & medical appointments ───────────────────────────────────────────────────
@@ -183,7 +185,7 @@ TASK_TYPES: list[TaskType] = [
     _t("chore_dishes", "Dishes", "chore", 15, LIGHT, "dishes", "dishwasher", "washing up"),
     _t("chore_clean", "Clean the house", "chore", 60, LIGHT,
        "clean", "tidy", "vacuum", "hoover", "mop", "dust", "declutter", "organize", "organise"),
-    _t("chore_bins", "Take out the bins", "chore", 5, LIGHT, "bins", "trash", "garbage", "recycling"),
+    _t("chore_bins", "Take out the bins", "chore", 5, LIGHT, "bin", "bins", "trash", "garbage", "recycling"),
     _t("chore_garden", "Garden / yard", "chore", 60, LIGHT,
        "garden", "mow", "lawn", "yard", "weeding", "plants"),
     _t("chore_repair", "Fix something at home", "chore", 60, MODERATE,
@@ -196,14 +198,16 @@ TASK_TYPES: list[TaskType] = [
     _t("cook_meal_prep", "Meal prep", "cooking", 90, LIGHT, "meal prep", "batch cook"),
 
     # ── exercise & self-care ────────────────────────────────────────────────────────────
-    _t("exercise_run", "Run", "exercise", 40, MODERATE, "run", "jog", "5k", "10k", "marathon"),
+    _t("exercise_run", "Run", "exercise", 40, MODERATE,
+       # "running"/"jogging" double the final consonant, so the inflection rule can't derive them.
+       "run", "running", "jog", "jogging", "5k", "10k", "marathon"),
     _t("exercise_gym", "Gym session", "exercise", 60, MODERATE,
        "gym", "workout", "lift", "weights", "training", "crossfit"),
     _t("exercise_class", "Fitness class", "exercise", 60, MODERATE,
        "yoga", "pilates", "spin class", "class at"),
     _t("exercise_walk", "Walk", "exercise", 30, LIGHT, "walk", "stroll", "steps"),
     _t("exercise_cycle", "Cycle", "exercise", 45, MODERATE, "bike", "cycle", "cycling", "ride"),
-    _t("exercise_swim", "Swim", "exercise", 45, MODERATE, "swim", "pool"),
+    _t("exercise_swim", "Swim", "exercise", 45, MODERATE, "swim", "swimming", "pool"),
     _t("hobby_practice", "Practise a skill", "hobby", 45, MODERATE,
        "practice", "practise", "rehearse", "piano", "guitar", "instrument", "drills"),
     _t("hobby_creative", "Creative project", "hobby", 60, MODERATE,
@@ -266,24 +270,33 @@ def normalize_difficulty(value: str | None) -> str | None:
 
 @lru_cache(maxsize=1)
 def _compiled_patterns() -> list[tuple[re.Pattern[str], TaskType]]:
-    """One start-anchored pattern per keyword, in library order.
+    """One whole-word pattern per keyword, in library order.
 
-    Anchoring matters: plain substring matching made "ping" fire inside "shop-ping at Aldi", so a
-    grocery run was classified as sending a message.
+    EVERY keyword is anchored at both ends. The previous rule anchored by LENGTH — only keywords of
+    three characters or fewer got a closing boundary — and that was backwards in effect:
 
-    Long keywords are anchored at the START only, so ordinary inflections still match
-    ("run" -> "running", "book" -> "booking"). Short ones (<= _WHOLE_WORD_MAX_LEN characters, e.g.
-    "pr", "dm", "5k") are anchored at BOTH ends, because a two-letter prefix matches far too much —
-    "\bpr" happily fires on "practice".
+      * short keywords, where tolerating inflection would be relatively safe, were locked to whole
+        words, so `run` missed "running";
+      * long keywords, where a false substring match is most likely, were left open at the end, so
+        `text` matched "textbook" and `book` matched "booklet".
+
+    Real captured titles hit both. A wrong type is worse than no type, because the catch-all is
+    never learned against (TIME-286) whereas a wrong type actively teaches the wrong duration
+    bucket — "Buy a textbook" was training a 5-minute message bucket with a shopping trip.
+
+    Inflection is now handled EXPLICITLY rather than by leaving the end open: a keyword may match a
+    common English suffix (plural, gerund, past tense). Forms that double a final consonant
+    ("run" -> "running") can't be derived by rule and are listed in the library instead.
     """
     patterns: list[tuple[re.Pattern[str], TaskType]] = []
     for task_type in TASK_TYPES:
         for keyword in task_type.keywords:
             kw = keyword.strip()
-            expr = r"\b" + re.escape(kw)
-            if len(kw) <= _WHOLE_WORD_MAX_LEN:
-                expr += r"\b"
-            patterns.append((re.compile(expr), task_type))
+            if not kw:
+                continue
+            # A multi-word phrase is already specific enough that suffixing it adds nothing.
+            suffix = "" if " " in kw else _INFLECTION_SUFFIX
+            patterns.append((re.compile(rf"\b{re.escape(kw)}{suffix}\b"), task_type))
     return patterns
 
 
