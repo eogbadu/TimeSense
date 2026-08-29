@@ -116,8 +116,11 @@ struct NowView: View {
                             Task { await viewModel.markDone(taskId: task.id, title: task.title,
                                                             estimatedMinutes: task.estimatedMinutes) }
                         },
-                        elapsedMinutes: viewModel.elapsedMinutes(taskId: task.id),
-                        onStart: { viewModel.startTimer(taskId: task.id) },
+                        elapsedSeconds: viewModel.elapsedSeconds(taskId: task.id),
+                        onStart: {
+                            viewModel.startTimer(taskId: task.id, title: task.title,
+                                                 estimatedMinutes: task.estimatedMinutes)
+                        },
                         onCancelTimer: { viewModel.cancelTimer(taskId: task.id) },
                         onSnooze: { Task { await viewModel.snooze(taskId: task.id) } }
                     )
@@ -311,7 +314,7 @@ private struct BestNextActionCard: View {
     let onAgree: () -> Void
     let onDisagree: () -> Void
     let onDone: () -> Void
-    let elapsedMinutes: Int?
+    let elapsedSeconds: TimeInterval?
     let onStart: () -> Void
     let onCancelTimer: () -> Void
     let onSnooze: () -> Void
@@ -387,7 +390,7 @@ private struct BestNextActionCard: View {
             Divider()
             WhyThis(load: loadExplanation)
             QuickActionRow(onAgree: onAgree, onDisagree: onDisagree, onDone: onDone,
-                           elapsedMinutes: elapsedMinutes, onStart: onStart,
+                           taskId: task.id, elapsedSeconds: elapsedSeconds, onStart: onStart,
                            onCancelTimer: onCancelTimer, onSnooze: onSnooze)
                 .id(task.id)  // reset the Agree/Disagree stage whenever the recommendation changes
         }
@@ -788,17 +791,24 @@ private struct QuickActionRow: View {
     let onAgree: () -> Void
     let onDisagree: () -> Void
     let onDone: () -> Void
-    let elapsedMinutes: Int?
+    let taskId: String
+    let elapsedSeconds: TimeInterval?
     let onStart: () -> Void
     let onCancelTimer: () -> Void
     let onSnooze: () -> Void
 
+    @State private var pulse = false
     @State private var agreed = false
-    @State private var timing = false
-    // Drives the live elapsed label. The source of truth is the view model's start timestamp, so a
-    // backgrounded app still shows the right figure on return.
+    /// Observed, not copied: a persisted timer is the source of truth, so the row can be recreated
+    /// (tab switch, recommendation change, cold launch) and still show the timer running (TIME-298).
+    @ObservedObject private var timers = TaskTimerStore.shared
+    // Drives the live label. Elapsed is always DERIVED from the stored start timestamp, so
+    // backgrounding or suspension can't cause drift — the tick only forces a redraw.
     @State private var tick = Date()
-    private let ticker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    /// True when this task is the one being timed — read from the store, never from local @State.
+    private var timing: Bool { timers.isTiming(taskId: taskId) }
 
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.sm) {
@@ -819,29 +829,54 @@ private struct QuickActionRow: View {
 
             // Optional timer. The point is a real duration captured with NO prompt at all — the
             // best learning signal, because it costs the user nothing to give (TIME-287).
-            if agreed {
+            // Shown whenever a timer is running for this task, even if the user hasn't tapped Agree
+            // in this instance of the view — otherwise returning to the tab hides a live timer.
+            if agreed || timing {
                 Button {
                     if timing { onCancelTimer() } else { onStart() }
-                    withAnimation(.easeInOut(duration: 0.18)) { timing.toggle() }
                 } label: {
-                    Label(timerLabel, systemImage: timing ? "stop.circle" : "play.circle")
-                        .font(DesignTokens.Typography.footnote)
-                        .foregroundColor(DesignTokens.Color.textSecondary)
+                    HStack(spacing: 6) {
+                        if timing {
+                            // A pulsing dot, so it reads as RUNNING at a glance rather than needing
+                            // the digits to be compared against a moment ago.
+                            Circle()
+                                .fill(Cosmic.green)
+                                .frame(width: 7, height: 7)
+                                .opacity(pulse ? 1.0 : 0.25)
+                                .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true),
+                                           value: pulse)
+                        } else {
+                            Image(systemName: "play.circle")
+                        }
+                        Text(timerLabel)
+                            .monospacedDigit()   // stops the label jittering as digits change width
+                    }
+                    .font(DesignTokens.Typography.footnote)
+                    .foregroundColor(timing ? DesignTokens.Color.textPrimary
+                                            : DesignTokens.Color.textSecondary)
                 }
                 .buttonStyle(.plain)
                 .onReceive(ticker) { tick = $0 }
+                .onAppear { pulse = true }
                 .accessibilityLabel(timing ? "Stop timing this task" : "Start timing this task")
+                .accessibilityValue(timing ? timerLabel : "")
             }
+        }
+        // A running timer means the user already committed to this task, so don't send them back
+        // through Agree — that was the reported "I have to choose to do the task again" (TIME-298).
+        .onAppear { if timing { agreed = true } }
+        .onChange(of: timing) { _, isTiming in
+            if isTiming { agreed = true }
         }
     }
 
     private var timerLabel: String {
         guard timing else { return "Start timer" }
-        _ = tick   // re-evaluated on each tick
-        guard let minutes = elapsedMinutes else { return "Timing…" }
-        return minutes < 60
-            ? "Timing · \(minutes) min"
-            : "Timing · \(minutes / 60)h \(minutes % 60)m"
+        _ = tick   // re-evaluated every second so the digits actually move
+        guard let seconds = elapsedSeconds else { return "Timing…" }
+        // Seconds, not whole minutes. The old label showed "Timing…" for the first full minute and
+        // then changed only every 30s, so there was no evidence the timer was alive (TIME-298).
+        return formatElapsed(seconds)
     }
 }
 
