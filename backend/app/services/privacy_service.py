@@ -16,6 +16,11 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.analytics_event import AnalyticsEvent
+from app.models.daily_activity import DailyActivity
+from app.models.device_token import DeviceToken
+from app.models.email_integration import EmailActionItem, EmailIntegration
+from app.models.energy_checkin import EnergyCheckIn
+from app.models.hourly_activity import HourlyActivity
 from app.models.calendar import CalendarIntegration, PendingCalendarAction
 from app.models.commute import CommuteEvent
 from app.models.consent import ConsentRecord
@@ -27,20 +32,33 @@ from app.models.notification_event import NotificationEvent
 from app.models.notion import NotionImportItem, NotionIntegration
 from app.models.onboarding import AssistantPersonality, OnboardingState
 from app.models.recommendation_event import RecommendationEvent
+from app.models.push_notification import PushNotification
 from app.models.recommendation_feedback import RecommendationFeedback
+from app.models.recommendation_swap import RecommendationSwap
 from app.models.referral import ReferralCode, ReferralConversion
 from app.models.routine import RoutineAssumption
 from app.models.slack import SlackActionItem, SlackIntegration
 from app.models.sleep_wake import SleepWakeEvent
 from app.models.subscription import Subscription
+from app.models.synced_calendar_event import SyncedCalendarEvent
 from app.models.task import InternalReminder, Task
+from app.models.task_duration import TaskDurationEstimate
+from app.models.task_duration_observation import TaskDurationObservation
 from app.models.teams import TeamsActionItem, TeamsIntegration
+from app.models.user_adaptation_profile import UserAdaptationProfile
+from app.models.user_location_state import UserLocationState
+from app.models.user_place import UserPlace
+from app.models.workout_session import WorkoutSession
 from app.models.user import User, UserPreferences, UserProfile
 
 logger = logging.getLogger(__name__)
 
 # Never export secrets even for the owner (they're server-only; the client already can't see them).
-_REDACTED_COLUMNS = {"access_token", "refresh_token"}
+# Credentials must never appear in an export, even one the user requested for themselves — an
+# export file gets emailed, synced and shared, and a push token or OAuth token in it is a live
+# credential. Location coordinates are NOT redacted: they are the user's own data, and the whole
+# point of the export is that they can have it.
+_REDACTED_COLUMNS = {"access_token", "refresh_token", "token"}
 
 # (label, model, user-referencing column). Drives the export bundle; deletion uses DB cascade.
 _USER_DATA: list[tuple[str, type, object]] = [
@@ -74,6 +92,27 @@ _USER_DATA: list[tuple[str, type, object]] = [
     ("invite_codes", InviteCode, InviteCode.created_by_id),
     ("referral_codes", ReferralCode, ReferralCode.owner_id),
     ("referral_conversions", ReferralConversion, ReferralConversion.referred_user_id),
+
+    # Added in TIME-304. An audit of every user-scoped table against this list found FIFTEEN
+    # missing, not the two the ticket assumed — the export had drifted behind the schema for a
+    # long time, and privacy policy section 8 promises "a portable copy of all your data".
+    # Four are mine from this batch (duration observations, energy check-ins, swaps, adaptation
+    # profile); the rest predate it.
+    ("task_duration_estimates", TaskDurationEstimate, TaskDurationEstimate.user_id),
+    ("task_duration_observations", TaskDurationObservation, TaskDurationObservation.user_id),
+    ("energy_checkins", EnergyCheckIn, EnergyCheckIn.user_id),
+    ("recommendation_swaps", RecommendationSwap, RecommendationSwap.user_id),
+    ("user_adaptation_profile", UserAdaptationProfile, UserAdaptationProfile.user_id),
+    ("daily_activity", DailyActivity, DailyActivity.user_id),
+    ("hourly_activity", HourlyActivity, HourlyActivity.user_id),
+    ("workout_sessions", WorkoutSession, WorkoutSession.user_id),
+    ("user_places", UserPlace, UserPlace.user_id),
+    ("user_location_state", UserLocationState, UserLocationState.user_id),
+    ("synced_calendar_events", SyncedCalendarEvent, SyncedCalendarEvent.user_id),
+    ("email_integrations", EmailIntegration, EmailIntegration.user_id),
+    ("email_action_items", EmailActionItem, EmailActionItem.user_id),
+    ("device_tokens", DeviceToken, DeviceToken.user_id),
+    ("push_notifications", PushNotification, PushNotification.user_id),
 ]
 
 
