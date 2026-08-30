@@ -11317,6 +11317,36 @@ TICKETS = [
             divider(), h2("Dependencies"), p("TIME-284, TIME-285, TIME-286."), divider(), h2("Next Ticket"), p("TIME-303."),
         ),
     },
+    {
+        "summary": "TIME-306: The running timer displays 0:00 — elapsed time is a snapshot, not live",
+        "labels": ["ios", "bug", "estimation"],
+        "description": doc(
+            h2("Goal"), p("Reported from device use: after tapping Start timer the label shows 0:00 and never moves, with a static dot. TIME-298 made the STORE derive elapsed time from a persisted start timestamp, which is correct, but the view then receives that value as a `let` property passed down from the parent — a snapshot taken when the parent's body last evaluated, i.e. the moment Start was tapped. The row's own one-second ticker re-renders it, but a stored `let` never recomputes, so it renders formatElapsed(0) forever. The TIME-298 tests exercised the store and the formatter, both of which are correct; the fault is in the SwiftUI data flow between them, which those tests structurally cannot reach."),
+            divider(), h2("Scope"), bullet_list([
+                "The row reads elapsed time from TaskTimerStore directly instead of receiving a snapshot as a parameter",
+                "Drive the live label with TimelineView(.periodic) so re-evaluation is guaranteed by the framework, rather than depending on @State plus Timer.publish inside a view the parent recreates",
+                "Make the pulsing dot derive its state from the timeline date too, so it cannot be left static by a re-render cancelling an implicit animation",
+                "Remove the now-dead elapsedSeconds parameter from the view chain so the same mistake cannot be reintroduced",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No change to the persistence model — the store and its start-timestamp derivation are correct",
+                "No change to the overrun prompt (TIME-299)",
+                "No Live Activity or Dynamic Island",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "ios TimeSense/Features/Now/NowView.swift",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "The label advances every second in mm:ss while the timer runs",
+                "The dot visibly pulses rather than sitting static",
+                "Switching tabs and returning still shows the correct elapsed time, still running",
+                "Force-quitting and reopening still shows the correct elapsed time",
+                "iOS BUILD SUCCEEDED",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO\n# on device: start a timer and watch the seconds advance"),
+            divider(), h2("Dependencies"), p("TIME-298."), divider(), h2("Next Ticket"), p("(none)."),
+        ),
+    },
 ]
 
 
