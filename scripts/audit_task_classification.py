@@ -1,13 +1,20 @@
 """
 Audit how well the baseline task library classifies REAL captured task titles.
 
-    python scripts/audit_task_classification.py
+    python scripts/audit_task_classification.py               # classification coverage
+    python scripts/audit_task_classification.py --durations   # baseline-vs-reality calibration
 
 Why this exists: the library's coverage was originally measured against a corpus written by the
 same author as the library, which reported 0% fall-through. Run against real captures it was 13%,
 and it also silently MISCLASSIFIED — "Buy a textbook" matched the `text` keyword and became a
 5-minute message task. Self-graded coverage is not evidence, so this makes the measurement
 repeatable against whatever data you point it at.
+
+--durations reports how well the library's hand-written durations match what tasks ACTUALLY take,
+so the wrong ones can be corrected BY HAND with evidence. It deliberately does not tune anything:
+`learning_and_adaptation_spec.md` states as an invariant that nothing one user does affects another
+and that the baseline library is the only shared prior, hand-written. Reporting keeps that true;
+automatic tuning would not (TIME-303).
 
 Read-only. Runs against whatever DATABASE_URL is configured, so it can be pointed at production.
 """
@@ -27,6 +34,10 @@ from sqlalchemy import select  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.database import AsyncSessionLocal  # noqa: E402
 from app.models.task import Task  # noqa: E402
+from app.repositories.task_duration_repository import (  # noqa: E402
+    CALIBRATION_MIN_SAMPLES,
+    DurationCalibrationRepository,
+)
 from app.services.task_library import (  # noqa: E402
     GENERAL_KEY,
     TASK_TYPES,
@@ -111,10 +122,42 @@ def report(titles: list[str]) -> int:
     return len(fell_through)
 
 
+def duration_report(rows: list[dict]) -> None:
+    """Print the baseline-vs-reality calibration. `rows` comes from
+    DurationCalibrationRepository.calibration_by_type()."""
+    if not rows:
+        print(
+            "No calibration data yet.\n\n"
+            "This needs recorded durations from users who granted the 'analytics' consent, with at\n"
+            f"least {CALIBRATION_MIN_SAMPLES} observations for a task type before it is reported —\n"
+            "that floor is also a k-anonymity threshold, so a bucket built from one or two people\n"
+            "is never shown. Come back once real durations have accumulated."
+        )
+        return
+
+    print(f"{'task type':<26}{'n':>4}{'library':>9}{'shown':>8}{'actual':>8}{'ratio':>7}  suggested")
+    print("-" * 78)
+    for r in rows:
+        print(
+            f"{r['task_type']:<26}{r['samples']:>4}{r['library_baseline']:>9}"
+            f"{r['mean_shown']:>8}{r['mean_actual']:>8}{r['ratio_vs_baseline']:>7}"
+            f"  -> {r['suggested_baseline']} min"
+        )
+    print()
+    print("ratio > 1 means the library UNDER-estimates that kind of task; < 1 means it over-estimates.")
+    print("Nothing here is applied automatically. Edit task_library.py by hand, and put the evidence")
+    print("in the commit message — the shared baselines stay hand-written on purpose (TIME-303).")
+
+
 async def main() -> None:
+    durations = "--durations" in sys.argv
     print(f"DB: {settings.database_url.split('@')[-1]}")  # host/db only, no creds
     print(f"library: {len(TASK_TYPES)} types (+ catch-all)\n")
+
     async with AsyncSessionLocal() as db:
+        if durations:
+            duration_report(await DurationCalibrationRepository(db).calibration_by_type())
+            return
         titles = [row[0] for row in (await db.execute(select(Task.title))).all()]
     report(titles)
 
