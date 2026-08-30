@@ -32,8 +32,15 @@ class TaskDurationRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def get_minutes(self, user_id: uuid.UUID, task_type: str) -> int | None:
-        """The blended estimate for a type, or None when we have nothing to add to the baseline.
+    async def get_minutes(
+        self, user_id: uuid.UUID, task_type: str, prior_minutes: int | None = None
+    ) -> int | None:
+        """The blended estimate for a type, or None when we have nothing to add to the prior.
+
+        `prior_minutes` lets a caller supply a better starting point than the library's generic
+        number — in practice the LLM's task-specific prediction (TIME-305). It replaces the
+        BASELINE in the blend rather than overriding anything, so the user's own observed history
+        still takes over as evidence accumulates and a bad prediction self-corrects.
 
         Never answers for the catch-all: a task we couldn't classify must not contribute its
         duration to a bucket that then answers for every other unclassified task.
@@ -43,7 +50,8 @@ class TaskDurationRepository:
         row = await self._get(user_id, task_type)
         if row is None or row.sample_count <= 0:
             return None
-        return self._blend(row.estimated_minutes, row.sample_count, get_type(task_type).typical_minutes)
+        baseline = prior_minutes or get_type(task_type).typical_minutes
+        return self._blend(row.estimated_minutes, row.sample_count, baseline)
 
     @staticmethod
     def _blend(learned_minutes: int, sample_count: int, baseline_minutes: int) -> int:

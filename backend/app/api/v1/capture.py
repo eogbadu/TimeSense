@@ -149,7 +149,8 @@ async def capture(
     # the duration lookup table (seed defaults, refined by what we've learned about this user).
     if task_create.estimated_minutes is None:
         minutes, _type = await TaskDurationEstimator(db).estimate(
-            user.id, task_create.title, task_create.task_type)
+            user.id, task_create.title, task_create.task_type,
+            predicted_minutes=task_create.predicted_minutes)
         task_create.estimated_minutes = minutes
 
     # A user-set time gets an end block from its duration (so it lands on the timeline correctly).

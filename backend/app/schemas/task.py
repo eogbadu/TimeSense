@@ -26,6 +26,9 @@ class TaskCreate(BaseModel):
     # the import paths fill them in — but they're accepted so a client can correct a wrong guess.
     task_type: str | None = Field(default=None, max_length=40)
     difficulty: str | None = Field(default=None, max_length=16)
+    # The LLM's own guess at how long this specific task will take (TIME-305). Transient: it seeds
+    # the estimate as a PRIOR and is not stored as a column of its own.
+    predicted_minutes: int | None = Field(default=None, ge=1, le=1440)
 
 
 class TaskUpdate(BaseModel):

@@ -353,3 +353,104 @@ async def test_duration_prompt_reports_the_task_type_for_the_correction_ui(clien
     assert p.status_code == 200
     assert p.json()["task_type"] == "exercise_run"
     assert p.json()["category"] == p.json()["task_type"]   # legacy alias
+
+
+# ── TIME-305: the LLM predicts a duration, as the PRIOR in the blend ─────────────────────
+
+
+def test_a_prediction_is_bounded_against_the_library_baseline():
+    """A model will confidently say "5 minutes" for a dissertation. The library is generic but never
+    absurd, so it makes a good sanity rail."""
+    bound = TaskDurationEstimator.bound_prediction
+    baseline = 90
+
+    assert bound(120, baseline) == 120, "a plausible prediction passes through untouched"
+    assert bound(5, baseline) == 22, "absurdly short is pulled up to 25% of baseline"
+    assert bound(6000, baseline) == 360, "absurdly long is pulled down to 4x baseline"
+    assert bound(None, baseline) is None
+    assert bound(0, baseline) is None
+
+
+@pytest.mark.anyio
+async def test_two_tasks_of_the_same_type_can_now_get_different_estimates(db_session):
+    """The whole point. "Complete dissertation abstract" and "Write the weekly status report" both
+    classify as writing and both got the library's 90 minutes, because a keyword-to-type-to-fixed-
+    number pipeline cannot read the specifics. With a prediction they diverge."""
+    from app.core.security import TokenUser
+    from app.services.user_service import UserService
+
+    tu = TokenUser(uid="dur-llm", email="llm@example.com", role="user", email_verified=True)
+    user, _ = await UserService(db_session).get_or_create_user(tu.uid, tu.email)
+    est = TaskDurationEstimator(db_session)
+
+    big, _ = await est.estimate(user.id, "Complete dissertation abstract", predicted_minutes=240)
+    small, _ = await est.estimate(user.id, "Write the weekly status report", predicted_minutes=25)
+
+    assert big > small, "the specifics should separate them"
+    assert big != small
+
+
+@pytest.mark.anyio
+async def test_without_a_prediction_behaviour_is_exactly_as_before(db_session):
+    """Classification and estimation must never depend on the model being reachable."""
+    from app.core.security import TokenUser
+    from app.services.user_service import UserService
+
+    tu = TokenUser(uid="dur-nollm", email="nollm@example.com", role="user", email_verified=True)
+    user, _ = await UserService(db_session).get_or_create_user(tu.uid, tu.email)
+
+    minutes, task_type = await TaskDurationEstimator(db_session).estimate(user.id, "Buy groceries")
+    assert minutes == get_type(task_type).typical_minutes
+
+
+@pytest.mark.anyio
+async def test_the_users_own_history_still_wins_over_a_prediction(db_session):
+    """The prediction is a PRIOR, not an override. Real observations must take over as they
+    accumulate, so a bad prediction self-corrects instead of persisting."""
+    from app.core.security import TokenUser
+    from app.services.user_service import UserService
+
+    tu = TokenUser(uid="dur-hist", email="hist@example.com", role="user", email_verified=True)
+    user, _ = await UserService(db_session).get_or_create_user(tu.uid, tu.email)
+    est = TaskDurationEstimator(db_session)
+
+    # This user's grocery runs really do take ~15 minutes.
+    for _ in range(15):
+        await est.record_actual(user.id, "Buy groceries", 15)
+
+    # An over-long prediction should barely move the answer now.
+    with_prediction, _ = await est.estimate(user.id, "Buy groceries", predicted_minutes=120)
+    without, _ = await est.estimate(user.id, "Buy groceries")
+
+    # The prior keeps k/(n+k) of the weight by design (TIME-286) — the same as the library
+    # baseline does — so it never vanishes entirely. What matters is that the OBSERVED value
+    # dominates: the answer must sit far nearer what actually happened than what was predicted.
+    assert abs(with_prediction - 15) < abs(with_prediction - 120), (
+        f"history should dominate; got {with_prediction} between observed=15 and predicted=120"
+    )
+    assert with_prediction < 40, "15 real observations of 15 min should still hold sway"
+
+    # And the prediction's influence must SHRINK as evidence accumulates.
+    for _ in range(30):
+        await est.record_actual(user.id, "Buy groceries", 15)
+    with_more_history, _ = await est.estimate(user.id, "Buy groceries", predicted_minutes=120)
+    assert with_more_history < with_prediction, (
+        "more observations should pull the estimate further from the prediction"
+    )
+
+
+@pytest.mark.anyio
+async def test_a_prediction_seeds_the_estimate_before_any_history_exists(db_session):
+    """With no observations the prediction IS the best answer available — better than the library's
+    generic number for the type."""
+    from app.core.security import TokenUser
+    from app.services.user_service import UserService
+
+    tu = TokenUser(uid="dur-seed", email="seed@example.com", role="user", email_verified=True)
+    user, _ = await UserService(db_session).get_or_create_user(tu.uid, tu.email)
+
+    minutes, task_type = await TaskDurationEstimator(db_session).estimate(
+        user.id, "Buy groceries", predicted_minutes=20
+    )
+    assert minutes == 20
+    assert minutes != get_type(task_type).typical_minutes

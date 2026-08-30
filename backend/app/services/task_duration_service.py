@@ -30,13 +30,43 @@ class TaskDurationEstimator:
         otherwise inferred from the title (rows predating classification stay usable)."""
         return task_type if is_known_type(task_type) else classify(title).key
 
+    # How far the LLM's prediction is allowed to stray from the library's number for that type.
+    # A model can confidently say "5 minutes" for a dissertation or "10 hours" for buying milk;
+    # the library is generic but never absurd, so it makes a good sanity rail (TIME-305).
+    PREDICTION_MIN_FACTOR = 0.25
+    PREDICTION_MAX_FACTOR = 4.0
+
+    @classmethod
+    def bound_prediction(cls, predicted: int | None, baseline: int) -> int | None:
+        """Clamp an LLM prediction to a plausible range around the library baseline."""
+        if not predicted or predicted <= 0:
+            return None
+        low = max(1, int(baseline * cls.PREDICTION_MIN_FACTOR))
+        high = max(low, int(baseline * cls.PREDICTION_MAX_FACTOR))
+        return max(low, min(high, predicted))
+
     async def estimate(
-        self, user_id: uuid.UUID, title: str, task_type: str | None = None
+        self,
+        user_id: uuid.UUID,
+        title: str,
+        task_type: str | None = None,
+        predicted_minutes: int | None = None,
     ) -> tuple[int, str]:
-        """Return (estimated_minutes, task_type)."""
+        """Return (estimated_minutes, task_type).
+
+        `predicted_minutes` is the LLM's task-specific guess. It is bounded against the library and
+        then used as the PRIOR: it improves the starting point without ever outranking what the
+        user's own history says (TIME-305). Without it, behaviour is exactly as before.
+        """
         resolved = self.resolve_type(title, task_type)
-        learned = await self._repo.get_minutes(user_id, resolved)
-        return (learned if learned is not None else get_type(resolved).typical_minutes), resolved
+        baseline = get_type(resolved).typical_minutes
+        prior = self.bound_prediction(predicted_minutes, baseline)
+
+        learned = await self._repo.get_minutes(user_id, resolved, prior_minutes=prior)
+        if learned is not None:
+            return learned, resolved
+        # No history yet: the LLM's bounded prediction is a better answer than the generic number.
+        return (prior or baseline), resolved
 
     async def should_ask(
         self, user_id: uuid.UUID, title: str, task_type: str | None = None

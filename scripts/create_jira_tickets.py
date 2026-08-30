@@ -11281,6 +11281,42 @@ TICKETS = [
             divider(), h2("Dependencies"), p("TIME-286, TIME-302."), divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
+    {
+        "summary": "TIME-305: Let the LLM predict a duration, as the prior in the confidence blend",
+        "labels": ["backend", "llm", "estimation"],
+        "description": doc(
+            h2("Goal"), p("The LLM is asked for estimated_minutes but the prompt tells it to 'derive from hints like 30 min, an hour, quick; null if not mentioned' — so it only EXTRACTS a duration the user already stated, and never predicts one. When nothing is stated the estimate falls back to the library's generic number for the task type. That means 'Complete dissertation abstract' and 'Write the weekly status report' both land on write_report and both get 90 minutes, because a keyword-to-type-to-fixed-number pipeline structurally cannot read the specifics. An LLM can. Ask it."),
+            divider(), h2("Scope"), bullet_list([
+                "Capture prompt asks for a PREDICTED duration separately from any duration the user stated, so the two are never confused",
+                "A duration the user explicitly stated still wins outright — that is an instruction, not a guess",
+                "Otherwise the LLM's prediction becomes the PRIOR in TIME-286's confidence blend: estimate = (n*learned + k*prior)/(n+k), replacing the library baseline as the prior rather than overriding anything",
+                "Bound the prediction against the library baseline so a hallucination cannot land (no 5 minutes for a dissertation, no 600 minutes for buying milk), plus the existing absolute clamp",
+                "Fall back to the library baseline whenever the LLM is unavailable or returns something unusable — classification must never depend on the model being reachable",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "The LLM never overrides what the user's own history says — learned evidence still takes over as samples accumulate, so a bad prediction self-corrects instead of persisting",
+                "No new column to distinguish LLM-sourced from library-sourced priors; measuring LLM accuracy separately is a follow-up for TIME-303",
+                "No change to difficulty (already LLM-assisted since TIME-285)",
+                "No re-estimation of existing tasks",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend app/services/capture_service.py (prompt + parse)",
+                "backend app/repositories/task_duration_repository.py (prior parameter on the blend)",
+                "backend app/services/task_duration_service.py",
+                "backend app/api/v1/capture.py",
+                "backend tests/test_task_duration.py, tests/test_capture.py",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "A stated duration ('call mom for 20 minutes') is used verbatim",
+                "An unstated duration uses the LLM's prediction as the prior, so two tasks of the same type with different scope get different estimates",
+                "An implausible prediction is bounded to a sane range around the library baseline rather than used as-is",
+                "With the LLM unavailable, behaviour is exactly as before (library baseline)",
+                "Learned per-user history still converges to dominate as observations accumulate",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_task_duration.py tests/test_capture.py tests/test_task_classification.py -q"),
+            divider(), h2("Dependencies"), p("TIME-284, TIME-285, TIME-286."), divider(), h2("Next Ticket"), p("TIME-303."),
+        ),
+    },
 ]
 
 
