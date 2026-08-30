@@ -11347,6 +11347,43 @@ TICKETS = [
             divider(), h2("Dependencies"), p("TIME-298."), divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
+    {
+        "summary": "TIME-307: Add an iOS unit test target",
+        "labels": ["ios", "testing", "tooling"],
+        "description": doc(
+            h2("Goal"), p("The repo has no iOS test target, so every Swift change is verified by 'BUILD SUCCEEDED' and nothing else. Three defects reached the user's device because of it, two of them in the same component: the task timer forgot its state on navigation (TIME-298) and then displayed a frozen 0:00 because the view received elapsed time as a snapshot rather than reading it live (TIME-306). CLAUDE.md line 39 already documents `xcodebuild test` as a verification command, but the scheme is not configured for the test action, so that command has never worked — a documented capability that does not exist."),
+            divider(), h2("Scope"), bullet_list([
+                "New TimeSenseTests unit-test bundle, hosted in the app so @testable import works",
+                "Configure the shared TimeSense scheme's test action so the documented `xcodebuild test` command actually runs",
+                "Move the timer's display logic out of a private view method into a testable value type, so the exact string the label renders can be asserted — that is precisely what neither previous fix could test",
+                "Tests covering the two shipped bugs: elapsed time must advance with the clock, and a restored timer must survive a simulated app restart",
+                "Tests for the overrun boundary, ask-once behaviour, and the plausibility guard",
+                "Update CLAUDE.md if the working command differs from what is documented",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No UI test target — slow, flaky, and not what caught these bugs",
+                "No third-party view-inspection dependency; making the display logic a testable value type achieves the same end without adding a package",
+                "No CI wiring (no CI exists yet); this is about making the command runnable locally",
+                "No Android test work",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "ios/TimeSense.xcodeproj/project.pbxproj (new target)",
+                "ios/TimeSense.xcodeproj/xcshareddata/xcschemes/TimeSense.xcscheme (test action)",
+                "ios/TimeSenseTests/ (new)",
+                "ios TimeSense/Core/Time/TaskTimerStore.swift (extract the display logic)",
+                "ios TimeSense/Features/Now/NowView.swift (call it)",
+                "CLAUDE.md",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "`xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination ...` runs and passes",
+                "A test fails if the timer label stops advancing with the clock (the TIME-306 regression)",
+                "A test fails if a running timer does not survive a simulated restart (the TIME-298 regression)",
+                "The app still builds and installs on a device",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16'"),
+            divider(), h2("Dependencies"), p("TIME-298, TIME-306."), divider(), h2("Next Ticket"), p("(none)."),
+        ),
+    },
 ]
 
 

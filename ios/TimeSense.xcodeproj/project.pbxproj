@@ -13,6 +13,7 @@
 		1867B909FA67B3A39C779266 /* LearnedAssumptionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */; };
 		2581959640C248F708C40237 /* NextEventWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0735A76942000F597C1CACE5 /* NextEventWidget.swift */; };
 		27E0CEE0014BB03E51E55021 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */; };
+		2AABFDECEACD37F2AC4EABA6 /* TaskTimerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCFE3E6508E21E86CFFFAB68 /* TaskTimerTests.swift */; };
 		3D092792B9E925D96BBCB8C5 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 0AD19081BFEAB84D2436D502 /* FirebaseAuth */; };
 		3F554C916352558F50E350F1 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B7C454C84B7C4695AE16D3BD /* FirebaseCore */; };
 		49607941D39A89E04469F288 /* TaskTimerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C87520488C546B3D4CEAC56 /* TaskTimerStore.swift */; };
@@ -26,6 +27,7 @@
 		7A42349EEC511C5FEE58F16E /* CosmicComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A0A340B8AD0769B3767167 /* CosmicComponents.swift */; };
 		89438A1E57EBE9F4974111C0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB3BCF8932A4D3E59E6DE68 /* AppDelegate.swift */; };
 		8E3B31883FEA8B41E2E76E41 /* EventEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63E29C3626EF863D669F96BA /* EventEditorView.swift */; };
+		956FE4247CDC0F7058A5A232 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF2C9C92FEC1E46674899DC /* Foundation.framework */; };
 		9937EB87B8697B2E0BA3D6FE /* TimezoneSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93CE28242CAC4A705027F3A1 /* TimezoneSyncService.swift */; };
 		A1000001 /* TimeSenseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001 /* TimeSenseApp.swift */; };
 		A1000002 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002 /* AppState.swift */; };
@@ -66,6 +68,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		9CBD3729AEC6CA7E375FF17D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A9000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A6000001;
+			remoteInfo = TimeSense;
+		};
 		A644018C0556263546BCAFDA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A9000001 /* Project object */;
@@ -140,14 +149,24 @@
 		C846D3A21090B08FC60339F0 /* LearnedAssumptionsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsViewModel.swift; sourceTree = "<group>"; };
 		D1279BB5F66DAC3C14E45947 /* SnapshotProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotProvider.swift; sourceTree = "<group>"; };
 		D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnedAssumptionsView.swift; sourceTree = "<group>"; };
+		DCFE3E6508E21E86CFFFAB68 /* TaskTimerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TaskTimerTests.swift; sourceTree = "<group>"; };
 		DEFDF748BAAB394AB39A6521 /* HealthService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthService.swift; sourceTree = "<group>"; };
 		E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseWidgetBundle.swift; sourceTree = "<group>"; };
 		F16EB79605DB0C9B35633534 /* LocationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LocationService.swift; path = Location/LocationService.swift; sourceTree = "<group>"; };
 		F22CD5D75BA658BEA67CA349 /* InsightsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InsightsViewModel.swift; sourceTree = "<group>"; };
 		FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimeSenseWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		FD37365F7FB395F113DC9D67 /* TimeSenseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeSenseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		170D6C23EE466D9D8FFACB46 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				956FE4247CDC0F7058A5A232 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A4000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -231,6 +250,7 @@
 				A5000002 /* Products */,
 				5813CB2744F38A533663F74D /* Frameworks */,
 				4040291497A3B40B6FBDA1C6 /* TimeSenseWidget */,
+				C4A9C8EFF5792B123EC91E60 /* TimeSenseTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -254,6 +274,7 @@
 			children = (
 				A3000001 /* TimeSense.app */,
 				FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */,
+				FD37365F7FB395F113DC9D67 /* TimeSenseTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -411,6 +432,15 @@
 			name = Capture;
 			sourceTree = "<group>";
 		};
+		C4A9C8EFF5792B123EC91E60 /* TimeSenseTests */ = {
+			isa = PBXGroup;
+			children = (
+				DCFE3E6508E21E86CFFFAB68 /* TaskTimerTests.swift */,
+			);
+			name = TimeSenseTests;
+			path = TimeSenseTests;
+			sourceTree = SOURCE_ROOT;
+		};
 		D98A6675BA65CD8C0C43AC2C /* Location */ = {
 			isa = PBXGroup;
 			children = (
@@ -433,6 +463,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		8B8A81CC7B21A156E61DA987 /* TimeSenseTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 95ABFB6626AA819859AAE518 /* Build configuration list for PBXNativeTarget "TimeSenseTests" */;
+			buildPhases = (
+				104C553FEEEC5534F37CBA4E /* Sources */,
+				170D6C23EE466D9D8FFACB46 /* Frameworks */,
+				22C95DE0208946019084DEBC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A6C5A07E04DA1C790075F748 /* PBXTargetDependency */,
+			);
+			name = TimeSenseTests;
+			productName = TimeSenseTests;
+			productReference = FD37365F7FB395F113DC9D67 /* TimeSenseTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		A6000001 /* TimeSense */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A8000001 /* Build configuration list for PBXNativeTarget "TimeSense" */;
@@ -508,12 +556,20 @@
 			targets = (
 				A6000001 /* TimeSense */,
 				C7768A1DC53D81F23727A0A6 /* TimeSenseWidgetExtension */,
+				8B8A81CC7B21A156E61DA987 /* TimeSenseTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		18FBCFF5E6D7A0DEB98563B4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		22C95DE0208946019084DEBC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -532,6 +588,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		104C553FEEEC5534F37CBA4E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2AABFDECEACD37F2AC4EABA6 /* TaskTimerTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A7000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -604,9 +668,50 @@
 			target = C7768A1DC53D81F23727A0A6 /* TimeSenseWidgetExtension */;
 			targetProxy = A644018C0556263546BCAFDA /* PBXContainerItemProxy */;
 		};
+		A6C5A07E04DA1C790075F748 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = TimeSense;
+			target = A6000001 /* TimeSense */;
+			targetProxy = 9CBD3729AEC6CA7E375FF17D /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		03BDDDEC762747E976D98AA1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = TimeSenseTests;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aetheranalytics.timesense.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TimeSense.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TimeSense";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		5609E2B4001820B133BB67A3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = TimeSenseTests;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aetheranalytics.timesense.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TimeSense.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TimeSense";
+			};
+			name = Debug;
+		};
 		A8000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -817,6 +922,15 @@
 			buildConfigurations = (
 				E8753AB5EC1F6433DCE8A993 /* Release */,
 				E3D47E8CECE481DACF005778 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		95ABFB6626AA819859AAE518 /* Build configuration list for PBXNativeTarget "TimeSenseTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				03BDDDEC762747E976D98AA1 /* Release */,
+				5609E2B4001820B133BB67A3 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

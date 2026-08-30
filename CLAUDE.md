@@ -34,9 +34,16 @@ cd backend && python run_dev.py                # dual-stack (::1 + 127.0.0.1) â€
 cd backend && alembic upgrade head
 cd backend && pytest
 
-# iOS
-xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense
-xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense
+# iOS â€” the -destination is REQUIRED; without it xcodebuild reports
+# "Found no destinations for the scheme" (see known_issues.md).
+xcodebuild build -project ios/TimeSense.xcodeproj -scheme TimeSense \
+  -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO
+xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense \
+  -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO
+
+# iOS on a real device (signed; needs the phone connected and UNLOCKED)
+xcodebuild -project ios/TimeSense.xcodeproj -scheme TimeSense \
+  -destination 'generic/platform=iOS' -allowProvisioningUpdates build
 
 # Android
 cd android && ./gradlew assembleDebug
