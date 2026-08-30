@@ -169,9 +169,25 @@ private struct AIRecommendedCard: View {
                             .foregroundStyle(DesignTokens.Color.onHero)
                             .fixedSize(horizontal: false, vertical: true)
                         if let due = task.dueAt {
-                            Text("before \(due.formatted(date: .omitted, time: .shortened))")
-                                .font(DesignTokens.Typography.title2.weight(.regular))
-                                .foregroundStyle(DesignTokens.Color.onHero.opacity(0.82))
+                            // A week-old deadline used to render as a bare "before 8:00 PM", which
+                            // reads as tonight. The label now says when, and says so loudly when the
+                            // deadline has already passed (TIME-310).
+                            let rendered = DueDateLabel.render(due)
+                            Text(rendered.text)
+                                .font(DesignTokens.Typography.title2.weight(rendered.isOverdue ? .semibold : .regular))
+                                .foregroundStyle(
+                                    rendered.isOverdue
+                                        ? DesignTokens.Color.onHero
+                                        : DesignTokens.Color.onHero.opacity(0.82)
+                                )
+                                .padding(.horizontal, rendered.isOverdue ? 8 : 0)
+                                .padding(.vertical, rendered.isOverdue ? 3 : 0)
+                                .background(
+                                    RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                                        .fill(rendered.isOverdue
+                                              ? DesignTokens.Color.destructive.opacity(0.85)
+                                              : Color.clear)
+                                )
                         }
                     }
                     Spacer(minLength: DesignTokens.Spacing.sm)
