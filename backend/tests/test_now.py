@@ -395,3 +395,109 @@ async def test_now_task_count_includes_real_todos(client, db_session):
     with _mock_verify(MOCK_USER):
         r = await client.get("/api/v1/now", headers=_auth_headers())
     assert r.json()["context"]["tasks_due_today"] == 1   # only the real to-do
+
+
+# --- TIME-309: a passed deadline is demoted, surfaced, and resolvable ------------------------------
+# The user was shown a task due a WEEK earlier as the single best thing to do next, at midnight.
+# deadline_urgency scores anything overdue at a flat 1.0 forever, so it outranked everything.
+
+STALE_USER = TokenUser(uid="uid-now-309", email="now309@example.com", role="user", email_verified=True)
+
+
+@pytest.mark.anyio
+async def test_stale_task_does_not_lead_when_a_fresh_one_exists(client):
+    """A week-old deadline must not beat a task that is actually actionable today."""
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    today = datetime.now(timezone.utc).date().isoformat()
+    with _mock_verify(STALE_USER):
+        await client.post("/api/v1/tasks", headers=_auth_headers(),
+                          json={"title": "Week-old deadline", "priority": 1,
+                                "due_at": week_ago, "source": "manual"})
+        await client.post("/api/v1/tasks", headers=_auth_headers(),
+                          json={"title": "Actionable today", "priority": 3,
+                                "scheduled_start": f"{today}T10:00:00Z", "source": "manual"})
+        r = await client.get("/api/v1/now", headers=_auth_headers())
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["best_task"]["title"] == "Actionable today"
+
+    # Demoted, NOT hidden — it must still be reachable.
+    titles = [data["best_task"]["title"]] + [t["title"] for t in data["alternatives"]]
+    assert "Week-old deadline" in titles
+
+
+@pytest.mark.anyio
+async def test_stale_task_is_surfaced_for_resolution_with_its_age(client):
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    with _mock_verify(STALE_USER):
+        await client.post("/api/v1/tasks", headers=_auth_headers(),
+                          json={"title": "Needs a decision", "priority": 1,
+                                "due_at": week_ago, "source": "manual"})
+        r = await client.get("/api/v1/now", headers=_auth_headers())
+
+    awaiting = r.json()["awaiting_resolution"]
+    entry = next(a for a in awaiting if a["task"]["title"] == "Needs a decision")
+    assert entry["days_overdue"] == 7
+
+
+@pytest.mark.anyio
+async def test_a_task_due_later_today_is_not_awaiting_resolution(client):
+    """The urgency override for today's deadlines stays — this is only about deadlines already
+    passed. Guards against the fix eating the behaviour the user asked to keep."""
+    later = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+    user = TokenUser(uid="uid-now-309b", email="now309b@example.com", role="user", email_verified=True)
+    with _mock_verify(user):
+        await client.post("/api/v1/tasks", headers=_auth_headers(),
+                          json={"title": "Due later today", "priority": 1,
+                                "due_at": later, "source": "manual"})
+        r = await client.get("/api/v1/now", headers=_auth_headers())
+
+    data = r.json()
+    assert data["awaiting_resolution"] == []
+    assert data["best_task"]["title"] == "Due later today"
+
+
+@pytest.mark.anyio
+async def test_rescheduling_a_stale_task_makes_it_eligible_to_lead_again(client):
+    """Resolution via the EXISTING PATCH — no new endpoint. Moving the deadline to today restores
+    normal behaviour immediately."""
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    today_iso = (datetime.now(timezone.utc) + timedelta(hours=3)).isoformat()
+    user = TokenUser(uid="uid-now-309c", email="now309c@example.com", role="user", email_verified=True)
+    with _mock_verify(user):
+        created = await client.post("/api/v1/tasks", headers=_auth_headers(),
+                                    json={"title": "Reschedule me", "priority": 1,
+                                          "due_at": week_ago, "source": "manual"})
+        await client.post("/api/v1/tasks", headers=_auth_headers(),
+                          json={"title": "Filler", "priority": 3, "source": "manual"})
+        before = await client.get("/api/v1/now", headers=_auth_headers())
+        assert before.json()["best_task"]["title"] != "Reschedule me"
+
+        task_id = created.json()["id"]
+        patched = await client.patch(f"/api/v1/tasks/{task_id}", headers=_auth_headers(),
+                                     json={"due_at": today_iso})
+        assert patched.status_code == 200
+
+        after = await client.get("/api/v1/now", headers=_auth_headers())
+
+    data = after.json()
+    assert data["awaiting_resolution"] == []
+    assert data["best_task"]["title"] == "Reschedule me"
+
+
+@pytest.mark.anyio
+async def test_removing_a_stale_task_clears_it(client):
+    """The other resolution path, also on the existing endpoint."""
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    user = TokenUser(uid="uid-now-309d", email="now309d@example.com", role="user", email_verified=True)
+    with _mock_verify(user):
+        created = await client.post("/api/v1/tasks", headers=_auth_headers(),
+                                    json={"title": "Delete me", "priority": 1,
+                                          "due_at": week_ago, "source": "manual"})
+        assert await client.get("/api/v1/now", headers=_auth_headers())
+        deleted = await client.delete(f"/api/v1/tasks/{created.json()['id']}", headers=_auth_headers())
+        assert deleted.status_code in (200, 204)
+        r = await client.get("/api/v1/now", headers=_auth_headers())
+
+    assert r.json()["awaiting_resolution"] == []

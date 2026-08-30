@@ -32,6 +32,7 @@ from app.services.recommendation_explainer import build_explanation
 from app.services.recommendation_service import RecommendationService
 from app.services.scheduling_service import SchedulingService
 from app.services.usable_time_service import UsableTimeService
+from app.services.task_resolution import awaiting_resolution_ids, days_overdue
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/now", tags=["now"])
@@ -61,6 +62,16 @@ class NowContextCards(BaseModel):
     inactive_minutes: int | None = None   # minutes since last meaningful movement
 
 
+class AwaitingResolution(BaseModel):
+    """A task whose deadline has already passed and needs a decision from the user.
+
+    Carried separately from `alternatives` so the client can ask rather than just list: the answer is
+    reschedule, complete, or remove — never "keep recommending it".
+    """
+    task: TaskResponse
+    days_overdue: int
+
+
 class NowResponse(BaseModel):
     greeting: str
     usable_minutes: int
@@ -77,6 +88,9 @@ class NowResponse(BaseModel):
     context: NowContextCards | None = None
     # The impression id for this shown best-task — echo it back on feedback to link the outcome.
     recommendation_event_id: uuid.UUID | None = None
+    # Tasks whose deadline passed on an earlier day — demoted out of the top slot, still visible,
+    # awaiting reschedule / complete / remove (TIME-309).
+    awaiting_resolution: list[AwaitingResolution] = []
 
 
 def _local_now(now: datetime, user_timezone: str) -> datetime:
@@ -129,15 +143,25 @@ async def _gather_candidate_tasks(db: AsyncSession, user, now: datetime):
 
 async def _ranked_candidates(db: AsyncSession, user, now: datetime):
     """Shared Now ranking: returns (ranked_tasks, usable_minutes, today_scheduled_tasks, best_meta,
-    scores) where scores maps task_id(str) -> the engine's 0–100 score for that task."""
+    scores, awaiting_resolution_ids) where scores maps task_id(str) -> the engine's 0–100 score for
+    that task, and the last element is the ids of tasks whose deadline passed on an earlier day."""
     candidates, usable_minutes, today_tasks = await _gather_candidate_tasks(db, user, now)
     if not candidates:
-        return [], usable_minutes, today_tasks, None, {}
+        return [], usable_minutes, today_tasks, None, {}, set()
     # A task the user just disagreed with must not be the top pick — surface the next-best instead
     # (it can still appear under "other options"). See _engine_rank_tasks (TIME-271).
-    demoted = await RecommendationFeedbackRepository(db).get_recently_disagreed_task_ids(user.id, now)
+    demoted = {str(x) for x in await RecommendationFeedbackRepository(db).get_recently_disagreed_task_ids(user.id, now)}
+
+    # A deadline that passed on an earlier day is demoted the same way. deadline_urgency scores
+    # anything overdue at a flat 1.0 forever, so without this a week-old deadline outranks
+    # everything indefinitely — the app shouting the same answer instead of asking the question
+    # (TIME-309). Demoted, not hidden: it still appears under the other options and in Today.
+    tz_name = user.profile.timezone if user.profile else "UTC"
+    stale = awaiting_resolution_ids(candidates, now, tz_name)
+    demoted |= stale
+
     ranked, best_meta, scores = await _engine_rank_tasks(db, user, candidates, now, usable_minutes, demoted)
-    return ranked, usable_minutes, today_tasks, best_meta, scores
+    return ranked, usable_minutes, today_tasks, best_meta, scores, stale
 
 
 async def _engine_rank_tasks(
@@ -306,7 +330,7 @@ async def get_now(
     user_tz = user.profile.timezone if user.profile else "UTC"
     local_now = _local_now(now, user_tz)
 
-    ranked, usable_minutes, today_tasks, best_meta, _scores = await _ranked_candidates(db, user, now)
+    ranked, usable_minutes, today_tasks, best_meta, _scores, stale_ids = await _ranked_candidates(db, user, now)
     context = await _context_cards(db, user, now, user_tz)
     if not ranked:
         return NowResponse(
@@ -331,7 +355,22 @@ async def get_now(
             if user.preferences else (8, 21),
         ),
         recommendation_event_id=event_id,
+        awaiting_resolution=_awaiting_resolution(ranked, stale_ids, now, user_tz),
     )
+
+
+def _awaiting_resolution(ranked, stale_ids: set, now: datetime, user_tz: str) -> list:
+    """The demoted stale tasks, most overdue first, so the client leads with the worst offender."""
+    out = [
+        AwaitingResolution(
+            task=TaskResponse.model_validate(t),
+            days_overdue=days_overdue(t.due_at, now, user_tz),
+        )
+        for t in ranked
+        if str(t.id) in stale_ids
+    ]
+    out.sort(key=lambda a: a.days_overdue, reverse=True)
+    return out
 
 
 async def _record_now_impression(db, user, best_task, confidence: float, best_meta: dict | None):
@@ -407,7 +446,7 @@ async def get_now_why(
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
 
     now = datetime.now(timezone.utc)
-    ranked, _usable, today_tasks, _meta, scores = await _ranked_candidates(db, user, now)
+    ranked, _usable, today_tasks, _meta, scores, _stale = await _ranked_candidates(db, user, now)
 
     target = next((t for t in ranked if t.id == task_id), None)
     if target is None:
