@@ -9,11 +9,13 @@ from app.models.task import Task
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskCreate, TaskUpdate
 from app.services.implicit_deadline import repair_midnight
+from app.services.task_backfill import TaskBackfillService
 
 
 class TaskService:
     def __init__(self, db: AsyncSession) -> None:
         self.repo = TaskRepository(db)
+        self.backfill = TaskBackfillService(db)
 
     async def create_task(
         self,
@@ -46,7 +48,10 @@ class TaskService:
         )
 
     async def get_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
-        return await self.repo.get_by_id(task_id, user_id)
+        task = await self.repo.get_by_id(task_id, user_id)
+        if task is not None:
+            await self.backfill.backfill(user_id, [task])
+        return task
 
     async def list_tasks(
         self,
@@ -54,7 +59,11 @@ class TaskService:
         status: str | None = None,
         for_date: date | None = None,
     ) -> list[Task]:
-        return await self.repo.list_by_user(user_id, status=status, for_date=for_date)
+        tasks = await self.repo.list_by_user(user_id, status=status, for_date=for_date)
+        # Rows captured before classification existed still carry pre-TIME-286 estimates — including
+        # the values from the "everything takes 23 minutes" bug. Reading is where they get corrected
+        # (TIME-311); nothing rewrites them in bulk.
+        return await self.backfill.backfill(user_id, tasks)
 
     async def update_task(
         self,
