@@ -1,5 +1,56 @@
 # Decision Log
 
+## Deadlines and staleness (2026-08-30, TIME-309 / TIME-313)
+
+- Decision: A deadline that names a DAY means the END of that day — 23:59 local, not the end of the
+  workday.
+  Reason: Someone who says "today" at 9am has until midnight. Requested directly by the user.
+  Date: 2026-08-30
+
+- Decision: Parts of a day resolve to their ends — morning 11:59, afternoon 17:00, evening/tonight 21:00.
+  Reason: A task for "this evening" still open at 11:50pm has plainly been missed; saying so is more
+  useful than technically still counting it.
+  Date: 2026-08-30
+
+- Decision: Weeks run Monday-Sunday (ISO). "End of next week" is next Sunday 23:59.
+  Reason: Unambiguous across locales, and the forgiving reading — it hands back the whole weekend
+  rather than cutting off on Friday. Flagged to the user as the one genuinely arguable call here.
+  Date: 2026-08-30
+
+- Decision: The deterministic resolver, not the LLM, owns the date for every phrase it recognises.
+  Reason: Counting days is what a model gets subtly wrong without anyone noticing, and the phrase set
+  is small and closed. The model is still asked for phrasings the resolver does not own.
+  Date: 2026-08-30
+
+- Decision: A task becomes "awaiting resolution" once its deadline falls on an EARLIER LOCAL DAY than
+  today — not when `due_at < now`.
+  Reason: A task due at 8pm must not be nagged about at 8:05pm. Judged in the user's timezone, since
+  23:00 in New York is already tomorrow in UTC.
+  Date: 2026-08-30
+
+- Decision: A passed deadline is DEMOTED, never hidden, and the app asks — reschedule, complete, or
+  remove — rather than deciding.
+  Reason: The user's own framing: a passed deadline needs a decision. Silently rescheduling or
+  deleting is the same overreach as writing to a calendar without approval.
+  Date: 2026-08-30
+
+- Decision: The urgency override for deadlines passed EARLIER TODAY is kept.
+  Reason: Explicitly requested by the user; only deadlines that survive the day are demoted.
+  Date: 2026-08-30
+
+- Decision: A due_at landing on local midnight is repaired to end-of-day, on the task WRITE path.
+  Reason: Covers every client at once — the iOS picker produced it via `Calendar.startOfDay`, and the
+  LLM produced it independently. Cost of being wrong is 24h of slack on a deadline genuinely set to
+  midnight; cost of not doing it is every date-only deadline being born overdue.
+  Date: 2026-08-30
+
+- Decision: Legacy estimates are re-derived on READ, never by bulk migration, and only on positive
+  evidence the estimate was derived rather than chosen.
+  Reason: A migration rewrites every row irreversibly using a classifier still being corrected.
+  Overwriting a duration the user chose would repeat the original complaint.
+  Date: 2026-08-30
+
+
 ## Product Decisions
 
 - Decision: Product name is TimeSense

@@ -11384,6 +11384,197 @@ TICKETS = [
             divider(), h2("Dependencies"), p("TIME-298, TIME-306."), divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
+    {
+        "summary": "TIME-308: Free time before the workday starts reports the whole workday",
+        "labels": ["backend", "bug", "recommendations"],
+        "description": doc(
+            h2("Goal"), p("At 00:03 with a workday of 08:00-21:00 the app told the user '780 minutes free before your workday ends' — 13 hours, i.e. the ENTIRE workday, offered as time available right now. SchedulingService.free_minutes_before does `start = max(now, window_start)`, which at any time BEFORE the workday begins clamps the start forward to 08:00 while the end stays 21:00. The after-hours case is already correct (end <= start returns 0); only before-start is broken. The bogus figure then fed the explanation, which claimed the task 'fits within your available time'."),
+            divider(), h2("Scope"), bullet_list([
+                "free_minutes_before returns 0 when now is outside the working window rather than projecting the full day forward",
+                "The Why-sheet copy stops contradicting itself: it said 'low-focus window' and 'despite low energy levels' while recommending a substantial mental challenge as fitting the available time",
+                "Outside working hours, say so plainly instead of quoting a free-minutes figure that implies the time is usable now",
+                "Tests at 00:03, 06:00, mid-workday, and 22:00",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No change to what the engine RANKS (the urgency override stays — TIME-309 handles stale deadlines)",
+                "No change to UsableTimeService, which caps correctly at 240 minutes and was not the source",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend app/services/scheduling_service.py",
+                "backend app/services/recommendation_explainer.py",
+                "backend tests/test_scheduling.py, tests/test_explanation_reasoning.py",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "At 00:03 with a 08:00-21:00 workday, free minutes is 0, not 780",
+                "At 14:00 the figure is unchanged from today's behaviour",
+                "At 22:00 it stays 0 as it already does",
+                "The explanation does not claim a task fits available time when there is none",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_scheduling.py tests/test_explanation_reasoning.py -q"),
+            divider(), h2("Dependencies"), p("None."), divider(), h2("Next Ticket"), p("TIME-309."),
+        ),
+    },
+    {
+        "summary": "TIME-309: A passed deadline must be resolved, not nagged forever",
+        "labels": ["backend", "ios", "recommendations", "ux"],
+        "description": doc(
+            h2("Goal"), p("deadline_urgency returns 1.0 for anything overdue, with no decay, so a task whose deadline passed leads the recommendation on maximum urgency indefinitely. The user hit this with a task due a WEEK ago still being recommended as the thing to do at midnight. A passed deadline is not information about what to do now — it is a signal that the task needs a decision: reschedule it, mark it done, or remove it."),
+            divider(), h2("Scope"), bullet_list([
+                "A task whose due_at falls before the start of today (user's local timezone) is 'awaiting resolution' — chosen so a task due at 8pm is not nagged about at 8:05pm, but one still sitting there the next day is",
+                "Awaiting-resolution tasks are DEMOTED so they cannot lead the recommendation, mirroring the existing demote-don't-hide pattern used for a disagreed task; they stay visible in Today and under other options",
+                "Surface them: an in-app card offering Reschedule / Mark done / Remove",
+                "The actions reuse the EXISTING PATCH /tasks/{id} (due_at) and DELETE /tasks/{id} — no new endpoints",
+                "Rescheduling to today restores normal behaviour immediately",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "Nothing is auto-deleted or auto-rescheduled — the assistant asks, the user decides, as with replans and calendar writes",
+                "The urgency override for tasks due TODAY stays, per the user's decision; this is only about deadlines already passed",
+                "Tasks are not hidden from Today",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend app/repositories/task_repository.py (awaiting-resolution query)",
+                "backend app/api/v1/now.py (demote + surface)",
+                "backend app/services/recommendation/candidates/common.py",
+                "ios TimeSense/Features/Now/NowView.swift, Today/TodayView.swift",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "A task due before today cannot be the top recommendation",
+                "It remains visible in Today and in the alternatives",
+                "The user can reschedule, complete, or remove it in one tap",
+                "Rescheduling to today makes it eligible to lead again",
+                "A task due LATER today is unaffected",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_now.py tests/test_tasks.py -q\nxcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-308."), divider(), h2("Next Ticket"), p("TIME-310."),
+        ),
+    },
+    {
+        "summary": "TIME-310: An overdue deadline renders as a bare time, reading as tonight",
+        "labels": ["ios", "bug", "ux"],
+        "description": doc(
+            h2("Goal"), p("TodayView renders a task's deadline with `due.formatted(date: .omitted, time: .shortened)`, so the date is ALWAYS dropped. A task that was due a week ago displays as 'before 8:00 PM', which reads as tonight. The user could not tell from the card that the deadline had already passed, let alone by how much — which is precisely the information that would have explained the recommendation."),
+            divider(), h2("Scope"), bullet_list([
+                "A deadline already passed reads as overdue and says by how much (e.g. 'was due 7 days ago')",
+                "A deadline later today keeps the current bare-time form ('before 8:00 PM') — it is unambiguous there",
+                "A deadline on another future day includes the day, not just a time",
+                "Style the overdue case so it reads as a warning rather than neutral metadata",
+                "Unit tests on the label logic, which must live in a value type rather than inside the view (TIME-307)",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No change to what is recommended (TIME-309)",
+                "No Android or web change",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "ios TimeSense/Features/Today/TodayView.swift",
+                "ios TimeSenseTests/",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "A deadline a week past shows that it is overdue and by how long",
+                "A deadline later today is unchanged",
+                "A deadline tomorrow shows the day",
+                "The logic is covered by unit tests in the new test target",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-307."), divider(), h2("Next Ticket"), p("TIME-311."),
+        ),
+    },
+    {
+        "summary": "TIME-311: Re-estimate tasks created before classification existed",
+        "labels": ["backend", "estimation"],
+        "description": doc(
+            h2("Goal"), p("A task captured before TIME-285 has no task_type and carries whatever estimate was computed at the time — including values produced by the 'everything takes 23 minutes' bug. The user is still seeing a 23-minute estimate on a task that plainly takes hours, because TIME-286 and TIME-305 changed how NEW estimates are derived and never revisited existing rows."),
+            divider(), h2("Scope"), bullet_list([
+                "When a task with no task_type is read, derive its type from the title and store it",
+                "Re-derive its estimate at the same time, from the library baseline and any learned per-type value",
+                "Leave a user-set estimate alone — a value the user chose is an instruction, not a stale default",
+                "Do it on read rather than as a bulk migration, so nothing is rewritten in one irreversible pass",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No bulk backfill migration",
+                "No LLM call on read — that would make a read path depend on the model; the library baseline is enough here",
+                "No change to tasks that already have a task_type",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend app/repositories/task_repository.py or app/services/task_service.py",
+                "backend tests/test_task_classification.py",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "A legacy task with no task_type gains one when read",
+                "Its estimate is re-derived rather than left at the stale value",
+                "A task with an explicitly user-set estimate keeps it",
+                "Reading is still a single query per task list, not one per task",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_task_classification.py tests/test_task_duration.py -q"),
+            divider(), h2("Dependencies"), p("TIME-285, TIME-286."), divider(), h2("Next Ticket"), p("TIME-312."),
+        ),
+    },
+    {
+        "summary": "TIME-312: Add coding-practice types to the task library",
+        "labels": ["backend", "estimation"],
+        "description": doc(
+            h2("Goal"), p("'Solve 10+ Leetcode problems daily for a month' falls through to the catch-all. The library has engineering types for building, fixing and reviewing, but nothing for deliberate practice — Leetcode, katas, interview prep, tutorials. The existing 'practice problems' keyword is a phrase that does not match '10+ Leetcode problems'."),
+            divider(), h2("Scope"), bullet_list([
+                "Coding practice: leetcode, hackerrank, codewars, katas, algorithm practice, coding challenge",
+                "Interview preparation: technical interview prep, system design practice, mock interview",
+                "Tutorial or course follow-along, distinct from passive study",
+                "Verify against the real captured titles with the audit script",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No matcher change (TIME-301 settled that)",
+                "No attempt to model multi-day goals like 'daily for a month' as recurring tasks — that is a much larger product question",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend app/services/task_library.py",
+                "backend tests/test_task_library.py",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "'Solve 10+ Leetcode problems daily for a month' classifies as coding practice, not the catch-all",
+                "Its duration and difficulty are plausible for deliberate practice",
+                "The existing library consistency and ordering tests still pass",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_task_library.py -q\npython scripts/audit_task_classification.py"),
+            divider(), h2("Dependencies"), p("TIME-302."), divider(), h2("Next Ticket"), p("(none)."),
+        ),
+    },
+    {
+        "summary": "TIME-313: Implicit deadlines must resolve to a real end-of-period time",
+        "labels": ["backend", "ios", "capture", "estimation"],
+        "description": doc(
+            h2("Goal"), p("A deadline phrased the way people actually phrase it — 'today', 'this evening', 'next week' — carries an implied time of day, and nothing in the pipeline supplies it. The parse prompt tells the model to 'convert to absolute UTC' but never says WHAT TIME 'today' means, so it returns midnight. A task captured as 'due today' is therefore stored with a deadline of 00:00 today: already past at the moment it is created, instantly overdue, and by the next morning demoted as stale (TIME-309). The iOS date picker has the same defect from the other direction — it stores a date-only deadline as Calendar.startOfDay, which is midnight at the START of the chosen day."),
+            divider(), h2("Scope"), bullet_list([
+                "A deadline of a DAY means the end of that day (23:59 local) — the day, not the workday",
+                "'this evening' / 'tonight' resolve to the same day, in the evening",
+                "'this week' / 'next week' resolve to the end of that week",
+                "'this morning' / 'this afternoon' resolve to the end of those periods",
+                "The prompt states each rule explicitly and is given the user's LOCAL date, time and weekday, not only UTC",
+                "A deterministic resolver owns the arithmetic; the model is not trusted to count days",
+                "A due_at landing exactly on local midnight is repaired to end-of-day at the point tasks are written, so the fix covers the iOS picker, Android and web, not just capture",
+                "The iOS picker stops storing startOfDay for a date-only deadline",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No recurring-task modelling ('daily for a month' stays a single task)",
+                "No change to scheduled_start, which already means a specific clock time",
+                "No user-configurable end-of-day hour — the day ends at 23:59 for everyone until there is a reason it should not",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend app/services/implicit_deadline.py (new)",
+                "backend app/services/capture_service.py, capture_date_parser.py",
+                "backend app/services/task_service.py",
+                "ios TimeSense/Features/Capture/CaptureView.swift",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "'Finish the report today' captured at 9am gets a deadline of 23:59 today, not 00:00",
+                "'Call mum this evening' lands the same day, in the evening",
+                "'Submit expenses next week' lands at the end of next week",
+                "A task captured as due today is NOT immediately overdue and NOT stale the next morning",
+                "A date-only deadline set from the iOS picker ends the chosen day rather than starting it",
+                "The deterministic resolver, not the model, decides the date for every phrase it recognises",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_capture.py tests/test_implicit_deadline.py tests/test_task_resolution.py -q\nxcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-309 (stale-deadline demotion, which this stops triggering spuriously)."),
+            divider(), h2("Next Ticket"), p("TIME-311."),
+        ),
+    },
 ]
 
 
