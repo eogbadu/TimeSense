@@ -893,10 +893,8 @@ private struct QuickActionRow: View {
     /// TIME-306: a value passed in is fixed at the parent's last render and cannot advance no
     /// matter how often this view redraws.
     private func liveLabel(at now: Date) -> String {
-        guard let started = timers.running?.startedAt, timers.isTiming(taskId: taskId) else {
-            return "Start timer"
-        }
-        return formatElapsed(now.timeIntervalSince(started))
+        guard let running = timers.running, running.taskId == taskId else { return "Start timer" }
+        return running.label(at: now)
     }
 }
 

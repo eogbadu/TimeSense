@@ -56,6 +56,17 @@ struct RunningTaskTimer: Codable, Equatable {
 
     /// Show the in-app prompt only once per timer.
     var needsOverrunPrompt: Bool { isOverrunning && !overrunAcknowledged }
+
+    /// The string the running-timer label should show at `now`.
+    ///
+    /// This lives here, on a value type, rather than as a private method on the view — deliberately.
+    /// The TIME-306 bug was that the view rendered elapsed time from a value passed in by its
+    /// parent, frozen at the parent's last render, so it showed 0:00 forever. Expressing the label
+    /// as a pure function of (this timer, now) means a test can assert it advances with the clock,
+    /// which is exactly what could not be tested while the logic lived inside the view.
+    func label(at now: Date) -> String {
+        formatElapsed(now.timeIntervalSince(startedAt))
+    }
 }
 
 @MainActor

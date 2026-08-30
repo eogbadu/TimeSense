@@ -1,5 +1,27 @@
 # Known Issues
 
+## LESSON (2026-08-30, TIME-307): iOS logic inside a View is untestable — and BUILD SUCCEEDED is not verification
+- Three defects reached the user's device this session, two in the same component, and every one was
+  "verified" by `xcodebuild build` succeeding. Compiling says nothing about behaviour.
+- The worst was TIME-306: the task timer rendered a frozen `0:00`. The store derived elapsed time
+  from a persisted timestamp correctly; the VIEW then received that value as a `let` passed down
+  from its parent — a snapshot fixed at the parent's last render, which never recomputed. Scratch
+  harnesses covering the store and the formatter both passed, because the fault was in the SwiftUI
+  data flow BETWEEN them, which they structurally could not reach.
+- **Rule: any iOS logic worth testing must be reachable from a value type, not live inside a View.**
+  The fix was to express the label as `RunningTaskTimer.label(at:)` — a pure function of
+  (timer, now) — which is what made the failure assertable at all.
+- **Second rule: never pass a time-derived value into a subview.** Pass the source of truth and let
+  the view derive it, with `TimelineView(.periodic)` driving the redraw. A value handed down is
+  frozen at the parent's render.
+- There is now a real test target (`ios/TimeSenseTests`) and the scheme runs it. Note the project
+  needed `PRODUCT_NAME = $(TARGET_NAME)` set explicitly on the test target, or the build fails with
+  `Multiple commands produce .../PlugIns/.xctest` (an empty bundle name).
+- Worth repeating after any timer change: break `label(at:)` to return `formatElapsed(0)` and confirm
+  the suite goes red. It caught 6 of 12. A suite that stays green when the code is broken protects
+  nothing.
+
+
 ## GOTCHA (found 2026-08-29): render.yaml's `fromDatabase` wiring is NOT what the services actually use
 - `render.yaml` declares `DATABASE_URL` via `fromDatabase: {property: connectionString}`, but the
   running `timesense-api` and `timesense-worker` hold **literal** `DATABASE_URL` /
