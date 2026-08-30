@@ -135,7 +135,6 @@ struct NowView: View {
                             Task { await viewModel.markDone(taskId: task.id, title: task.title,
                                                             estimatedMinutes: task.estimatedMinutes) }
                         },
-                        elapsedSeconds: viewModel.elapsedSeconds(taskId: task.id),
                         onStart: {
                             viewModel.startTimer(taskId: task.id, title: task.title,
                                                  estimatedMinutes: task.estimatedMinutes)
@@ -333,7 +332,6 @@ private struct BestNextActionCard: View {
     let onAgree: () -> Void
     let onDisagree: () -> Void
     let onDone: () -> Void
-    let elapsedSeconds: TimeInterval?
     let onStart: () -> Void
     let onCancelTimer: () -> Void
     let onSnooze: () -> Void
@@ -409,7 +407,7 @@ private struct BestNextActionCard: View {
             Divider()
             WhyThis(load: loadExplanation)
             QuickActionRow(onAgree: onAgree, onDisagree: onDisagree, onDone: onDone,
-                           taskId: task.id, elapsedSeconds: elapsedSeconds, onStart: onStart,
+                           taskId: task.id, onStart: onStart,
                            onCancelTimer: onCancelTimer, onSnooze: onSnooze)
                 .id(task.id)  // reset the Agree/Disagree stage whenever the recommendation changes
         }
@@ -811,20 +809,15 @@ private struct QuickActionRow: View {
     let onDisagree: () -> Void
     let onDone: () -> Void
     let taskId: String
-    let elapsedSeconds: TimeInterval?
     let onStart: () -> Void
     let onCancelTimer: () -> Void
     let onSnooze: () -> Void
 
-    @State private var pulse = false
     @State private var agreed = false
     /// Observed, not copied: a persisted timer is the source of truth, so the row can be recreated
     /// (tab switch, recommendation change, cold launch) and still show the timer running (TIME-298).
+    /// Elapsed time is read from it live — never passed in as a value (TIME-306).
     @ObservedObject private var timers = TaskTimerStore.shared
-    // Drives the live label. Elapsed is always DERIVED from the stored start timestamp, so
-    // backgrounding or suspension can't cause drift — the tick only forces a redraw.
-    @State private var tick = Date()
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     /// True when this task is the one being timed — read from the store, never from local @State.
     private var timing: Bool { timers.isTiming(taskId: taskId) }
@@ -854,31 +847,36 @@ private struct QuickActionRow: View {
                 Button {
                     if timing { onCancelTimer() } else { onStart() }
                 } label: {
-                    HStack(spacing: 6) {
-                        if timing {
-                            // A pulsing dot, so it reads as RUNNING at a glance rather than needing
-                            // the digits to be compared against a moment ago.
-                            Circle()
-                                .fill(Cosmic.green)
-                                .frame(width: 7, height: 7)
-                                .opacity(pulse ? 1.0 : 0.25)
-                                .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true),
-                                           value: pulse)
-                        } else {
-                            Image(systemName: "play.circle")
+                    if timing {
+                        // TimelineView drives the redraw, so the framework guarantees a tick every
+                        // second. The previous version used @State + Timer.publish and read elapsed
+                        // time from a `let` handed down by the parent — a SNAPSHOT taken when Start
+                        // was tapped, which never recomputed, so it rendered 0:00 forever (TIME-306).
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            HStack(spacing: 6) {
+                                // Blink derived from the timeline's own clock rather than an
+                                // implicit animation on @State, which a re-render can cancel and
+                                // leave sitting static.
+                                Circle()
+                                    .fill(Cosmic.green)
+                                    .frame(width: 7, height: 7)
+                                    .opacity(Int(context.date.timeIntervalSince1970) % 2 == 0 ? 1.0 : 0.3)
+                                    .animation(.easeInOut(duration: 0.45), value: context.date)
+                                Text(liveLabel(at: context.date))
+                                    .monospacedDigit()   // stops the label jittering as digits change
+                            }
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
                         }
-                        Text(timerLabel)
-                            .monospacedDigit()   // stops the label jittering as digits change width
+                    } else {
+                        Label("Start timer", systemImage: "play.circle")
+                            .font(DesignTokens.Typography.footnote)
+                            .foregroundColor(DesignTokens.Color.textSecondary)
                     }
-                    .font(DesignTokens.Typography.footnote)
-                    .foregroundColor(timing ? DesignTokens.Color.textPrimary
-                                            : DesignTokens.Color.textSecondary)
                 }
                 .buttonStyle(.plain)
-                .onReceive(ticker) { tick = $0 }
-                .onAppear { pulse = true }
                 .accessibilityLabel(timing ? "Stop timing this task" : "Start timing this task")
-                .accessibilityValue(timing ? timerLabel : "")
+                .accessibilityValue(timing ? liveLabel(at: Date()) : "")
             }
         }
         // A running timer means the user already committed to this task, so don't send them back
@@ -889,13 +887,16 @@ private struct QuickActionRow: View {
         }
     }
 
-    private var timerLabel: String {
-        guard timing else { return "Start timer" }
-        _ = tick   // re-evaluated every second so the digits actually move
-        guard let seconds = elapsedSeconds else { return "Timing…" }
-        // Seconds, not whole minutes. The old label showed "Timing…" for the first full minute and
-        // then changed only every 30s, so there was no evidence the timer was alive (TIME-298).
-        return formatElapsed(seconds)
+    /// Elapsed time computed from the STORE at the given instant.
+    ///
+    /// Reading the store here, rather than accepting a value from the parent, is the fix for
+    /// TIME-306: a value passed in is fixed at the parent's last render and cannot advance no
+    /// matter how often this view redraws.
+    private func liveLabel(at now: Date) -> String {
+        guard let started = timers.running?.startedAt, timers.isTiming(taskId: taskId) else {
+            return "Start timer"
+        }
+        return formatElapsed(now.timeIntervalSince(started))
     }
 }
 
