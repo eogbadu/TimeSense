@@ -314,3 +314,72 @@ def test_specific_types_still_win_within_a_section():
     keyword LENGTH broke exactly this — "appointment" (11 chars, generic) beat "dentist" (7)."""
     assert classify("Book dentist appointment").key == "appt_dentist"
     assert classify("Grocery shopping at Aldi").key == "shop_groceries"
+
+
+# --- TIME-312: deliberate practice is its own kind of work -------------------------------------------
+# "Solve 10+ Leetcode problems daily for a month" fell to the catch-all. The library had engineering
+# types for building, fixing, reviewing and shipping, but nothing for practising — which is neither
+# building a feature nor attending a lecture, and has its own honest duration.
+
+@pytest.mark.parametrize("title", [
+    "Solve 10+ Leetcode problems daily for a month",
+    "leetcode grind",
+    "do a kata",
+    "advent of code day 3",
+    "algorithm practice",
+    "hackerrank problems",
+    "codewars session",
+    "coding challenge",
+])
+def test_coding_practice_is_recognised(title):
+    assert classify(title).key == "code_practice"
+
+
+@pytest.mark.parametrize("title", [
+    "interview prep",
+    "mock interview Friday",
+    "practice system design",
+    "technical interview practice",
+    "coding interview prep",
+])
+def test_interview_preparation_is_recognised(title):
+    assert classify(title).key == "interview_prep"
+
+
+@pytest.mark.parametrize("title", [
+    "follow the FastAPI tutorial",
+    "work through the codelab",
+    "code along with the video",
+])
+def test_tutorial_follow_along_is_recognised(title):
+    assert classify(title).key == "study_tutorial"
+
+
+def test_the_reported_title_no_longer_falls_to_the_catch_all():
+    """The exact title the user was shown, with a 23-minute estimate on it."""
+    t = classify("Solve 10+ Leetcode problems daily for a month")
+    assert t.key != GENERAL_KEY
+    assert t.typical_minutes >= 45, "deliberate practice is not a 20-minute job"
+    assert t.difficulty == "deep"
+
+
+@pytest.mark.parametrize("title,expected", [
+    ("build the export feature", "code_feature"),
+    ("fix the login bug", "code_bugfix"),
+    ("review pr 42", "code_review"),
+    ("deploy to production", "code_deploy"),
+    ("study for the exam", "study_course"),
+    ("do my homework", "study_course"),
+    ("research pricing options", "study_research"),
+])
+def test_the_neighbouring_engineering_and_study_types_are_unchanged(title, expected):
+    """New types must not steal from the ones already working — the failure mode of every previous
+    matcher change (TIME-301, TIME-302)."""
+    assert classify(title).key == expected
+
+
+def test_practice_problems_belongs_to_exactly_one_type():
+    """It was a keyword on study_course as well. A duplicate makes the winner depend on library
+    ORDER rather than on meaning, which is how a matcher becomes unpredictable."""
+    owners = [t.key for t in TASK_TYPES if "practice problems" in t.keywords]
+    assert owners == ["code_practice"], f"claimed by {owners}"

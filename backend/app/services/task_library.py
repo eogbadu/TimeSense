@@ -143,10 +143,25 @@ TASK_TYPES: list[TaskType] = [
        "code review", "review pr", "review the pr", "pull request", "pr", "merge request"),
     _t("code_deploy", "Deploy / release", "engineering", 45, DEEP,
        "deploy", "release", "ship the", "rollout", "roll out"),
+    # Deliberate practice — distinct from building something and from studying. A Leetcode session
+    # is not a feature and not a lecture; it has its own rhythm and its own honest duration, and it
+    # was falling to the catch-all (TIME-312). Placed before the study types so the single-word pass
+    # reaches "leetcode" and "kata" before anything more generic can claim them.
+    _t("code_practice", "Coding practice", "engineering", 60, DEEP,
+       "leetcode", "hackerrank", "codewars", "advent of code", "coding challenge",
+       "coding problem", "coding problems", "algorithm practice", "practice algorithms",
+       "kata", "katas", "coding exercise", "coding exercises", "practice problems",
+       "codesignal", "project euler"),
+    _t("interview_prep", "Interview preparation", "engineering", 60, DEEP,
+       "interview prep", "prep for the interview", "prepare for the interview",
+       "technical interview", "system design practice", "practice system design",
+       "mock interview", "behavioral interview", "coding interview", "whiteboard practice"),
+    _t("study_tutorial", "Follow a tutorial", "reading", 45, MODERATE,
+       "tutorial", "codelab", "follow along", "code along", "workshop exercise"),
     _t("study_research", "Research something", "reading", 60, DEEP,
        "research", "look into", "investigate", "compare options", "evaluate"),
     _t("study_course", "Study / course", "reading", 60, DEEP,
-       "study", "course", "lecture", "revise", "revision", "practice problems", "homework"),
+       "study", "course", "lecture", "revise", "revision", "homework"),
     _t("read_article", "Read an article", "reading", 20, MODERATE,
        "read the article", "read article", "blog", "newsletter read"),
     # "book" is far more often the VERB in a task list ("book a table", "book the dentist") than the
