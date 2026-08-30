@@ -1,5 +1,66 @@
 # Implementation Log
 
+## 2026-08-30 — TIME-308..313 Midnight-recommendation batch (Jira TIME-2342..2347, PRs #347-352)
+
+Triggered by one screenshot: at 00:03, with a workday that ended at 21:00, the app recommended a task
+that had been due **a week earlier**, explained it with "You have 780 minutes free before your workday
+ends", and rendered the deadline as a bare "before 8:00 PM". Five distinct defects behind one card.
+
+| Logical | Jira | PR | What |
+|---|---|---|---|
+| TIME-308 | TIME-2342 | #347 | `free_minutes_before` clamped its start FORWARD before the workday opened, so it answered 780 (the whole 08:00-21:00 day) as time available *now*. Split availability from feasibility rather than narrowing the shared helper |
+| TIME-309 | TIME-2343 | #348 | `deadline_urgency` returns 1.0 for anything overdue FOREVER. A passed deadline is now demoted (not hidden) once it survives into the next local day, and surfaced for reschedule / complete / remove |
+| TIME-310 | TIME-2344 | #349 | Today card formatted every deadline with `date: .omitted`, so a week-old deadline read as tonight. `DueDateLabel` value type + 11 tests |
+| TIME-311 | TIME-2345 | #351 | Tasks predating classification still carried pre-TIME-286 estimates. Classified and re-estimated on read, never in bulk, and only where there is positive evidence the estimate was derived |
+| TIME-312 | TIME-2346 | #352 | Deliberate practice (leetcode, katas, interview prep, tutorials) had no type and fell to the catch-all, which is never learned against |
+| TIME-313 | TIME-2347 | #350 | An implied deadline has an implied TIME and nothing supplied it — "today" became 00:00 today, already past. Deterministic resolver + midnight repair on the write path |
+
+### The one that was not what it looked like
+
+TIME-308 looked like a bug in `free_minutes_before`. It was not. The function has two callers asking
+different questions, and 780 is the **correct** answer to one of them:
+
+| Caller | Question | 780 at 00:03? |
+|---|---|---|
+| `_feasibility` | will there be enough working time before this is due? | correct |
+| the explainer | how much time is free right now? | nonsense |
+
+Narrowing the helper would have made feasibility warn "you only have 0 free" for a task with a whole
+workday ahead of it. `free_minutes_available_now` and `within_working_hours` split the questions; the
+780 figure is now **pinned as correct** for feasibility so a future narrowing fails loudly.
+
+### Design notes
+
+- **Staleness is judged by DAY, not instant** (`is_awaiting_resolution`). A task due at 8pm is not
+  stale at 8:05pm — the user is plausibly still on it, and nagging there is the "another job to
+  manage" failure the brief forbids. It becomes stale once it survives into the next *local* day.
+  `DueDateLabel.isOverdue` uses the same rule so the card and the engine cannot disagree.
+- **Demote, not hide.** Stale ids are unioned into the demotion set already built for
+  recently-disagreed tasks (TIME-271), so the task still appears under other options and in Today.
+- **Resolution reuses existing endpoints** — `PATCH due_at`, `PATCH status`, `DELETE`. No new
+  "resolve" concept. Nothing is auto-rescheduled or auto-deleted; deleting confirms first.
+- **Implicit deadlines resolve deterministically, not in the prompt.** Counting days is what a model
+  gets subtly wrong without anyone noticing, and the phrase set is small and closed. The resolver
+  returns `None` for anything it does not own — no guessing — and reports the phrase it matched so an
+  override is traceable to the words that caused it. Weeks are Monday-Sunday (ISO), so "end of next
+  week" is next Sunday night.
+- **Midnight repair lives on the WRITE path**, not in capture, because the iOS picker produced the
+  same bad value independently via `Calendar.startOfDay`. That covers Android and web, and PATCH as
+  well as POST.
+- **Re-estimation requires positive evidence** the estimate was derived (see known_issues).
+
+### Verification
+
+- Backend `pytest tests -q` (minus the 11 documented network-bound hangers): **852 passed**, up from
+  735 at the start of the day. Only the 2 documented `test_push_service` time-of-day flakes fail,
+  confirmed pre-existing by stashing onto clean `main`.
+- iOS `xcodebuild test`: **31 passed**, up from 12 (`DueDateLabelTests` +11, `AwaitingResolutionTests` +8).
+- **Mutation-verified**, each independently: removing the TIME-308 guard reddens exactly the two
+  availability tests; removing `demoted |= stale` reddens exactly the two demotion tests; disabling
+  the TIME-313 resolver override reddens exactly the one test that distinguishes it from the repair.
+- `scripts/audit_task_classification.py`: catch-all 3%, suspicious matches 0, library 117 -> 120 types.
+
+
 ## 2026-08-28 — TIME-282..297 Recommendation quality batch (Jira TIME-2316..2331, PRs #320-336)
 
 | Logical | Jira | PR | What |

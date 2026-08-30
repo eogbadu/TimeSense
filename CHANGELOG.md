@@ -1,5 +1,42 @@
 # Changelog
 
+## 2026-08-30 — Midnight-recommendation batch (TIME-308..313)
+
+One screenshot at 00:03: a task due a week earlier, recommended as the best thing to do next,
+explained with "780 minutes free before your workday ends", with its deadline shown as "before
+8:00 PM". Five separate defects behind one card, plus a sixth found on the way.
+
+### Fixed
+- **The app no longer offers tomorrow's workday as time you have now.** Before the working window
+  opened, free time was measured from the START of the workday rather than from now, so at 00:03 it
+  reported the entire 13-hour day as available. Outside working hours it now says so plainly instead
+  of quoting a figure that implies the time is usable.
+- **A passed deadline stops leading and asks to be resolved.** Anything overdue scored maximum
+  urgency forever, with no decay, so a week-old deadline outranked everything indefinitely. Once a
+  deadline survives into the next day the task is demoted — still visible in Today and under the
+  other options — and offered as Reschedule / Done / Remove. Deadlines passed earlier the same day
+  are unaffected.
+- **Deadlines say when they were.** Every deadline was rendered as a bare clock time, so one from a
+  week ago read as tonight. Overdue deadlines now say how overdue; future ones carry their day.
+- **"Today" means the end of today.** An implied deadline had no implied time anywhere in the
+  pipeline, so "due today" was stored as 00:00 today — already past at the moment of capture, and
+  stale by the next morning. "this evening", "next week", "end of the month" and the rest now resolve
+  to real end-of-period times, in the user's own timezone.
+- **A date picked with no time no longer arrives already overdue.** A date-only deadline was stored
+  at the instant the day began. Repaired wherever tasks are written, so it holds for every client.
+- **Old tasks get today's estimates.** Tasks captured before task classification existed still
+  carried the "everything takes 23 minutes" numbers. They are now classified and re-estimated when
+  read — never in bulk, and never over a duration you chose yourself.
+
+### Added
+- Coding practice, interview preparation and tutorial follow-along as task types. Leetcode, katas and
+  mock interviews were falling into the catch-all, which is deliberately never learned from — so they
+  would have stayed generic forever.
+
+### Under the hood
+- iOS test coverage grew from 12 to 31 cases; backend from 735 to 852.
+
+
 ## 2026-08-28 — Recommendation quality batch (TIME-282..297)
 
 Ten items of on-device feedback, all addressed.

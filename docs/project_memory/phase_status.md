@@ -1,5 +1,20 @@
 # Phase Status
 
+## Midnight recommendation quality (TIME-308..313) — COMPLETE 2026-08-30
+
+All 6 tickets merged. Everything visible in the 00:03 screenshot is addressed: the free-time figure,
+the never-decaying overdue urgency, the bare-time deadline label, the stale pre-classification
+estimates, the missing coding-practice types, and implicit deadline resolution.
+
+Outstanding and owned by the user: **rebuild onto the phone** and confirm in use. Nothing in this
+batch has been seen working on hardware — the awaiting-resolution card, the overdue deadline label
+and the timer overrun prompt all need a real device with the real week-old task on it.
+
+Known follow-ups, deliberately not taken here: no `estimate_source` column (TIME-311 infers from
+`raw_input`); relative phrasings like "in three days" still fall to the LLM; Android has neither the
+awaiting-resolution card nor the overdue label, though the backend demotion already covers it.
+
+
 ## Recommendation quality (TIME-282..297) — COMPLETE 2026-08-28
 
 All 16 tickets merged. The 10 device-feedback items are addressed end to end: estimation, timezone,

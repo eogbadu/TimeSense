@@ -1,5 +1,17 @@
 # Change Summary
 
+## 2026-08-30 — TIME-308..313
+
+6 tickets, 6 PRs (#347-352), all merged. Backend suite 852 passing; iOS 31 tests passing; no
+migrations (nothing in this batch changed the schema).
+
+Origin: one screenshot at 00:03 showing a week-old deadline recommended as the best next action,
+justified with "780 minutes free before your workday ends". Five defects behind that single card,
+plus a sixth raised by the user mid-session (implicit deadlines).
+
+Not yet verified on the physical device.
+
+
 ## 2026-08-28 — TIME-282..297
 
 16 tickets, 16 PRs (#320-336), all merged. Backend suite 704 passing; iOS builds clean; alembic head

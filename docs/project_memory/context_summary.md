@@ -185,6 +185,7 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- **MIDNIGHT-RECOMMENDATION BATCH (device feedback 2026-08-30)** logical TIME-308..313 → Jira **TIME-2342..2347** (308=2342 free-minutes-before-workday, 309=2343 passed-deadline resolution, 310=2344 overdue deadline label, 311=2345 re-estimate legacy tasks, 312=2346 coding-practice types, 313=2347 implicit deadlines). PRs #347-352, all merged. Origin: ONE screenshot at 00:03 — a task due a week earlier recommended as best-next, explained with "780 minutes free before your workday ends", deadline rendered as a bare "before 8:00 PM". FIVE defects behind one card, plus TIME-313 raised by the user mid-session. Key findings: (a) `free_minutes_before` is NOT buggy — it has two callers asking different questions and 780 is CORRECT for feasibility; narrowing it would have broken the warning, so availability was split off (`free_minutes_available_now`, `within_working_hours`) and 780 is now pinned as correct; (b) `deadline_urgency` returns 1.0 for overdue FOREVER with no decay — stale tasks are now demoted (not hidden) once they survive into the next LOCAL day, reusing the TIME-271 disagree-demotion set; (c) implied deadlines had no implied TIME anywhere in the pipeline, so "due today" was stored as 00:00 today — already past at capture; (d) the iOS picker independently produced the same midnight value via `Calendar.startOfDay`, so the repair lives on the task WRITE path, covering every client.
 - **RECOMMENDATION QUALITY BATCH (device feedback 2026-08-28)** logical TIME-282..297 → Jira **TIME-2316..2331** (in order: 282=2316 entitlement override, 283=2317 timezone, 284=2318 task library, 285=2319 classification, 286=2320 duration learning, 287=2321 iOS duration UX, 288=2322 EnergyService, 289=2323 energy check-in, 290=2324 required-energy from difficulty, 291=2325 location repair, 292=2326 UserAdaptationProfile, 293=2327 activate inert scoring weight, 294=2328 swap backend, 295=2329 swap iOS, 296=2330 swap learning, 297=2331 spec/close-out). Use the Jira keys with move_ticket.py. Origin: 10 items of on-device feedback. Root causes established up front — everything ≈23 min (learning keyed on the 'general' catch-all + 3-button prompt → EWMA 15→20→23); timezone never re-synced (iOS `.task{}` fires once, no scenePhase/NSSystemTimeZoneDidChange observer) on top of UTC day boundaries; own account gated (no client creates a Subscription row → is_premium == created_at+14d, and PREMIUM_TEST_EMAILS missing from render.yaml); location dead (6 stacked breaks); energy backwards (scorer uses sleep-only/hard-coded 'medium', display uses activity where busy ⇒ 'high'). STRUCTURAL FINDING driving the batch: context_fit/routine_fit/user_preference_fit/location_fit are hard-coded identical for every task candidate — **38% of the scoring weight was inert** (context_fit 0.15 + location_fit 0.10 + routine_fit 0.08 + user_preference_fit 0.05), so only urgency/importance/time_fit/energy_fit could differentiate. NOTE: the initial survey reported this as 58%, which inverted the split — the verified figure is 38% inert / 62% varying, now pinned by a test against WEIGHTS in test_score_differentiation.py.
 - **Web track (companion website + app)** TIME-168..172 — all **Done, merged 2026-07-09** (the "TIME-168..172" IDs are embedded in each ticket's summary; Jira auto-numbers the actual issue keys separately — e.g. TIME-171 = Jira **TIME-2205**, TIME-172 = Jira **TIME-2206**; use those keys with move_ticket.py): TIME-168 cosmic marketing landing (PR #162), TIME-169 logo-returns-to-top (PR #163), TIME-170 companion web app /app Now·Today·Capture for signed-in users (PR #164), TIME-171 web Insights tab (Premium weekly insight + non-Premium upgrade gate; PR #165, Jira TIME-2205 Done), TIME-172 public /privacy Privacy Policy linked from footer (PR #166, Jira TIME-2206 Done), TIME-173 public /terms Terms of Service linked from footer + cross-linked with Privacy (PR #170, Jira TIME-2207 Done). No App Store/Play links yet — user doesn't have the real app URLs; site keeps the web "Open the app" CTA. Web is still companion-only (not the primary product). A real user test account exists for the /app auth chain: `webdemo@timesense.app` (role: user, non-Premium → sees the Insights gate).
 - TIME-112..116 → Jira TIME-112..116 (**Deterministic recommendation engine** rebuild per recommendation-engine-build-spec.md — foundation (types/time/location/maps-wrapper/travel-feasibility/normalize), decision core (candidates/scoring/penalties/ranking/selection/feedback + orchestrator; NO LLM in selection), **integrated into /now** (context_builder maps DB→UserContext; engine drives best_task), **real Google maps provider** gated by GOOGLE_MAPS_API_KEY + user_places store + /api/v1/places, and **iOS place-sync**) — **Done (PRs #106-110 merged 2026-07-07)**. LIVE in /now. Remaining to fully activate location driving-time: set GOOGLE_MAPS_API_KEY on the server. NEXT: LLM explanation layer (final phase, explains the already-selected recommendation only).
@@ -252,7 +253,19 @@ both clean.
   see `implementation_log.md` for the full ticket-by-ticket mapping if needed.
 
 ## Last Completed Work
-TIME-062 (Jira TIME-56): Client Firebase Config (iOS + Android)
+TIME-308..313 (Jira TIME-2342..2347, PRs #347-352, all merged 2026-08-30) — the midnight-recommendation
+batch. See implementation_log.md for the full table and design notes; decision_log.md for the settled
+deadline semantics ("today" = 23:59 local; evening = 21:00; ISO weeks so "end of next week" = next
+Sunday; staleness judged by DAY not instant; demote-never-hide; nothing auto-rescheduled or deleted).
+
+Test counts after the batch: backend **852** passing (from 735 at the start of 2026-08-28), iOS **31**
+(from 12). Each of the three riskiest guards was mutation-verified individually — see known_issues.md
+for the lesson about a downstream repair masking the absence of the real fix.
+
+State of the five reported defects: all fixed and merged. NOT yet verified on the physical device —
+the app has not been rebuilt onto the phone since TIME-307.
+
+### (previous) TIME-062 (Jira TIME-56): Client Firebase Config (iOS + Android)
 - iOS: linked firebase-ios-sdk (pinned 11.x → 11.15.0; 12.x needs Swift tools 6.1 > this Xcode 16.0)
   + GoogleSignIn-iOS (8.x) to the TimeSense target via the xcodeproj gem; added
   GoogleService-Info.plist (project timesense-eb7ec, bundle com.aetheranalytics.timesense —
@@ -325,7 +338,25 @@ Full history of TIME-034 through TIME-052 + net-new TIME-059/060/061 is in `impl
 and `change_summary.md`.
 
 ## Current Active Task
-No specific ticket in flight. Candidate next steps (ask the user): (a) client Firebase config so a
+No ticket in flight. TIME-308..313 are merged; the immediate next step is **rebuilding onto the
+physical device** and confirming the five defects are actually gone in use — none of them have been
+seen fixed on hardware.
+
+On-device passes a simulator cannot cover, still outstanding:
+- the geofence / location permission flow (TIME-291)
+- the timer overrun prompt (needs a timer left running past estimate + 30 min)
+- the awaiting-resolution card (TIME-309) and the overdue deadline label (TIME-310) against the real
+  week-old task that prompted this batch
+
+Follow-ups identified but not ticketed:
+- **No column records where an estimate came from** (`estimate_source`), which is the only reason
+  TIME-311 infers it from `raw_input`. With one, that rule becomes a lookup.
+- Relative phrasings the implicit-deadline resolver deliberately does not own ("in three days", "a
+  week from Tuesday") still fall to the LLM — the phrasings most likely to be miscounted.
+- Android has neither the awaiting-resolution card nor the overdue deadline label; the backend
+  demotion applies to it already.
+
+### (previous, stale) No specific ticket in flight. Candidate next steps (ask the user): (a) client Firebase config so a
 client can actually sign in end-to-end — iOS GoogleService-Info.plist + Firebase SPM, Android
 google-services.json, web NEXT_PUBLIC_FIREBASE_* from the timesense-eb7ec console (the backend
 already verifies real tokens as of TIME-061); (b) remaining Phase 13 items in

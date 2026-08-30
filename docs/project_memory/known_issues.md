@@ -1,5 +1,40 @@
 # Known Issues
 
+## LESSON (2026-08-30, TIME-308): a shared helper answering two questions is not a bug in the helper
+- `free_minutes_before` reported 780 minutes free at 00:03. The obvious fix — clamp it — would have
+  broken the OTHER caller, because 780 is the correct answer to "will there be enough working time
+  before this is due?" and nonsense as an answer to "how much time is free right now?".
+- Before narrowing a shared function because one caller is wrong, check what the other callers are
+  actually asking. Split the questions; do not average them.
+- The wrong-looking value is now pinned as CORRECT for feasibility, so a future "fix" fails loudly
+  instead of silently degrading the warning.
+
+## LESSON (2026-08-30, TIME-311): overwriting user data needs positive evidence, not absent evidence
+- The backfill first replaced any legacy estimate that wasn't provably user-set. That broke
+  `test_suggested_slot`, which asserts a 60-minute task keeps its 60 minutes — an estimate set
+  straight through the API with no `raw_input` to vouch for it.
+- The test was right and the rule was wrong. Rule now: replace only on positive evidence the value
+  was DERIVED (no estimate at all, or captured text that states no duration). No captured text and
+  an estimate present means someone probably typed it — leave it alone.
+- Root cause worth fixing: there is no column recording where an estimate came from, which is the
+  only reason this reasons from `raw_input` at all. With one, the rule is a lookup, not an inference.
+
+## LESSON (2026-08-30, TIME-313): a downstream repair can hide the bug you meant to fix
+- `repair_midnight` on the task write path made the first "the model returned midnight" test pass
+  even with the resolver override sabotaged. The test proved nothing about the thing it named.
+- A safety net that catches the common case will happily mask the absence of the real fix. When two
+  mechanisms could produce a passing test, write the case only ONE of them can handle — here, a
+  well-formed but WRONG date, which no repair can detect and only re-derivation can correct.
+- Mutation-test every guard you add, not just the suite as a whole.
+
+## LESSON (2026-08-30, TIME-310): Date.formatted() ignores the Calendar you are reasoning with
+- It uses the DEVICE timezone and locale. A label can therefore contradict its own date arithmetic,
+  and a test can pass a `Calendar` but cannot change the device — so the disagreement is invisible.
+- Format through the same calendar the arithmetic uses (`DateFormatter` with `calendar.timeZone`).
+- Also: iOS renders "8:00 PM" with a NARROW NO-BREAK SPACE (U+202F) before the meridiem. Hardcoded
+  string literals never match. Derive expected strings from the same formatter.
+
+
 ## LESSON (2026-08-30, TIME-307): iOS logic inside a View is untestable — and BUILD SUCCEEDED is not verification
 - Three defects reached the user's device this session, two in the same component, and every one was
   "verified" by `xcodebuild build` succeeding. Compiling says nothing about behaviour.
