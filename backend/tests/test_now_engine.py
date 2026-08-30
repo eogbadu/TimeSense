@@ -44,6 +44,31 @@ async def test_engine_still_prefers_overdue(client, db_session):
     from app.models.task import Task
 
     user, _ = await UserService(db_session).get_or_create_user(USER.uid, USER.email)
+    # Deliberately a deadline that passed EARLIER TODAY, not yesterday. The urgency override still
+    # applies here and the user explicitly asked to keep it. A deadline that survives into the next
+    # day is a different case — it stops leading and asks to be resolved instead (TIME-309), which
+    # is covered by test_stale_task_does_not_lead_when_a_fresh_one_exists.
+    now = datetime.now(timezone.utc)
+    db_session.add_all([
+        Task(user_id=user.id, title="Overdue invoice", status="pending", priority=2,
+             due_at=now.replace(hour=0, minute=0, second=0, microsecond=0), estimated_minutes=20),
+        Task(user_id=user.id, title="Someday idea", status="pending", priority=4),
+    ])
+    await db_session.flush()
+
+    with _verify():
+        r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    assert r.json()["best_task"]["title"] == "Overdue invoice"
+
+
+@pytest.mark.anyio
+async def test_engine_stops_preferring_a_deadline_that_survived_the_day(client, db_session):
+    """The other side of the same rule (TIME-309). Yesterday's deadline no longer wins on urgency
+    alone — it is demoted and surfaced for a decision."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+
+    user, _ = await UserService(db_session).get_or_create_user(USER.uid, USER.email)
     db_session.add_all([
         Task(user_id=user.id, title="Overdue invoice", status="pending", priority=2,
              due_at=datetime.now(timezone.utc) - timedelta(days=1), estimated_minutes=20),
@@ -53,7 +78,9 @@ async def test_engine_still_prefers_overdue(client, db_session):
 
     with _verify():
         r = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
-    assert r.json()["best_task"]["title"] == "Overdue invoice"
+    data = r.json()
+    assert data["best_task"]["title"] == "Someday idea"
+    assert [a["task"]["title"] for a in data["awaiting_resolution"]] == ["Overdue invoice"]
 
 
 @pytest.mark.anyio

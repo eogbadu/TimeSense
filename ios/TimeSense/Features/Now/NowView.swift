@@ -11,6 +11,12 @@ struct NowView: View {
     // Set when the user taps Disagree — drives the "why not this one?" reason prompt (TIME-272).
     @State private var disagreeTaskId: String?
 
+    // Resolving a passed deadline (TIME-309). Two of the three answers need a second step: picking
+    // a new date, and confirming a delete. "Mark done" doesn't — it's the same action as anywhere
+    // else and reversing it is cheap.
+    @State private var rescheduleTarget: AwaitingResolution?
+    @State private var removeTarget: AwaitingResolution?
+
     var body: some View {
         NavigationStack {
             Group {
@@ -86,6 +92,32 @@ struct NowView: View {
                                                           reason: prompt.reason) } }
             )
         }
+        .sheet(item: $rescheduleTarget) { item in
+            RescheduleSheet(
+                item: item,
+                onPick: { newDue in
+                    Task { await viewModel.reschedule(taskId: item.task.id, to: newDue) }
+                },
+                onCancel: { rescheduleTarget = nil }
+            )
+        }
+        // Deleting is the one irreversible answer, so it asks. Everything else on this card is undoable.
+        .confirmationDialog(
+            "Remove this task?",
+            isPresented: Binding(
+                get: { removeTarget != nil },
+                set: { if !$0 { removeTarget = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: removeTarget
+        ) { item in
+            Button("Remove", role: .destructive) {
+                Task { await viewModel.removeTask(taskId: item.task.id) }
+            }
+            Button("Keep it", role: .cancel) { removeTarget = nil }
+        } message: { item in
+            Text("\"\(item.task.title)\" will be deleted. This can't be undone.")
+        }
     }
 
     /// Record the reason and immediately ask what the user would rather do. The disagree itself is
@@ -121,6 +153,25 @@ struct NowView: View {
                             }
                         },
                         onStillGoing: { timers.acknowledgeOverrun() }
+                    )
+                }
+
+                // Deadlines that have already passed. Placed ABOVE the recommendation because it
+                // is the honest order: the assistant has stopped recommending these, and saying so
+                // is more useful than quietly ranking them last (TIME-309).
+                let stale = ctx.awaitingResolution ?? []
+                if !stale.isEmpty {
+                    AwaitingResolutionSection(
+                        items: stale,
+                        onReschedule: { item in rescheduleTarget = item },
+                        onDone: { item in
+                            Task {
+                                await viewModel.markDone(taskId: item.task.id,
+                                                         title: item.task.title,
+                                                         estimatedMinutes: item.task.estimatedMinutes)
+                            }
+                        },
+                        onRemove: { item in removeTarget = item }
                     )
                 }
 
@@ -216,6 +267,160 @@ private struct AnalysisBanner: View {
         if mins <= 0 { return "Re-evaluated just now" }
         if mins == 1 { return "Re-evaluated 1 min ago" }
         return "Re-evaluated \(mins) min ago"
+    }
+}
+
+/// Tasks whose deadline has already passed, and the three ways out.
+///
+/// TIME-309. `deadline_urgency` scores anything overdue at a flat 1.0 with no decay, so before this
+/// existed a task due a week ago led the recommendation indefinitely — the app repeating the same
+/// answer at a user who had evidently already decided not to act on it.
+///
+/// The backend demotes them so they stop leading. This section is the other half: demoting alone
+/// just buries the problem. A passed deadline is a decision the user hasn't made yet, so the app
+/// asks — once, calmly, in one place — instead of raising its voice.
+private struct AwaitingResolutionSection: View {
+    let items: [AwaitingResolution]
+    let onReschedule: (AwaitingResolution) -> Void
+    let onDone: (AwaitingResolution) -> Void
+    let onRemove: (AwaitingResolution) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            HStack(spacing: 6) {
+                Image(systemName: "clock.badge.exclamationmark")
+                    .font(.footnote)
+                Text(items.count == 1 ? "Needs a decision" : "\(items.count) need a decision")
+                    .font(DesignTokens.Typography.footnote.weight(.semibold))
+            }
+            .foregroundColor(DesignTokens.Color.textSecondary)
+
+            VStack(spacing: DesignTokens.Spacing.sm) {
+                ForEach(items) { item in
+                    AwaitingResolutionCard(
+                        item: item,
+                        onReschedule: { onReschedule(item) },
+                        onDone: { onDone(item) },
+                        onRemove: { onRemove(item) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct AwaitingResolutionCard: View {
+    let item: AwaitingResolution
+    let onReschedule: () -> Void
+    let onDone: () -> Void
+    let onRemove: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+                Image(systemName: "calendar.badge.exclamationmark")
+                    .font(.callout)
+                    .foregroundColor(DesignTokens.Color.destructive)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.task.title)
+                        .font(DesignTokens.Typography.body.weight(.semibold))
+                        .foregroundColor(DesignTokens.Color.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(item.ageLabel)
+                        .font(DesignTokens.Typography.footnote)
+                        .foregroundColor(DesignTokens.Color.destructive)
+                }
+                Spacer(minLength: 0)
+            }
+
+            Text("This isn't being recommended any more. Give it a new date, or clear it.")
+                .font(DesignTokens.Typography.footnote)
+                .foregroundColor(DesignTokens.Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Button(action: onReschedule) {
+                    Label("Reschedule", systemImage: "calendar")
+                        .font(DesignTokens.Typography.footnote.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+                Button(action: onDone) {
+                    Label("Done", systemImage: "checkmark")
+                        .font(DesignTokens.Typography.footnote.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Spacer(minLength: 0)
+
+                Button(role: .destructive, action: onRemove) {
+                    Image(systemName: "trash")
+                        .font(.footnote)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .accessibilityLabel("Remove task")
+            }
+        }
+        .padding(DesignTokens.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
+                .fill(DesignTokens.Color.destructive.opacity(0.10))
+        )
+    }
+}
+
+/// Picking a new deadline. Deliberately offers concrete near dates first — the point is to get the
+/// task moving again, and a date picker as the only option is friction at exactly the moment the
+/// user is least invested.
+private struct RescheduleSheet: View {
+    let item: AwaitingResolution
+    let onPick: (Date) -> Void
+    let onCancel: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var customDate = Date()
+
+    /// 6pm, so a rescheduled task gets a plausible working deadline rather than midnight.
+    private func atEvening(_ daysFromNow: Int) -> Date {
+        let cal = Calendar.current
+        let day = cal.date(byAdding: .day, value: daysFromNow, to: Date()) ?? Date()
+        return cal.date(bySettingHour: 18, minute: 0, second: 0, of: day) ?? day
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Button("Today") { pick(atEvening(0)) }
+                    Button("Tomorrow") { pick(atEvening(1)) }
+                    Button("Next week") { pick(atEvening(7)) }
+                } header: {
+                    Text("New deadline")
+                } footer: {
+                    Text("Set to 6:00 PM so it has a realistic working deadline.")
+                }
+
+                Section("Pick a date") {
+                    DatePicker("Due", selection: $customDate, displayedComponents: [.date, .hourAndMinute])
+                    Button("Use this date") { pick(customDate) }
+                }
+            }
+            .navigationTitle(item.task.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel(); dismiss() }
+                }
+            }
+        }
+    }
+
+    private func pick(_ date: Date) {
+        onPick(date)
+        dismiss()
     }
 }
 

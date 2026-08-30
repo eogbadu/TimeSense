@@ -12,6 +12,9 @@ struct NowContext: Decodable {
     let feasibility: Feasibility?
     let context: NowContextCards?
     let recommendationEventId: String?
+    /// Tasks whose deadline passed on an earlier day — demoted out of the top slot but still
+    /// visible, waiting for the user to reschedule, complete, or remove them (TIME-309).
+    let awaitingResolution: [AwaitingResolution]?
 
     enum CodingKeys: String, CodingKey {
         case greeting
@@ -24,6 +27,33 @@ struct NowContext: Decodable {
         case feasibility
         case context
         case recommendationEventId = "recommendation_event_id"
+        case awaitingResolution = "awaiting_resolution"
+    }
+}
+
+/// A task the assistant has stopped recommending because its deadline has passed, paired with how
+/// long ago that was. The app asks instead of repeating itself: a deadline a week gone is not a
+/// statement about what to do now, it is a decision the user hasn't made yet (TIME-309).
+struct AwaitingResolution: Decodable, Identifiable {
+    let task: NowTask
+    let daysOverdue: Int
+
+    var id: String { task.id }
+
+    enum CodingKeys: String, CodingKey {
+        case task
+        case daysOverdue = "days_overdue"
+    }
+
+    /// "Due yesterday" reads better than "1 day past due", and the plural matters at a glance.
+    var ageLabel: String {
+        switch daysOverdue {
+        case ...0: return "Past due"
+        case 1: return "Due yesterday"
+        case 2...6: return "\(daysOverdue) days past due"
+        case 7...13: return "Over a week past due"
+        default: return "Over \(daysOverdue / 7) weeks past due"
+        }
     }
 }
 
@@ -269,6 +299,39 @@ final class NowViewModel: ObservableObject {
             // Reload anyway so UI stays consistent
             await load()
         }
+    }
+
+    // MARK: - Resolving a passed deadline (TIME-309)
+    //
+    // A stale task is demoted by the backend so it stops leading the recommendation, but demoting is
+    // only half an answer — the task is still sitting there. These are the three ways out, and they
+    // reuse the existing task endpoints rather than adding a "resolve" concept the API doesn't need.
+    //
+    // Nothing here decides for the user. The app never silently reschedules or deletes a task; that
+    // would be the same class of overreach as writing to their calendar without asking.
+
+    /// Move the deadline forward to a real, near time so the task can compete again.
+    func reschedule(taskId: String, to newDue: Date) async {
+        struct DueUpdate: Encodable {
+            let due_at: String
+        }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        do {
+            let _: TaskPatchResponse = try await APIClient.shared.patch(
+                "/api/v1/tasks/\(taskId)", body: DueUpdate(due_at: iso.string(from: newDue))
+            )
+        } catch {
+            // fall through — the reload below keeps the UI honest either way
+        }
+        await load()
+    }
+
+    /// Drop the task entirely. Destructive, so the view confirms before calling this.
+    func removeTask(taskId: String) async {
+        try? await APIClient.shared.delete("/api/v1/tasks/\(taskId)")
+        timers.stopIfTiming(taskId: taskId)
+        await load()
     }
 
     private func maybePromptDuration(taskId: String, title: String,
