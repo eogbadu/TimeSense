@@ -206,3 +206,49 @@ async def test_a_quiet_day_is_not_called_low_energy_merely_for_low_steps(db_sess
     )
     detail = _energy_signal(exp)["detail"]
     assert "Low energy" not in detail, f"a quiet morning was called low energy: {detail!r}"
+
+
+# TIME-308 — at 00:03 a user was told "You have 780 minutes free before your workday ends" and that
+# the task "fits the time you have". 780 is the whole 08:00-21:00 workday, none of which had
+# started. The explanation must not present the day ahead as time available now.
+
+@pytest.mark.anyio
+async def test_before_the_workday_opens_no_free_minutes_are_claimed(db_session):
+    user, _ = await UserService(db_session).get_or_create_user("uid-expl-308", "expl308@example.com")
+    now = datetime(2026, 8, 30, 0, 3, tzinfo=UTC)          # 12:03 AM, workday 08:00-21:00
+    task = Task(user_id=user.id, title="Write the report", status="pending", priority=2,
+                estimated_minutes=45)
+    db_session.add(task)
+    await db_session.flush()
+
+    exp = await build_explanation(
+        db_session, user, task, alternatives=[], today_tasks=[task],
+        now=now, tz_name="UTC", gateway=get_llm_gateway(),
+    )
+    cal_signal = next(s for s in exp["signals"] if s["name"] == "Calendar")["detail"]
+    cal_context = next(c for c in exp["context_used"] if c.startswith("Calendar"))
+    task_context = next(c for c in exp["context_used"] if c.startswith("Task:"))
+
+    assert "780" not in cal_signal and "780" not in cal_context
+    assert "minutes free" not in cal_signal and "minutes free" not in cal_context
+    assert "outside your working hours" in cal_signal
+    assert "fits the time you have" not in task_context
+
+
+@pytest.mark.anyio
+async def test_during_the_workday_free_minutes_are_still_reported(db_session):
+    """The off-hours wording must not leak into working hours."""
+    user, _ = await UserService(db_session).get_or_create_user("uid-expl-308b", "expl308b@example.com")
+    now = datetime(2026, 8, 30, 14, 0, tzinfo=UTC)
+    task = Task(user_id=user.id, title="Write the report", status="pending", priority=2,
+                estimated_minutes=45)
+    db_session.add(task)
+    await db_session.flush()
+
+    exp = await build_explanation(
+        db_session, user, task, alternatives=[], today_tasks=[task],
+        now=now, tz_name="UTC", gateway=get_llm_gateway(),
+    )
+    cal_signal = next(s for s in exp["signals"] if s["name"] == "Calendar")["detail"]
+    assert "minutes free" in cal_signal
+    assert "outside your working hours" not in cal_signal
