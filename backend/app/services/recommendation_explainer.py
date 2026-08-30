@@ -138,8 +138,12 @@ async def _location(db: AsyncSession, user_id, now: datetime):
 
 async def _free_and_next(db, user, today_tasks: Sequence, now: datetime, tz_name: str):
     """Real free time until the next commitment, or the end of the working day — accounting for BOTH
-    scheduled tasks AND the user's calendar events, inside working hours. Returns (free_minutes,
-    next_event_label | None). Replaces the old tasks-only, 240-capped-to-midnight estimate."""
+    scheduled tasks AND the user's calendar events, inside working hours.
+
+    Returns (free_minutes, next_event_label | None, off_hours). `free_minutes` is time the user can
+    start using NOW, so it is 0 outside the working window — including the hours BEFORE it opens,
+    which used to report the entire day ahead as though it were available (TIME-308). `off_hours`
+    lets the copy say why the number is 0 instead of implying the day is full."""
     prefs = user.preferences
     sched = SchedulingService(
         work_start_hour=prefs.work_start_hour if prefs else 8,
@@ -188,12 +192,12 @@ async def _free_and_next(db, user, today_tasks: Sequence, now: datetime, tz_name
 
     if starts:
         next_start, next_title = min(starts, key=lambda x: x[0])
-        free = sched.free_minutes_before(next_start, now, busy, tz_name)
+        free = sched.free_minutes_available_now(next_start, now, busy, tz_name)
         label = f"{next_title} at {_local(next_start, tz_name).strftime('%-I:%M %p')}"
     else:
-        free = sched.free_minutes_before(window_end, now, busy, tz_name)
+        free = sched.free_minutes_available_now(window_end, now, busy, tz_name)
         label = None
-    return free, label
+    return free, label, not sched.within_working_hours(now, tz_name)
 
 
 async def build_explanation(
@@ -208,7 +212,7 @@ async def build_explanation(
     score: float = 0.0,
     alt_scores: dict[str, float] | None = None,
 ) -> dict:
-    free_minutes, next_event = await _free_and_next(db, user, today_tasks, now, tz_name)
+    free_minutes, next_event, off_hours = await _free_and_next(db, user, today_tasks, now, tz_name)
     local_now = _local(now, tz_name)
     tod_label, tod_note = _time_of_day(local_now)
     health = await _health(db, user.id, now, tz_name)
@@ -229,6 +233,8 @@ async def build_explanation(
     context_used: list[str] = []
     if scheduled_at_label:
         context_used.append(f"Calendar: this is scheduled for {scheduled_at_label}.")
+    elif off_hours:
+        context_used.append("Calendar: you're outside your working hours right now.")
     elif next_event:
         context_used.append(f"Calendar: {free_minutes} minutes free before {next_event}.")
     else:
@@ -248,7 +254,11 @@ async def build_explanation(
     if est:
         context_used.append(
             f"Task: {_priority_label(best.priority).lower()} priority, ~{est} min — "
-            + ("fits the time you have." if fits else "longer than the time you have right now.")
+            + (
+                "outside your working hours."
+                if off_hours
+                else ("fits the time you have." if fits else "longer than the time you have right now.")
+            )
         )
 
     # ---- Decision factors (deterministic ratings) ----
@@ -277,6 +287,8 @@ async def build_explanation(
     signals: list[dict] = []
     if scheduled_at_label:
         cal = f"This is on your calendar for {scheduled_at_label}."
+    elif off_hours:
+        cal = "You're outside your working hours right now."
     elif next_event:
         cal = f"You have a {free_minutes}-minute free block before {next_event}."
     else:

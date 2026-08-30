@@ -118,9 +118,19 @@ class SchedulingService:
         scheduled_tasks: Sequence,
         tz_name: str = "UTC",
     ) -> int:
-        """Unscheduled minutes between now and `deadline`, inside the working window."""
+        """Unscheduled working minutes between now and `deadline`, inside today's working window.
+
+        Those minutes may lie entirely in the FUTURE. Asked at 00:03 with a window of 08:00-21:00,
+        this answers 780 — the whole workday ahead — because the question it exists to answer is
+        "will there be enough working time before this is due?" (feasibility, TIME-084).
+
+        That is not the same question as "how much time is free right now". Before the workday
+        begins, the two diverge completely. Use `free_minutes_available_now` for the second — the
+        explanation once told a user at 00:03 that they had "780 minutes free before your workday
+        ends", offered as evidence that a task fitted the time available (TIME-308).
+        """
         window_start, window_end = self._window(now, tz_name)
-        start = max(now, window_start)
+        start = max(_utc(now), window_start)
         end = min(_utc(deadline), window_end)
         if end <= start:
             return 0
@@ -128,3 +138,26 @@ class SchedulingService:
         for s, e in self._busy(scheduled_tasks, start, end):
             free -= int((min(e, end) - max(s, start)).total_seconds() / 60)
         return max(0, free)
+
+    def within_working_hours(self, now: datetime, tz_name: str = "UTC") -> bool:
+        """Is the user inside their working window right now?"""
+        window_start, window_end = self._window(now, tz_name)
+        return window_start <= _utc(now) < window_end
+
+    def free_minutes_available_now(
+        self,
+        deadline: datetime,
+        now: datetime,
+        scheduled_tasks: Sequence,
+        tz_name: str = "UTC",
+    ) -> int:
+        """Unscheduled working minutes the user can actually start using NOW.
+
+        Zero outside the working window, in both directions: after it ends there is none left, and
+        before it begins there is none yet. The pre-start case is the one that bit us — the shared
+        helper clamps its start forward to the beginning of the workday, which is right for
+        feasibility and wrong for availability (TIME-308).
+        """
+        if not self.within_working_hours(now, tz_name):
+            return 0
+        return self.free_minutes_before(deadline, now, scheduled_tasks, tz_name)
