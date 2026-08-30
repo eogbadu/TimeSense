@@ -310,3 +310,47 @@ async def test_capture_different_text_not_deduped(client):
         r1 = await client.post("/api/v1/capture", headers=_auth_headers(), json={"raw_input": "buy milk"})
         r2 = await client.post("/api/v1/capture", headers=_auth_headers(), json={"raw_input": "call mom"})
     assert r1.json()["id"] != r2.json()["id"]
+
+
+@pytest.mark.anyio
+async def test_capture_accepts_both_the_new_and_legacy_duration_field():
+    """TIME-305 split the LLM's single `estimated_minutes` into `stated_minutes` (what the user
+    said) and `predicted_minutes` (the model's own guess). A model will not reliably follow a
+    renamed schema, so the old name is still accepted and treated as a stated duration — which is
+    exactly what it always meant."""
+    from app.services.capture_service import CaptureService
+
+    new_style = await CaptureService(
+        _StubGateway({"title": "Call dentist", "stated_minutes": 15, "priority": 3})
+    ).parse("call dentist")
+    legacy = await CaptureService(
+        _StubGateway({"title": "Call dentist", "estimated_minutes": 15, "priority": 3})
+    ).parse("call dentist")
+
+    assert new_style.estimated_minutes == 15
+    assert legacy.estimated_minutes == 15, "the pre-TIME-305 field name must still work"
+
+
+@pytest.mark.anyio
+async def test_a_predicted_duration_is_kept_separate_from_a_stated_one():
+    """The two must never be confused: a stated duration is an instruction and is used verbatim,
+    while a prediction is only a prior for the blend."""
+    from app.services.capture_service import CaptureService
+
+    tc = await CaptureService(
+        _StubGateway({"title": "Complete dissertation abstract",
+                      "stated_minutes": None, "predicted_minutes": 240, "priority": 2})
+    ).parse("complete dissertation abstract")
+
+    assert tc.estimated_minutes is None, "nothing was stated, so nothing is treated as stated"
+    assert tc.predicted_minutes == 240
+
+
+@pytest.mark.anyio
+async def test_an_absurd_prediction_is_clamped_before_it_reaches_the_estimator():
+    from app.services.capture_service import CaptureService
+
+    tc = await CaptureService(
+        _StubGateway({"title": "Do a thing", "predicted_minutes": 999999, "priority": 3})
+    ).parse("do a thing")
+    assert tc.predicted_minutes == 1440
