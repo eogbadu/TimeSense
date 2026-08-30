@@ -19,6 +19,10 @@ from app.services.task_library import (
     resolve_classification,
 )
 from app.services.capture_date_parser import parse_datetime
+from app.services.implicit_deadline import (
+    repair_midnight,
+    resolve as resolve_implicit_deadline,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +58,18 @@ Rules:
   (e.g. "today at 5pm", "tomorrow 2pm", "9:30am Monday"). Convert to absolute UTC.
 - due_at: a deadline/date WITHOUT a specific do-time (e.g. "by Friday", "July 5th", "due tomorrow").
   Convert to absolute UTC. If a specific time is given, prefer scheduled_start and leave due_at null.
+- A deadline that names a DAY or a PERIOD means the END of it, in the user's LOCAL time. Never
+  midnight at the start of a day — that is already past for the whole day it refers to:
+    "today", "by end of day", "EOD"  -> 23:59 local TODAY (the end of the day, NOT the workday)
+    "this morning"                   -> 11:59 local today
+    "this afternoon"                 -> 17:00 local today
+    "this evening", "tonight"        -> 21:00 local today
+    "tomorrow"                       -> 23:59 local tomorrow
+    "this week"                      -> 23:59 local on the coming Sunday
+    "next week"                      -> 23:59 local on the Sunday AFTER that
+    "end of the month"               -> 23:59 local on the last day of this month
+    "by Friday", "July 5th"          -> 23:59 local on that day
+  Convert the local time to UTC afterwards. The user's local date and time are given below.
 - priority: 1=critical, 2=high, 3=normal, 4=low, 5=someday
 - task_type: the closest matching key from VALID TASK TYPES below. Use null rather than forcing a
   bad fit — a wrong type is worse than none, because the assistant learns durations per type.
@@ -125,6 +141,18 @@ class CaptureService:
             title = _clean_title(rb_title) or "New task"
             llm_type, llm_difficulty, predicted = None, None, None
 
+        # An implied deadline has an implied TIME, and the model does not reliably supply it — it
+        # returns midnight, which is already past for the entire day it refers to (TIME-313).
+        # Counting days is also exactly what a language model gets subtly wrong without anyone
+        # noticing, and the phrase set is small and closed, so where the resolver recognises a
+        # phrase its answer wins outright rather than merely filling a gap.
+        implied = resolve_implicit_deadline(raw_input, datetime.now(timezone.utc), user_timezone)
+        if implied is not None and scheduled_start is None:
+            due_at = implied.due_at_utc
+        else:
+            # Nothing recognised — but a midnight deadline is still wrong however it got here.
+            due_at = repair_midnight(due_at, user_timezone)
+
         # An "Idea" is a someday capture — never urgent, never auto-scheduled.
         if (type_hint or "").lower() == "idea":
             priority = 5
@@ -154,9 +182,15 @@ def _build_parse_prompt(raw_input: str, user_timezone: str, type_hint: str | Non
     hint = _HINT_GUIDANCE.get((type_hint or "").lower())
     hint_line = f"\nThe user tagged this as a {type_hint}. {hint}\n" if hint else ""
     fenced = raw_input.replace("<user_input>", "").replace("</user_input>", "")
+    now_utc = datetime.now(timezone.utc)
+    try:
+        local_now = now_utc.astimezone(ZoneInfo(user_timezone))
+    except Exception:
+        local_now = now_utc
     return (
-        f"Today's UTC date and time: {datetime.now(timezone.utc).isoformat()}\n"
+        f"Today's UTC date and time: {now_utc.isoformat()}\n"
         f"User timezone: {user_timezone}\n"
+        f"User's LOCAL date and time: {local_now.strftime('%A %Y-%m-%d %H:%M')}\n"
         f"{hint_line}\n"
         f"{_valid_types_block()}\n\n"
         f"<user_input>\n{fenced}\n</user_input>"

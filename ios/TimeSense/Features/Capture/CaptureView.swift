@@ -393,7 +393,10 @@ struct CaptureView: View {
         var dueAt: Date?
         if selectedChip == "Reminder" || selectedChip == "Schedule" {
             if includeTime { scheduledAt = pickedDate }
-            else { dueAt = Calendar.current.startOfDay(for: pickedDate) }
+            // A date with no time is a deadline for the END of that day, not its start. startOfDay
+            // produced a task due at the instant the day BEGAN, so it was overdue for the whole day
+            // it was meant to be done in — and stale by the next morning (TIME-313).
+            else { dueAt = DueDateLabel.endOfDay(for: pickedDate) }
         }
         await viewModel.submit(
             rawInput: text, typeHint: selectedChip,

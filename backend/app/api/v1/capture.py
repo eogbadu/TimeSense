@@ -193,7 +193,9 @@ async def capture(
             task_create.scheduled_end = slot + timedelta(minutes=task_create.estimated_minutes)
             auto_scheduled = True
 
-    task = await TaskService(db).create_task(user.id, task_create, auto_scheduled=auto_scheduled)
+    task = await TaskService(db).create_task(
+        user.id, task_create, auto_scheduled=auto_scheduled, user_timezone=user_timezone_of(user)
+    )
     await AnalyticsService(db).track(
         "task_captured", user_id=user.id,
         properties={

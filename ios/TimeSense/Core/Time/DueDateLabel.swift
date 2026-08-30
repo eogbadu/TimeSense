@@ -49,6 +49,17 @@ enum DueDateLabel {
         }
     }
 
+    /// The end of the given day — 23:59 local, matching the backend's END_OF_DAY (TIME-313).
+    ///
+    /// A date with no time is a deadline for when the day ENDS. `Calendar.startOfDay` gives the
+    /// opposite, which is how a task captured as "due today" ended up already overdue at the moment
+    /// it was created. The backend repairs a midnight deadline anyway, but the client should not be
+    /// sending one — the user sees the date it set immediately, before any round trip.
+    static func endOfDay(for date: Date, calendar: Calendar = .current) -> Date {
+        calendar.date(bySettingHour: 23, minute: 59, second: 0, of: date)
+            ?? calendar.startOfDay(for: date)
+    }
+
     /// Convenience for callers that only need the string.
     static func text(_ due: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
         render(due, now: now, calendar: calendar).text
