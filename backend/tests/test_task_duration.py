@@ -454,3 +454,130 @@ async def test_a_prediction_seeds_the_estimate_before_any_history_exists(db_sess
     )
     assert minutes == 20
     assert minutes != get_type(task_type).typical_minutes
+
+
+# ── TIME-303: cross-user calibration REPORT (reporting, never learning) ───────────────────
+
+
+async def _consenting_user(db, uid: str, granted: bool = True):
+    from app.models.consent import ConsentRecord
+    from app.services.user_service import UserService
+
+    user, _ = await UserService(db).get_or_create_user(uid, f"{uid}@example.com")
+    db.add(ConsentRecord(user_id=user.id, consent_type="analytics", granted=granted))
+    await db.flush()
+    return user
+
+
+@pytest.mark.anyio
+async def test_calibration_reports_where_the_baseline_is_wrong(db_session):
+    """The point of the report: surface hand-written numbers that reality disagrees with, so a
+    human can correct them deliberately."""
+    from app.repositories.task_duration_repository import DurationCalibrationRepository
+
+    user = await _consenting_user(db_session, "cal-1")
+    est = TaskDurationEstimator(db_session)
+    baseline = get_type("shop_groceries").typical_minutes
+    for _ in range(6):
+        await est.record_actual(user.id, "Buy groceries", baseline * 2, estimated_minutes=baseline)
+    await db_session.flush()
+
+    rows = await DurationCalibrationRepository(db_session).calibration_by_type()
+    row = next(r for r in rows if r["task_type"] == "shop_groceries")
+    assert row["samples"] == 6
+    assert row["ratio_vs_baseline"] == 2.0, "reality took twice as long as the library says"
+    assert row["suggested_baseline"] == baseline * 2
+
+
+@pytest.mark.anyio
+async def test_a_user_who_did_not_consent_is_excluded(db_session):
+    """Every other cross-user aggregate here reads analytics-consent-gated sources.
+    task_duration_observations is written unconditionally, so this filter is explicit rather than
+    inherited — without it the report would aggregate data collected without the consent that
+    covers aggregation."""
+    from app.repositories.task_duration_repository import DurationCalibrationRepository
+
+    user = await _consenting_user(db_session, "cal-no", granted=False)
+    est = TaskDurationEstimator(db_session)
+    for _ in range(8):
+        await est.record_actual(user.id, "Buy groceries", 90, estimated_minutes=45)
+    await db_session.flush()
+
+    assert await DurationCalibrationRepository(db_session).calibration_by_type() == []
+
+
+@pytest.mark.anyio
+async def test_withdrawn_consent_is_respected_not_just_the_first_grant(db_session):
+    """Consent is append-only and latest-wins. A user who granted and later withdrew must be
+    excluded — reading only the first record would silently keep using their data."""
+    from app.models.consent import ConsentRecord
+    from app.repositories.task_duration_repository import DurationCalibrationRepository
+
+    user = await _consenting_user(db_session, "cal-withdrawn", granted=True)
+    est = TaskDurationEstimator(db_session)
+    for _ in range(8):
+        await est.record_actual(user.id, "Buy groceries", 90, estimated_minutes=45)
+    await db_session.flush()
+    assert await DurationCalibrationRepository(db_session).calibration_by_type() != []
+
+    db_session.add(ConsentRecord(user_id=user.id, consent_type="analytics", granted=False))
+    await db_session.flush()
+    assert await DurationCalibrationRepository(db_session).calibration_by_type() == [], (
+        "withdrawn consent must exclude the user"
+    )
+
+
+@pytest.mark.anyio
+async def test_a_thin_bucket_is_suppressed_as_a_k_anonymity_floor(db_session):
+    """A bucket built from one or two people's data should not be reportable, and a couple of
+    observations is not evidence about a baseline either."""
+    from app.repositories.task_duration_repository import (
+        CALIBRATION_MIN_SAMPLES,
+        DurationCalibrationRepository,
+    )
+
+    user = await _consenting_user(db_session, "cal-thin")
+    est = TaskDurationEstimator(db_session)
+    for _ in range(CALIBRATION_MIN_SAMPLES - 1):
+        await est.record_actual(user.id, "Buy groceries", 90, estimated_minutes=45)
+    await db_session.flush()
+
+    assert await DurationCalibrationRepository(db_session).calibration_by_type() == []
+
+
+@pytest.mark.anyio
+async def test_the_report_never_mutates_the_library(db_session):
+    """The invariant this ticket is built around: reporting, not learning. Nothing one user does
+    may change the shared prior."""
+    from app.repositories.task_duration_repository import DurationCalibrationRepository
+    from app.services.task_library import get_type as _get_type
+
+    before = _get_type("shop_groceries").typical_minutes
+    user = await _consenting_user(db_session, "cal-immutable")
+    est = TaskDurationEstimator(db_session)
+    for _ in range(10):
+        await est.record_actual(user.id, "Buy groceries", 300, estimated_minutes=45)
+    await db_session.flush()
+
+    rows = await DurationCalibrationRepository(db_session).calibration_by_type()
+    assert rows, "the report should have something to say"
+    assert _get_type("shop_groceries").typical_minutes == before, (
+        "the library must be unchanged — correcting it is a deliberate human edit"
+    )
+
+
+@pytest.mark.anyio
+async def test_the_catch_all_never_appears_in_the_report(db_session):
+    """record_actual refuses to write an observation for an unclassified task, so the catch-all is
+    structurally absent rather than merely filtered."""
+    from app.repositories.task_duration_repository import DurationCalibrationRepository
+    from app.services.task_library import GENERAL_KEY
+
+    user = await _consenting_user(db_session, "cal-general")
+    est = TaskDurationEstimator(db_session)
+    for _ in range(10):
+        await est.record_actual(user.id, "Zorble the frobnicator", 60, estimated_minutes=30)
+    await db_session.flush()
+
+    rows = await DurationCalibrationRepository(db_session).calibration_by_type()
+    assert all(r["task_type"] != GENERAL_KEY for r in rows)

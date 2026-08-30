@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.consent import ConsentRecord
 from app.models.task_duration import TaskDurationEstimate
 from app.models.task_duration_observation import TaskDurationObservation
 from app.services.task_library import GENERAL_KEY, get_type
@@ -152,3 +153,95 @@ class TaskDurationRepository:
             .limit(limit)
         )
         return list(result.scalars().all())
+
+
+# Minimum observations before a task type appears in the cross-user calibration report. Doubles as
+# a k-anonymity floor: a bucket built from one or two people's data should not be reportable.
+CALIBRATION_MIN_SAMPLES = 5
+
+
+class DurationCalibrationRepository:
+    """Cross-user REPORTING on how well the hand-written baselines match reality.
+
+    Reporting, not learning. `learning_and_adaptation_spec.md` states as an invariant that nothing
+    one user does affects another, and that the baseline library is the only shared prior and is
+    hand-written. This class exists so a human can SEE where those hand-written numbers are wrong
+    and correct them deliberately, with the evidence recorded. Nothing here feeds back into any
+    user's estimates automatically — doing so would make the invariant false (TIME-303).
+
+    Two constraints shape it:
+
+    * **Consent.** Every other cross-user aggregate in this codebase reads analytics-consent-gated
+      sources — `recommendation_events` is gated at write time. `task_duration_observations` is
+      written unconditionally, so this filters to consenting users explicitly rather than inheriting
+      a gate it doesn't have.
+    * **k-anonymity.** A bucket below CALIBRATION_MIN_SAMPLES is suppressed entirely.
+
+    The catch-all is structurally absent: `record_actual` never writes an observation for it.
+    """
+
+    ANALYTICS_CONSENT = "analytics"
+
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
+
+    async def _consenting_user_ids(self) -> set[uuid.UUID]:
+        """Users whose LATEST analytics decision is 'granted'. Consent is append-only and
+        latest-wins, so an earlier grant that was later withdrawn must not count."""
+        rows = (await self.db.execute(
+            select(ConsentRecord)
+            .where(ConsentRecord.consent_type == self.ANALYTICS_CONSENT)
+            .order_by(ConsentRecord.created_at.asc())
+        )).scalars().all()
+        latest: dict[uuid.UUID, bool] = {}
+        for row in rows:
+            latest[row.user_id] = row.granted
+        return {uid for uid, granted in latest.items() if granted}
+
+    async def calibration_by_type(
+        self, min_samples: int = CALIBRATION_MIN_SAMPLES
+    ) -> list[dict]:
+        """Per task type: how long we said, how long it actually took, and the ratio.
+
+        ratio > 1 means we systematically UNDER-estimate that kind of task.
+        Aggregated in Python rather than SQL — this is a report, not a hot path, and it keeps the
+        query portable across Postgres and the SQLite used in tests (mirrors acceptance_stats).
+        """
+        consenting = await self._consenting_user_ids()
+        if not consenting:
+            return []
+
+        rows = (await self.db.execute(
+            select(TaskDurationObservation).where(
+                TaskDurationObservation.user_id.in_(consenting),
+                TaskDurationObservation.estimated_minutes.is_not(None),
+            )
+        )).scalars().all()
+
+        grouped: dict[str, list[TaskDurationObservation]] = {}
+        for row in rows:
+            grouped.setdefault(row.task_type, []).append(row)
+
+        out: list[dict] = []
+        for task_type, observations in grouped.items():
+            if len(observations) < min_samples:
+                continue
+            actual = [o.actual_minutes for o in observations]
+            shown = [o.estimated_minutes for o in observations]
+            mean_actual = sum(actual) / len(actual)
+            mean_shown = sum(shown) / len(shown)
+            baseline = get_type(task_type).typical_minutes
+            out.append({
+                "task_type": task_type,
+                "samples": len(observations),
+                "library_baseline": baseline,
+                "mean_shown": round(mean_shown, 1),
+                "mean_actual": round(mean_actual, 1),
+                # Against what the library says, which is the number a human would edit.
+                "ratio_vs_baseline": round(mean_actual / baseline, 2) if baseline else None,
+                # Against what we actually told the user, which measures the whole pipeline.
+                "ratio_vs_shown": round(mean_actual / mean_shown, 2) if mean_shown else None,
+                "suggested_baseline": int(round(mean_actual)),
+            })
+        out.sort(key=lambda r: abs((r["ratio_vs_baseline"] or 1) - 1), reverse=True)
+        return out
