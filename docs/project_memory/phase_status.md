@@ -1,5 +1,17 @@
 # Phase Status
 
+## Voice capture (TIME-314, TIME-315) — 2026-08-31
+
+- **TIME-314 (Jira TIME-2348) — DONE, merged (PR #354), confirmed working on the user's iPhone.**
+  The mic entered the recording state and heard nothing, silently. Engine rebuilt per session, input
+  format validated, first-buffer watchdog, interruption/route recovery, capped recognizer restarts.
+- **TIME-315 (Jira TIME-2349) — implemented, awaiting visual sign-off.** The waveform was live but
+  read as static. Continuous travelling wave, centre-weighted bars, peak-hold envelope, curved
+  loudness, and a hero glow that tracks your voice.
+
+49 iOS tests pass. Built, installed and launched on the device. What remains is a judgement call on
+how the motion looks, which is the user's.
+
 ## Voice capture repair (TIME-314) — IMPLEMENTED 2026-08-31, awaiting device sign-off
 
 The Capture microphone entered the recording state and then heard nothing, silently. Engine rebuilt

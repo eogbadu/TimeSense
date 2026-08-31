@@ -1,5 +1,22 @@
 # Change Summary
 
+## 2026-08-31 — TIME-315 The recording waveform reacts to your voice (Jira TIME-2349)
+
+**What changed:**
+- `WaveformView` rebuilt on `TimelineView(.animation)`: one continuous travelling wave at display
+  rate, centre-weighted bars, peak-hold envelope, idle motion raised clear of the height floor
+- `rmsLevel` curved so ordinary speech occupies the upper half of the range
+- The hero circle's glow and scale track loudness
+- 2 new tests (49 total)
+
+**What did not change:**
+- TIME-314's capture pipeline is untouched — no change to audio, recognition or the privacy stance
+- No FFT or frequency analysis; this remains an amplitude meter
+- No sound effects, no haptics during recording
+
+**Next:**
+- Visual sign-off is the user's; idle floor, wave speed and circle pulse are independently tunable
+
 ## 2026-08-31 — TIME-314 Voice capture never heard the microphone (Jira TIME-2348)
 
 **What changed:**

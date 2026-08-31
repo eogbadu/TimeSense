@@ -125,11 +125,28 @@ final class VoiceCaptureServiceTests: XCTestCase {
     }
 
     func testSpeechLevelAudioLandsBetweenTheExtremes() {
-        // ~0.02 RMS is a realistic speaking level; the ×18 scale must lift it clear of the floor.
-        let buffer = Self.buffer(filledWith: 0.02)
-        let level = VoiceCaptureService.rmsLevel(buffer)
-        XCTAssertGreaterThan(level, 0.2)
+        // ~0.02 RMS is a realistic speaking level. The whole point of TIME-315's curve is that
+        // ordinary speech lands in the UPPER half of the range, not bunched just above the floor —
+        // under the old linear scale this was 0.36 and the bars barely moved.
+        let level = VoiceCaptureService.rmsLevel(Self.buffer(filledWith: 0.02))
+        XCTAssertGreaterThan(level, 0.5)
         XCTAssertLessThan(level, 1.0)
+    }
+
+    func testQuietSpeechIsStillClearlyVisible() {
+        // A soft voice must not read as silence — that ambiguity is what hid TIME-314 for weeks.
+        let level = VoiceCaptureService.rmsLevel(Self.buffer(filledWith: 0.005))
+        XCTAssertGreaterThan(level, 0.15)
+    }
+
+    func testLevelRisesWithLoudness() {
+        // Monotonic across the range voices actually occupy.
+        let levels = [0.002, 0.005, 0.01, 0.02, 0.03].map {
+            VoiceCaptureService.rmsLevel(Self.buffer(filledWith: Float($0)))
+        }
+        for (quieter, louder) in zip(levels, levels.dropFirst()) {
+            XCTAssertLessThan(quieter, louder)
+        }
     }
 
     func testEmptyBufferReadsZero() {

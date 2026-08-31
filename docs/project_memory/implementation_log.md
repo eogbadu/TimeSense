@@ -1,5 +1,43 @@
 # Implementation Log
 
+## 2026-08-31 — TIME-315 The recording waveform now reacts to your voice (Jira TIME-2349)
+
+Immediately after TIME-314 landed and voice capture was confirmed working on the phone, the waveform
+was technically live but read as static.
+
+### Why it looked dead
+
+Two independent causes, both visible only in the arithmetic:
+
+1. **The idle shimmer was clamped away.** `idle = 0.16 * jitter` with jitter 0.35…1.0 gives 0.056…0.16,
+   i.e. 2.6–7.4pt against a 6pt `minHeight` floor. Silence therefore rendered as motionless dots —
+   **the same ambiguity that hid TIME-314 for weeks**: a live-but-quiet mic looked exactly like a
+   dead one. This is now a first-class requirement, not a cosmetic one.
+2. **Random jitter reads as flicker, not response.** Each bar re-rolled `CGFloat.random(in:)` every
+   0.11s under a 0.11s easeInOut, so the animation never settled and never corresponded to anything
+   the user was doing.
+
+A third, in the level itself: linear `rms * 18` spends most of its range on volumes nobody produces.
+Ordinary speech (~0.02 RMS) only reached 0.36, so the bars barely moved for normal talking.
+
+### Fixed
+
+- `TimelineView(.animation)` drives one continuous travelling wave at display rate, replacing the
+  0.11s timer and the per-bar dice
+- Centre bars weighted above the edges (`centreWeight`), so the row reads as a voice meter
+- Idle motion raised clear of `minHeight` — a live mic in silence visibly breathes
+- Peak-hold envelope (instant attack, eased release) so a single loud syllable survives the ~14/s
+  level publish rate instead of being lost between frames
+- `rmsLevel` curved (`pow(min(1, rms*24), 0.65)`): ordinary speech 0.36 → 0.62, quiet speech 0.09 → 0.25
+- The hero circle's glow radius and scale track loudness, so the whole element responds
+
+### Verification
+
+49 iOS tests pass (2 new: quiet speech stays clearly visible; level rises monotonically across the
+range voices occupy). Device build, install and launch succeeded. **The visual judgement is the
+user's** — numbers like the idle floor and wave speed are tunable and were deliberately left for
+their eye rather than settled from a simulator.
+
 ## 2026-08-31 — TIME-314 Voice capture never heard the microphone (Jira TIME-2348)
 
 Reported from the phone: the Capture mic entered the recording state correctly — button to stop, hero

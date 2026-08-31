@@ -369,6 +369,12 @@ final class VoiceCaptureService: ObservableObject {
     }
 
     /// Normalized loudness (0…1) of a capture buffer, for the waveform.
+    ///
+    /// Speech RMS sits very low — ordinary conversation is around 0.02 — so the raw value is scaled
+    /// and then curved. A linear scale (what this was before TIME-315) spends most of its range on
+    /// volumes nobody produces, leaving normal speech bunched near the floor and barely visible. The
+    /// exponent expands the quiet end where voices actually live and compresses the top, which is
+    /// what makes the bars track speech rather than only shouting.
     nonisolated static func rmsLevel(_ buffer: AVAudioPCMBuffer) -> CGFloat {
         guard let channel = buffer.floatChannelData?[0] else { return 0 }
         let n = Int(buffer.frameLength)
@@ -376,8 +382,8 @@ final class VoiceCaptureService: ObservableObject {
         var sum: Float = 0
         for i in 0..<n { let s = channel[i]; sum += s * s }
         let rms = sqrt(sum / Float(n))
-        // Speech RMS sits low; scale up generously and clamp so bars clearly react.
-        return CGFloat(min(1.0, max(0.0, rms * 18)))
+        let scaled = min(1.0, max(0.0, Double(rms) * 24))
+        return CGFloat(pow(scaled, 0.65))
     }
 
     private func requestPermissions() async -> Bool {
