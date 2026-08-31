@@ -456,7 +456,17 @@ final class ConnectedSignalsViewModel: ObservableObject {
             consents = c.consents
         }
         integrations = try? await APIClient.shared.get("/api/v1/integrations/status")
-        micGranted = AVAudioSession.sharedInstance().recordPermission == .granted
+        micGranted = Self.microphoneGranted()
+    }
+
+    /// `AVAudioSession.recordPermission` is deprecated on iOS 17+; reading it there can disagree with
+    /// what the system actually holds. Mirrors the split VoiceCaptureService already uses to *request*.
+    private static func microphoneGranted() -> Bool {
+        if #available(iOS 17.0, *) {
+            return AVAudioApplication.shared.recordPermission == .granted
+        } else {
+            return AVAudioSession.sharedInstance().recordPermission == .granted
+        }
     }
 }
 

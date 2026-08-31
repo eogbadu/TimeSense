@@ -319,6 +319,23 @@
   doesn't depend on a Subscription row existing, on account age, or on an email string matching.
   Date: 2026-08-28 (TIME-282)
 
+- Decision: The audio engine is rebuilt for every recording session, never reused for the process
+  lifetime
+  Reason: `AVAudioEngine.start()` succeeding is not evidence of a live microphone. A reused engine's
+  `inputNode` can hold a format resolved under an older hardware route; a tap installs on it cleanly,
+  the engine starts, and no buffer ever arrives. This is not hypothetical — since TIME-239 replaced
+  the stock `TabView` with an always-mounted pager, `CaptureView`'s `@StateObject` is built at app
+  launch and never torn down, so that engine now lives for the whole process. A fresh engine is cheap
+  and the session is user-initiated, so there is nothing to trade off.
+  Date: 2026-08-31 (TIME-314)
+
+- Decision: A recording session that hears nothing must fail loudly within ~1.5s
+  Reason: Every failure mode in VoiceCaptureService was previously silent, so a dead microphone was
+  indistinguishable from a user who hadn't started speaking — the reported bug was invisible for
+  weeks. A started engine that has delivered no buffer is a definite fault, and saying so is strictly
+  better than a waveform that will never move.
+  Date: 2026-08-31 (TIME-314)
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

@@ -21,6 +21,7 @@
 		52BDFC5568770624F97DA818 /* TimeSenseWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */; };
 		56A356B25C25BEB8CD534EE2 /* InsightsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F22CD5D75BA658BEA67CA349 /* InsightsViewModel.swift */; };
 		5F913504C123E85B497873BE /* DueDateLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3C124886471F1B1CFDD214 /* DueDateLabelTests.swift */; };
+		7A1D4C0E5B2F86339CDA0114 /* VoiceCaptureServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1D4C0E5B2F86339CDA0115 /* VoiceCaptureServiceTests.swift */; };
 		6CD4FF6DFF50C030900D4212 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B1E8B7D3AE0CA4FC53BB095C /* GoogleSignIn */; };
 		6DE9467AEC6AECB4110CB3C0 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DesignTokens.swift */; };
 		6F341198DDE522BD07556E0F /* LearnedAssumptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */; };
@@ -119,6 +120,7 @@
 		6361C11819E25EA3EF15AD57 /* DueDateLabel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DueDateLabel.swift; path = Time/DueDateLabel.swift; sourceTree = "<group>"; };
 		63E29C3626EF863D669F96BA /* EventEditorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EventEditorView.swift; path = Calendar/EventEditorView.swift; sourceTree = "<group>"; };
 		6B3C124886471F1B1CFDD214 /* DueDateLabelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DueDateLabelTests.swift; path = DueDateLabelTests.swift; sourceTree = "<group>"; };
+		7A1D4C0E5B2F86339CDA0115 /* VoiceCaptureServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = VoiceCaptureServiceTests.swift; path = VoiceCaptureServiceTests.swift; sourceTree = "<group>"; };
 		71DE2E87542D3359F2FEE460 /* PlacesSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlacesSettingsView.swift; sourceTree = "<group>"; };
 		7C87520488C546B3D4CEAC56 /* TaskTimerStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TaskTimerStore.swift; path = Time/TaskTimerStore.swift; sourceTree = "<group>"; };
 		7FAA2C64ED43B5EA57A49D6E /* TimeSense.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = TimeSense.entitlements; sourceTree = "<group>"; };
@@ -445,6 +447,7 @@
 				DCFE3E6508E21E86CFFFAB68 /* TaskTimerTests.swift */,
 				96EAA7D53E61D55370B71BB4 /* AwaitingResolutionTests.swift */,
 				6B3C124886471F1B1CFDD214 /* DueDateLabelTests.swift */,
+				7A1D4C0E5B2F86339CDA0115 /* VoiceCaptureServiceTests.swift */,
 			);
 			name = TimeSenseTests;
 			path = TimeSenseTests;
@@ -604,6 +607,7 @@
 				2AABFDECEACD37F2AC4EABA6 /* TaskTimerTests.swift in Sources */,
 				45EEEC85C9FEFCF9EEB3DE0B /* AwaitingResolutionTests.swift in Sources */,
 				5F913504C123E85B497873BE /* DueDateLabelTests.swift in Sources */,
+				7A1D4C0E5B2F86339CDA0114 /* VoiceCaptureServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
