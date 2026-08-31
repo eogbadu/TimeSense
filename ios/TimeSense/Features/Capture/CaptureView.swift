@@ -186,8 +186,11 @@ struct CaptureView: View {
                 .frame(width: 110, height: 110)
                 .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
                 .shadow(color: Cosmic.violet.opacity(voice.isRecording ? 0.6 : 0.4),
-                        radius: voice.isRecording ? 30 : 22, y: 8)
+                        radius: voice.isRecording ? 30 + voice.level * 16 : 22, y: 8)
                 .shadow(color: Cosmic.blue.opacity(0.4), radius: 16, y: 2)
+                // The glow tracks loudness, so the whole hero responds to your voice (TIME-315).
+                .scaleEffect(voice.isRecording ? 1 + voice.level * 0.045 : 1)
+                .animation(.easeOut(duration: 0.14), value: voice.level)
             if voice.isRecording {
                 WaveformView(level: voice.level, color: .white)
             } else {
@@ -445,40 +448,67 @@ private struct DetectTile: View {
     }
 }
 
-/// An audio-reactive waveform shown while recording. Bar heights scale with the live mic level and
-/// jitter per-bar for a lively look; collapses to a flat line in silence.
+/// An audio-reactive waveform shown while recording.
+///
+/// TIME-315 rebuilt the motion. Two things made the old version read as static: the idle shimmer was
+/// clamped away (at level 0 a bar computed to 2.6–7.4pt against a 6pt floor, so silence rendered as
+/// motionless dots — indistinguishable from the dead microphone of TIME-314), and speech was drawn
+/// with random per-bar jitter re-rolled every 0.11s, which reads as flicker rather than as a
+/// response to a voice.
+///
+/// Now: a continuous travelling wave at display rate, weighted so the centre bars rise higher than
+/// the edges the way a voice meter does, scaled by an envelope that snaps up on a peak and eases
+/// down — so a single loud syllable is actually visible instead of being lost between frames.
 private struct WaveformView: View {
     let level: CGFloat        // 0…1 from VoiceCaptureService
     var color: Color = .white
 
-    private let barCount = 7
-    private let maxHeight: CGFloat = 46
-    private let minHeight: CGFloat = 6
-    @State private var jitter: [CGFloat] = Array(repeating: 0.6, count: 7)
-    private let ticker = Timer.publish(every: 0.11, on: .main, in: .common).autoconnect()
+    private let barCount = 9
+    private let maxHeight: CGFloat = 54
+    private let minHeight: CGFloat = 5
+    private let barWidth: CGFloat = 5
+
+    /// Peak-hold envelope. The raw level arrives ~14×/s and drops to nothing between syllables;
+    /// following it directly would strobe. Fast attack, slow release is what a real meter does.
+    @State private var envelope: CGFloat = 0
 
     var body: some View {
-        HStack(spacing: 5) {
-            ForEach(0..<barCount, id: \.self) { i in
-                Capsule()
-                    .fill(color)
-                    .frame(width: 5, height: barHeight(i))
+        // .animation drives this at the display's refresh rate, so motion is continuous rather than
+        // stepped on a timer — no interpolation to fight, and nothing to keep re-animating.
+        TimelineView(.animation) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            HStack(spacing: 4) {
+                ForEach(0..<barCount, id: \.self) { i in
+                    Capsule()
+                        .fill(color)
+                        .frame(width: barWidth, height: barHeight(i, at: t))
+                }
             }
+            .frame(height: maxHeight)
         }
-        .frame(height: maxHeight)
-        .animation(.easeInOut(duration: 0.11), value: level)
-        .animation(.easeInOut(duration: 0.11), value: jitter)
-        .onReceive(ticker) { _ in
-            jitter = (0..<barCount).map { _ in CGFloat.random(in: 0.35...1.0) }
+        .onChange(of: level) { _, new in
+            // Snap to a peak immediately; ease back down so it stays readable.
+            envelope = new > envelope ? new : envelope * 0.80 + new * 0.20
         }
     }
 
-    private func barHeight(_ i: Int) -> CGFloat {
-        // A gentle idle shimmer so it always looks alive while recording, plus a strong per-bar
-        // reaction to how loudly you're speaking.
-        let idle = 0.16 * jitter[i]
-        let voice = level * (0.45 + 0.55 * jitter[i])
-        let amount = min(1.0, idle + voice)
-        return max(minHeight, maxHeight * amount)
+    private func barHeight(_ i: Int, at t: TimeInterval) -> CGFloat {
+        // One wave travelling across the bars, rather than each bar rolling its own dice.
+        let wobble = (sin(t * 3.4 - Double(i) * 0.62) + 1) / 2   // 0…1
+
+        // Alive even in silence, and deliberately clear of minHeight — a live-but-quiet mic has to
+        // look different from a dead one. This is the ambiguity that hid TIME-314.
+        let idle = 0.12 + 0.10 * CGFloat(wobble)
+
+        let voice = envelope * centreWeight(i) * (0.35 + 0.65 * CGFloat(wobble))
+        return max(minHeight, maxHeight * min(1.0, idle + voice))
+    }
+
+    /// Centre bars carry more of the amplitude than the edges, which is what makes a row of bars
+    /// read as a voice rather than as an equalizer.
+    private func centreWeight(_ i: Int) -> CGFloat {
+        let mid = CGFloat(barCount - 1) / 2
+        let distance = abs(CGFloat(i) - mid) / mid   // 0 at centre → 1 at the edges
+        return 1 - 0.45 * distance * distance
     }
 }

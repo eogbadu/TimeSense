@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-08-31 — The recording waveform reacts to your voice (TIME-315)
+
+### Changed
+- **The waveform now visibly responds while you speak.** It was technically live but read as static:
+  its idle movement was smaller than the minimum bar height so silence rendered as motionless dots,
+  and while speaking each bar moved at random rather than to your voice. It is now one continuous
+  wave travelling across the bars, weighted higher in the middle the way a voice meter is, and it
+  holds a peak long enough to see.
+- **Normal speaking moves it.** Loudness was measured on a scale that spent most of its range on
+  volumes nobody produces, leaving ordinary conversation bunched near the bottom. Quiet and normal
+  speech now register clearly.
+- **A live microphone always looks alive.** Even in silence the waveform breathes, so recording can
+  never again be mistaken for the app doing nothing — the exact ambiguity behind TIME-314.
+- The hero circle's glow now grows with your voice, so the whole element responds rather than just
+  the bars.
+
 ## 2026-08-31 — Voice capture (TIME-314)
 
 ### Fixed

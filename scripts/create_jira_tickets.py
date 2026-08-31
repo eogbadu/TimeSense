@@ -11618,6 +11618,45 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
+    {
+        "summary": "TIME-315: The recording waveform must visibly react to your voice",
+        "labels": ["ios", "capture", "voice", "ux"],
+        "description": doc(
+            h2("Goal"), p("With voice capture working again (TIME-314), the waveform is technically live but reads as static. Two reasons. Its idle shimmer is clamped away — at level 0 a bar computes to 2.6-7.4pt against a 6pt floor, so silence renders as motionless dots and the user cannot tell recording from broken, which is exactly the ambiguity that made TIME-314 invisible for weeks. And while speaking, the bars are driven by random per-bar jitter re-rolled every 0.11s, which reads as noise rather than as a response to the voice. The waveform should make it obvious at a glance that TimeSense is listening and hearing YOU."),
+            divider(), h2("Scope"), bullet_list([
+                "Idle motion sits clear of the minimum height, so a silent-but-live mic visibly breathes",
+                "Bars are driven by a continuous travelling wave rather than random jitter re-rolled on a timer",
+                "Centre bars are weighted above the edges, reading as a voice meter rather than an equalizer",
+                "An envelope follower with fast attack and slow release holds peaks long enough to see",
+                "The loudness curve lifts ordinary speech well clear of the floor instead of compressing it",
+                "The hero circle's glow responds to loudness, so the whole element reacts, not just the bars",
+                "Motion is continuous at display rate rather than stepped on a 0.11s timer",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No change to audio capture, recognition or the privacy stance — TIME-314's pipeline is untouched",
+                "No real frequency analysis or FFT; this is an amplitude meter, not a spectrum",
+                "No sound effects and no haptics during recording",
+                "Nothing gimmicky or sci-fi — it stays a calm assistant, per the premium UX rules",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "ios TimeSense/Features/Capture/CaptureView.swift",
+                "ios TimeSense/Core/Capture/VoiceCaptureService.swift",
+                "ios TimeSenseTests/VoiceCaptureServiceTests.swift",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "A live microphone in silence is visibly moving, and clearly distinguishable from a dead one",
+                "Speaking at a normal volume moves the bars unmistakably, not marginally",
+                "Motion reads as a wave responding to the voice, not as random flicker",
+                "A short loud syllable is visible rather than lost between frames",
+                "The hero circle's glow tracks loudness",
+                "Animation stays smooth with no jank",
+                "The loudness curve is unit-tested at silence, speech and clipping levels",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO\nxcodebuild -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'generic/platform=iOS' -allowProvisioningUpdates build"),
+            divider(), h2("Dependencies"), p("TIME-314 (voice capture actually delivering audio, without which there is no level to react to)."),
+            divider(), h2("Next Ticket"), p("(none)."),
+        ),
+    },
 ]
 
 
