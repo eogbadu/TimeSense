@@ -342,6 +342,41 @@ Hand-written Alembic migrations must include server_default=now() on created_at/
 - Follow-up needed: (1) done; (3) de-risked (live sign-off is the user's, per the runbook). (2)
   (web/Android read-only-block plan parity) is the remaining code follow-up.
 
+## Issue: Voice capture entered the recording state but never heard the microphone
+- Date: 2026-08-31
+- Area: iOS / Capture / voice
+- Symptom: On a physical iPhone the mic button flipped to stop and the hero icon swapped to the
+  waveform, but the bars never moved and no text was ever transcribed. No error, no crash, and the
+  rest of the app stayed fully responsive — the UI sat in a convincing fake recording state forever.
+- Root cause: `AVAudioEngine.start()` returning without throwing was treated as proof of a live
+  microphone. It is not. One process-lifetime `AVAudioEngine` was reused across every session
+  (`teardown()` deactivated the session but never called `reset()`), so `inputNode` could hold a
+  format resolved under an older hardware route. `installTap` accepts such a format, `start()`
+  succeeds, and no buffer ever arrives. `level` and the transcript share exactly one origin — that
+  tap — which is why both died together while the UI stayed responsive.
+- Fix (TIME-314): the engine is rebuilt per session; the input format is validated (non-zero sample
+  rate and channels) and rejected with a typed error; a first-buffer watchdog fails loudly within
+  ~1.5s; interruptions and route changes rebuild the graph preserving committed text; the recognizer
+  restart loop is capped so a permanent failure can't spin forever.
+- Files changed: ios/TimeSense/Core/Capture/VoiceCaptureService.swift,
+  ios/TimeSense/Features/Settings/SettingsScreens.swift,
+  ios/TimeSenseTests/VoiceCaptureServiceTests.swift (new), ios/TimeSense.xcodeproj/project.pbxproj
+- Verification: 47 iOS tests pass (16 new, first tests this feature has ever had); simulator and
+  signed device builds succeed. **On-device behavioural sign-off is still the user's** — the
+  simulator's virtualised audio path cannot reproduce the fault.
+- Follow-up needed: If the orange mic indicator and a "first audio buffer received" log line both
+  appear and there is STILL no text, the audio path is healthy and the remaining suspect is
+  `requiresOnDeviceRecognition = true` with an on-device model unavailable for the current locale
+  (`SFSpeechRecognizer` is deprecated in favour of `SpeechAnalyzer`/`SpeechTranscriber` on recent
+  iOS). Falling back to server-side recognition would send audio to Apple, so it needs a decision,
+  not a silent change.
+
+## Lesson: "BUILD SUCCEEDED" was never verification for voice capture
+Voice capture shipped in TIME-144/145/146 with three "iOS BUILD SUCCEEDED" sign-offs, zero tests, and
+zero entries in this file — and was broken on the user's phone. The same lesson as TIME-298/306. Any
+feature that touches hardware needs either a test over its decision logic or an explicit on-device
+check; a compile is neither.
+
 ## Format
 
 ```

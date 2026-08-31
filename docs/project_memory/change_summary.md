@@ -1,5 +1,28 @@
 # Change Summary
 
+## 2026-08-31 — TIME-314 Voice capture never heard the microphone (Jira TIME-2348)
+
+**What changed:**
+- `VoiceCaptureService` rebuilds its `AVAudioEngine` per session instead of reusing one for the
+  process lifetime, and validates the resolved input format instead of trusting it
+- A first-buffer watchdog turns a silent dead microphone into an actionable alert within ~1.5s
+- Audio-session interruptions and route changes rebuild the graph, preserving committed text
+- The audio-thread tap no longer touches `@MainActor` state; level publishing throttled
+- Recognizer restarts capped by rate so a permanent failure surfaces instead of spinning forever
+- `os.Logger` diagnostics under subsystem `com.timesense`, category `voice`
+- Settings reads mic permission via the iOS 17+ API
+- First unit tests the feature has ever had (16)
+
+**What did not change:**
+- No audio leaves the device; recognition stays on-device where supported
+- No backend, Android or web code touched — voice capture is iOS-only and stays that way
+- The dormant `audio_storage` / `audio_training` consent scaffolding is untouched
+- TIME-146 continuous dictation semantics preserved (pauses still don't wipe text)
+
+**Next:**
+- On-device sign-off by the user: orange mic indicator, moving bars, streaming text, and three
+  start/stop cycles without relaunching
+
 ## 2026-08-30 — TIME-308..313
 
 6 tickets, 6 PRs (#347-352), all merged. Backend suite 852 passing; iOS 31 tests passing; no

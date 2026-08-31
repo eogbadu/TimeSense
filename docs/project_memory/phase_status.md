@@ -1,5 +1,15 @@
 # Phase Status
 
+## Voice capture repair (TIME-314) — IMPLEMENTED 2026-08-31, awaiting device sign-off
+
+The Capture microphone entered the recording state and then heard nothing, silently. Engine rebuilt
+per session, input format validated, first-buffer watchdog, interruption/route-change recovery, and
+a capped recognizer restart loop. 47 iOS tests pass (16 new — the first this feature has ever had).
+
+Outstanding and owned by the user: **the on-device check**. A simulator cannot reproduce this fault,
+so BUILD SUCCEEDED and a green test run are explicitly NOT sign-off. Checklist in
+`context_summary.md` under Current Active Task.
+
 ## Midnight recommendation quality (TIME-308..313) — COMPLETE 2026-08-30
 
 All 6 tickets merged. Everything visible in the 00:03 screenshot is addressed: the free-time figure,

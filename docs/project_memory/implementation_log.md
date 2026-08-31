@@ -1,5 +1,60 @@
 # Implementation Log
 
+## 2026-08-31 — TIME-314 Voice capture never heard the microphone (Jira TIME-2348)
+
+Reported from the phone: the Capture mic entered the recording state correctly — button to stop, hero
+icon to the waveform — and then nothing. No bar movement, no text, no error, and the rest of the app
+fully responsive.
+
+### Diagnosis, and the two theories the symptom killed
+
+`level` and the transcript have exactly ONE shared origin: the tap installed in `startAudio()`. Both
+dead while the engine reported started ⇒ the tap was receiving no buffers. Two plausible causes were
+ruled out by the report itself rather than by reading code:
+
+- **Not a code regression.** `VoiceCaptureService.swift` was byte-identical to TIME-146 (2026-07-08)
+  and the Info.plist usage strings unchanged since TIME-144. A survey flagged TIME-239's hand-rolled
+  tab pager (a `DragGesture` over the mic button) as the likely culprit — but the button *does* fire,
+  so `startAudio()` had already succeeded. Ruled out.
+- **Not the recognizer restart loop.** `:96-100` restarted on *any* error, so a permanent failure
+  would spin the MainActor hot. "Fully responsive" ruled it out. (Capped anyway — see below.)
+
+The waveform reading confirmed the rest: at `level = 0`, `barHeight` is `max(6, 46 * 0.16 * jitter)`
+= 6.0–7.4pt against a 6pt floor, so "dots, no motion" is a precise report of `level == 0`.
+
+### Root cause
+
+`AVAudioEngine.start()` returning without throwing is not evidence of a live microphone. One
+process-lifetime engine was reused across sessions and `teardown()` never called `reset()`, so
+`inputNode` could hold a format resolved under an older hardware route. A tap installs on such a
+format cleanly, `start()` succeeds, and no buffer ever arrives. Since TIME-239 made every tab
+permanently mounted, that engine is now built at app launch and lives for the whole process.
+
+**The defect that mattered most was that all of this was silent.** `startAudio()` had no way to
+report "I started, but I can't hear anything".
+
+### Fixed
+
+- Engine rebuilt per session (see `decision_log.md`); input format validated and rejected with a
+  typed `VoiceCaptureError` instead of trusted
+- First-buffer watchdog: no audio within ~1.5s ⇒ an actionable alert, not a dead waveform
+- Interruptions and route changes rebuild the graph, preserving already-committed text; Bluetooth
+  input permitted so AirPods don't break capture
+- The tap closure no longer reads `@MainActor` state from the real-time audio thread (a genuine data
+  race that compiled only because the target is on Swift 5); level updates throttled from ~43/s to ~14/s
+- Recognizer restarts capped by RATE (4 per 10s), so ordinary pauses never trip it but a permanent
+  failure surfaces instead of spinning; `endAudio()` now called before dropping a request
+- `os.Logger` diagnostics (`com.timesense`/`voice`) at every decision point
+- Settings' mic row reads the iOS 17+ `AVAudioApplication.shared.recordPermission`
+
+### Verification
+
+47 iOS tests pass, 16 new — **the first tests this feature has ever had**, after three tickets signed
+off on "BUILD SUCCEEDED" alone. Simulator and signed device builds succeed. The audio graph needs
+hardware, so the tests cover the decision logic that was missing: an unusable format is rejected, and
+the restart cap distinguishes a pause from a broken recognizer by rate. **On-device behavioural
+sign-off is the user's** — the simulator's virtualised audio path cannot reproduce the fault.
+
 ## 2026-08-30 — TIME-308..313 Midnight-recommendation batch (Jira TIME-2342..2347, PRs #347-352)
 
 Triggered by one screenshot: at 00:03, with a workday that ended at 21:00, the app recommended a task

@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-08-31 — Voice capture (TIME-314)
+
+### Fixed
+- **The Capture mic works again.** Tapping it looked right — the button became stop, the waveform
+  appeared — and then nothing happened: no moving bars, no text, no error, indefinitely. The audio
+  engine was being reused for the whole life of the app, so it could hold on to a stale description
+  of the microphone; it would start successfully and then never receive any sound. The engine is now
+  built fresh for each recording.
+- **A microphone that can't be heard now says so.** Every failure in voice capture used to be
+  silent, which is why this looked like recording and wasn't. If no audio arrives within a moment of
+  starting, TimeSense tells you instead of leaving you talking at a waveform that will never move.
+- **Recording survives interruptions.** A call, Siri, or AirPods connecting mid-sentence used to kill
+  the microphone while the app carried on believing it was recording. Recording now recovers, and
+  keeps what you had already said.
+- **Speech recognition can no longer fail invisibly in a loop.** A recognizer that had genuinely
+  stopped working would restart forever; it now reports the problem and keeps your text.
+- The Settings privacy panel reads microphone permission through the current iOS API, so the "Voice
+  capture" row can't disagree with what the system actually holds.
+
 ## 2026-08-30 — Midnight-recommendation batch (TIME-308..313)
 
 One screenshot at 00:03: a task due a week earlier, recommended as the best thing to do next,

@@ -11575,6 +11575,49 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("TIME-311."),
         ),
     },
+    {
+        "summary": "TIME-314: Voice capture starts but never hears the microphone",
+        "labels": ["ios", "capture", "voice", "bug"],
+        "description": doc(
+            h2("Goal"), p("On a physical iPhone the Capture mic enters the recording state correctly — the button flips to stop and the hero icon swaps to the waveform — but the waveform never moves and no text is ever transcribed. The level and the transcript have exactly one shared origin, the audio tap installed in VoiceCaptureService.startAudio(), so both being dead while the engine reports started means the input tap is receiving no buffers. AVAudioEngine.start() returning without throwing is not evidence of a live input. The deeper defect is that every failure in this file is silent: startAudio() has no way to report 'I started, but I cannot hear anything', so the UI sits in a convincing fake recording state indefinitely. This is not a regression — the file is byte-identical to TIME-146 (2026-07-08) and the Info.plist usage strings are unchanged; it is a latent fault surfacing on device."),
+            divider(), h2("Scope"), bullet_list([
+                "The AVAudioEngine is built fresh per recording session instead of being reused for the whole process lifetime, so a stale cached input format cannot survive between sessions",
+                "The resolved input format is validated (non-zero sample rate and channel count) and rejected with a typed error instead of having a tap installed on it",
+                "A first-buffer watchdog fails loudly within ~1.5s if no audio arrives, replacing the silent fake-recording state with an actionable alert",
+                "Audio session interruptions and route changes are observed and the graph is restarted, preserving already-committed text",
+                "Bluetooth input is permitted so AirPods and CarPlay do not break capture",
+                "The tap closure no longer touches MainActor-isolated state from the real-time audio thread, and level updates are throttled",
+                "The recognition restart loop distinguishes a pause from a fatal error and is capped so it cannot spin forever",
+                "os.Logger diagnostics at each decision point make the on-device console readable",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No Android voice parity — Android capture stays text-only",
+                "No audio upload and no backend speech-to-text; recognition stays on the device",
+                "No change to the on-device-recognition privacy stance without asking first",
+                "No work on the dormant audio_storage / audio_training consent scaffolding",
+                "No migration from SFSpeechRecognizer to SpeechAnalyzer / SpeechTranscriber",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "ios TimeSense/Core/Capture/VoiceCaptureService.swift",
+                "ios TimeSense/Features/Settings/SettingsScreens.swift",
+                "ios TimeSenseTests/VoiceCaptureServiceTests.swift (new)",
+                "ios TimeSense.xcodeproj/project.pbxproj",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "Speaking into the Capture mic on a real iPhone moves the waveform and streams text into the field",
+                "The orange iOS microphone indicator appears while recording",
+                "Recording can be started, stopped and started again twice more without relaunching the app",
+                "Pausing mid-sentence for several seconds preserves earlier text (TIME-146 continuous dictation does not regress)",
+                "When no audio arrives, an actionable alert appears within ~1.5s instead of a dead waveform",
+                "A route change (AirPods connected or removed mid-recording) either survives or fails loudly, never silently",
+                "The Settings 'Voice capture' row reads mic permission through the iOS 17+ API and matches reality",
+                "Unit tests cover transcript joining, RMS level, input-format validation and the restart cap",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO\nxcodebuild -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'generic/platform=iOS' -allowProvisioningUpdates build"),
+            divider(), h2("Dependencies"), p("TIME-146 (continuous dictation + waveform), TIME-307 (the iOS unit test target this ticket's tests live in)."),
+            divider(), h2("Next Ticket"), p("(none)."),
+        ),
+    },
 ]
 
 
