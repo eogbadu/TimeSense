@@ -1,6 +1,8 @@
 # Context Summary
 
-**Last updated:** 2026-08-31 — **TIME-314 (Jira TIME-2348) voice capture never heard the microphone**, from device feedback: the Capture mic entered the recording state but the waveform never moved and no text was transcribed, with no error and the app fully responsive. Root cause: `AVAudioEngine.start()` succeeding was treated as proof of a live microphone. One process-lifetime engine was reused across sessions and `teardown()` never called `reset()`, so `inputNode` could hold a format resolved under an older hardware route — a tap installs on it cleanly, `start()` succeeds, and no buffer ever arrives. Since TIME-239's always-mounted tab pager, that engine is built at app launch and lives for the whole process. The engine is now rebuilt per session, the input format validated, and a first-buffer watchdog fails loudly within ~1.5s. Two survey theories were killed by the symptom itself, not by reading code: the pager's DragGesture over the mic button (the button DOES fire) and the recognizer restart loop (it would freeze the UI; the app was responsive). NOT a regression — the file was byte-identical to TIME-146. 16 first-ever tests for the feature. **Awaiting on-device sign-off.**
+**Last updated:** 2026-09-01 — **TIME-316 (Jira TIME-2350) complete any task in Today, and say how long it took.** User need: an opportunity comes up to do a task that was NOT the recommendation, and they need to mark it done with a duration, simply. KEY FINDING: the experience already existed and was already good (`DurationFeedbackSheet`, plus a server gate that asks only while still learning a type) — it was reachable from ONE screen, because `TodayViewModel.markDone` sent a bare `PATCH status=done`. Mostly a wiring job. Extracted to `Core/Duration/DurationFeedback.swift` as a `DurationPrompting` PROTOCOL, not a shared observable: the tab pager keeps Now and Today both mounted, so one shared `@Published` prompt would have two screens presenting the same sheet. Sheet moved to `Features/Shared/`. Learning half: `tasks.completed_at` (stamped in the REPOSITORY — `POST /recommendations/feedback` writes status=done straight through it, bypassing TaskService), and an off-recommendation completion writes an UNPINNED `RecommendationSwap`, which `_swap_signals` learns from for free because it reads swap ROWS not the endpoint. Three things that had to be right: (a) `pin=False` is load-bearing — `active_pin` takes the newest row, so a pinned completion swap would shadow a genuine explicit pin AND try to recommend a finished task; (b) `OUTCOME_SUPERSEDED` (in neither positive nor negative set) makes a recommendation teach AT MOST ONCE, or a burst of five completions pairs all five against it; (c) completion-origin signals weigh 0.5, because these signals only TIGHTEN and "may relax, never tighten" applies. The displaced recommendation is NEVER marked disagree — the user rejected nothing and may still do it. Found on the way: `.astimezone()` on a DB timestamp assumes the SERVER zone when the value is naive (see known_issues.md). **Awaiting on-device sign-off.**
+
+**Previously:** 2026-08-31 — **TIME-314 (Jira TIME-2348) voice capture never heard the microphone**, from device feedback: the Capture mic entered the recording state but the waveform never moved and no text was transcribed, with no error and the app fully responsive. Root cause: `AVAudioEngine.start()` succeeding was treated as proof of a live microphone. One process-lifetime engine was reused across sessions and `teardown()` never called `reset()`, so `inputNode` could hold a format resolved under an older hardware route — a tap installs on it cleanly, `start()` succeeds, and no buffer ever arrives. Since TIME-239's always-mounted tab pager, that engine is built at app launch and lives for the whole process. The engine is now rebuilt per session, the input format validated, and a first-buffer watchdog fails loudly within ~1.5s. Two survey theories were killed by the symptom itself, not by reading code: the pager's DragGesture over the mic button (the button DOES fire) and the recognizer restart loop (it would freeze the UI; the app was responsive). NOT a regression — the file was byte-identical to TIME-146. 16 first-ever tests for the feature. **Awaiting on-device sign-off.**
 
 **Previously:** 2026-08-28 — RECOMMENDATION QUALITY BATCH (TIME-282..297, Jira TIME-2316..2331, PRs #320-336) **COMPLETE, all merged**.
 
@@ -187,6 +189,8 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- **TIME-316 → Jira TIME-2350** (complete any task in Today + duration + silent off-recommendation learning; 2026-09-01). Depends on TIME-286/287/294/296/298.
+- **TIME-315 → Jira TIME-2349** (waveform reacts to your voice; 2026-08-31) — PR #355, still OPEN.
 - **TIME-314 → Jira TIME-2348** (voice capture never heard the microphone; device feedback 2026-08-31). NOTE: the Jira key was read from the creation output, not inferred.
 - **MIDNIGHT-RECOMMENDATION BATCH (device feedback 2026-08-30)** logical TIME-308..313 → Jira **TIME-2342..2347** (308=2342 free-minutes-before-workday, 309=2343 passed-deadline resolution, 310=2344 overdue deadline label, 311=2345 re-estimate legacy tasks, 312=2346 coding-practice types, 313=2347 implicit deadlines). PRs #347-352, all merged. Origin: ONE screenshot at 00:03 — a task due a week earlier recommended as best-next, explained with "780 minutes free before your workday ends", deadline rendered as a bare "before 8:00 PM". FIVE defects behind one card, plus TIME-313 raised by the user mid-session. Key findings: (a) `free_minutes_before` is NOT buggy — it has two callers asking different questions and 780 is CORRECT for feasibility; narrowing it would have broken the warning, so availability was split off (`free_minutes_available_now`, `within_working_hours`) and 780 is now pinned as correct; (b) `deadline_urgency` returns 1.0 for overdue FOREVER with no decay — stale tasks are now demoted (not hidden) once they survive into the next LOCAL day, reusing the TIME-271 disagree-demotion set; (c) implied deadlines had no implied TIME anywhere in the pipeline, so "due today" was stored as 00:00 today — already past at capture; (d) the iOS picker independently produced the same midnight value via `Calendar.startOfDay`, so the repair lives on the task WRITE path, covering every client.
 - **RECOMMENDATION QUALITY BATCH (device feedback 2026-08-28)** logical TIME-282..297 → Jira **TIME-2316..2331** (in order: 282=2316 entitlement override, 283=2317 timezone, 284=2318 task library, 285=2319 classification, 286=2320 duration learning, 287=2321 iOS duration UX, 288=2322 EnergyService, 289=2323 energy check-in, 290=2324 required-energy from difficulty, 291=2325 location repair, 292=2326 UserAdaptationProfile, 293=2327 activate inert scoring weight, 294=2328 swap backend, 295=2329 swap iOS, 296=2330 swap learning, 297=2331 spec/close-out). Use the Jira keys with move_ticket.py. Origin: 10 items of on-device feedback. Root causes established up front — everything ≈23 min (learning keyed on the 'general' catch-all + 3-button prompt → EWMA 15→20→23); timezone never re-synced (iOS `.task{}` fires once, no scenePhase/NSSystemTimeZoneDidChange observer) on top of UTC day boundaries; own account gated (no client creates a Subscription row → is_premium == created_at+14d, and PREMIUM_TEST_EMAILS missing from render.yaml); location dead (6 stacked breaks); energy backwards (scorer uses sleep-only/hard-coded 'medium', display uses activity where busy ⇒ 'high'). STRUCTURAL FINDING driving the batch: context_fit/routine_fit/user_preference_fit/location_fit are hard-coded identical for every task candidate — **38% of the scoring weight was inert** (context_fit 0.15 + location_fit 0.10 + routine_fit 0.08 + user_preference_fit 0.05), so only urgency/importance/time_fit/energy_fit could differentiate. NOTE: the initial survey reported this as 58%, which inverted the split — the verified figure is 38% inert / 62% varying, now pinned by a test against WEIGHTS in test_score_differentiation.py.
@@ -341,20 +345,30 @@ Full history of TIME-034 through TIME-052 + net-new TIME-059/060/061 is in `impl
 and `change_summary.md`.
 
 ## Current Active Task
-**TIME-314 (Jira TIME-2348)** — voice capture fix, implemented and tested, awaiting on-device
-sign-off. TIME-308..313 are merged and also still need **rebuilding onto the physical device**.
+**TIME-316 (Jira TIME-2350)** — implemented and tested, awaiting on-device sign-off. Branch
+`feature/TIME-316-complete-any-task-with-duration`.
 
-TIME-314 on-device checklist (the simulator's virtualised audio path CANNOT reproduce the fault, so
-a green test run is not sign-off here). With Console.app filtered to subsystem `com.timesense`:
-1. Tap the mic — the **orange iOS microphone indicator** must appear, and the log must show a
-   non-zero input format plus "first audio buffer received"
-2. Speak — bars must rise clear of the 6pt floor and text must stream in
-3. Pause ~3s mid-sentence — earlier text must survive (TIME-146 must not regress)
-4. Stop and restart **twice more without relaunching** — the direct test of the per-session engine
-5. AirPods connected, then disconnected mid-recording — must survive or fail loudly, never silently
-6. If the orange dot AND a first-buffer line appear but there is still no text, the audio path is
-   fine and the suspect is `requiresOnDeviceRecognition` with no on-device model for the locale.
-   Falling back to Apple's servers sends audio off-device — that needs a decision, not a silent change.
+**TIME-314 is DONE** (PR #354, confirmed working on the user's iPhone). **TIME-315 (waveform, PR
+#355) is still OPEN.** TIME-316 branched from main without it, and both append a ticket block to
+`scripts/create_jira_tickets.py` — expect a trivial conflict there on the second merge, resolved by
+keeping both blocks.
+
+TIME-316 on-device checklist:
+1. Swipe Done on a Today task whose type is still being learned → the sheet appears, pre-filled
+2. Swipe Done on a well-learned type (5+ observations) → one tap, no sheet
+3. Start a timer on Now, then complete that task by swiping on Today → the timed figure pre-fills
+   AND the timer stops (it used to keep running)
+4. Tap the circle on an already-done row → nothing happens
+5. Complete a task other than the recommended one, then confirm Now does NOT start recommending the
+   task you just finished (the unpinned-swap guarantee)
+
+Device tooling that works here (learned 2026-08-31):
+- `xcodebuild ... -destination 'id=00008110-0014703A0C7A401E'` — the HARDWARE UDID from
+  `xcodebuild -showdestinations`, NOT the `devicectl list devices` coredevice identifier
+- `xcrun devicectl device install app --device <udid> <path>/TimeSense.app`, then `process launch`
+- **The phone must be UNLOCKED**: a locked phone aborts install mid-transfer and refuses launch
+- `log stream --device*` is gone from this macOS; device os_log means Console.app
+
 
 On-device passes a simulator cannot cover, still outstanding:
 - the geofence / location permission flow (TIME-291)

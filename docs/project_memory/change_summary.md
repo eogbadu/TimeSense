@@ -1,5 +1,31 @@
 # Change Summary
 
+## 2026-09-01 — TIME-316 Complete any task in Today, and say how long it took (Jira TIME-2350)
+
+**What changed:**
+- Today's Done now runs the same completion flow as Now: asks how long (only while still learning
+  that type), keeps a timed figure, and stops the timer
+- The duration flow and its sheet extracted to `Core/Duration/` + `Features/Shared/` — one copy, two
+  screens, via a protocol rather than a shared observable (both tabs stay mounted)
+- `tasks.completed_at`, stamped on the pending→done edge in the REPOSITORY (the recommendations
+  feedback route bypasses TaskService)
+- Off-recommendation completions recorded silently as unpinned swaps, learned by the existing
+  `_swap_signals` with no new learning code
+- `outcome="done"` finally reachable; `OUTCOME_SUPERSEDED` makes each recommendation teach at most once
+- Completion-origin signals weigh half of explicit ones
+- 22 new backend tests, 9 new iOS tests
+
+**What did not change:**
+- No extra tap and no "why did you do that instead?" — the learning is entirely silent
+- No mood capture; it exists nowhere in the product and is its own decision
+- No Android or web parity; no retroactive duration entry for already-done tasks
+- The displaced recommendation is never marked rejected, and no RecommendationFeedback is fabricated
+- No backfill of completed_at
+
+**Next:**
+- On-device: swipe Done on a Today task and confirm the sheet appears (still-learning type) or does
+  not (well-learned type), and that a Now-started timer stops when completing from Today
+
 ## 2026-08-31 — TIME-314 Voice capture never heard the microphone (Jira TIME-2348)
 
 **What changed:**

@@ -36,6 +36,21 @@ struct TodayView: View {
                 Task { await calendar.syncIfAuthorized() }
             }
         }
+        // Raised after completing a task, while the assistant is still learning that type. Attached
+        // out here because `scheduleDraft`'s sheet is already on the inner Group — two .sheet
+        // modifiers on one view node and only one of them ever presents.
+        .sheet(item: $viewModel.durationPrompt) { prompt in
+            DurationFeedbackSheet(
+                prompt: prompt,
+                onSubmit: { minutes, correctedType in
+                    Task {
+                        await viewModel.submitDuration(taskId: prompt.id, minutes: minutes,
+                                                       taskType: correctedType)
+                    }
+                },
+                onSkip: { viewModel.durationPrompt = nil }
+            )
+        }
         // A tapped "block time" offer routes here → open the scheduler pre-filled for that task.
         .onChange(of: router.route) { _, route in
             if case let .scheduleTask(taskId, title) = route {
@@ -73,7 +88,7 @@ struct TodayView: View {
                 } else {
                     SmartPlanCard(
                         entries: entries,
-                        onToggle: { id in Task { await viewModel.markDone(taskId: id) } },
+                        onToggle: { task in Task { await viewModel.markDone(task: task) } },
                         onDelete: { id in Task { await viewModel.deleteTask(taskId: id) } },
                         onSchedule: { task in
                             Task {
@@ -213,7 +228,7 @@ private struct AIRecommendedCard: View {
 
 private struct SmartPlanCard: View {
     let entries: [TimelineEntry]
-    let onToggle: (String) -> Void
+    let onToggle: (TimelineTask) -> Void
     let onDelete: (String) -> Void
     let onSchedule: (TimelineTask) -> Void
 
@@ -269,10 +284,10 @@ private struct SmartPlanCard: View {
                     ForEach(group.entries) { entry in
                         if let task = entry.task {
                             SwipeableRow(
-                                onDone: task.status == "done" ? nil : { onToggle(task.id) },
+                                onDone: task.status == "done" ? nil : { onToggle(task) },
                                 onDelete: { onDelete(task.id) }
                             ) {
-                                SmartPlanRow(task: task, onToggle: { onToggle(task.id) })
+                                SmartPlanRow(task: task, onToggle: { onToggle(task) })
                                     .contextMenu {
                                         Button { onSchedule(task) } label: {
                                             Label("Find a time & add to calendar", systemImage: "calendar.badge.plus")
@@ -418,6 +433,8 @@ private struct SmartPlanRow: View {
                 }
             }
             .buttonStyle(.plain)
+            // Nothing left to complete, and re-completing would re-ask how long it took (TIME-316).
+            .disabled(done)
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
                     .font(DesignTokens.Typography.callout.weight(.semibold))

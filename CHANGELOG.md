@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-09-01 — Finish any task, and say how long it took (TIME-316)
+
+### Added
+- **Any task in today's plan can now be completed properly, not just the recommended one.** Swipe
+  Done on anything and TimeSense asks how long it took — but only while it is still learning that
+  kind of task, so most completions stay a single tap and the question fades away on its own. This
+  matters for the case it used to miss entirely: the task you get an unexpected chance to do is
+  precisely the one it did not pick.
+- **It quietly notices when you choose differently.** Finishing something while it was recommending
+  something else now teaches it your preference, with no extra tap and no "why did you do that
+  instead?". A silent signal deliberately counts for less than telling it outright, and a burst of
+  catching-up can never be mistaken for a preference.
+
+### Fixed
+- Completing or deleting a timed task from Today left the timer running; it now stops, and the
+  timed figure is offered as the duration.
+- An already-completed row in Today could be tapped again, which would have re-asked how long it
+  took.
+- Completing a task you had pinned as "do this instead" left the pin overriding recommendations for
+  up to three hours afterwards.
+- Tasks now record when they were actually finished, rather than inferring it from the last time
+  the row was edited.
+
 ## 2026-08-31 — Voice capture (TIME-314)
 
 ### Fixed

@@ -21,11 +21,8 @@ from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.learned_preferences_service import LearnedPreferencesService
 from app.services.recommendation_service import RecommendationService
-from app.core.localtime import resolve_zone
 from app.repositories.recommendation_swap_repository import RecommendationSwapRepository
-from app.repositories.user_location_repository import UserLocationRepository
-from app.services.energy_service import EnergyService
-from app.services.task_library import get_type
+from app.services.recommendation.swap_context import ORIGIN_EXPLICIT, build_swap_context
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -232,20 +229,11 @@ async def submit_swap(
             body.recommendation_event_id, user.id, outcome="disagree", feedback_id=fb.id
         )
 
-    # The pairing only means something in context — "chose an errand over deep work" reads
-    # differently at 9am on good sleep than at 8pm when depleted, and the surrounding state cannot
-    # be reconstructed after the fact.
-    energy = await EnergyService(db).estimate(user.id, now=now, user_timezone=tz)
-    location = await UserLocationRepository(db).get_current(user.id, now)
-    snapshot = {
-        "local_hour": now.astimezone(resolve_zone(tz)).hour,
-        "energy": energy.level,
-        "location_category": (location.place_name if location else None),
-        "rejected_task_type": rejected.task_type,
-        "rejected_category": get_type(rejected.task_type).category if rejected.task_type else None,
-        "chosen_task_type": chosen.task_type,
-        "chosen_category": get_type(chosen.task_type).category if chosen.task_type else None,
-    }
+    # Shared with the silent completion path (TIME-316) so the two can never drift apart on the
+    # exact keys `_swap_signals` reads.
+    snapshot = await build_swap_context(
+        db, user, rejected, chosen, now, tz, origin=ORIGIN_EXPLICIT
+    )
 
     swap = await RecommendationSwapRepository(db).create(
         user_id=user.id,
