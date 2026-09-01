@@ -424,6 +424,26 @@ check; a compile is neither.
 - Verification: `cd backend && pytest tests/test_insights_series.py -q` on any Mon/Tue.
 - Follow-up needed: yes — worth its own ticket; it will red the suite two days in seven.
 
+## Issue: `tests/test_behavioral_patterns.py` hangs, so the full backend suite cannot complete
+- Date: 2026-09-01 (observed; pre-existing)
+- Area: backend / tests
+- Symptom: `cd backend && pytest` never finishes. Bisected to `tests/test_behavioral_patterns.py`,
+  which hangs indefinitely (>9 minutes, killed). Everything else runs in seconds.
+- Confirmed pre-existing: **reproduced on `main` (38b534f) in a clean git worktree**, with no
+  TIME-316 changes present. Not caused by the `tasks.completed_at` column or anything else added
+  there — the file builds its own in-memory SQLite engine and touches no task/swap/impression code.
+- Consequence: "the full suite passes" cannot currently be claimed by anyone. Until it is fixed,
+  verify with a selection, e.g.
+  `pytest tests/ -k "not behavioral"`, and note that several other modules
+  (`test_calendar_providers_http`, `test_email_fetch`, `test_llm_gateway`, `test_maps_provider`)
+  are network-shaped and slow.
+- Note: `pytest-timeout` is NOT installed, so a hanging test cannot self-abort. Installing it and
+  setting a default per-test timeout would turn this class of failure from "suite hangs forever"
+  into a named failing test.
+- Files changed: none
+- Verification: `cd backend && pytest tests/test_behavioral_patterns.py -q` (hangs on any branch)
+- Follow-up needed: yes — own ticket. Worth pairing with adding `pytest-timeout`.
+
 ## Format
 
 ```
