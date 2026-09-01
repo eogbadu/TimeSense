@@ -26,6 +26,14 @@ struct DurationFeedbackSheet: View {
 
     private static let presets = [5, 10, 15, 30, 45, 60, 90, 120]
 
+    /// The type this observation will be filed under — the user's correction if they made one.
+    private var effectiveType: String {
+        correctedType ?? prompt.taskType ?? DurationPrompt.unclassifiedType
+    }
+
+    /// Nothing would be learned from saving against the catch-all type.
+    private var isUnclassified: Bool { effectiveType == DurationPrompt.unclassifiedType }
+
     init(prompt: DurationPrompt, onSubmit: @escaping (Int, String?) -> Void,
          onSkip: @escaping () -> Void) {
         self.prompt = prompt
@@ -99,21 +107,23 @@ struct DurationFeedbackSheet: View {
 
                     // A wrong type teaches the wrong bucket, so make it correctable here rather
                     // than hiding the assistant's guess (TIME-285/286).
-                    if let detected = prompt.taskType {
+                    if prompt.taskType != nil {
                         Button {
                             showTypePicker = true
                         } label: {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Counted as")
+                                    Text(isUnclassified ? "What kind of task was it?" : "Counted as")
                                         .font(DesignTokens.Typography.footnote)
                                         .foregroundColor(DesignTokens.Color.textSecondary)
-                                    Text(friendlyType(correctedType ?? detected))
+                                    Text(isUnclassified ? "Pick one" : friendlyType(effectiveType))
                                         .font(DesignTokens.Typography.callout)
-                                        .foregroundColor(DesignTokens.Color.textPrimary)
+                                        .foregroundColor(isUnclassified
+                                                         ? DesignTokens.Color.accent
+                                                         : DesignTokens.Color.textPrimary)
                                 }
                                 Spacer()
-                                Text("Change")
+                                Text(isUnclassified ? "Choose" : "Change")
                                     .font(DesignTokens.Typography.footnote)
                                     .foregroundColor(DesignTokens.Color.accent)
                             }
@@ -123,7 +133,13 @@ struct DurationFeedbackSheet: View {
                         .buttonStyle(.plain)
                     }
 
-                    Text("This is how TimeSense learns your pace for this kind of task.")
+                    // The server DISCARDS an observation recorded against the catch-all type, so
+                    // saving one here would look like it worked and teach nothing. Say why instead
+                    // of failing silently. This only ever shows on a manual entry — the server
+                    // never prompts for an unclassified task in the first place.
+                    Text(isUnclassified
+                         ? "TimeSense couldn't tell what kind of task this is. Pick one and it'll learn your pace for that kind."
+                         : "This is how TimeSense learns your pace for this kind of task.")
                         .font(DesignTokens.Typography.footnote)
                         .foregroundColor(DesignTokens.Color.textSecondary)
                 }
@@ -139,6 +155,7 @@ struct DurationFeedbackSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { onSubmit(minutes, correctedType); dismiss() }
                         .fontWeight(.semibold)
+                        .disabled(isUnclassified)
                 }
             }
             .sheet(isPresented: $showTypePicker) {

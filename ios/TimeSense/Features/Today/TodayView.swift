@@ -90,6 +90,14 @@ struct TodayView: View {
                         entries: entries,
                         onToggle: { task in Task { await viewModel.markDone(task: task) } },
                         onDelete: { id in Task { await viewModel.deleteTask(taskId: id) } },
+                        onRecordDuration: { task in
+                            Task {
+                                await viewModel.promptDurationManually(
+                                    taskId: task.id, title: task.title,
+                                    estimatedMinutes: task.estimatedMinutes
+                                )
+                            }
+                        },
                         onSchedule: { task in
                             Task {
                                 guard await calendar.ensureWriteAccess() else { return }
@@ -230,6 +238,7 @@ private struct SmartPlanCard: View {
     let entries: [TimelineEntry]
     let onToggle: (TimelineTask) -> Void
     let onDelete: (String) -> Void
+    let onRecordDuration: (TimelineTask) -> Void
     let onSchedule: (TimelineTask) -> Void
 
     private var groups: [(name: String, entries: [TimelineEntry])] {
@@ -283,14 +292,26 @@ private struct SmartPlanCard: View {
                 VStack(spacing: DesignTokens.Spacing.md) {
                     ForEach(group.entries) { entry in
                         if let task = entry.task {
+                            let done = task.status == "done"
                             SwipeableRow(
-                                onDone: task.status == "done" ? nil : { onToggle(task) },
+                                leading: done
+                                    ? .init(title: "How long?", icon: "stopwatch",
+                                            color: DesignTokens.Color.accent,
+                                            perform: { onRecordDuration(task) })
+                                    : .init(title: "Done", icon: "checkmark", color: .green,
+                                            perform: { onToggle(task) }),
                                 onDelete: { onDelete(task.id) }
                             ) {
                                 SmartPlanRow(task: task, onToggle: { onToggle(task) })
                                     .contextMenu {
-                                        Button { onSchedule(task) } label: {
-                                            Label("Find a time & add to calendar", systemImage: "calendar.badge.plus")
+                                        if done {
+                                            Button { onRecordDuration(task) } label: {
+                                                Label("How long did that take?", systemImage: "stopwatch")
+                                            }
+                                        } else {
+                                            Button { onSchedule(task) } label: {
+                                                Label("Find a time & add to calendar", systemImage: "calendar.badge.plus")
+                                            }
                                         }
                                     }
                             }
@@ -354,7 +375,16 @@ private struct CalendarBlockRow: View {
 /// Swipe left to reveal Done + Delete buttons (Mail-style). Used because the Smart Plan is a custom
 /// card, not a List (so `.swipeActions` isn't available).
 private struct SwipeableRow<Content: View>: View {
-    let onDone: (() -> Void)?
+    /// The slot before Delete. It is "Done" on an open task and "How long?" on a finished one —
+    /// the swipe keeps its shape, and the finished row stops offering an action it has already had.
+    struct LeadingAction {
+        let title: String
+        let icon: String
+        let color: Color
+        let perform: () -> Void
+    }
+
+    let leading: LeadingAction?
     let onDelete: () -> Void
     @ViewBuilder var content: () -> Content
 
@@ -363,13 +393,13 @@ private struct SwipeableRow<Content: View>: View {
     @State private var isDragging = false
 
     private let buttonWidth: CGFloat = 78
-    private var revealWidth: CGFloat { buttonWidth * (onDone == nil ? 1 : 2) }
+    private var revealWidth: CGFloat { buttonWidth * (leading == nil ? 1 : 2) }
 
     var body: some View {
         ZStack(alignment: .trailing) {
             HStack(spacing: 0) {
-                if let onDone {
-                    actionButton("Done", "checkmark", .green) { close(); onDone() }
+                if let leading {
+                    actionButton(leading.title, leading.icon, leading.color) { close(); leading.perform() }
                 }
                 actionButton("Delete", "trash", DesignTokens.Color.destructive) { close(); onDelete() }
             }

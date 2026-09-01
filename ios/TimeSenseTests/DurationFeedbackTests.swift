@@ -93,4 +93,70 @@ final class DurationFeedbackTests: XCTestCase {
                                     taskType: nil, measuredMinutes: nil)
         XCTAssertEqual(openingValue(for: prompt), 25)
     }
+
+    // MARK: - Answering when the assistant didn't ask
+    //
+    // On-device testing found the case these cover: the server's gate deliberately goes quiet once
+    // a type is learned, and never speaks at all for a task it couldn't classify. That is correct
+    // for whether to ASK, but it left a plan full of finished tasks and no way to say how long any
+    // of them took. The gate now owns the question, not the answer.
+
+    func testAManualPromptIsMarkedAsSuch() {
+        let prompt = DurationPrompt(id: "t1", title: "Test task", estimatedMinutes: 20,
+                                    taskType: "chore_clean", measuredMinutes: nil, isManual: true)
+        XCTAssertTrue(prompt.isManual)
+    }
+
+    func testAPromptedSheetIsNotManualByDefault() {
+        // The one-tap path must keep its shape: nothing about it changed.
+        let prompt = DurationPrompt(id: "t1", title: "Write the report", estimatedMinutes: 30,
+                                    taskType: "deep_work", measuredMinutes: 47)
+        XCTAssertFalse(prompt.isManual)
+    }
+
+    func testAManualEntryOpensOnTheEstimateLikeAnyOther() {
+        // A finished task has no running timer, so the estimate is the best figure available.
+        let prompt = DurationPrompt(id: "t1", title: "Clean the kitchen", estimatedMinutes: 20,
+                                    taskType: "chore_clean", measuredMinutes: nil, isManual: true)
+        XCTAssertEqual(openingValue(for: prompt), 20)
+    }
+
+    // MARK: - Not saving something the server will throw away
+    //
+    // `TaskDurationRepository.record_actual` returns early for the catch-all type: an unclassified
+    // observation teaches nothing transferable. Saving one would look like it worked and change
+    // nothing, which is worse than asking one question.
+
+    func testAnUnclassifiedTaskCannotBeSavedUntilATypeIsPicked() {
+        let prompt = DurationPrompt(id: "t1", title: "Test task", estimatedMinutes: nil,
+                                    taskType: DurationPrompt.unclassifiedType,
+                                    measuredMinutes: nil, isManual: true)
+        XCTAssertTrue(isUnclassified(prompt, corrected: nil))
+    }
+
+    func testPickingATypeUnblocksTheSave() {
+        let prompt = DurationPrompt(id: "t1", title: "Test task", estimatedMinutes: nil,
+                                    taskType: DurationPrompt.unclassifiedType,
+                                    measuredMinutes: nil, isManual: true)
+        XCTAssertFalse(isUnclassified(prompt, corrected: "chore_clean"))
+    }
+
+    func testAClassifiedTaskIsSaveableWithNoExtraStep() {
+        let prompt = DurationPrompt(id: "t1", title: "Clean the kitchen", estimatedMinutes: 20,
+                                    taskType: "chore_clean", measuredMinutes: nil, isManual: true)
+        XCTAssertFalse(isUnclassified(prompt, corrected: nil))
+    }
+
+    func testAMissingTypeIsTreatedAsUnclassifiedRatherThanSaveable() {
+        // taskType is optional on the wire; absent must not read as "fine to save".
+        let prompt = DurationPrompt(id: "t1", title: "Something new", estimatedMinutes: nil,
+                                    taskType: nil, measuredMinutes: nil, isManual: true)
+        XCTAssertTrue(isUnclassified(prompt, corrected: nil))
+    }
+
+    /// Mirrors `DurationFeedbackSheet.isUnclassified`, which gates the Save button.
+    private func isUnclassified(_ prompt: DurationPrompt, corrected: String?) -> Bool {
+        (corrected ?? prompt.taskType ?? DurationPrompt.unclassifiedType)
+            == DurationPrompt.unclassifiedType
+    }
 }

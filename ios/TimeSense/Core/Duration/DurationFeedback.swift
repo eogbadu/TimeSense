@@ -14,6 +14,15 @@ struct DurationPrompt: Identifiable, Equatable {
     /// Minutes measured by the in-app timer, when the user used it. Pre-fills the sheet with a real
     /// figure rather than a guess.
     let measuredMinutes: Int?
+    /// True when the user asked for this sheet rather than being asked. The server declined to
+    /// prompt, so the sheet has to explain itself a little differently — and, crucially, must not
+    /// let an unclassified task be saved against a type that teaches nothing.
+    var isManual: Bool = false
+
+    /// The server's catch-all type. An observation recorded against it is silently DISCARDED
+    /// (`TaskDurationRepository.record_actual` returns early), so the sheet has to ask for a real
+    /// type before a manual entry is worth saving.
+    static let unclassifiedType = "general"
 }
 
 /// Guard against a timer left running overnight, or one stopped a few seconds after starting —
@@ -91,6 +100,28 @@ extension DurationPrompting {
         durationPrompt = DurationPrompt(
             id: taskId, title: title, estimatedMinutes: estimatedMinutes,
             taskType: resp.task_type, measuredMinutes: measured
+        )
+    }
+
+    /// Open the duration sheet because the USER asked to, not because the server did.
+    ///
+    /// `should_ask` deliberately goes quiet once a type is well learned, and never speaks at all for
+    /// a task it could not classify — that gate is what keeps the question from becoming a tax on
+    /// finishing things. But it also means a user who WANTS to record a real figure has nowhere to
+    /// put it, which is what on-device testing of TIME-316 found: a plan full of completed tasks and
+    /// no way to say how long any of them took.
+    ///
+    /// So the gate still owns whether we ASK; it does not own whether the user may ANSWER. The same
+    /// endpoint is called purely for its resolved `task_type`, and `ask` is ignored.
+    func promptDurationManually(taskId: String, title: String, estimatedMinutes: Int?) async {
+        let resp: DurationPromptResponse? = try? await APIClient.shared.get(
+            "/api/v1/tasks/\(taskId)/duration-prompt"
+        )
+        durationPrompt = DurationPrompt(
+            id: taskId, title: title, estimatedMinutes: estimatedMinutes,
+            taskType: resp?.task_type ?? DurationPrompt.unclassifiedType,
+            measuredMinutes: measuredMinutes(taskId: taskId),
+            isManual: true
         )
     }
 

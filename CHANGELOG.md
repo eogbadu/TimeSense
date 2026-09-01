@@ -13,6 +13,12 @@
   instead?". A silent signal deliberately counts for less than telling it outright, and a burst of
   catching-up can never be mistaken for a preference.
 
+- **You can say how long something took even when TimeSense doesn't ask.** It stays quiet once it
+  knows a kind of task well, and it never asks about one it couldn't recognise — that restraint is
+  the point. But swiping a finished task now reveals **How long?**, so a figure you want to give it
+  always has somewhere to go. If it couldn't tell what kind of task it was, it asks you that first,
+  because otherwise the number it saved would teach it nothing.
+
 ### Fixed
 - Completing or deleting a timed task from Today left the timer running; it now stops, and the
   timed figure is offered as the duration.

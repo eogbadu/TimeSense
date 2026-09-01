@@ -73,6 +73,38 @@ suite; iOS 56 tests, 9 new. The migration was applied, downgraded and re-applied
 **Postgres** dev database, not only the SQLite the tests build — the column and index were queried
 directly out of `information_schema`.
 
+### On-device sign-off, 2026-09-01 — the gate owned too much
+
+The user tested on their iPhone and found the ticket's headline promise had not landed for them:
+*"there is no way for me to say how long the task took."* Nothing was broken. The wiring is correct
+end to end; `should_ask` simply returned false, which for this account it almost always will.
+
+`TaskDurationRepository.learning_active` declines to prompt in two cases: a type with 5+ samples,
+and the catch-all `general` type — *"never ask about something we couldn't classify"*. Both are
+right. The classifier is good on real titles (`"Clean the kitchen"` → `chore_clean`), but a test
+account is full of titles like `"Test task"`, and every one of those resolves to `general`. So the
+sheet never appeared, and there was no other way in — the ONLY entry point in the product was the
+completion moment itself.
+
+The distinction that was missing: **the gate should decide whether TimeSense ASKS, not whether the
+user may ANSWER.** Keeping the question rare is what stops it becoming a chore; refusing to accept
+a volunteered figure just loses data the user wanted to give.
+
+- `promptDurationManually` calls the same endpoint purely for its resolved `task_type` and ignores
+  `ask`. The automatic path is untouched, so nothing about the one-tap case changed.
+- A done row's swipe now reveals **How long?** where an open row shows **Done** — the freed slot, so
+  the swipe keeps its shape and a finished row stops offering an action it has already had. Also on
+  the row's context menu, which for a done task no longer offers "find a time" for something
+  already finished.
+- `record_actual` DISCARDS an observation filed under `general` — deliberately, since an
+  unclassified one teaches nothing transferable. A manual entry against it would therefore look
+  like it worked and change nothing, so the sheet asks for a real type first and disables Save
+  until it has one. This can only ever be reached manually: the server never prompts for an
+  unclassified task, so the one-tap path cannot hit a disabled Save.
+
+8 new iOS tests, including that an absent `task_type` on the wire reads as unclassified rather than
+as saveable.
+
 ## 2026-08-31 — TIME-314 Voice capture never heard the microphone (Jira TIME-2348)
 
 Reported from the phone: the Capture mic entered the recording state correctly — button to stop, hero
