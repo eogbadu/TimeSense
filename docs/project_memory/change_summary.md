@@ -1,5 +1,28 @@
 # Change Summary
 
+## 2026-09-02 — TIME-318 Settle the App Store listing name (Jira TIME-2352)
+
+**What changed:**
+- Listing name is **"TimeSense: Time Assistant"** — App Store Connect rejects the bare "TimeSense",
+  which is owned by another developer (and the variants by two more; the check is case- and
+  space-insensitive)
+- `CFBundleDisplayName = TimeSense` pinned in `ios/TimeSense/Info.plist`. It was absent, so the
+  home-screen name fell out of `CFBundleName` → `PRODUCT_NAME` → `TARGET_NAME` by coincidence and a
+  target rename would have silently renamed everyone's icon
+- `docs/release/testflight.md` records the name, names the three incumbents so the failed attempt is
+  not repeated, and tabulates which name controls what
+- `decision_log.md` records the choice and why `Time$ense` was rejected; `known_issues.md` warns
+  against "correcting" the intended store/device mismatch
+
+**Why:** the name collision blocked the first step of the TestFlight checklist, and the fix creates
+a permanent divergence between two names that will read as a bug unless it is written down.
+
+**Verified:** archived and confirmed `CFBundleDisplayName => "TimeSense"` alongside
+`CFBundleName => "TimeSense"` in the built app. iOS suites pass.
+
+**Not done:** no rebrand, no icon or marketing work, no trademark filing. No CHANGELOG entry —
+nothing user-visible changed and the listing has never been published.
+
 ## 2026-09-02 — TIME-317 Make the iOS app archivable, signable, and acceptable to TestFlight (Jira TIME-2351)
 
 **What changed:**

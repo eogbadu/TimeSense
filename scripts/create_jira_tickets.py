@@ -11716,6 +11716,44 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
+    {
+        "summary": "TIME-318: Settle the App Store listing name, which is taken",
+        "labels": ["ios", "release", "testflight", "naming", "branding"],
+        "description": doc(
+            h2("Goal"), p("Creating the App Store Connect record failed: \"The app name you entered is already being used.\" The exact string TimeSense belongs to another developer, and Apple's uniqueness check is case- and space-insensitive, so Timesense and Time Sense are blocked too — three separate developers hold them, one in Productivity. The listing name becomes TimeSense: Time Assistant, which keeps the exact searchable string TimeSense in the listing. That choice creates a deliberate divergence: the App Store listing name and the name under the icon on the home screen are now different things, and unless that is written down it reads like a bug and someone will 'fix' it."),
+            divider(), h2("Scope"), bullet_list([
+                "Pin the on-device name with an explicit CFBundleDisplayName instead of letting it fall out of PRODUCT_NAME by coincidence",
+                "Record TimeSense: Time Assistant as the App Store Connect listing name in the release checklist",
+                "Explain in the checklist which name controls what, and that the listing name stays changeable until App Store submission",
+                "Record the naming decision and the rejected alternatives in the decision log",
+                "Record in known issues that TimeSense is unavailable and who holds the three variants, so nobody retries it",
+                "Warn, in known issues, against 'correcting' the intended mismatch between the display name and the listing name",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No rebrand — PRODUCT_NAME, the bundle ID com.aetheranalytics.timesense, target names, the app group and every signing artifact are untouched",
+                "No icon, marketing copy or App Store screenshot work",
+                "No trademark filing to have Apple release the name; that takes weeks, needs registered rights, and the incumbent ships a live app",
+                "No CHANGELOG entry — nothing user-visible changes, and the listing has never been published",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "ios/TimeSense/Info.plist",
+                "docs/release/testflight.md",
+                "docs/project_memory/decision_log.md, known_issues.md, context_summary.md",
+                "docs/project_memory/change_summary.md, implementation_log.md",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "The built app's Info.plist carries CFBundleDisplayName = TimeSense, so the home-screen name no longer depends on PRODUCT_NAME",
+                "CFBundleName is still TimeSense — the name under the icon is unchanged by this ticket",
+                "The release checklist names TimeSense: Time Assistant and says plainly why it differs from the on-device name",
+                "The decision log records why a punctuation-substituted name was rejected",
+                "Known issues names the three incumbent apps, so the failed attempt is not repeated",
+                "The iOS test suite still passes and the app still archives",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild archive -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'generic/platform=iOS' -archivePath /tmp/TS.xcarchive -allowProvisioningUpdates\nplutil -p /tmp/TS.xcarchive/Products/Applications/TimeSense.app/Info.plist | grep -E 'CFBundleDisplayName|CFBundleName'\nxcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-317 (release preparation), which this unblocks at its first step."),
+            divider(), h2("Next Ticket"), p("(none)."),
+        ),
+    },
 ]
 
 
