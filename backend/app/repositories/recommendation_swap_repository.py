@@ -28,7 +28,16 @@ class RecommendationSwapRepository:
         reason: str | None = None,
         context_snapshot: dict | None = None,
         now: datetime | None = None,
+        pin: bool = True,
     ) -> RecommendationSwap:
+        """`pin=False` records the preference without making the chosen task the recommendation.
+
+        A pin means "do this next". A swap inferred from a COMPLETION (TIME-316) means "I already
+        did this", so pinning it would be nonsense — and worse, `active_pin` takes the newest row,
+        so it would shadow a genuine explicit pin for up to three hours and the user's real "do this
+        instead" would be silently discarded. A NULL `pinned_until` is invisible to `active_pin`
+        (`NULL > now` is never true) while still being fully visible to `_swap_signals`.
+        """
         now = now or datetime.now(timezone.utc)
         row = RecommendationSwap(
             user_id=user_id,
@@ -36,12 +45,35 @@ class RecommendationSwapRepository:
             chosen_task_id=chosen_task_id,
             reason=reason,
             context_snapshot=context_snapshot,
-            pinned_until=now + PIN_DURATION,
+            pinned_until=(now + PIN_DURATION) if pin else None,
         )
         self.db.add(row)
         await self.db.flush()
         await self.db.refresh(row)
         return row
+
+    async def recent_pair_exists(
+        self,
+        user_id: uuid.UUID,
+        rejected_task_id: uuid.UUID,
+        chosen_task_id: uuid.UUID,
+        since: datetime,
+    ) -> bool:
+        """Whether this exact preference is already on record recently.
+
+        The same pairing can arrive twice — once because the user said so on the Now screen, once
+        because they then completed the task they chose. That is one preference, not two, and
+        `_swap_signals` counts rows (TIME-316).
+        """
+        result = await self.db.execute(
+            select(RecommendationSwap.id).where(
+                RecommendationSwap.user_id == user_id,
+                RecommendationSwap.rejected_task_id == rejected_task_id,
+                RecommendationSwap.chosen_task_id == chosen_task_id,
+                RecommendationSwap.created_at >= since,
+            ).limit(1)
+        )
+        return result.scalar_one_or_none() is not None
 
     async def active_pin(
         self, user_id: uuid.UUID, now: datetime | None = None

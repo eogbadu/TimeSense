@@ -1,5 +1,14 @@
 # Phase Status
 
+## Completing tasks + learning from what you actually do (TIME-316) — 2026-09-01
+
+Any task in today's plan can now be completed with a duration, not just the recommended one, and
+choosing differently from the recommendation is finally visible to learning. 22 new backend tests,
+9 new iOS tests; the migration was round-tripped against real Postgres.
+
+Outstanding and owned by the user: the on-device pass. A simulator cannot tell you whether it feels
+simple, which is the actual requirement.
+
 ## Voice capture repair (TIME-314) — IMPLEMENTED 2026-08-31, awaiting device sign-off
 
 The Capture microphone entered the recording state and then heard nothing, silently. Engine rebuilt

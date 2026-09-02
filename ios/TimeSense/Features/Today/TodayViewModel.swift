@@ -41,8 +41,10 @@ enum TodayUiState {
 }
 
 @MainActor
-final class TodayViewModel: ObservableObject {
+final class TodayViewModel: ObservableObject, DurationPrompting {
     @Published var uiState: TodayUiState = .idle
+    /// Raised after completing a task, while the assistant is still learning that type (TIME-316).
+    @Published var durationPrompt: DurationPrompt?
     /// The current best-next-action (same as Now) — shown in the "AI Recommended Now" card.
     @Published var recommendation: NowContext?
 
@@ -61,18 +63,24 @@ final class TodayViewModel: ObservableObject {
         return try? await APIClient.shared.get("/api/v1/now/why?task_id=\(taskId)")
     }
 
-    func markDone(taskId: String) async {
-        struct StatusUpdate: Encodable { let status: String }
-        struct Resp: Decodable { let id: String }
-        let _: Resp? = try? await APIClient.shared.patch(
-            "/api/v1/tasks/\(taskId)", body: StatusUpdate(status: "done")
-        )
+    /// Complete a task from today's plan — whichever one it is, recommended or not.
+    ///
+    /// Until TIME-316 this sent a bare status change: no "how long did that take?", and a timer
+    /// left running. That made the most useful case invisible, because the task the user seizes an
+    /// opportunity to do is precisely the one the assistant did NOT pick.
+    func markDone(task: TimelineTask) async {
+        // The row's circle stays tappable once a task is done; re-completing it would re-ask how
+        // long it took, which is a nag.
+        guard task.status != "done" else { return }
+        await completeAndMaybeAskDuration(taskId: task.id, title: task.title,
+                                          estimatedMinutes: task.estimatedMinutes)
         await load()
     }
 
     /// Delete a task that's completed or no longer viable (soft-delete on the backend).
     func deleteTask(taskId: String) async {
         try? await APIClient.shared.delete("/api/v1/tasks/\(taskId)")
+        TaskTimerStore.shared.stopIfTiming(taskId: taskId)   // NowViewModel.removeTask already did
         await load()
     }
 

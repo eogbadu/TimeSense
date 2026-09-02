@@ -27,6 +27,7 @@ from app.services.recommendation.feedback.apply_feedback import (
     SWAP_MIN_SAMPLES,
     FeedbackSummary,
 )
+from app.services.recommendation.swap_context import ORIGIN_COMPLETION
 from app.services.recommendation.time_service import part_of_day
 from app.services.task_library import get_type
 
@@ -35,6 +36,19 @@ HISTORY_WINDOW = timedelta(days=30)
 RECENT_DISMISS_WINDOW = timedelta(hours=6)
 # Rejections of the same action type at the same part of day before we learn to avoid it then.
 AVOID_AT_TIME_THRESHOLD = 3
+
+# What a swap is worth depending on how it was learned (TIME-316).
+#
+# An explicit swap is a deliberate statement: the user opened a picker and named a replacement. A
+# completion-derived swap is inferred from behaviour — they finished something while another task
+# was on screen, which is real evidence but much weaker, and they were never asked. Counting them
+# equally would let two Done swipes in one afternoon apply the same -18 score bonus that previously
+# took two deliberate multi-tap interactions, and these signals can only TIGHTEN recommendations —
+# which the project rule (adjustments may relax, never tighten) does not allow on evidence this
+# thin. Half a sample means two silent completions alone are never enough, while a completion
+# alongside a deliberate swap still crosses the line.
+EXPLICIT_SWAP_WEIGHT = 1.0
+COMPLETION_SWAP_WEIGHT = 0.5
 
 
 def _local_hour(dt: datetime, tz: str) -> int:
@@ -109,8 +123,8 @@ async def _swap_signals(db, user_id, since, current_pod, tz) -> dict:
         )
     )).scalars().all()
 
-    chosen: dict[str, int] = {}
-    rejected: dict[str, int] = {}
+    chosen: dict[str, float] = {}
+    rejected: dict[str, float] = {}
     for row in rows:
         snapshot = row.context_snapshot or {}
         hour = snapshot.get("local_hour")
@@ -118,10 +132,15 @@ async def _swap_signals(db, user_id, since, current_pod, tz) -> dict:
             part_of_day(_local_hour(row.created_at, tz))
         if pod != current_pod:
             continue
+        # A swap the user stated outright counts for more than one merely inferred from what they
+        # finished. Rows written before origin existed are explicit by definition.
+        weight = (COMPLETION_SWAP_WEIGHT
+                  if snapshot.get("origin") == ORIGIN_COMPLETION
+                  else EXPLICIT_SWAP_WEIGHT)
         if (c := snapshot.get("chosen_category")):
-            chosen[c] = chosen.get(c, 0) + 1
+            chosen[c] = chosen.get(c, 0.0) + weight
         if (r := snapshot.get("rejected_category")):
-            rejected[r] = rejected.get(r, 0) + 1
+            rejected[r] = rejected.get(r, 0.0) + weight
 
     return {
         "preferred_categories_now": {c for c, n in chosen.items() if n >= SWAP_MIN_SAMPLES},

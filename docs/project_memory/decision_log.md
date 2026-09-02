@@ -336,6 +336,48 @@
   better than a waveform that will never move.
   Date: 2026-08-31 (TIME-314)
 
+- Decision: An off-recommendation completion is recorded as an UNPINNED swap, never as a disagree
+  Reason: Finishing a task while something else was recommended is a paired preference — exactly
+  what `RecommendationSwap` already models, and `_swap_signals` reads swap ROWS rather than the swap
+  endpoint, so it learns with no new learning code. It must not pin: `active_pin` takes the newest
+  row, so a pinned completion swap would shadow a genuine explicit pin for three hours (silently
+  discarding the user's real "do this instead") and would try to recommend a task they just
+  finished. And it must not write a disagree: the user rejected nothing, they did something else
+  first and may still do it — a fabricated rejection would suppress a task they still intend to do.
+  Date: 2026-09-01 (TIME-316)
+
+- Decision: A behavioural signal counts for half of a stated one
+  Reason: Swap signals can only TIGHTEN recommendations (−18 for the preferred category, +22 for the
+  one swapped away from), and the standing rule is that per-user adjustments may relax a requirement
+  but never tighten one on thin evidence. Reaching `SWAP_MIN_SAMPLES` previously took two deliberate
+  multi-tap interactions; two Done swipes in an afternoon must not buy the same effect. `origin` is
+  stored in the context snapshot so the two can be told apart; rows written before it existed were
+  all explicit and keep full weight.
+  Date: 2026-09-01 (TIME-316)
+
+- Decision: A recommendation can teach at most once, via a `superseded` outcome
+  Reason: Without it, catching up by marking five tasks done in ten seconds pairs all five against
+  the same open impression and manufactures a preference out of one bout of housekeeping. The new
+  outcome sits in NEITHER the positive nor the negative set — it closes the impression without
+  claiming the user liked or disliked it.
+  Date: 2026-09-01 (TIME-316)
+
+- Decision: `completed_at` replaces `updated_at` as the completion timestamp, with no backfill
+  Reason: `updated_at` moves whenever a done task is edited, so it could not answer "what were we
+  recommending when this was actually finished" — `count_completed_in_range` said as much in its own
+  docstring. Stamped in the REPOSITORY rather than the service, because `POST
+  /recommendations/feedback` writes `status="done"` straight through the repository and bypasses
+  `TaskService` entirely. Not backfilled: copying `updated_at` would invent completion instants for
+  rows edited after they were finished ("null, not zero, below every sample floor"); readers
+  coalesce to `updated_at` so historic counts keep working.
+  Date: 2026-09-01 (TIME-316)
+
+- Decision: The duration flow is shared as a protocol, not a shared observable object
+  Reason: The tab pager keeps Now and Today both mounted at all times, so a single shared
+  `@Published` prompt would have two live screens attempting to present the same sheet. Each view
+  model keeps its own prompt state and presents its own sheet; only the behaviour is shared.
+  Date: 2026-09-01 (TIME-316)
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

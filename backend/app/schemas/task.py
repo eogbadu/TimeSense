@@ -67,5 +67,7 @@ class TaskResponse(BaseModel):
     difficulty: str | None = None
     created_at: datetime
     updated_at: datetime
+    # Derived, not client-settable — deliberately absent from TaskUpdate (TIME-316).
+    completed_at: datetime | None = None
 
     model_config = {"from_attributes": True}

@@ -15,6 +15,12 @@ IMPRESSION_DEDUPE_WINDOW = timedelta(minutes=10)
 POSITIVE_OUTCOMES = {"agree", "done"}
 NEGATIVE_OUTCOMES = {"disagree", "not_now"}
 
+# Deliberately in NEITHER set. It closes an impression without claiming the user liked or disliked
+# it: they finished something else while it was on screen, so it has already taught what it can and
+# must not teach again (TIME-316). Without this, marking five tasks done in a burst would pair all
+# five against the same recommendation and invent a preference out of one bout of housekeeping.
+OUTCOME_SUPERSEDED = "superseded"
+
 
 def _summarize(items) -> dict:
     shown = len(items)
@@ -74,6 +80,35 @@ class RecommendationEventRepository:
         self.db.add(event)
         await self.db.flush()
         return event
+
+    async def latest_open_impression(
+        self,
+        user_id: uuid.UUID,
+        since: datetime,
+        surface: str = "now",
+        task_id: uuid.UUID | None = None,
+    ) -> RecommendationEvent | None:
+        """The most recent recommendation still awaiting a reaction — i.e. what was on screen.
+
+        Restricted to the `now` surface on purpose: `now_why` and `now_recommendation` are
+        exploratory taps rather than "this is the pick", and `push` fires without the user
+        necessarily looking at anything.
+        """
+        conditions = [
+            RecommendationEvent.user_id == user_id,
+            RecommendationEvent.surface == surface,
+            RecommendationEvent.outcome.is_(None),
+            RecommendationEvent.created_at >= since,
+        ]
+        if task_id is not None:
+            conditions.append(RecommendationEvent.task_id == task_id)
+        result = await self.db.execute(
+            select(RecommendationEvent)
+            .where(*conditions)
+            .order_by(RecommendationEvent.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
 
     async def set_outcome(
         self,

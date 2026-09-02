@@ -377,6 +377,73 @@ zero entries in this file — and was broken on the user's phone. The same lesso
 feature that touches hardware needs either a test over its decision logic or an explicit on-device
 check; a compile is neither.
 
+## Issue: `.astimezone()` on a timestamp read back from the database
+- Date: 2026-09-01
+- Area: backend / datetimes
+- Symptom: The TIME-316 completion signal silently recorded nothing. No exception, no log — an early
+  return, because the part-of-day check believed the recommendation had been shown four hours before
+  it was.
+- Root cause: `created_at` comes back NAIVE from SQLite (`server_default=func.now()`), and
+  `.astimezone()` on a naive datetime assumes the SERVER's local zone rather than UTC — here EDT, a
+  four-hour shift, enough to land in a different part of day.
+- Fix: the `if dt.tzinfo is None: dt.replace(tzinfo=timezone.utc)` guard already used in
+  `time_service`, `usable_time_service`, `task_scorer` and ~7 other places. Anything reading a
+  timestamp back out of the database needs it.
+- Note: this is the INVERSE of the usual trap below — it would have worked on Postgres (where
+  `DateTime(timezone=True)` returns aware values) and failed only under the SQLite the tests build.
+  Green Postgres does not imply green tests any more than the reverse.
+- Files changed: backend/app/services/task_completion_service.py
+- Verification: tests/test_completion_learning.py
+- Follow-up needed: none.
+
+## Watch: `outcome="done"` is live for the first time
+- Date: 2026-09-01
+- Area: backend / metrics
+- Symptom to expect (not a bug): acceptance rates and confidence-calibration curves will step up
+  discontinuously after TIME-316 deploys.
+- Cause: `POSITIVE_OUTCOMES = {"agree", "done"}` has existed all along, but no client ever sent
+  `done`, so in practice it was only ever `agree`. Completions now reach it, and they are stronger
+  evidence than tapping Agree. Three consumers move at once: `build_summary.accepts`,
+  `acceptance_stats` (admin dashboards) and `calibration_buckets`. `UserAdaptationProfile` will also
+  start crossing its `MIN_SAMPLES_PER_BUCKET` floor for users who never tapped Agree.
+- Follow-up needed: read the step as correct, not as a regression. Worth a dated annotation on the
+  dashboards.
+
+## Issue: `test_weekly_workouts_buckets_running_miles` fails every Monday and Tuesday
+- Date: 2026-09-01 (observed; pre-existing, NOT introduced by TIME-316)
+- Area: backend / tests
+- Symptom: `assert latest["running_count"] == 2` gets 1.
+- Root cause: the test seeds runs at 1 and 2 days ago and comments "two runs this week", but
+  `_week_start` is Monday-anchored. On a Tuesday, 2 days ago is Sunday — the PREVIOUS week — so only
+  one run lands in the latest bucket. On a Monday, both fall outside it. The assumption only holds
+  Wednesday through Sunday.
+- Fix: not applied — out of scope for TIME-316, which touches nothing `weekly_workouts` reads (it
+  uses `WorkoutSession` only). The fix is to anchor the seeded runs relative to `_week_start` rather
+  than to "days ago", or to freeze the clock.
+- Files changed: none
+- Verification: `cd backend && pytest tests/test_insights_series.py -q` on any Mon/Tue.
+- Follow-up needed: yes — worth its own ticket; it will red the suite two days in seven.
+
+## Issue: `tests/test_behavioral_patterns.py` hangs, so the full backend suite cannot complete
+- Date: 2026-09-01 (observed; pre-existing)
+- Area: backend / tests
+- Symptom: `cd backend && pytest` never finishes. Bisected to `tests/test_behavioral_patterns.py`,
+  which hangs indefinitely (>9 minutes, killed). Everything else runs in seconds.
+- Confirmed pre-existing: **reproduced on `main` (38b534f) in a clean git worktree**, with no
+  TIME-316 changes present. Not caused by the `tasks.completed_at` column or anything else added
+  there — the file builds its own in-memory SQLite engine and touches no task/swap/impression code.
+- Consequence: "the full suite passes" cannot currently be claimed by anyone. Until it is fixed,
+  verify with a selection, e.g.
+  `pytest tests/ -k "not behavioral"`, and note that several other modules
+  (`test_calendar_providers_http`, `test_email_fetch`, `test_llm_gateway`, `test_maps_provider`)
+  are network-shaped and slow.
+- Note: `pytest-timeout` is NOT installed, so a hanging test cannot self-abort. Installing it and
+  setting a default per-test timeout would turn this class of failure from "suite hangs forever"
+  into a named failing test.
+- Files changed: none
+- Verification: `cd backend && pytest tests/test_behavioral_patterns.py -q` (hangs on any branch)
+- Follow-up needed: yes — own ticket. Worth pairing with adding `pytest-timeout`.
+
 ## Format
 
 ```

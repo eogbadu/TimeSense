@@ -45,6 +45,12 @@ class Task(UUIDMixin, TimestampMixin, Base):
         DateTime(timezone=True), nullable=True
     )
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # When the task was actually finished. Set on the pending→done EDGE only, never moved by a
+    # later edit — that lossiness is exactly why `updated_at` was not good enough (TIME-316). Null
+    # for anything completed before this column existed, and for anything not yet done.
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     source: Mapped[str] = mapped_column(String(20), nullable=False, default="manual")
     # True when TimeSense auto-placed this task into the day (vs. a user-set time) — drives the
     # "Scheduled · Undo" affordance on Today.

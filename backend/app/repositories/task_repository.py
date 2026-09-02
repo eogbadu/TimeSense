@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -150,9 +150,16 @@ class TaskRepository:
         task = await self.get_by_id(task_id, user_id)
         if task is None:
             return None
+        was_done = task.status == "done"
         for field, value in kwargs.items():
             if value is not None:
                 setattr(task, field, value)
+        # Stamp the completion instant on the pending→done EDGE only (TIME-316). Re-saving a done
+        # task, or editing its title a week later, must not move it — that is precisely the
+        # lossiness that made `updated_at` an unusable proxy. This lives in the repository rather
+        # than the service because `POST /recommendations/feedback` calls update() directly.
+        if task.status == "done" and not was_done and task.completed_at is None:
+            task.completed_at = datetime.now(timezone.utc)
         await self.db.flush()
         await self.db.refresh(task)
         return task
@@ -182,14 +189,18 @@ class TaskRepository:
     async def count_completed_in_range(
         self, user_id: uuid.UUID, start: datetime, end: datetime
     ) -> int:
-        """Tasks marked done with updated_at in [start, end) — a proxy for completions, since
-        Task has no explicit completed_at field yet."""
+        """Tasks completed in [start, end).
+
+        Uses the real `completed_at` where it exists and falls back to `updated_at` for rows
+        finished before that column did (TIME-316), so historic counts keep working while new ones
+        stop drifting every time a done task is edited."""
+        completed = func.coalesce(Task.completed_at, Task.updated_at)
         result = await self.db.execute(
             select(func.count()).select_from(Task).where(
                 Task.user_id == user_id,
                 Task.status == "done",
-                Task.updated_at >= start,
-                Task.updated_at < end,
+                completed >= start,
+                completed < end,
             )
         )
         return result.scalar_one()

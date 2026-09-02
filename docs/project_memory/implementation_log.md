@@ -1,5 +1,110 @@
 # Implementation Log
 
+## 2026-09-01 — TIME-316 Complete any task in Today, and say how long it took (Jira TIME-2350)
+
+User need, verbatim: *"sometimes I get an opportunity to accomplish one of the tasks in my list that
+was not recommended at that time. Maybe my mood or it was just a better option based on data
+TimeSense did not have."*
+
+### The experience already existed — it was reachable from one screen
+
+`DurationFeedbackSheet` was already built, already good, and its stated design goal #1 was already
+"never become a chore". The server gate (`duration-prompt`) already asked only while still learning
+a type. What was missing: `TodayViewModel.markDone` sent a bare `PATCH {"status":"done"}` — no
+question, no timer stop. So the whole thing only ever fired for the Now screen's RECOMMENDED task,
+which is the exact opposite of the case the user was describing. Mostly a wiring job.
+
+Extracted `DurationPrompt` + the completion flow into `Core/Duration/DurationFeedback.swift` as a
+`DurationPrompting` protocol, and moved the sheet to `Features/Shared/`. **Deliberately not a shared
+observable singleton**: the tab pager keeps Now and Today BOTH mounted, so one shared `@Published`
+prompt would have two screens presenting the same sheet. Each view model keeps its own state; only
+behaviour is shared.
+
+Also fixed on the way: completing (or deleting) a timed task from Today left the timer running until
+the 12h cutoff, and Today's row circle stayed tappable when done — which after this change would
+have re-asked how long it took, a nag.
+
+### The learning half
+
+Completing a non-recommended task was **completely invisible**. `recommendation_events` knew what was
+recommended and when, `tasks` knew a status changed, nothing joined them, and `Task` had no
+`completed_at` at all (`count_completed_in_range` apologised for using `updated_at` in its own
+docstring). No client had ever sent `signal: "done"`, so `outcome="done"` was dead code and
+POSITIVE_OUTCOMES was in practice only `agree`.
+
+Now, silently and with no extra tap: on the pending→done edge, if a DIFFERENT task was recommended
+within 90 minutes and in the same part of day, an **unpinned** `RecommendationSwap` is written. This
+reuses `_swap_signals` wholesale — it reads swap ROWS, not the swap endpoint — so it learns with no
+new learning code.
+
+### Three things that had to be got right, verified in the source rather than assumed
+
+1. **`pin=False` is load-bearing.** `active_pin` takes the NEWEST row, so a pinned completion swap
+   would shadow a genuine explicit pin for three hours — the user's real "do this instead" silently
+   discarded — and would try to recommend a task they just finished. `pinned_until` is nullable and
+   `active_pin` filters `pinned_until > now`, which NULL never satisfies. Pinned by a test.
+2. **A burst of completions must not invent a preference.** Marking five tasks done in ten seconds
+   would otherwise pair all five against the same recommendation and blow past `SWAP_MIN_SAMPLES=2`
+   from one bout of housekeeping. The impression is closed with a new `OUTCOME_SUPERSEDED` — in
+   NEITHER positive nor negative sets — so one recommendation teaches at most once.
+3. **A silent signal must count for less than a stated one.** Two Done swipes would otherwise apply
+   the same −18 bonus that previously took two deliberate multi-tap swaps, and these signals can
+   only TIGHTEN recommendations, which the "may relax, never tighten" rule forbids on evidence this
+   thin. `origin` is stored in the snapshot; completion-origin rows weigh 0.5. Rows predating
+   `origin` are explicit by definition and keep full weight.
+
+The displaced recommendation is never marked `disagree`/`not_now` and no `RecommendationFeedback`
+row is written: the user rejected nothing, they did something else first and may still do it.
+Fabricating a rejection would suppress a task they still intend to do.
+
+### A real bug found by the tests
+
+`_same_part_of_day` used `.astimezone()` on a timestamp read back from the database. Those come back
+NAIVE from SQLite, and `.astimezone()` on a naive value silently assumes the SERVER's local zone —
+filing the completion under a part of day four hours out and dropping the signal. Guarded with the
+`tzinfo is None → UTC` pattern already used in `time_service`, `usable_time_service` and eight other
+places. It would have behaved correctly on Postgres and silently wrongly in tests, which is the
+inverse of the usual trap recorded in `known_issues.md`.
+
+### Verification
+
+Backend 22 new tests (`test_task_completion.py` 6, `test_completion_learning.py` 16) plus the full
+suite; iOS 56 tests, 9 new. The migration was applied, downgraded and re-applied against the real
+**Postgres** dev database, not only the SQLite the tests build — the column and index were queried
+directly out of `information_schema`.
+
+### On-device sign-off, 2026-09-01 — the gate owned too much
+
+The user tested on their iPhone and found the ticket's headline promise had not landed for them:
+*"there is no way for me to say how long the task took."* Nothing was broken. The wiring is correct
+end to end; `should_ask` simply returned false, which for this account it almost always will.
+
+`TaskDurationRepository.learning_active` declines to prompt in two cases: a type with 5+ samples,
+and the catch-all `general` type — *"never ask about something we couldn't classify"*. Both are
+right. The classifier is good on real titles (`"Clean the kitchen"` → `chore_clean`), but a test
+account is full of titles like `"Test task"`, and every one of those resolves to `general`. So the
+sheet never appeared, and there was no other way in — the ONLY entry point in the product was the
+completion moment itself.
+
+The distinction that was missing: **the gate should decide whether TimeSense ASKS, not whether the
+user may ANSWER.** Keeping the question rare is what stops it becoming a chore; refusing to accept
+a volunteered figure just loses data the user wanted to give.
+
+- `promptDurationManually` calls the same endpoint purely for its resolved `task_type` and ignores
+  `ask`. The automatic path is untouched, so nothing about the one-tap case changed.
+- A done row's swipe now reveals **How long?** where an open row shows **Done** — the freed slot, so
+  the swipe keeps its shape and a finished row stops offering an action it has already had. Also on
+  the row's context menu, which for a done task no longer offers "find a time" for something
+  already finished.
+- `record_actual` DISCARDS an observation filed under `general` — deliberately, since an
+  unclassified one teaches nothing transferable. A manual entry against it would therefore look
+  like it worked and change nothing, so the sheet asks for a real type first and disables Save
+  until it has one. This can only ever be reached manually: the server never prompts for an
+  unclassified task, so the one-tap path cannot hit a disabled Save.
+
+8 new iOS tests, including that an absent `task_type` on the wire reads as unclassified rather than
+as saveable.
+
 ## 2026-08-31 — TIME-314 Voice capture never heard the microphone (Jira TIME-2348)
 
 Reported from the phone: the Capture mic entered the recording state correctly — button to stop, hero

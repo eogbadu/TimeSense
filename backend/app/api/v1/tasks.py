@@ -231,7 +231,9 @@ async def update_task(
     user_svc: UserService = Depends(get_user_service),
 ) -> TaskResponse:
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
-    task = await task_svc.update_task(task_id, user.id, body, user_timezone=user_timezone_of(user))
+    task = await task_svc.update_task(
+        task_id, user.id, body, user_timezone=user_timezone_of(user), user=user
+    )
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
     return TaskResponse.model_validate(task)
