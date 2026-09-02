@@ -54,19 +54,27 @@ Processing takes 5–15 minutes before a build shows up in TestFlight.
 
 ## App Store Connect record
 
-Create the app once, at App Store Connect → Apps → **+**:
+Create the app once, at App Store Connect → Apps → **+**. These are the only fields the
+**New App** sheet asks for:
 
 | Field | Value |
 |---|---|
-| Platform | iOS |
+| Platforms | iOS |
 | Name | TimeSense |
+| Primary Language | English (U.S.) |
 | Bundle ID | `com.aetheranalytics.timesense` |
 | SKU | `timesense-ios` |
-| Primary language | English (U.S.) |
-| Category | Productivity |
+| User Access | Full Access |
 
-The bundle ID must already exist as an App ID in the Developer portal. It does — automatic signing
-created it, along with the HealthKit, App Groups, Push and Sign in with Apple capabilities.
+**Category is not on that sheet** — it lives under App Store → General → **App Information** after
+the app exists, and it is not required for TestFlight at all, only for App Store submission. Set it
+to Productivity whenever you get there.
+
+The bundle ID must already exist as an App ID in the Developer portal, and appears in that dropdown
+only if it does. It does — automatic signing created it during the first archive, along with the
+HealthKit, App Groups, Push and Sign in with Apple capabilities. If the dropdown is empty or missing
+it, the App ID never propagated: check developer.apple.com → Certificates, Identifiers & Profiles →
+Identifiers.
 
 ### App Privacy answers
 
