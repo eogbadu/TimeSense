@@ -1,5 +1,76 @@
 # Implementation Log
 
+## 2026-09-02 — TIME-317 Make the iOS app archivable, signable, and acceptable to TestFlight (Jira TIME-2351)
+
+Nothing in the repository had ever been prepared for distribution. The app built and ran on a
+connected phone, which quietly hid every problem below — each one costs nothing on a development
+build and is fatal on a distribution one.
+
+### The five things wrong with the artifact
+
+**Sign in with Apple had no entitlement.** `SignInView` offers an Apple button and
+`AppleSignInCoordinator` drives `ASAuthorizationController`, but `com.apple.developer.applesignin`
+was absent from `TimeSense.entitlements`. On the Simulator this costs nothing; on any signed build
+the request fails with error 1000. The first archive is where it would have surfaced, and nobody had
+ever archived. Automatic signing added the capability to the App ID on its own once the entitlement
+was declared — no portal work was needed.
+
+**No export-compliance answer.** Without `ITSAppUsesNonExemptEncryption` every single upload sits in
+"Missing Compliance" and cannot reach a tester until someone answers the question by hand, per
+upload. TimeSense uses only HTTPS and the platform keychain, so `false` is the honest answer and it
+now lives in `Info.plist`.
+
+**No privacy manifest, in an app that calls a required-reason API.** `WidgetSnapshot`,
+`TaskTimerStore` and `LocationService` all use `UserDefaults` (reason CA92.1). The widget extension
+needs its OWN manifest — it is a separate bundle and it compiles `WidgetSnapshot.swift` too, which
+is easy to miss. Both are wired into the pbxproj as Resources and verified present inside the built
+`.app` and `.appex`.
+
+**A Google button that cannot work.** `signInWithGoogle` opens with
+`guard let clientID = FirebaseApp.app()?.options.clientID else { return }` — and the bundled
+`GoogleService-Info.plist` has no `CLIENT_ID`, because the Google provider was never enabled for
+iOS in the Firebase console. The button was therefore a no-op: tap, nothing, no error. Beta App
+Review rejects exactly this. Rather than delete the feature, `AuthService.isGoogleSignInConfigured`
+reads the client ID and `SocialSignInButtons` takes a `showGoogle` flag, so the button is hidden
+today and **returns by itself** the moment a real plist is dropped in. No code change to undo.
+
+**A purpose string about our build setup.** `NSLocalNetworkUsageDescription` read "TimeSense
+connects to your development server on the local network." That string is shown to the user.
+
+### The archive is not the distribution build — the export is
+
+Worth writing down because it looks like a fault and is not. `xcodebuild archive` with
+`-destination generic/platform=iOS` signs with an **Apple Development** identity and ships
+`get-task-allow = 1`. That is correct and expected. `xcodebuild -exportArchive` is the step that
+re-signs with **Apple Distribution**, sets `get-task-allow` to false, flips `aps-environment` to
+`production` and adds `beta-reports-active`. Confirmed on the real artifact: the exported `.ipa` is
+signed `Apple Distribution: Born Royal LLC (WB5NV894N5)`.
+
+A related trap, hit while writing the verification: `get-task-allow` is **present** in a
+distribution build, set to false. Grepping for the key name proves nothing — the check has to read
+the value, which it now does via `plutil -extract`.
+
+**A distribution certificate already existed** (cloud-managed), which was not obvious:
+`security find-identity -v -p codesigning` lists only "Apple Development". The export succeeded
+anyway. So the distribution cert was never a blocker; the only remaining Apple-side gap is an
+App Store Connect API key for the upload.
+
+### `scripts/testflight_build.sh`
+
+Archive → export → **verify** → optionally upload, so a build is a command rather than a sequence of
+Xcode clicks. It refuses to upload an artifact that fails any of six checks (Apple Sign In
+entitlement, get-task-allow false, Apple Distribution authority, export compliance, both privacy
+manifests). Build numbers default to seconds since 2026-01-01 — always increasing, never colliding,
+which matters because App Store Connect rejects a repeat build number for a version.
+
+macOS ships bash 3.2, where an empty array counts as unset under `set -u`, so a bare
+`"${AUTH_ARGS[@]}"` aborts a non-upload run. Every expansion uses the `${a[@]+"${a[@]}"}` guard.
+
+### Verified
+
+Full pipeline run end to end: `** ARCHIVE SUCCEEDED **`, `** EXPORT SUCCEEDED **`, all six checks
+`ok`, a 6 MB signed `.ipa`. All 5 iOS test suites pass. Version is now 1.0.0.
+
 ## 2026-09-01 — TIME-316 Complete any task in Today, and say how long it took (Jira TIME-2350)
 
 User need, verbatim: *"sometimes I get an opportunity to accomplish one of the tasks in my list that

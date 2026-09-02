@@ -1,86 +1,55 @@
 # Context Summary
 
-**Last updated:** 2026-09-01 — **TIME-316 (Jira TIME-2350) complete any task in Today, and say how long it took.** User need: an opportunity comes up to do a task that was NOT the recommendation, and they need to mark it done with a duration, simply. KEY FINDING: the experience already existed and was already good (`DurationFeedbackSheet`, plus a server gate that asks only while still learning a type) — it was reachable from ONE screen, because `TodayViewModel.markDone` sent a bare `PATCH status=done`. Mostly a wiring job. Extracted to `Core/Duration/DurationFeedback.swift` as a `DurationPrompting` PROTOCOL, not a shared observable: the tab pager keeps Now and Today both mounted, so one shared `@Published` prompt would have two screens presenting the same sheet. Sheet moved to `Features/Shared/`. Learning half: `tasks.completed_at` (stamped in the REPOSITORY — `POST /recommendations/feedback` writes status=done straight through it, bypassing TaskService), and an off-recommendation completion writes an UNPINNED `RecommendationSwap`, which `_swap_signals` learns from for free because it reads swap ROWS not the endpoint. Three things that had to be right: (a) `pin=False` is load-bearing — `active_pin` takes the newest row, so a pinned completion swap would shadow a genuine explicit pin AND try to recommend a finished task; (b) `OUTCOME_SUPERSEDED` (in neither positive nor negative set) makes a recommendation teach AT MOST ONCE, or a burst of five completions pairs all five against it; (c) completion-origin signals weigh 0.5, because these signals only TIGHTEN and "may relax, never tighten" applies. The displaced recommendation is NEVER marked disagree — the user rejected nothing and may still do it. Found on the way: `.astimezone()` on a DB timestamp assumes the SERVER zone when the value is naive (see known_issues.md). **On-device sign-off 2026-09-01 found the headline promise had not landed:** `should_ask` almost always returns false on a test account, because `learning_active` never asks about the catch-all `general` type and titles like "Test task" all resolve to it. Nothing was broken — the gate simply owned too much. It now decides whether TimeSense ASKS, not whether the user may ANSWER: a done row's swipe reveals **How long?** in the slot Done vacates, calling the same endpoint purely for its resolved `task_type`. Because `record_actual` DISCARDS a `general` observation, the sheet asks for a real type first and disables Save until it has one — reachable only manually, so the one-tap path can never hit it.
+**Last updated:** 2026-09-02 — **TIME-317 (Jira TIME-2351) TestFlight release preparation.** The
+repository can now produce an artifact App Store Connect will accept, proven end to end: a signed
+`.ipa` under `Apple Distribution: Born Royal LLC (WB5NV894N5)`, version 1.0.0.
 
-**Previously:** 2026-08-31 — **TIME-314 (Jira TIME-2348) voice capture never heard the microphone**, from device feedback: the Capture mic entered the recording state but the waveform never moved and no text was transcribed, with no error and the app fully responsive. Root cause: `AVAudioEngine.start()` succeeding was treated as proof of a live microphone. One process-lifetime engine was reused across sessions and `teardown()` never called `reset()`, so `inputNode` could hold a format resolved under an older hardware route — a tap installs on it cleanly, `start()` succeeds, and no buffer ever arrives. Since TIME-239's always-mounted tab pager, that engine is built at app launch and lives for the whole process. The engine is now rebuilt per session, the input format validated, and a first-buffer watchdog fails loudly within ~1.5s. Two survey theories were killed by the symptom itself, not by reading code: the pager's DragGesture over the mic button (the button DOES fire) and the recognizer restart loop (it would freeze the UI; the app was responsive). NOT a regression — the file was byte-identical to TIME-146. 16 first-ever tests for the feature. **Awaiting on-device sign-off.**
+**Five faults, none of which a Simulator or a development build could ever have shown.** (1) Sign in
+with Apple had no `com.apple.developer.applesignin` entitlement — the app's own Apple button would
+have failed with error 1000 on any signed build; automatic signing added the capability to the App
+ID once the entitlement was declared, so no portal work was needed. (2) No
+`ITSAppUsesNonExemptEncryption`, so every upload would sit in "Missing Compliance" until answered by
+hand, per upload. (3) No `PrivacyInfo.xcprivacy` in an app that calls `UserDefaults` (CA92.1) — and
+the **widget needs its own**, because it is a separate bundle that also compiles
+`WidgetSnapshot.swift`. (4) A Google sign-in button that was a silent no-op: `signInWithGoogle`
+guards on `FirebaseApp.app()?.options.clientID` and the bundled `GoogleService-Info.plist` has no
+`CLIENT_ID`, because the Google provider was never enabled for iOS in the Firebase console. Beta App
+Review rejects exactly that, so the button is now gated on `AuthService.isGoogleSignInConfigured`
+and **returns by itself** when a real plist lands. (5) `NSLocalNetworkUsageDescription` told the
+user about "your development server".
 
-**Previously:** 2026-08-28 — RECOMMENDATION QUALITY BATCH (TIME-282..297, Jira TIME-2316..2331, PRs #320-336) **COMPLETE, all merged**.
+**The archive is NOT the distribution build — the export is.** `xcodebuild archive` with
+`-destination generic/platform=iOS` signs Apple Development and ships `get-task-allow = 1`. That is
+correct. `-exportArchive` re-signs Apple Distribution, sets `get-task-allow` false, flips
+`aps-environment` to `production`, adds `beta-reports-active`. Two traps: `get-task-allow` is
+**present** in a distribution build (set to false), so any check that greps the key name rather than
+reading the value reports a false failure; and `security find-identity` lists only "Apple
+Development" on this Mac yet distribution export succeeds — the cert is cloud-managed.
 
-Origin: 10 items of on-device feedback. All 10 addressed. What changed, and the root cause of each:
+**`scripts/testflight_build.sh`** does archive → export → verify → optionally upload, and refuses to
+upload an artifact failing any of six checks. Build numbers default to seconds since 2026-01-01
+(always increasing; ASC rejects a repeat build number for a version). Note macOS bash 3.2 treats an
+empty array as unset under `set -u` — every array expansion uses the `${a[@]+"${a[@]}"}` guard.
 
-1/7/9 **"Everything takes 23 minutes."** Two independent causes. (a) Learning was keyed on a coarse category whose catch-all bucket swallowed ~30% of realistic titles (measured), so one learned number answered for nearly every task. (b) The estimate was seeded to the FIRST observation and then EWMA'd, so a single coarse tap became the estimate — 15/30/30 at alpha 0.3 gives exactly 15→20→23. FIX: new 79-type baseline library with typical minutes AND difficulty (TIME-284, catch-all 30%→0% on an 89-title corpus, 15→67 distinct buckets); classification on every creation path at the repository choke point (TIME-285); learning keyed on task TYPE, never on the catch-all, with a confidence-weighted blend toward the baseline, and raw observations persisted (TIME-286); the three coarse iOS buttons replaced with real minute entry + an optional timer (TIME-287).
+## Current Active Task — the Apple-account half, owned by the user
 
-2 **Timezone didn't follow the device.** iOS pushed TimeZone.current from a single `.task{}` that fires once and never again — no scenePhase observer, no NSSystemTimeZoneDidChange observer, errors swallowed by `try?`. Underneath, 10 backend paths computed "today" in UTC. FIX (TIME-283): TimezoneSyncService on launch/foreground/system-change; one shared `app/core/localtime.py` for local day bounds (DST-correct, half-open); check-ins now run hourly and fire at each user's LOCAL hour. Parametrized over Tokyo/Shanghai/Sydney/Auckland/Lagos/Kolkata(+05:30)/Kathmandu(+05:45)/NY/LA/UTC — NOT a Japan-specific fix.
+Nothing further can be done from this repository. `docs/release/testflight.md` holds the full
+checklist and the ready-to-paste TestFlight test information; the short version:
 
-4 **Own account required Premium.** No client ever calls POST /subscriptions/trial, so no Subscription row exists and is_premium == created_at + 14d. PREMIUM_TEST_EMAILS was in the local .env but absent from render.yaml, so empty in production. FIX (TIME-282): durable `users.entitlement_override` checked first, admin endpoint to set it, render.yaml declares the allowlist, and the Settings screen now reads /subscriptions/me/entitlement (it read /subscriptions/me, which returns null without a row, so it said "Basic (Free)" to entitled users).
+1. Create the App Store Connect app record — bundle ID `com.aetheranalytics.timesense`.
+2. Create an App Store Connect API key (App Manager role), put the `.p8` in
+   `~/.appstoreconnect/private_keys/`, export `ASC_KEY_ID` and `ASC_ISSUER_ID`. Then
+   `scripts/testflight_build.sh --upload` does the rest. (Without a key: build the `.ipa` and use
+   Transporter.)
+3. Publish `docs/legal/privacy_policy.md` at a public URL and a support page at another, and put
+   both in App Store Connect. Replace the placeholder contact address in the policy first.
+4. Complete the App Privacy questionnaire — answers are in `docs/release/testflight.md` and must
+   match `ios/TimeSense/PrivacyInfo.xcprivacy`, which is the source of truth.
+5. Create a demo account on production for Beta App Review.
+6. Internal testing needs none of 3–5. Start there; it has no Beta App Review.
 
-5 **Location signal dead.** Six stacked breaks: permission only requestable from a Settings screen nothing routed to; "While Using" fell through and did nothing; the place was only reported on a geofence crossing so users with no saved places reported nothing ever; coordinates never persisted; 6h staleness with no refresh; location_fit a flat constant. FIX (TIME-291 + TIME-293): onboarding asks with a rationale, While-Using supported, current position stored (consent-gated, ONE overwritten row — no history), refreshed before the cutoff.
-
-6 **Energy backwards.** TWO disagreeing implementations: the scorer used sleep only and hard-coded "medium" without a sample; the display used activity, where 30+ min exercise or 8000+ steps read as HIGH — so a busy day announced high energy at 8pm. FIX (TIME-288): one EnergyService, energy as a recovery budget that DEPLETES (hours awake, effort already finished, sedentary stretch, circadian shape). Never claims "high" without sleep evidence. Plus a one-tap check-in that overrides it for 4h (TIME-289), and required-energy now from DIFFICULTY not duration (TIME-290).
-
-3/8 **Learning and data.** Answered in `docs/architecture/learning_and_adaptation_spec.md` (new). New `user_adaptation_profiles` rollup + nightly job (TIME-292) — the first table whose purpose is adaptation, cheap enough for the engine to read every request.
-
-10 **Bump-a-task.** Disagree → reason → "What would you rather do?" picker → the chosen task is PINNED and becomes the recommendation, and the pair is learned (TIME-294/295/296). The disagree reason finally does more than lengthen a demote window: wrong_time / too_big / not_priority each get a distinct, tested effect.
-
-**CORRECTION worth carrying forward:** the initial code survey reported that 58% of the scoring weight was inert. That is WRONG — it inverted the split. The verified figure is **38% inert / 62% varying**, now pinned by a test against WEIGHTS in `test_score_differentiation.py`.
-
-**State:** backend suite 704 passing (see known_issues.md for the 11 network-bound files that cannot run in this environment — they HANG rather than fail, and reproduce on clean main). iOS BUILD SUCCEEDED throughout. Alembic head `a1b2c3d4e5f9`, single head, applied to Postgres.
-
-**DEPLOYMENT REALITY (re-verified 2026-08-29): the batch IS DEPLOYED and migrated.**
-
-CORRECTION to an earlier entry in this file: it briefly claimed production was running pre-batch
-code. That was wrong. It was inferred from `GET /openapi.json` returning no paths — but that endpoint
-returns **404 in production** (docs are disabled), so the reading was meaningless, not evidence.
-
-**How to actually check what's deployed** (no credentials needed): hit a route unauthenticated and
-read the status. `404` = the route does not exist; `401/403` = it exists and is auth-gated. Use a
-known-bad path as a control.
-```bash
-curl -s -o /dev/null -w '%{http_code}\n' https://timesense-api.onrender.com/api/v1/definitely-not-real   # 404 control
-curl -s -o /dev/null -w '%{http_code}\n' https://timesense-api.onrender.com/api/v1/energy                # 401 => deployed
-```
-Confirmed 2026-08-29: `/api/v1/energy` and `/api/v1/recommendations/swap` both return 401, so the
-batch is live. Render auto-deploys from pushes to `main`.
-
-**Migrations definitely applied.** `backend/entrypoint.sh` uses `set -e` and runs
-`alembic upgrade head` BEFORE `exec`ing the server, with `RUN_MIGRATIONS=1` on the api service. A
-failed migration therefore prevents the server from starting at all. The API is up and serving the
-new routes, so all seven migrations succeeded — including `a1b2c3d4e5f8`, so
-`users.entitlement_override` EXISTS in production.
-
-**Two databases — the thing that caused the original confusion.** The iOS Simulator talks to the
-Mac's local Postgres (`localhost:5432/timesense`); a PHYSICAL iPhone talks to Render
-(`APIClient.resolveBaseURL` → `prodBaseURL`). The repo-root `.env` therefore only ever affects the
-Simulator. That is exactly why the owner's account read Premium on the Mac and was gated on the
-phone: the local `.env` set `PREMIUM_TEST_EMAILS`, Render never had it, so prod fell through to
-`created_at + 14d` (account created 2026-07-05 → intro trial ended 2026-07-19).
-
-**Unblocked 2026-08-29:** the owner added `PREMIUM_TEST_EMAILS=ekele_r@yahoo.com` to the Render
-`timesense-secrets` env group. Confirmed no longer gated on device. This is the STRING-MATCH
-mechanism, i.e. the thing TIME-282 exists to replace.
-
-**STATUS 2026-08-29 — the batch is fully delivered and live.**
-- Backend: deployed to Render, all seven migrations applied (`alembic_version` = `a1b2c3d4e5f9`).
-- iOS: built signed for the device, installed and launched on the owner's iPhone
-  (`com.aetheranalytics.timesense`, Debug build → talks to Render, not the Mac).
-- Entitlement: `users.entitlement_override = 'comped'` on the owner's production account. Verified
-  with `premium_test_emails` forced empty, so the COLUMN is what grants Premium — no subscription
-  row, intro trial expired 2026-07-31, `is_premium` still True. `PREMIUM_TEST_EMAILS` has been
-  removed from Render, so the string-match mechanism is gone entirely.
-- Database credential rotated (`timesense_user` → `timesense_user_20260829`) and the old role
-  revoked — it now fails with `role ... is not permitted to log in`. See
-  `docs/runbooks/database_credential_rotation.md`; the non-obvious part is recorded in
-  known_issues.md (render.yaml says `fromDatabase`, the services hold literal values).
-
-**REMAINING — on-device passes only, which a simulator cannot cover:**
-1. Geofence / location permission flow (grant location in Settings ▸ Places; geofences need
-   `Always`), then walk between saved places.
-2. The duration sheet + the Start-timer path, after completing a task.
-3. The swap picker: Now ▸ Disagree ▸ reason ▸ choose a replacement, and confirm it becomes the
-   recommendation.
-
-Note the onboarding location ask only appears on a fresh sign-in, so an already-onboarded account
-has to grant location via Settings ▸ Places.
+Still true and unchanged: **StoreKit is not implemented** — the "Upgrade to Premium" buttons are
+inert, which the review notes state plainly. Android and web are not release-prepared.
 
 ---
 

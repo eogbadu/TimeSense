@@ -16,6 +16,7 @@ struct SignInView: View {
                     Spacer().frame(height: DesignTokens.Spacing.xxl)
                     BrandHeader()
                     SocialSignInButtons(
+                        showGoogle: AuthService.isGoogleSignInConfigured,
                         onGoogle: signInWithGoogle,
                         onApple: signInWithApple
                     )
@@ -109,6 +110,9 @@ private struct BrandHeader: View {
 }
 
 private struct SocialSignInButtons: View {
+    /// Google is only offered when Firebase supplied a client ID — see
+    /// `AuthService.isGoogleSignInConfigured`. Apple and email always work.
+    let showGoogle: Bool
     let onGoogle: () -> Void
     let onApple: () -> Void
 
@@ -124,19 +128,21 @@ private struct SocialSignInButtons: View {
             .foregroundColor(.white)
             .cornerRadius(DesignTokens.Radius.pill)
 
-            Button(action: onGoogle) {
-                SignInButtonLabel(icon: "g.circle.fill", text: "Continue with Google")
+            if showGoogle {
+                Button(action: onGoogle) {
+                    SignInButtonLabel(icon: "g.circle.fill", text: "Continue with Google")
+                }
+                .padding(.vertical, DesignTokens.Spacing.md)
+                .padding(.horizontal, DesignTokens.Spacing.lg)
+                .frame(maxWidth: .infinity)
+                .background(DesignTokens.Color.surface)
+                .foregroundColor(DesignTokens.Color.textPrimary)
+                .cornerRadius(DesignTokens.Radius.pill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.pill)
+                        .stroke(DesignTokens.Color.textSecondary.opacity(0.3), lineWidth: 1)
+                )
             }
-            .padding(.vertical, DesignTokens.Spacing.md)
-            .padding(.horizontal, DesignTokens.Spacing.lg)
-            .frame(maxWidth: .infinity)
-            .background(DesignTokens.Color.surface)
-            .foregroundColor(DesignTokens.Color.textPrimary)
-            .cornerRadius(DesignTokens.Radius.pill)
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.pill)
-                    .stroke(DesignTokens.Color.textSecondary.opacity(0.3), lineWidth: 1)
-            )
         }
     }
 }

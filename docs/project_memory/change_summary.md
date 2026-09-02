@@ -1,5 +1,30 @@
 # Change Summary
 
+## 2026-09-02 — TIME-317 Make the iOS app archivable, signable, and acceptable to TestFlight (Jira TIME-2351)
+
+**What changed:**
+- `com.apple.developer.applesignin` added — the app's own Apple sign-in path had no entitlement and
+  fails on any signed build without it (invisible on the Simulator)
+- `ITSAppUsesNonExemptEncryption = false` — without it every upload stalls in "Missing Compliance"
+- `PrivacyInfo.xcprivacy` for the app AND the widget (separate bundle, also compiles
+  `WidgetSnapshot.swift`, also calls UserDefaults → CA92.1); both wired into the pbxproj Resources
+- The Google sign-in button is gated on `AuthService.isGoogleSignInConfigured` — the bundled
+  `GoogleService-Info.plist` has no `CLIENT_ID`, so the button was a silent no-op and Beta App
+  Review rejects that. Returns by itself when a real plist lands.
+- `NSLocalNetworkUsageDescription` no longer tells the user about a development server
+- Version 1.0.0; build number overridable via `CURRENT_PROJECT_VERSION` on the command line
+- `ios/ExportOptions.plist` + `scripts/testflight_build.sh` (archive → export → verify → upload)
+- `docs/legal/privacy_policy.md`, `docs/release/testflight.md`
+
+**Why:** nothing in the repo had ever been prepared for distribution; every item above is either a
+hard upload rejection, a Beta App Review rejection, or a tester-facing dead end.
+
+**Verified:** full pipeline end to end — ARCHIVE SUCCEEDED, EXPORT SUCCEEDED, six artifact checks
+ok, signed `.ipa` produced (`Apple Distribution: Born Royal LLC`). All 5 iOS test suites pass.
+
+**Not done (needs the Apple account holder):** App Store Connect app record, ASC API key for upload,
+public URLs for the privacy policy and support page, demo account, App Privacy questionnaire.
+
 ## 2026-09-01 — TIME-316 Complete any task in Today, and say how long it took (Jira TIME-2350)
 
 **What changed:**

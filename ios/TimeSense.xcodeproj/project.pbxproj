@@ -64,6 +64,8 @@
 		AB4928A79E2DF8D711F9C21C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF2C9C92FEC1E46674899DC /* Foundation.framework */; };
 		AC5C8D839246AAA1FAD6F1A8 /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157401B5592BA83C136A5804 /* DeepLinkRouter.swift */; };
 		B222B5BA80D315FBD04DD843 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 10849A270EBDF154E79FD082 /* GoogleService-Info.plist */; };
+		C1A0PRIV0002APP0000000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C1A0PRIV0001APP0000000001 /* PrivacyInfo.xcprivacy */; };
+		C1A0PRIV0004WID0000000004 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C1A0PRIV0003WID0000000003 /* PrivacyInfo.xcprivacy */; };
 		B98E3891DFBAB8E368AEF84E /* TimeSenseWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FC4C1AC65D8617FA53D4A853 /* TimeSenseWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		C1277917BBEAE5DE7169E3AD /* PlacesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71DE2E87542D3359F2FEE460 /* PlacesSettingsView.swift */; };
 		C947A57452119252AB0CE31D /* TimeSenseShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */; };
@@ -109,6 +111,8 @@
 		048537E8FE790591EDC1B6DE /* VoiceCaptureService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = VoiceCaptureService.swift; path = Capture/VoiceCaptureService.swift; sourceTree = "<group>"; };
 		0735A76942000F597C1CACE5 /* NextEventWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextEventWidget.swift; sourceTree = "<group>"; };
 		10849A270EBDF154E79FD082 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		C1A0PRIV0001APP0000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C1A0PRIV0003WID0000000003 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		157401B5592BA83C136A5804 /* DeepLinkRouter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
 		1D9496846C646307031C8387 /* TimeSenseShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeSenseShortcuts.swift; sourceTree = "<group>"; };
 		2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UsableTimeWidget.swift; sourceTree = "<group>"; };
@@ -220,6 +224,7 @@
 				5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */,
 				6345B92D47288413957CE8BE /* Info.plist */,
 				53053C84F6BDAB4CB9AC5592 /* TimeSenseWidget.entitlements */,
+				C1A0PRIV0003WID0000000003 /* PrivacyInfo.xcprivacy */,
 			);
 			path = TimeSenseWidget;
 			sourceTree = "<group>";
@@ -279,6 +284,7 @@
 				E72265378D15A638603FE532 /* Intents */,
 				10849A270EBDF154E79FD082 /* GoogleService-Info.plist */,
 				A27CCD58C9BAE9E0D039807B /* Assets.xcassets */,
+				C1A0PRIV0001APP0000000001 /* PrivacyInfo.xcprivacy */,
 			);
 			path = TimeSense;
 			sourceTree = "<group>";
@@ -595,6 +601,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C1A0PRIV0004WID0000000004 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -611,6 +618,7 @@
 			files = (
 				B222B5BA80D315FBD04DD843 /* GoogleService-Info.plist in Resources */,
 				F38816ECFDA6CE143C0C8729 /* Assets.xcassets in Resources */,
+				C1A0PRIV0002APP0000000002 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -865,7 +873,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aetheranalytics.timesense;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -896,7 +904,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aetheranalytics.timesense;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -917,7 +925,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeSenseWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aetheranalytics.timesense.TimeSenseWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -939,7 +947,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeSenseWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aetheranalytics.timesense.TimeSenseWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

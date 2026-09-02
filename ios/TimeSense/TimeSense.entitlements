@@ -14,5 +14,13 @@
 	     App Store distribution. -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Sign in with Apple. SignInView offers an Apple button and AppleSignInCoordinator drives
+	     ASAuthorizationController; without this entitlement the request fails on any signed build
+	     (error 1000, "The operation couldn't be completed"). It cost nothing on the Simulator,
+	     which is why it went unnoticed until the first archive. -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>
