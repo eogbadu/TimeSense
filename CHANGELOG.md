@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-09-02 — Ready to hand to testers (TIME-317)
+
+### Fixed
+- **Sign in with Apple works on a real, signed build.** The entitlement it needs was never declared,
+  so the button worked in the Simulator and failed everywhere that matters.
+
+### Changed
+- **The Google sign-in button is hidden until Google sign-in actually works.** It has never been
+  connected — the Firebase configuration carries no Google client ID — so tapping it did nothing at
+  all. It now appears only once that configuration is in place, and comes back on its own when it
+  is. Apple and email sign-in are unaffected.
+- **A permission prompt no longer mentions our development server.** The local-network prompt now
+  describes what it means for you.
+- Version is now 1.0.0.
+
+### Added
+- **The app can be built and shipped to TestFlight with one command**, and refuses to upload a build
+  that would be rejected — it checks the signing, the entitlements, the export-compliance answer and
+  the privacy manifests first.
+- **A privacy policy**, and the App Store privacy declarations that go with it: what TimeSense
+  collects, why, who else touches it, and how to get rid of it.
+- Apple's required privacy manifests for the app and the widget.
+
 ## 2026-09-01 — Finish any task, and say how long it took (TIME-316)
 
 ### Added

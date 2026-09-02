@@ -1,5 +1,21 @@
 # Phase Status
 
+## iOS release preparation (TIME-317) — 2026-09-02
+
+The repository now produces an artifact App Store Connect will accept. `scripts/testflight_build.sh`
+archives, re-signs for distribution, verifies six things about the result and refuses to upload if
+any of them is wrong. Proven end to end: a signed `.ipa` under `Apple Distribution: Born Royal LLC`.
+
+Five distribution-only faults fixed, none of which a Simulator or a development build could show:
+the missing Sign in with Apple entitlement, the absent export-compliance answer, no privacy manifest
+in an app that calls a required-reason API, a Google sign-in button wired to a Firebase config with
+no client ID, and a permission prompt that mentioned our development server.
+
+Outstanding and owned by the user — the Apple-account half, none of which can be scripted from here:
+the App Store Connect app record, an ASC API key for the upload, public URLs for the privacy policy
+and support page, a demo account for review, and the App Privacy questionnaire. The full checklist
+is in `docs/release/testflight.md`.
+
 ## Completing tasks + learning from what you actually do (TIME-316) — 2026-09-01
 
 Any task in today's plan can now be completed with a duration, not just the recommended one, and

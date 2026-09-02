@@ -11669,6 +11669,53 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none)."),
         ),
     },
+    {
+        "summary": "TIME-317: Make the iOS app archivable, signable, and acceptable to TestFlight",
+        "labels": ["ios", "release", "testflight", "signing", "privacy"],
+        "description": doc(
+            h2("Goal"), p("The app builds and runs on a connected device, but nothing in the repository has ever been prepared for distribution. A Release archive today signs with an Apple Development identity, ships get-task-allow, declares no export-compliance answer, carries no privacy manifest, offers a Google sign-in button that cannot work because the Firebase plist has no CLIENT_ID, and is missing the Sign in with Apple entitlement that its own sign-in path requires. Each of these is either a hard upload rejection, a Beta App Review rejection, or a tester-facing dead end. This ticket makes the repository produce an artifact that App Store Connect will accept and an external tester can actually sign into."),
+            divider(), h2("Scope"), bullet_list([
+                "Add the Sign in with Apple entitlement, without which the app's own Apple sign-in path fails on any signed build",
+                "Declare ITSAppUsesNonExemptEncryption so each upload stops stalling on the export-compliance question",
+                "Add an app-level and widget-level privacy manifest declaring the required-reason APIs actually used (UserDefaults) and the data actually collected",
+                "Show the Google sign-in button only when Firebase supplies a client ID, so a button that cannot work is never offered",
+                "Move the version to 1.0.0 and make the build number settable from the command line for repeat uploads",
+                "Reword the local-network purpose string, which currently tells the user about a development server",
+                "Add an ExportOptions.plist and a scripted archive/export/upload path so a build is reproducible rather than a sequence of Xcode clicks",
+                "Write the privacy policy and support pages the App Store Connect record requires, and the TestFlight test information",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No StoreKit purchase implementation — the Upgrade buttons stay inert and the trial gate is unchanged",
+                "No Android or web release preparation",
+                "No App Store Connect record creation, certificate issuance, or upload — these need the account holder's credentials and are handed over as a checklist",
+                "No Google sign-in enablement in the Firebase console; the button lights up on its own once a real plist lands",
+                "No new features, and no change to any product behaviour beyond the sign-in button's visibility",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "ios/TimeSense/Info.plist, ios/TimeSense/TimeSense.entitlements",
+                "ios/TimeSense/PrivacyInfo.xcprivacy (new), ios/TimeSenseWidget/PrivacyInfo.xcprivacy (new)",
+                "ios/TimeSense/Features/Auth/SignInView.swift",
+                "ios/TimeSense.xcodeproj/project.pbxproj (version, privacy manifest resources)",
+                "ios/ExportOptions.plist (new), scripts/testflight_build.sh (new)",
+                "docs/legal/privacy_policy.md (new), docs/legal/terms_of_service.md (new)",
+                "docs/release/testflight.md (new)",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "xcodebuild archive succeeds and the resulting app carries com.apple.developer.applesignin in its embedded entitlements",
+                "The archived Info.plist contains ITSAppUsesNonExemptEncryption set to false",
+                "PrivacyInfo.xcprivacy is present inside the built app bundle and inside the widget appex",
+                "The Google button is absent when the bundled GoogleService-Info.plist has no CLIENT_ID, and present when it has one",
+                "CFBundleShortVersionString reads 1.0.0 and the build number can be overridden by passing CURRENT_PROJECT_VERSION on the command line",
+                "No purpose string in the shipped Info.plist mentions a development server",
+                "The build script produces a signed .ipa given an App Store Connect API key, and reports a clear error without one",
+                "A privacy policy and support page exist in the repository with real, publishable content",
+                "The iOS test suite still passes",
+            ]),
+            divider(), h2("Verification"), code_block("xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO\nxcodebuild archive -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'generic/platform=iOS' -archivePath /tmp/TimeSense.xcarchive -allowProvisioningUpdates\ncodesign -d --entitlements - /tmp/TimeSense.xcarchive/Products/Applications/TimeSense.app\nplutil -p /tmp/TimeSense.xcarchive/Products/Applications/TimeSense.app/Info.plist | grep ITSApp\nls /tmp/TimeSense.xcarchive/Products/Applications/TimeSense.app/PrivacyInfo.xcprivacy"),
+            divider(), h2("Dependencies"), p("TIME-059/060 (real signing and the HealthKit entitlement), TIME-062 (Firebase SPM in the project), TIME-316 (last feature merged)."),
+            divider(), h2("Next Ticket"), p("(none)."),
+        ),
+    },
 ]
 
 

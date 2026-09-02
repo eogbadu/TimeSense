@@ -49,6 +49,15 @@ final class AuthService: ObservableObject {
 
     // MARK: – Sign in
 
+    /// Whether the bundled `GoogleService-Info.plist` actually carries a Google OAuth client ID.
+    /// It only does once the Google provider is enabled for iOS in the Firebase console; the plist
+    /// downloaded before that has no `CLIENT_ID` key at all. Without one `signInWithGoogle` can do
+    /// nothing but return, so the UI hides the button rather than offering a tap that does nothing.
+    /// The button reappears on its own the moment a real plist is dropped in — no code change.
+    static var isGoogleSignInConfigured: Bool {
+        FirebaseApp.app()?.options.clientID?.isEmpty == false
+    }
+
     func signInWithGoogle(presenting viewController: UIViewController) async {
         guard let clientID = FirebaseApp.app()?.options.clientID else { return }
         isLoading = true
@@ -172,6 +181,8 @@ final class AuthService: ObservableObject {
     @Published private(set) var error: AuthError? = nil
 
     init() {}
+    /// No Firebase, so no Google client ID and no Google button.
+    static var isGoogleSignInConfigured: Bool { false }
     func signInWithGoogle(presenting: AnyObject) async {}
     func signInWithApple(credential: Any) async {}
     func signInWithEmail(email: String, password: String) async {}

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Export options for a TestFlight / App Store build. Used by scripts/testflight_build.sh.
+
+  The archive itself is signed with an Apple Development identity (that is what automatic signing
+  picks for a `generic/platform=iOS` archive). `xcodebuild -exportArchive` re-signs it with an
+  Apple Distribution identity and strips get-task-allow — that step, not the archive, is what makes
+  the build uploadable. With `signingStyle = automatic` and an App Store Connect API key,
+  -allowProvisioningUpdates will create the distribution certificate and profiles if they are
+  missing, so nothing here has to be clicked through in Xcode.
+-->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>teamID</key>
+	<string>WB5NV894N5</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>destination</key>
+	<string>export</string>
+	<!-- Symbols go up with the build so TestFlight crash reports are symbolicated. -->
+	<key>uploadSymbols</key>
+	<true/>
+	<!-- Bitcode has been dead since Xcode 14; leaving it on only produces a warning. -->
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+</dict>
+</plist>

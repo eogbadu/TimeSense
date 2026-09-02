@@ -8,16 +8,25 @@
 	     FCM or phone-auth, so turning the proxy off is safe and lets our delegate receive the token. -->
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<false/>
-	<!-- Allow plain-HTTP connections to the local network (e.g. the dev backend on the Mac reached
-	     via its .local Bonjour name) while keeping App Transport Security on for everything else. -->
+	<!-- Export compliance. TimeSense uses only HTTPS (URLSession/ATS) and the platform keychain —
+	     no proprietary or non-exempt cryptography. Declaring this here answers App Store Connect's
+	     export-compliance question at upload time; without it every build sits in "Missing
+	     Compliance" and cannot reach a tester until someone answers it by hand. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- Allow plain-HTTP connections to the local network while keeping App Transport Security on
+	     for everything else. This exists so a development build can be pointed at a backend running
+	     on the same Wi-Fi via the API_BASE_URL scheme variable; release builds always use the HTTPS
+	     production API and never take this path. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<!-- iOS 14+ requires a purpose string before the app makes local-network connections. -->
+	<!-- iOS 14+ requires a purpose string before the app makes local-network connections. The user
+	     reads this, so it describes what they'd experience, not our build setup. -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>TimeSense connects to your development server on the local network.</string>
+	<string>TimeSense can connect to a TimeSense server on your local network instead of over the internet.</string>
 	<!-- Apple Health (read-only): sleep to estimate your energy, and steps/activity for your daily
 	     summary. TimeSense never writes to Health. -->
 	<key>NSHealthShareUsageDescription</key>

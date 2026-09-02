@@ -1,5 +1,33 @@
 # Known Issues
 
+## Google sign-in is unavailable on iOS — the Firebase config has no client ID (TIME-317, 2026-09-02)
+
+`ios/TimeSense/GoogleService-Info.plist` contains no `CLIENT_ID` / `REVERSED_CLIENT_ID`, because the
+Google provider has never been enabled for iOS in the `timesense-eb7ec` Firebase console. That makes
+`AuthService.signInWithGoogle` return immediately on its `guard let clientID` — the button was a
+silent no-op, which Beta App Review rejects.
+
+The button is now hidden behind `AuthService.isGoogleSignInConfigured`. **To restore it:** enable
+Google as a sign-in provider for the iOS app in the Firebase console, download the new
+`GoogleService-Info.plist`, replace the bundled one, and add the `REVERSED_CLIENT_ID` as a
+`CFBundleURLTypes` URL scheme in `Info.plist` (GoogleSignIn needs it for the OAuth callback). The
+button reappears on its own; no Swift change is required.
+
+Apple and email sign-in are unaffected and both work.
+
+## The archive is development-signed by design — do not chase it (TIME-317, 2026-09-02)
+
+`xcodebuild archive -destination generic/platform=iOS` signs with **Apple Development** and ships
+`get-task-allow = 1`. This looks like a signing fault and is not. `xcodebuild -exportArchive` is what
+re-signs with Apple Distribution, sets `get-task-allow` false, flips `aps-environment` to
+`production` and adds `beta-reports-active`.
+
+Related: `get-task-allow` is **present** in a distribution build, set to false. Any check that greps
+for the key name rather than reading the value will report a false failure.
+
+Also non-obvious: `security find-identity -v -p codesigning` lists only "Apple Development" on this
+Mac, yet distribution export succeeds — the distribution certificate is cloud-managed by Xcode.
+
 ## LESSON (2026-08-30, TIME-308): a shared helper answering two questions is not a bug in the helper
 - `free_minutes_before` reported 780 minutes free at 00:03. The obvious fix — clamp it — would have
   broken the OTHER caller, because 780 is the correct answer to "will there be enough working time
