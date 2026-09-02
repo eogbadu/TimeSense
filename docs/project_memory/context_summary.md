@@ -36,7 +36,10 @@ empty array as unset under `set -u` — every array expansion uses the `${a[@]+"
 Nothing further can be done from this repository. `docs/release/testflight.md` holds the full
 checklist and the ready-to-paste TestFlight test information; the short version:
 
-1. Create the App Store Connect app record — bundle ID `com.aetheranalytics.timesense`.
+1. Create the App Store Connect app record — bundle ID `com.aetheranalytics.timesense`, listing
+   name **`TimeSense: Time Assistant`**. The bare name "TimeSense" is owned by another developer and
+   is rejected (TIME-318); the name under the icon stays "TimeSense" and that mismatch is intended.
+   Category is not on the New App sheet and TestFlight does not need it.
 2. Create an App Store Connect API key (App Manager role), put the `.p8` in
    `~/.appstoreconnect/private_keys/`, export `ASC_KEY_ID` and `ASC_ISSUER_ID`. Then
    `scripts/testflight_build.sh --upload` does the rest. (Without a key: build the `.ipa` and use

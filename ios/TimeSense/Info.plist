@@ -8,6 +8,16 @@
 	     FCM or phone-auth, so turning the proxy off is safe and lets our delegate receive the token. -->
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<false/>
+	<!-- The name under the icon on the home screen. This is DELIBERATELY not the App Store listing
+	     name, which is "TimeSense: Time Assistant" — the bare string "TimeSense" is owned by another
+	     developer on the App Store and cannot be used for a listing (see known_issues.md). The two
+	     names are different on purpose; do not "fix" the mismatch.
+
+	     Pinned here rather than left to fall out of CFBundleName ($(PRODUCT_NAME) → $(TARGET_NAME)),
+	     which happened to produce the right string but would silently rename the icon on everyone's
+	     home screen if the target were ever renamed. -->
+	<key>CFBundleDisplayName</key>
+	<string>TimeSense</string>
 	<!-- Export compliance. TimeSense uses only HTTPS (URLSession/ATS) and the platform keychain —
 	     no proprietary or non-exempt cryptography. Declaring this here answers App Store Connect's
 	     export-compliance question at upload time; without it every build sits in "Missing

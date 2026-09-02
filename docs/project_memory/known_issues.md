@@ -1,5 +1,26 @@
 # Known Issues
 
+## "TimeSense" is unavailable as an App Store name — do not retry it (TIME-318, 2026-09-02)
+
+App Store Connect rejects it: *"The app name you entered is already being used."* Apple's check is
+case- and space-insensitive, so all three of these block it, held by three separate developers:
+
+| Name | Developer | Category |
+|---|---|---|
+| TimeSense | TAKESHI SUZUKI | Entertainment |
+| Timesense - Interval tracker | Stanton Software, LLC | Productivity |
+| Time Sense | Ubrixy Technologies | Productivity |
+
+The listing name is **"TimeSense: Time Assistant"**. The name under the icon on the home screen is
+still **"TimeSense"**, pinned by `CFBundleDisplayName` in `ios/TimeSense/Info.plist`.
+
+**The two names differ ON PURPOSE and the mismatch must not be "corrected".** They control different
+things — `CFBundleDisplayName` drives the home screen, the App Store Connect record drives the store
+listing and the TestFlight entry — and there is no way to make them identical while the bare name is
+taken. Reasoning, including why `Time$ense` was rejected, is in `decision_log.md`.
+
+Nothing about the binary depends on this: the bundle ID stays `com.aetheranalytics.timesense`.
+
 ## Google sign-in is unavailable on iOS — the Firebase config has no client ID (TIME-317, 2026-09-02)
 
 `ios/TimeSense/GoogleService-Info.plist` contains no `CLIENT_ID` / `REVERSED_CLIENT_ID`, because the

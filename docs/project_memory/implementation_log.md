@@ -1,5 +1,39 @@
 # Implementation Log
 
+## 2026-09-02 — TIME-318 Settle the App Store listing name (Jira TIME-2352)
+
+The first step of the TestFlight checklist failed on its first field: *"The app name you entered is
+already being used."* "TimeSense" belongs to TAKESHI SUZUKI (Entertainment), and because Apple's
+uniqueness check is case- and space-insensitive, Stanton Software's "Timesense - Interval tracker"
+and Ubrixy's "Time Sense" block the near variants too — two of the three are in Productivity, the
+same category.
+
+Listing name is now **"TimeSense: Time Assistant"** (25 of the 30 allowed characters). A store name
+containing the home-screen name is ordinary practice, passes review, and — the reason it beat every
+alternative — keeps the exact string "TimeSense" in the listing, so the app is still findable by
+people searching its brand.
+
+`Time$ense` was considered and rejected. It clears the uniqueness check while discarding the only
+thing worth keeping: nobody types "$" when searching, so the app would be undiscoverable under its
+own name and the three incumbents would take that traffic. It also cannot be spoken (to a person, to
+Siri, on a podcast), "$" is not valid in a domain name, and Apple bans price information in app
+names — which invites reviewer attention on a first submission.
+
+### The part that needed pinning down
+
+The choice creates a **permanent divergence between two names**, and that is the real deliverable
+here. `CFBundleDisplayName` drives the home screen; the App Store Connect record drives the store
+listing and the TestFlight entry. They cannot be made identical while the bare name is taken, so
+without a written record the mismatch reads as a bug and someone eventually "fixes" it.
+
+There was also a latent fault worth closing while here: the app had **no `CFBundleDisplayName` at
+all**. iOS was falling back to `CFBundleName` → `$(PRODUCT_NAME)` → `$(TARGET_NAME)` → "TimeSense" —
+the right answer by coincidence. Renaming the target would have silently renamed the icon on every
+installed device. It is now stated explicitly.
+
+Nothing about the binary changed: bundle ID, `PRODUCT_NAME`, target names, app group and every
+signing artifact are untouched.
+
 ## 2026-09-02 — TIME-317 Make the iOS app archivable, signable, and acceptable to TestFlight (Jira TIME-2351)
 
 Nothing in the repository had ever been prepared for distribution. The app built and ran on a

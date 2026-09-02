@@ -1,5 +1,43 @@
 # Decision Log
 
+## App Store listing name (2026-09-02, TIME-318)
+
+- Decision: The App Store listing name is **"TimeSense: Time Assistant"**. The name under the icon
+  on the home screen stays **"TimeSense"**.
+  Reason: The bare string "TimeSense" is owned by another developer and App Store Connect rejects
+  it; the near variants are held by two more. A store name that contains the home-screen name is
+  ordinary practice, passes review, and keeps the exact searchable string "TimeSense" in the
+  listing.
+  Date: 2026-09-02
+
+- Decision: The store name and the on-device name are allowed to differ, permanently.
+  Reason: They control different things and there is no way to make them identical while "TimeSense"
+  is taken. `CFBundleDisplayName` is now pinned explicitly in `Info.plist` so the home-screen name
+  is a stated decision rather than a by-product of `PRODUCT_NAME`. **The mismatch is intended — do
+  not "fix" it.**
+  Date: 2026-09-02
+
+- Decision: Rejected "Time$ense" as the listing name.
+  Reason: It clears the uniqueness check while giving up the only thing worth keeping. Nobody types
+  "$" when searching, so the app would be undiscoverable under its own brand and the three incumbents
+  would collect that traffic; it cannot be spoken aloud, to Siri, or on a podcast; "$" is not valid
+  in a domain name; and Apple bans price information in app names, so it invites reviewer attention
+  on a first submission. It also fights the product's positioning — a `$` reads as finance or as
+  2000s marketing, against a product whose promise is "don't make managing your day another job".
+  Date: 2026-09-02
+
+- Decision: No trademark filing to have Apple release "TimeSense".
+  Reason: Weeks of latency, requires registered rights we have not established, and the incumbent
+  ships a live app. Not a path to a beta.
+  Date: 2026-09-02
+
+- Decision: No rebrand. `PRODUCT_NAME`, the bundle ID `com.aetheranalytics.timesense`, target names
+  and the app group are untouched.
+  Reason: Nothing about the binary or the signing depends on the listing name, and the listing name
+  stays editable until App Store submission. Rebranding now would be a large change bought with no
+  benefit at this stage.
+  Date: 2026-09-02
+
 ## Deadlines and staleness (2026-08-30, TIME-309 / TIME-313)
 
 - Decision: A deadline that names a DAY means the END of that day — 23:59 local, not the end of the

@@ -60,11 +60,31 @@ Create the app once, at App Store Connect → Apps → **+**. These are the only
 | Field | Value |
 |---|---|
 | Platforms | iOS |
-| Name | TimeSense |
+| Name | `TimeSense: Time Assistant` — **not** "TimeSense", see below |
 | Primary Language | English (U.S.) |
 | Bundle ID | `com.aetheranalytics.timesense` |
 | SKU | `timesense-ios` |
 | User Access | Full Access |
+
+### The listing name is not the name on the phone
+
+**"TimeSense" on its own is unavailable** and App Store Connect will reject it with *"The app name
+you entered is already being used."* Three developers hold the variants — TAKESHI SUZUKI
+("TimeSense", Entertainment), Stanton Software ("Timesense - Interval tracker", Productivity) and
+Ubrixy Technologies ("Time Sense", Productivity) — and Apple's uniqueness check is case- and
+space-insensitive, so all three block you. Do not retry it.
+
+The listing name is therefore `TimeSense: Time Assistant`, which keeps the exact searchable string
+"TimeSense" in the listing. Two names are now in play and they control different things:
+
+| | Comes from | Where it shows |
+|---|---|---|
+| `TimeSense` | `CFBundleDisplayName` in `ios/TimeSense/Info.plist` | Under the icon on the home screen |
+| `TimeSense: Time Assistant` | The App Store Connect record | The store listing and the TestFlight entry |
+
+**They differ on purpose.** A store name that contains the home-screen name is ordinary practice and
+passes review. The listing name can be changed freely right up until App Store submission, so it
+commits you to nothing — if a better name turns up, changing it costs one field.
 
 **Category is not on that sheet** — it lives under App Store → General → **App Information** after
 the app exists, and it is not required for TestFlight at all, only for App Store submission. Set it
