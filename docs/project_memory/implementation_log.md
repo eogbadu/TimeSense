@@ -1,5 +1,23 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-324 Today plan nests steps under their parent (Jira TIME-2358)
+
+`GET /timeline/today/plan` now returns one `kind:"task"` entry per group, with `task.steps` filled in position order. Steps no longer appear as rows of their own.
+
+**How the plan is built:**
+1. The day's tasks are collected as before. Parents of any steps among them that aren't in the plan are loaded in one `get_many`, scoped to the user. Calendar-sourced parents are skipped.
+2. A row is any task that isn't a step, or a step whose parent couldn't be loaded.
+3. The rows' steps come from one `steps_for` query, with cancelled steps dropped.
+4. Rows and nested steps are serialized in a single `TaskGraphService.responses` pass, which keeps the query count fixed.
+5. **Entry time for a group:** its first open step (in position order) that has a time. Otherwise the parent's own time, or "Anytime" if it has none. A finished step never sets the time.
+
+**What doesn't change:**
+- There is no new entry kind, so older iOS builds show the group as an ordinary task row.
+- `GET /timeline/today` stays flat, because Android and web read it.
+- The plan still lists cancelled tasks timed today, as it did before. That was left as is.
+
+**Verified:** 5 new tests in `tests/test_timeline_plan_steps.py`, alongside the existing timeline and graph suites. Results are in the PR.
+
 ## 2026-09-15 — TIME-323 Recommendations and scheduling respect steps and prerequisites (Jira TIME-2357)
 
 This is the ticket where waits and steps start to change what the user sees. TimeSense no longer suggests a task that is still waiting on an unfinished one, or a parent whose steps are still open; it suggests the next step instead and names the parent. Scheduling no longer places a task before what it waits for.
