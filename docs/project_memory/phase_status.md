@@ -1,5 +1,12 @@
 # Phase Status
 
+## Insights fix (TIME-330) — 2026-09-15
+
+- [x] Completion rate counts the same tasks on both sides (tasks added that week)
+- [x] Admin recalculation for saved weeks
+- [x] iOS percent charts stay inside their cards
+- [ ] Run `POST /api/v1/admin/insights/recalculate` on Render after deploy (user)
+
 ## Steps & prerequisites (TIME-319..329) — IN PROGRESS, started 2026-09-15
 
 Two user-requested features on one model:

@@ -1,5 +1,20 @@
 # Change Summary
 
+## 2026-09-15 — TIME-330 Insights completion rate and chart bounds (Jira TIME-2364)
+
+**What changed:**
+- **Completion rate:** "Tasks completed X of Y" and the rate now count the same tasks, the ones added that week, so X can't exceed Y. Steps count; their parent doesn't.
+- **Saved weeks:** can be corrected with `POST /admin/insights/recalculate`.
+- **iOS:** the percent charts use a curve that can't overshoot and clamp values to 0–100.
+
+**Why:** the two numbers counted different tasks, so a week could show 175%. The chart's smoothed line and fixed scale then drew it outside the card.
+
+**Verified:**
+- 4 new backend tests and 4 new XCTests.
+- Full suite and iOS results are in the PR.
+
+**Owned by the user:** after deploying, run the recalculation endpoint once on Render. Until then, saved weeks keep their old numbers (the chart clamps them).
+
 ## 2026-09-15 — TIME-329 iOS Capture adds to a group (Jira TIME-2363)
 
 **What changed:**

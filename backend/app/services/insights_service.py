@@ -76,8 +76,9 @@ class InsightsService:
         start_dt, _ = local_day_bounds(week_start, tz)
         _, end_dt = local_day_bounds(week_end, tz)
 
-        tasks_total = await self.task_repo.count_created_in_range(user_id, start_dt, end_dt)
-        tasks_completed = await self.task_repo.count_completed_in_range(user_id, start_dt, end_dt)
+        tasks_total, tasks_completed = await self.task_repo.completion_of_added_in_range(
+            user_id, start_dt, end_dt
+        )
         completion_rate = tasks_completed / tasks_total if tasks_total > 0 else None
 
         skipped_by_meal = await self.meal_repo.count_skipped_by_type_in_range(
@@ -118,6 +119,53 @@ class InsightsService:
         summary_text = await self._summarize(stats)
 
         return await self.insight_repo.create(user_id=user_id, summary_text=summary_text, **stats)
+
+    async def recalculate_all(self) -> dict[str, int]:
+        """Re-count the task numbers on every saved week (TIME-330).
+
+        Weeks saved before TIME-330 compared tasks finished that week with tasks added that week,
+        so some report more done than total. Only the task numbers are recounted; everything else
+        a week recorded stays as it was."""
+        insights = await self.insight_repo.list_all()
+        timezones: dict[uuid.UUID, str] = {}
+        changed = 0
+        for insight in insights:
+            if insight.user_id not in timezones:
+                timezones[insight.user_id] = await self._user_timezone(insight.user_id)
+            if await self.recalculate(insight, timezones[insight.user_id]):
+                changed += 1
+        return {"checked": len(insights), "changed": changed}
+
+    async def recalculate(self, insight: WeeklyInsight, tz: str) -> bool:
+        """Correct one saved week's task numbers. The summary sentence quotes them, so it is
+        rewritten too, but only when they changed. Returns whether anything changed."""
+        start_dt, _ = local_day_bounds(insight.week_start, tz)
+        _, end_dt = local_day_bounds(insight.week_end, tz)
+        total, completed = await self.task_repo.completion_of_added_in_range(
+            insight.user_id, start_dt, end_dt
+        )
+        if (total, completed) == (insight.tasks_total, insight.tasks_completed):
+            return False
+
+        insight.tasks_total = total
+        insight.tasks_completed = completed
+        insight.completion_rate = completed / total if total > 0 else None
+        insight.summary_text = await self._summarize({
+            "week_start": insight.week_start,
+            "week_end": insight.week_end,
+            "tasks_completed": completed,
+            "tasks_total": total,
+            "most_skipped_meal": insight.most_skipped_meal,
+            "late_wake_count": insight.late_wake_count,
+            "commute_confirmed_count": insight.commute_confirmed_count,
+            "feedback_done_count": insight.feedback_done_count,
+            "feedback_not_now_count": insight.feedback_not_now_count,
+            "recommendations_shown": insight.recommendations_shown,
+            "recommendations_accepted": insight.recommendations_accepted,
+            "recommendation_acceptance_rate": insight.recommendation_acceptance_rate,
+        })
+        await self.db.flush()
+        return True
 
     async def _summarize(self, stats: dict) -> str:
         try:

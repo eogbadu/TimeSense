@@ -569,6 +569,20 @@ Every decision below was put to the user and settled in a planning session befor
   model keeps its own prompt state and presents its own sheet; only the behaviour is shared.
   Date: 2026-09-01 (TIME-316)
 
+- Decision: Weekly completion rate = of the tasks added that week, the share that are done
+  Reason: It was "finished that week ÷ added that week", two different sets of tasks, so a week
+  could read 7 of 4 (175%). Chosen by the user over "of the tasks scheduled or due that week"
+  (leaves out undated tasks) and "cap at 100%" (hides the wrong numbers). Steps count as tasks; a
+  parent with live steps doesn't, so a group isn't counted twice.
+  Date: 2026-09-15 (TIME-330)
+
+- Decision: Saved weeks are corrected by an admin recalculation, not recomputed on every read
+  Reason: The user chose to fix every saved week. An idempotent admin endpoint
+  (`POST /admin/insights/recalculate`) does it once after deploy, without an LLM call per page load.
+  Weeks stay snapshots taken when they are generated, and only task numbers and the summary that
+  quotes them are rewritten.
+  Date: 2026-09-15 (TIME-330)
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

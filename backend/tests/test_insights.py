@@ -23,6 +23,8 @@ from app.models.recommendation_event import RecommendationEvent
 from app.models.recommendation_feedback import RecommendationFeedback
 from app.models.sleep_wake import SleepWakeEvent
 from app.models.subscription import Subscription
+from app.models.task import Task
+from app.repositories.insight_repository import InsightRepository
 from app.repositories.task_repository import TaskRepository
 from app.services.insights_service import InsightsService, most_recently_completed_week
 from app.services.user_service import UserService
@@ -151,6 +153,74 @@ async def test_completion_rate_and_task_counts(db_session):
     assert insight.tasks_total == 3
     assert insight.tasks_completed == 2
     assert insight.completion_rate == pytest.approx(2 / 3)
+
+
+@pytest.mark.anyio
+async def test_finishing_an_older_task_does_not_push_the_rate_past_100(db_session):
+    # TIME-330: finishing last month's task this week used to count as done but not as added.
+    user = await _make_user(db_session, "uid-ins-older")
+    await _add_task(db_session, user.id, created_at=_in_week(-20), status="done", updated_at=_in_week(1))
+    await _add_task(db_session, user.id, created_at=_in_week(-20), status="done", updated_at=_in_week(2))
+    await _add_task(db_session, user.id, created_at=_in_week(3), status="pending")
+
+    svc = InsightsService(db_session, get_llm_gateway())
+    insight = await svc.get_or_generate_for_week(user.id, WEEK_START, WEEK_END)
+
+    assert insight.tasks_total == 1
+    assert insight.tasks_completed == 0
+    assert insight.completion_rate == 0
+
+
+async def _add_group(db_session, user_id, step_statuses: list[str]):
+    parent = Task(user_id=user_id, title="Renew passport", status="done")
+    db_session.add(parent)
+    await db_session.flush()
+    parent.created_at = _in_week(0)
+    for i, status in enumerate(step_statuses):
+        step = Task(user_id=user_id, title=f"Step {i}", status=status, parent_task_id=parent.id, position=i)
+        db_session.add(step)
+        await db_session.flush()
+        step.created_at = _in_week(0)
+    await db_session.flush()
+    return parent
+
+
+@pytest.mark.anyio
+async def test_a_group_counts_its_steps_not_its_parent(db_session):
+    user = await _make_user(db_session, "uid-ins-group")
+    await _add_group(db_session, user.id, ["done", "done", "cancelled"])
+
+    svc = InsightsService(db_session, get_llm_gateway())
+    insight = await svc.get_or_generate_for_week(user.id, WEEK_START, WEEK_END)
+
+    assert insight.tasks_total == 2
+    assert insight.tasks_completed == 2
+    assert insight.completion_rate == 1
+
+
+@pytest.mark.anyio
+async def test_recalculate_corrects_saved_weeks_and_leaves_right_ones_alone(db_session):
+    user = await _make_user(db_session, "uid-ins-recalc")
+    wrong = await InsightRepository(db_session).create(
+        user_id=user.id, week_start=WEEK_START, week_end=WEEK_END,
+        tasks_completed=7, tasks_total=4, completion_rate=1.75,
+        summary_text="You completed 7 of 4 tasks this week.",
+    )
+    await _add_task(db_session, user.id, created_at=_in_week(0), status="done", updated_at=_in_week(1))
+    await _add_task(db_session, user.id, created_at=_in_week(1), status="pending")
+
+    svc = InsightsService(db_session, get_llm_gateway())  # _NoOpProvider raises — fallback summary
+    assert await svc.recalculate_all() == {"checked": 1, "changed": 1}
+
+    await db_session.refresh(wrong)
+    assert (wrong.tasks_completed, wrong.tasks_total) == (1, 2)
+    assert wrong.completion_rate == pytest.approx(0.5)
+    assert "1 of 2" in wrong.summary_text
+
+    wrong.summary_text = "Kept as written."
+    await db_session.flush()
+    assert await svc.recalculate_all() == {"checked": 1, "changed": 0}
+    assert wrong.summary_text == "Kept as written."
 
 
 @pytest.mark.anyio
@@ -391,3 +461,18 @@ async def test_insights_are_per_user(client, db_session):
     with _mock_verify(OTHER_USER):
         history = await client.get("/api/v1/insights/history", headers=_auth_headers())
     assert history.json() == []
+
+
+ADMIN = TokenUser(uid="uid-insights-admin", email="insights-admin@example.com", role="admin", email_verified=True)
+
+
+@pytest.mark.anyio
+async def test_recalculate_endpoint_is_admin_only(client, db_session):
+    with _mock_verify(MOCK_USER):
+        r = await client.post("/api/v1/admin/insights/recalculate", headers=_auth_headers())
+    assert r.status_code == 403
+
+    with _mock_verify(ADMIN):
+        r = await client.post("/api/v1/admin/insights/recalculate", headers=_auth_headers())
+    assert r.status_code == 200
+    assert set(r.json()) == {"checked", "changed"}

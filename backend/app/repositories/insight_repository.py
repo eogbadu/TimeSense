@@ -29,6 +29,13 @@ class InsightRepository:
         await self.db.refresh(insight)
         return insight
 
+    async def list_all(self) -> list[WeeklyInsight]:
+        """Every saved week for every user, for an admin recalculation (TIME-330)."""
+        result = await self.db.execute(
+            select(WeeklyInsight).order_by(WeeklyInsight.user_id, WeeklyInsight.week_start)
+        )
+        return list(result.scalars().all())
+
     async def list_recent(self, user_id: uuid.UUID, limit: int = 8) -> list[WeeklyInsight]:
         result = await self.db.execute(
             select(WeeklyInsight)

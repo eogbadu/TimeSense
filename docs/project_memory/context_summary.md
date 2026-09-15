@@ -1,6 +1,13 @@
 # Context Summary
 
-**Last updated:** 2026-09-15. **Steps & prerequisites batch started** (TIME-319..329 → Jira TIME-2353..2363).
+**Last updated:** 2026-09-15.
+
+**Current:** TIME-330 (Jira TIME-2364), branch `feature/TIME-330-insights-completion-rate`. It fixes the Insights completion rate, which compared tasks finished that week with tasks added that week and could pass 100%, and keeps the completion chart inside its card.
+- New definition: of the tasks added that week, how many are done.
+- `POST /api/v1/admin/insights/recalculate` corrects saved weeks.
+- **After deploying, the user runs it once on Render.**
+
+**Previous:** the steps & prerequisites batch (TIME-319..329, Jira TIME-2353..2363) is complete and merged. Its details follow.
 
 **Features.** The user asked for two:
 - A task can have **steps** (sub-tasks).
