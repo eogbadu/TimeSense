@@ -1,5 +1,35 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-329 iOS Capture adds to a group (Jira TIME-2363) — last ticket of the steps & prerequisites batch
+
+Capture now shows, and lets the user decide, where a new task belongs.
+
+**"Part of…" chip** (`CaptureView.partOfRow`):
+- It sits in its own row under the type chips, because it isn't a kind of capture.
+- Tapping it loads today's plan and opens `TaskPickerView`. The candidates come from `StepLabels.captureParentCandidates`: today's open tasks that aren't steps.
+- Once chosen, it reads "Part of <title> ✕" and is sent as `parent_task_id`.
+- It clears after a successful capture.
+
+**Result card** (`groupingCard`, above "TimeSense detected"):
+- **Joined a group:** "Added to <parent> · Undo".
+  - Undo PATCHes an explicit null with the shared `LeaveGroup` body, now internal in `TodayViewModel.swift`.
+  - When `step-position` names a step, the card also asks "Before “…”? · Yes / No particular order". Yes reads that step's current `position` from a fresh plan and PATCHes it.
+- **Created steps:** a numbered list, with estimates.
+- **Suggested parent:** "Part of “<title>”? · Add to it / No". Add to it attaches the task and then makes the same placement offer; No hides the suggestion.
+
+**Refusals:**
+- A refused follow-up (undo, join or place) shows inline in the server's words.
+- A refused chip, such as a parent that is already finished, shows as the capture error in those words.
+- After each follow-up the captured task is re-read from `GET /tasks/{id}`, so the card shows what is really there.
+
+**Model:** `CapturedTask` gains `parentTaskId`, `parentTitle`, `steps: [CapturedStep]` and `suggestedParent`. They are declared as `var` with defaults, so older responses decode and the memberwise initializer keeps working. `CapturedStep` keeps the type `Equatable`.
+
+**Scope change, agreed in the Jira ticket:** Notion "Import both" is deferred.
+- No client has a Notion import review screen. iOS Settings ▸ Connections and the web connections page only connect.
+- The backend fields are ready: `parent_title_hint` and `parent_pending_item_id` (TIME-326). Logged in known_issues.
+
+**Verified:** 3 new XCTests cover capture decoding (joined, steps, suggestion, older shape) and the chip's candidates. iOS build and test results are in the PR.
+
 ## 2026-09-15 — TIME-328 iOS task detail sheet, task picker, and Break this down (Jira TIME-2362)
 
 iOS had no screen for a single task. `Features/Today/TaskDetailSheet.swift` is that screen (medium and large detents), kept deliberately short. Most steps are still meant to come from Capture or "Break this down".

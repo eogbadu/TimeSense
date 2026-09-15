@@ -12141,22 +12141,23 @@ TICKETS = [
         "summary": "TIME-329: iOS Capture adds to a group, and Notion import offers Import both",
         "labels": ["ios", "capture", "notion", "steps"],
         "description": doc(
-            h2("Goal"), p("Close the loop in Capture: say or pick what a new task is part of, see where it landed with an Undo, answer a one-tap placement or grouping suggestion, and see detected steps. Notion's import list offers to bring a missing parent along with its sub-item."),
+            h2("Goal"), p("Close the loop in Capture: say or pick what a new task is part of, see where it landed with an Undo, answer a one-tap placement or grouping suggestion, and see detected steps. (Scope change 2026-09-15: the Notion 'Import both' affordance is deferred. No client has a Notion import review screen to put it on — iOS and web only have Connect — so it needs that screen first. The backend data it needs shipped in TIME-326.)"),
             divider(), h2("Scope"), bullet_list([
                 "CapturedTask gains parent fields, steps and suggestedParent",
                 "A Part of chip in Capture using TaskPickerView, sent as parent_task_id",
                 "Result states: 'Added to <parent> · Undo'; 'Before <step>? · Yes / No particular order' for ordered groups; one-tap 'Part of <title>?'; a detected steps tile with the numbered list",
-                "Notion pending import rows show 'Part of <title> · Import both' when the parent is also pending",
+                "Follow-up refusals (undo, join, place) shown inline in the server's own words",
             ]),
             divider(), h2("Non-Goals"), bullet_list([
                 "No automatic grouping",
                 "No Android or web changes",
                 "No Apple Reminders import",
+                "No Notion 'Import both' — deferred until a Notion import review screen exists on a client (the API fields parent_title_hint / parent_pending_item_id are ready)",
             ]),
             divider(), h2("Files Likely Changed"), bullet_list([
                 "ios/TimeSense/Features/Capture/CaptureView.swift, CaptureViewModel.swift",
-                "ios/TimeSense/Features/Settings/*Notion* (import list)",
-                "ios/TimeSenseTests/*",
+                "ios/TimeSense/Features/Today/TodayViewModel.swift (shared LeaveGroup body)",
+                "ios/TimeSenseTests/StepGroupTests.swift",
                 "docs/project_memory/* and CHANGELOG.md",
             ]),
             divider(), h2("Acceptance Criteria"), bullet_list([
@@ -12164,7 +12165,6 @@ TICKETS = [
                 "Picking a parent with the chip attaches regardless of wording",
                 "A grouping suggestion is applied only when tapped",
                 "A multi-step capture shows its steps",
-                "Import both imports the parent and child linked",
                 "iOS build and tests pass",
             ]),
             divider(), h2("Verification"), code_block("xcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),

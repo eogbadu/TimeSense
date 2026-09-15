@@ -33,15 +33,23 @@
 
 - TIME-327 (PR #368): Today renders groups and waiting rows; Now's step label; widget and Siri name the parent; `StepLabels`; backend `step_number` / `parent_step_count`.
 
-**Current:** TIME-328 (Jira TIME-2362), branch `feature/TIME-328-ios-task-detail`.
-- `TaskDetailSheet`: steps, Break this down, Part of (with a "Before …?" placement offer), Waits for.
-- `TaskPickerView`, with candidate rules in `StepLabels`.
-- Today uses a single sheet enum; tapping a title opens details.
-- On Now, tapping the step label opens the group through `TaskDetailHost`.
-- **Next:** TIME-329 (Jira TIME-2363), the last ticket in the batch:
-  - Capture: "Part of…" chip (`TaskPickerView`, sent as `parent_task_id`)
-  - capture result states: "Added to X · Undo", "Before …?", a one-tap "Part of X?" for `suggested_parent`, and a steps tile
-  - Notion pending rows: "Part of X · Import both" (`parent_pending_item_id`)
+- TIME-328 (PR #369): `TaskDetailSheet` (steps, Break this down, Part of with a "Before …?" offer, Waits for), `TaskPickerView`, Today's single sheet enum, and Now's step label opening the group.
+- TIME-329 (Jira TIME-2363, branch `feature/TIME-329-ios-capture-part-of`): Capture's "Part of…" chip, and a result card with "Added to X · Undo", "Before …?", the created steps, and a one-tap "Part of X?".
+
+**The steps & prerequisites batch (TIME-319..329) is complete once TIME-329 merges.**
+
+**Outstanding, owned by the user:**
+1. **On-device check.** Nothing in TIME-327..329 has been seen on a screen, only built and unit-tested:
+   - Capture "renew passport: get photos, then mail it" → Today shows the group, and Now shows "RENEW PASSPORT · STEP 1 OF 2".
+   - Tap a title → details → "Do this after…", "Make it a step of…", "Break this down".
+   - Capture with the "Part of…" chip → "Added to …" → Undo.
+2. **Deploy the backend.** Render must run migrations `c4d5e6f0a1b2` and `d5e6f0a1b2c3` (`alembic upgrade head`).
+3. **Notion "Import both" is deferred.** No client has a Notion import review screen, which needs a ticket of its own. The API fields are ready.
+
+**Candidate follow-ups, not ticketed:**
+- A small score boost for tasks that unblock others.
+- Now copy for "everything left is waiting".
+- A Notion import review screen.
 
 **iOS project note:** new Swift files must be added to `project.pbxproj`. The project lists files explicitly and has no synchronized groups, so use the `xcodeproj` gem (Ruby).
 

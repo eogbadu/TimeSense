@@ -19,7 +19,9 @@ Ordered steps write the "waits for" edges automatically. The plan was settled wi
 - **Backend complete. Paused here for the user to try the API before the iOS tickets (their instruction).**
 - [x] TIME-327 iOS step groups, parent eyebrow on Now, blocked rows
 - [x] TIME-328 iOS detail sheet, task picker, Break this down
-- [ ] TIME-329 iOS Capture "Part of…", Notion "Import both"
+- [x] TIME-329 iOS Capture "Part of…" (Notion "Import both" deferred: no client has a Notion import screen)
+
+**Batch complete 2026-09-15.** Outstanding and owned by the user: an on-device pass. Nothing in TIME-327..329 has been seen on a screen, only built and unit-tested.
 
 ## iOS release preparation (TIME-317) — 2026-09-02
 

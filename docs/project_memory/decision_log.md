@@ -100,6 +100,12 @@ Every decision below was put to the user and settled in a planning session befor
   - The four paths don't share code, and a filter on one path would have left the other three suggesting blocked work.
   Date: 2026-09-15
 
+- Decision (TIME-329): **Notion "Import both" is deferred, and Capture's "Part of…" gets its own row rather than joining the type chips.**
+  Reason:
+  - "Import both" needs a Notion import review list to live on. No client has one: iOS and web can only connect Notion, and pending imports were only ever reachable through the API. Building that whole screen inside a capture ticket would bundle an unrelated feature into it. The backend fields (`parent_title_hint`, `parent_pending_item_id`) are ready for when it is built.
+  - The type chips are mutually exclusive kinds of capture ("Task", "Errand", …). "Part of…" combines with any of them, so it sits separately.
+  Date: 2026-09-15
+
 - Decision (technical, TIME-328): **Tasks are shaped by hand in one detail sheet, reached by tapping a title or from a context menu.**
   - The pickers are filtered by client rules that mirror the server's refusals, and anything the server still refuses is shown in its own words.
   - Today's sheets share one enum.

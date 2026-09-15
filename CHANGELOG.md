@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-15 — Capture knows where things belong (TIME-329)
+
+### Added
+- **"Part of…" in Capture.** Pick the task your new capture belongs to before you capture it.
+- **See where a capture landed.** After "add get photos to renew passport" you'll see "Added to Renew passport", with Undo. If that task's steps happen in order, TimeSense asks where the new one fits.
+- **Captured steps are listed.** "Renew passport: get photos, fill out the form, then mail it" shows its three steps straight away.
+- **"Part of Renew passport?"** When a new capture looks like it belongs to something you already have, add it with one tap, or say no.
+
 ## 2026-09-15 — Task details, Break this down, and "Do this after" (TIME-328)
 
 ### Added

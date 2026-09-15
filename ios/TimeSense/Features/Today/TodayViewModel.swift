@@ -493,8 +493,8 @@ private struct StepsBody: Encodable {
 }
 
 /// `{"parent_task_id": null}`. The explicit null is what takes a step out of its group; a missing key
-/// would leave it where it is, and synthesized encoding drops nil values.
-private struct LeaveGroup: Encodable {
+/// would leave it where it is, and synthesized encoding drops nil values. Shared by Today and Capture.
+struct LeaveGroup: Encodable {
     enum CodingKeys: String, CodingKey { case parentTaskId = "parent_task_id" }
 
     func encode(to encoder: Encoder) throws {
