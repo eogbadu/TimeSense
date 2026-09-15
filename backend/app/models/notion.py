@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -54,3 +54,7 @@ class NotionImportItem(UUIDMixin, TimestampMixin, Base):
         ForeignKey("tasks.id", ondelete="SET NULL"),
         nullable=True,
     )
+    # Notion's own structure, kept as page ids until the other side is imported too (TIME-326): the page
+    # this one is a sub-item of, and the pages it is blocked by.
+    external_parent_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    external_prereq_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)

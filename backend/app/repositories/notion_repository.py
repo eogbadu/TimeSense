@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from datetime import datetime
 
 from sqlalchemy import select
@@ -59,6 +60,8 @@ class NotionImportItemRepository:
         title: str,
         notes: str | None,
         due_at: datetime | None,
+        external_parent_id: str | None = None,
+        external_prereq_ids: list[str] | None = None,
     ) -> NotionImportItem:
         item = NotionImportItem(
             user_id=user_id,
@@ -67,6 +70,8 @@ class NotionImportItemRepository:
             title=title,
             notes=notes,
             due_at=due_at,
+            external_parent_id=external_parent_id,
+            external_prereq_ids=external_prereq_ids or None,
         )
         self.db.add(item)
         await self.db.flush()
@@ -98,3 +103,44 @@ class NotionImportItemRepository:
             )
         )
         return result.first() is not None
+
+    # ── Relations (TIME-326) ──────────────────────────────────────────────────
+
+    async def by_pages(
+        self, user_id: uuid.UUID, page_ids: Iterable[str]
+    ) -> dict[str, NotionImportItem]:
+        """The user's items for these Notion pages, keyed by page id, in one query."""
+        ids = list({p for p in page_ids if p})
+        if not ids:
+            return {}
+        result = await self.db.execute(
+            select(NotionImportItem).where(
+                NotionImportItem.user_id == user_id, NotionImportItem.page_id.in_(ids)
+            )
+        )
+        return {item.page_id: item for item in result.scalars().all()}
+
+    async def children_of(self, user_id: uuid.UUID, page_id: str) -> list[NotionImportItem]:
+        """Items that are Notion sub-items of `page_id`."""
+        result = await self.db.execute(
+            select(NotionImportItem).where(
+                NotionImportItem.user_id == user_id,
+                NotionImportItem.external_parent_id == page_id,
+            )
+        )
+        return list(result.scalars().all())
+
+    async def waiting_on(self, user_id: uuid.UUID, page_id: str) -> list[NotionImportItem]:
+        """Items that Notion says are blocked by `page_id`.
+
+        The ids are kept in a JSON list, so they are filtered here rather than in SQL. That keeps one
+        code path for Postgres and the SQLite test database, and a user's Notion items are few."""
+        result = await self.db.execute(
+            select(NotionImportItem).where(
+                NotionImportItem.user_id == user_id, NotionImportItem.status != "dismissed"
+            )
+        )
+        return [
+            item for item in result.scalars().all()
+            if page_id in (item.external_prereq_ids or [])
+        ]

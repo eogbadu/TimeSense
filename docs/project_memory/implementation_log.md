@@ -1,5 +1,41 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-326 Notion import keeps sub-items and Blocked by relations (Jira TIME-2360)
+
+Notion databases can already say that a row is a sub-item of another row, or that it is blocked by others. Import used to keep only the title and due date. It now keeps that structure.
+
+**Reading.** `notion_source._extract_relations` reads only relation-type properties, matched by name:
+- The parent comes from "Parent item" (Notion's default), "Parent" or "Parent task", taking the first id.
+- Waits come from "Blocked by" (Notion's default), "Depends on" or "Waiting on", deduplicated.
+- A text column called "Parent" is ignored.
+
+`SourceTask` gains `parent_external_id` and `prerequisite_external_ids`.
+
+**Storage.** Migration `d5e6f0a1b2c3` adds two columns to `notion_import_items`:
+- `external_parent_id`: String(64), indexed.
+- `external_prereq_ids`: JSON.
+
+The page ids are stored exactly as Notion returns them.
+
+**Linking on import.** `NotionService._link` runs after the task is created and before auto-placement, so placement already knows what the task waits for. It works in both directions:
+1. Its parent page, if already imported, becomes its parent via `StepService.attach`.
+2. Its own sub-items that were imported earlier become its steps.
+3. Its "Blocked by" pages that were already imported become waits via `PrerequisiteService.add`.
+4. Items already imported that are blocked by this page now wait for it.
+
+A link that breaks a TimeSense rule, such as a sub-item of a sub-item or a Notion dependency loop, is skipped (`StepError` is swallowed). The import itself always succeeds, and the first link made wins.
+
+**What the app gets:**
+- `GET /notion/pending` returns `parent_title_hint` for a sub-item whose parent page is known, and `parent_pending_item_id` while that parent is still pending. That's the data behind "Import both".
+- `POST /notion/items/{id}/import` returns `suggested_parent` when the task has no Notion parent. `StepSuggestionService.suggest_parent` picks from the user's open tasks. The suggestion is never applied, and a model failure simply means no suggestion.
+
+**Repository.** `by_pages`, `children_of`, and `waiting_on`. The last filters the JSON list in Python, so one code path works for both Postgres and SQLite.
+
+**Verified:**
+- 12 new tests in `tests/test_notion_relations.py`, with the Notion API and the model mocked.
+- The migration round-trips on scratch Postgres.
+- Targeted and full-suite results are in the PR.
+
 ## 2026-09-15 — TIME-325 AI steps: capture detects steps and parents, Break this down, suggested placement (Jira TIME-2359)
 
 Steps can now come from what the user says, rather than from organizing.

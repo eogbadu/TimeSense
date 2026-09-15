@@ -100,6 +100,15 @@ Every decision below was put to the user and settled in a planning session befor
   - The four paths don't share code, and a filter on one path would have left the other three suggesting blocked work.
   Date: 2026-09-15
 
+- Decision (technical, TIME-326): **Notion relations are stored as page ids on the import item and linked whenever both sides have been imported, in either order.**
+  - Links TimeSense can't represent are skipped and never fail the import. These are a sub-item of a sub-item, and dependency loops.
+  - Relations are recognised only on relation-type properties, matched by Notion's default names and obvious renames.
+  Reason:
+  - Import is item-by-item and approval-gated, so the user can import a child before its parent. Linking only at scan time, or only in one direction, would lose the structure for anyone who imports out of order.
+  - Notion allows deeper nesting than TimeSense's one level. Refusing the whole import because of a link would be worse than a flatter result.
+  - Matching text columns by name would turn a free-text "Parent" field into a false grouping.
+  Date: 2026-09-15
+
 - Decision (technical, TIME-325): **Capture finds steps, a named parent and a likely parent in the same single model call that parses the task.**
   - The model sees only the user's 40 newest open standalone tasks and parents, as fenced data, and only ids from that list are accepted.
   - An order is accepted only when the model returns literally `true`.
