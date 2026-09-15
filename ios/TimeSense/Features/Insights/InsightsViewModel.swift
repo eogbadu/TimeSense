@@ -58,6 +58,13 @@ struct WeeklyTrendPoint: Identifiable {
     let acceptancePct: Double?      // 0–100
     let confidencePct: Double?      // 0–100
     var id: Date { weekStart }
+
+    /// A 0–1 rate as a percent the charts can draw. Their scale stops at 100, so anything outside it
+    /// is pinned to the edge instead of drawing over the card: weeks saved before TIME-330 can
+    /// report more tasks done than added.
+    static func percent(_ rate: Double?) -> Double? {
+        rate.map { min(max($0 * 100, 0), 100) }
+    }
 }
 
 /// Daily steps + exercise minutes (GET /insights/activity).
@@ -151,9 +158,9 @@ final class InsightsViewModel: ObservableObject {
                     weekStart: parseYMD($0.weekStart),
                     tasksCompleted: $0.tasksCompleted,
                     tasksTotal: $0.tasksTotal,
-                    completionPct: $0.completionRate.map { $0 * 100 },
-                    acceptancePct: $0.recommendationAcceptanceRate.map { $0 * 100 },
-                    confidencePct: $0.meanConfidence.map { $0 * 100 }
+                    completionPct: WeeklyTrendPoint.percent($0.completionRate),
+                    acceptancePct: WeeklyTrendPoint.percent($0.recommendationAcceptanceRate),
+                    confidencePct: WeeklyTrendPoint.percent($0.meanConfidence)
                 )
             }
         }

@@ -12172,6 +12172,48 @@ TICKETS = [
             divider(), h2("Next Ticket"), p("(none) — optional follow-up: small score boost for tasks that unblock others."),
         ),
     },
+    {
+        "summary": "TIME-330: Insights completion rate counts the same tasks on both sides, and its chart stays inside the card",
+        "labels": ["backend", "ios", "insights", "bugfix"],
+        "description": doc(
+            h2("Goal"), p("Insights shows 'Tasks completed X of Y' and a completion rate where X is everything finished that week (older tasks and steps included) but Y is only new top-level tasks added that week, so the rate can pass 100%. The weekly trend chart is pinned to 0–100% with a smoothed, unclipped line, so those weeks draw outside the card. Make both numbers count the same tasks — of the tasks added that week, how many are done — fix the weeks already saved, and keep the chart inside its card."),
+            divider(), h2("Scope"), bullet_list([
+                "TaskRepository.completion_of_added_in_range: of the non-cancelled tasks created in the week, how many there are and how many are done. Steps count as tasks; a parent with live steps does not, so nothing is counted twice",
+                "InsightsService builds new weeks from it, so tasks_completed <= tasks_total and completion_rate is always 0–1",
+                "InsightsService.recalculate(insight): recomputes the task numbers on a saved week and, when they changed, rewrites the summary sentence that quotes them",
+                "POST /api/v1/admin/insights/recalculate (admin only): recalculates every saved week and reports how many changed",
+                "iOS percent charts: values clamped to 0–100 and monotone interpolation (a curve that can't overshoot its points), so the line stays inside the card without clipping the dots at 100%; captions say 'of the tasks you added'",
+                "Tests for the new count, the service, the recalculation, and the admin endpoint",
+            ]),
+            divider(), h2("Non-Goals"), bullet_list([
+                "No change to now.py's 'completed today' count (count_completed_in_range stays as is)",
+                "No change to recommendation acceptance or confidence numbers (already the same group on both sides)",
+                "No schema migration",
+                "No Android or web changes",
+                "No automatic recalculation on read — a week is still a snapshot taken when it is generated",
+            ]),
+            divider(), h2("Files Likely Changed"), bullet_list([
+                "backend/app/repositories/task_repository.py",
+                "backend/app/repositories/insight_repository.py",
+                "backend/app/services/insights_service.py",
+                "backend/app/api/v1/admin.py",
+                "backend/tests/test_insights.py",
+                "ios/TimeSense/Features/Insights/InsightsView.swift",
+                "docs/project_memory/* and CHANGELOG.md",
+            ]),
+            divider(), h2("Acceptance Criteria"), bullet_list([
+                "A week where older tasks were finished never reports more completed than total, or a rate above 100%",
+                "A parent whose steps are all done counts its steps, not itself",
+                "Recalculating a saved week with wrong numbers corrects them and rewrites its summary; an already-correct week is left unchanged",
+                "The admin endpoint returns 403 for non-admins",
+                "The completion chart never draws outside its card",
+                "Backend tests and iOS build and tests pass",
+            ]),
+            divider(), h2("Verification"), code_block("cd backend && pytest tests/test_insights.py tests/test_task_steps.py -q\ncd backend && pytest -q\nxcodebuild test -project ios/TimeSense.xcodeproj -scheme TimeSense -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO"),
+            divider(), h2("Dependencies"), p("TIME-046 (weekly insights), TIME-274 (Insights charts), TIME-321 (step-aware counts)."),
+            divider(), h2("Next Ticket"), p("(none)"),
+        ),
+    },
 ]
 
 

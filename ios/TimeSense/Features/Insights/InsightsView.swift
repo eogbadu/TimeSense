@@ -116,16 +116,18 @@ private struct TrendChartsSection: View {
     }
 
     private var completionCard: some View {
-        ChartCard(title: "Completion rate", caption: "Share of each week's tasks you finished") {
+        ChartCard(title: "Completion rate", caption: "Of the tasks you added each week, how many are done") {
+            // `.monotone`, not `.catmullRom`: a Catmull-Rom curve swings past its points, so a week at
+            // 100% next to a week at 0% drew outside the 0–100 scale and over the card (TIME-330).
             Chart(trends) { pt in
                 if let v = pt.completionPct {
                     AreaMark(x: .value("Week", pt.weekStart, unit: .weekOfYear), y: .value("Rate", v))
                         .foregroundStyle(LinearGradient(colors: [Cosmic.blue.opacity(0.28), Cosmic.blue.opacity(0.02)],
                                                         startPoint: .top, endPoint: .bottom))
-                        .interpolationMethod(.catmullRom)
+                        .interpolationMethod(.monotone)
                     LineMark(x: .value("Week", pt.weekStart, unit: .weekOfYear), y: .value("Rate", v))
                         .foregroundStyle(Cosmic.blue)
-                        .interpolationMethod(.catmullRom)
+                        .interpolationMethod(.monotone)
                         .symbol(Circle().strokeBorder(lineWidth: 2))
                 }
             }
@@ -136,7 +138,7 @@ private struct TrendChartsSection: View {
     }
 
     private var tasksCard: some View {
-        ChartCard(title: "Tasks completed", caption: "Bars = completed · dashed line = total") {
+        ChartCard(title: "Tasks completed", caption: "Bars = done · dashed line = added that week") {
             Chart(trends) { pt in
                 BarMark(x: .value("Week", pt.weekStart, unit: .weekOfYear), y: .value("Completed", pt.tasksCompleted))
                     .foregroundStyle(Cosmic.green.gradient)
@@ -158,7 +160,7 @@ private struct TrendChartsSection: View {
                         LineMark(x: .value("Week", pt.weekStart, unit: .weekOfYear),
                                  y: .value("Percent", a), series: .value("Metric", "Accepted"))
                             .foregroundStyle(by: .value("Metric", "Accepted"))
-                            .interpolationMethod(.catmullRom)
+                            .interpolationMethod(.monotone)
                     }
                 }
                 ForEach(trends) { pt in
@@ -166,7 +168,7 @@ private struct TrendChartsSection: View {
                         LineMark(x: .value("Week", pt.weekStart, unit: .weekOfYear),
                                  y: .value("Percent", c), series: .value("Metric", "Confidence"))
                             .foregroundStyle(by: .value("Metric", "Confidence"))
-                            .interpolationMethod(.catmullRom)
+                            .interpolationMethod(.monotone)
                     }
                 }
             }
@@ -373,7 +375,7 @@ private struct StatsGrid: View {
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.md) {
             StatRow(icon: "checkmark.circle.fill", tint: Cosmic.green, label: "Tasks completed",
-                    value: "\(insight.tasksCompleted) of \(insight.tasksTotal)")
+                    value: "\(insight.tasksCompleted) of \(insight.tasksTotal)", detail: "of the tasks you added")
             StatRow(icon: "percent", tint: Cosmic.blue, label: "Completion rate", value: completionRateText)
             if let meal = insight.mostSkippedMeal {
                 StatRow(icon: "fork.knife", tint: Cosmic.amber, label: "Most skipped meal", value: meal.capitalized)

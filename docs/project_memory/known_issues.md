@@ -1,5 +1,14 @@
 # Known Issues
 
+## Saved Insights weeks keep their pre-TIME-330 numbers until the recalculation runs (TIME-330, 2026-09-15)
+
+Weeks saved before TIME-330 compared tasks finished that week with tasks added that week, so some show more done than added.
+
+- **Fix:** after deploying, an admin calls `POST /api/v1/admin/insights/recalculate` once on Render. It can be repeated safely.
+- **Until then:** iOS clamps those rates to 100% in the charts, but "X of Y" still shows the old numbers.
+
+**Still by design:** a week is a snapshot taken when it is generated, the Monday after it ends. A task added that week and finished later still counts as not done, unless the recalculation is run again.
+
 ## No client can review Notion imports, so "Import both" has nowhere to live (found in TIME-329, 2026-09-15)
 
 The Notion import flow works through the API only:

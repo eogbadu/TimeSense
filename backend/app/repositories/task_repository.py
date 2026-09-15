@@ -270,6 +270,32 @@ class TaskRepository:
         )
         return result.scalar_one()
 
+    async def completion_of_added_in_range(
+        self, user_id: uuid.UUID, start: datetime, end: datetime
+    ) -> tuple[int, int]:
+        """Of the tasks added in [start, end): how many there are, and how many of those are done.
+
+        Both numbers count the same tasks, so done can never exceed total. Mixing "finished this
+        week" with "added this week" let a week report 7 of 4 (TIME-330). Steps count as tasks and a
+        parent with live steps does not, the same rule as `count_completed_in_range`."""
+        step = aliased(Task)
+        has_steps = (
+            select(step.id)
+            .where(step.parent_task_id == Task.id, step.status != "cancelled")
+            .exists()
+        )
+        result = await self.db.execute(
+            select(func.count(), func.count().filter(Task.status == "done")).select_from(Task).where(
+                Task.user_id == user_id,
+                Task.status != "cancelled",
+                ~has_steps,
+                Task.created_at >= start,
+                Task.created_at < end,
+            )
+        )
+        total, done = result.one()
+        return total, done
+
     # ── Steps (TIME-320) ──────────────────────────────────────────────────────
     # Bulk reads only: Today and Now annotate whole lists, so a per-task query would multiply.
 

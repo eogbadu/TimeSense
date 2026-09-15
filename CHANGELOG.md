@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-15 — Insights numbers add up (TIME-330)
+
+### Fixed
+- **Completion rate never goes past 100%.** "Tasks completed" now means: of the tasks you added that week, how many are done. Previously, finishing older tasks could make a week read "7 of 4". Steps count as tasks; the task they belong to doesn't count twice.
+- **The completion rate chart stays inside its card.**
+- **Past weeks can be corrected.** An admin can recount the saved weeks.
+
 ## 2026-09-15 — Capture knows where things belong (TIME-329)
 
 ### Added

@@ -1,5 +1,39 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-330 Insights completion rate and chart bounds (Jira TIME-2364)
+
+The user reported that Insights showed incorrect metrics and the completion rate chart went outside its card.
+
+**Cause of the wrong numbers:** `InsightsService._generate` divided `count_completed_in_range` by `count_created_in_range`.
+- The first counts everything finished that week: older tasks, and steps.
+- The second counts only top-level tasks added that week.
+
+So "7 of 4 · 175%" was possible. TIME-321 made it worse by leaving steps out of the second count but not the first.
+
+**Cause of the chart:** its y scale is pinned to 0–100 and drawn with `.catmullRom`, a curve that swings past its points, so values over 100 and the overshoot drew above the card. Nothing clipped the plot.
+
+**Backend:**
+- `TaskRepository.completion_of_added_in_range` returns `(total, done)` for the tasks added in the range, in one query (`COUNT` plus `COUNT FILTER`). It excludes cancelled tasks and parents with live steps, so steps count and their parent doesn't.
+- `InsightsService` builds new weeks from it.
+- `InsightsService.recalculate_all` / `recalculate`: recount the task numbers on every saved week and, only when they changed, rewrite `completion_rate` and the summary sentence that quotes them. Everything else a week recorded is left as it was.
+- `InsightRepository.list_all`.
+- `POST /api/v1/admin/insights/recalculate` (admin only) returns `{checked, changed}`. It is safe to run again.
+- Unchanged: `count_completed_in_range` and `count_created_in_range`. `now.py` uses the first for the day's completed count.
+
+**iOS:**
+- The percent charts use `.monotone` interpolation, which can't overshoot its points.
+- `WeeklyTrendPoint.percent` clamps rates to 0–100, so weeks not yet recalculated stay on the scale.
+- Captions say "of the tasks you added".
+- Clipping was left out, because it would cut the 100% dots in half.
+
+**Tests:**
+- Backend: 4 new in `test_insights.py`:
+  - an older task finished this week doesn't count
+  - a group counts its steps and not the parent
+  - recalculation corrects a wrong week and leaves a correct one alone
+  - the endpoint is admin only
+- iOS: new `InsightsTrendTests` (4).
+
 ## 2026-09-15 — TIME-329 iOS Capture adds to a group (Jira TIME-2363) — last ticket of the steps & prerequisites batch
 
 Capture now shows, and lets the user decide, where a new task belongs.

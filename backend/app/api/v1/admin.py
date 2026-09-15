@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import AdminUser
+from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.calendar_repository import CalendarIntegrationRepository
 from app.repositories.recommendation_event_repository import RecommendationEventRepository
@@ -32,6 +33,7 @@ from app.schemas.admin import (
     AdminUserSummary,
 )
 from app.schemas.invite import WaitlistEntryOut
+from app.services.insights_service import InsightsService
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -222,6 +224,17 @@ async def recommendation_metrics(
     stats = await repo.acceptance_stats(start, end)
     calibration = await repo.calibration_buckets(start, end)
     return {"window_days": days, **stats, "calibration": calibration}
+
+
+@router.post("/insights/recalculate", summary="Recount task numbers on saved weekly insights (admin)")
+async def recalculate_insights(
+    _admin: AdminUser = None,  # type: ignore[assignment]
+    db: AsyncSession = Depends(get_db),
+    gateway: LLMGateway = Depends(get_llm_gateway),
+) -> dict:
+    """Corrects weeks saved before TIME-330, whose completion rate compared different tasks and
+    could pass 100%. Safe to run again: a week that is already right is left untouched."""
+    return await InsightsService(db, gateway).recalculate_all()
 
 
 @router.get("/health", summary="Admin health check (admin)")
