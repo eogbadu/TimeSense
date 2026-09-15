@@ -325,3 +325,13 @@ class TaskRepository:
         )
         current = result.scalar_one()
         return 0 if current is None else current + 1
+
+    async def parent_links(self, user_id: uuid.UUID) -> dict[uuid.UUID, uuid.UUID]:
+        """step id → parent id for every step the user has, so loop checks can follow the waits a step
+        inherits from its parent (TIME-322)."""
+        result = await self.db.execute(
+            select(Task.id, Task.parent_task_id).where(
+                Task.user_id == user_id, Task.parent_task_id.is_not(None)
+            )
+        )
+        return {step_id: parent_id for step_id, parent_id in result.all()}

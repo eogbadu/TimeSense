@@ -24,6 +24,12 @@ class StepsCreate(BaseModel):
     sequential: bool | None = None
 
 
+class PrerequisiteCreate(BaseModel):
+    """"Do this after…": the task in the URL waits for this one (TIME-322)."""
+
+    prerequisite_task_id: uuid.UUID
+
+
 class TaskCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     description: str | None = None

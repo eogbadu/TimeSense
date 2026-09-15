@@ -17,11 +17,17 @@
 - TIME-319 (PR #360): the capture prompt states the user's local time.
 - TIME-320 (PR #361): migration `c4d5e6f0a1b2`, `TaskPrerequisite`, and `TaskGraphService` (`annotate`/`recommendable`/`responses`), with additive response fields.
 
-**Current:** TIME-321 (Jira TIME-2355), branch `feature/TIME-321-steps-attach-autocomplete`.
-- `TaskRepository._settle_graph`: the parent finishes and reopens with its steps, and the steps close with the parent.
-- `StepService` (`attach`/`detach`/`create_steps`).
-- `POST /tasks/{id}/steps`; `TaskCreate` and `TaskUpdate` group fields.
-- **Next:** TIME-322 (Jira TIME-2356), `PrerequisiteService` + endpoints, with cycle detection over `edges_for_user`.
+- TIME-321 (PR #362): `TaskRepository._settle_graph` (parent finishes and reopens with its steps; steps close with the parent), `StepService` (`attach`/`detach`/`create_steps`), `POST /tasks/{id}/steps`.
+
+**Current:** TIME-322 (Jira TIME-2356), branch `feature/TIME-322-prerequisites-do-this-after`.
+- `PrerequisiteService`: loop check includes each step's inherited wait on its parent; a step can't wait for its own parent; group ordering can't be removed as a wait.
+- `POST` and `DELETE /tasks/{id}/prerequisites`.
+- **Next:** TIME-323 (Jira TIME-2357), engine + scheduling respect the graph:
+  - apply `TaskGraphService.recommendable` in `candidate_gather`, legacy `/recommendations`, `push_service` time-block offer, and `google_assistant._best_task`
+  - swap to a blocked task or a parent → 409
+  - scoring inheritance in `context_builder`
+  - scheduling `not_before`
+  - parent title in push and assistant text
 
 **Working notes for this batch:**
 - **Pytest output always goes to a log file.** A local pytest process can stay alive after printing its summary, and a pipe into `tail` then never returns.
