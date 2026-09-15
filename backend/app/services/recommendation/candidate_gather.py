@@ -12,6 +12,7 @@ from app.repositories.synced_calendar_event_repository import SyncedCalendarEven
 from app.core.localtime import local_today, user_timezone_of
 from app.repositories.task_repository import TaskRepository
 from app.services.task_backfill import TaskBackfillService
+from app.services.task_graph import TaskGraphService
 from app.services.usable_time_service import UsableTimeService
 
 
@@ -52,6 +53,11 @@ async def gather_candidate_tasks(db: AsyncSession, user, now: datetime):
         t for t in (pending + overdue + unscheduled)
         if t.id not in suppressed and t.source != "calendar"
     ]
+    # Never suggest a task still waiting on another one, or a parent whose steps are still open: its
+    # next step is suggested instead. Filtering here covers /now, /now/why, /now/recommendation and
+    # proactive push in one place (TIME-323).
+    graph = TaskGraphService(db)
+    candidates = graph.recommendable(candidates, await graph.annotate(candidates))
     # Legacy rows reach the engine here too, and a wrong estimate distorts time_fit — 12% of the
     # score — before it ever reaches a screen. Classify and re-estimate them on the way through
     # (TIME-311).

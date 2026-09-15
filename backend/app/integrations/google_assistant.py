@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.meal_repository import MealRepository
 from app.repositories.task_repository import TaskRepository
+from app.services.task_graph import TaskGraphService
 from app.services.task_scorer import TaskScorer
 from app.services.usable_time_service import UsableTimeService
 
@@ -67,23 +68,23 @@ class GoogleAssistantService:
     # ── Intent handlers ───────────────────────────────────────────────────────
 
     async def _what_to_do_next(self, user_id: uuid.UUID) -> str:
-        best, usable = await self._best_task(user_id)
+        best, usable, parent = await self._best_task(user_id)
         if best is None:
             return "You're all caught up — nothing on your plate right now."
-        return f"Do {best.title} next. You have {usable} minutes of usable time."
+        return f"Do {self._spoken(best, parent)} next. You have {usable} minutes of usable time."
 
     async def _start_focus(self, user_id: uuid.UUID) -> str:
-        best, _ = await self._best_task(user_id)
+        best, _, parent = await self._best_task(user_id)
         if best is None:
             return "Nothing to focus on right now — you're all caught up."
-        return f"Focusing on {best.title}. Let's go."
+        return f"Focusing on {self._spoken(best, parent)}. Let's go."
 
     async def _log_lunch(self, user_id: uuid.UUID) -> str:
         await self.meal_repo.log(user_id=user_id, meal_type="lunch", status="eaten")
         return "Logged your lunch."
 
     async def _mark_done(self, user_id: uuid.UUID) -> str:
-        best, _ = await self._best_task(user_id)
+        best, _, _parent = await self._best_task(user_id)
         if best is None:
             return "There's nothing to mark done right now."
         await self.task_repo.update(best.id, user_id, status="done")
@@ -93,17 +94,29 @@ class GoogleAssistantService:
         # Replans require explicit in-app approval — never applied from a voice command.
         return "Open TimeSense to review and approve your new plan."
 
+    @staticmethod
+    def _spoken(task, parent) -> str:
+        """"Get photos, for Renew passport". A step on its own doesn't say what it is for (TIME-323)."""
+        return f"{task.title}, for {parent.title}" if parent is not None else task.title
+
     # ── Shared best-task selection (mirrors GET /now) ─────────────────────────
 
     async def _best_task(self, user_id: uuid.UUID):
+        """(best task, usable minutes, the best task's parent if it is a step)."""
         now = datetime.now(timezone.utc)
         tasks = await self.task_repo.list_by_user(user_id, limit=200)
         active = [t for t in tasks if t.status in ("pending", "in_progress")]
         usable = UsableTimeService().calculate(tasks, anchor=now)
+        # The same rule as Now: never a task still waiting on another, never a parent whose steps are
+        # still open (TIME-323).
+        graph = TaskGraphService(self.db)
+        info = await graph.annotate(active)
+        active = graph.recommendable(active, info)
         if not active:
-            return None, usable
+            return None, usable, None
         ranked = TaskScorer().rank(active, usable, now)
-        return (ranked[0] if ranked else None), usable
+        best = ranked[0] if ranked else None
+        return best, usable, (info.parent_of(best) if best is not None else None)
 
 
 _INTENT_HANDLERS = {

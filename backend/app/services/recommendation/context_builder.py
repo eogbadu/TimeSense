@@ -13,6 +13,7 @@ from app.models.task import Task
 from app.models.user_place import UserPlace
 from app.repositories.recommendation_feedback_repository import RecommendationFeedbackRepository
 from app.repositories.sleep_wake_repository import SleepWakeRepository
+from app.repositories.task_repository import TaskRepository
 from app.repositories.user_adaptation_repository import UserAdaptationRepository
 from app.services.energy_service import EnergyService
 from app.services.task_library import classify, get_type
@@ -86,10 +87,18 @@ def _location_intent(task: Task) -> LocationIntent | None:
     return detect_location_intent(task.title)
 
 
-def _to_task_item(task: Task) -> TaskItem:
-    due = None
-    if task.due_at is not None:
-        due = (task.due_at if task.due_at.tzinfo else task.due_at.replace(tzinfo=timezone.utc)).isoformat()
+def _as_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _to_task_item(task: Task, parent: Task | None = None) -> TaskItem:
+    # A step is as pressing as the task it is part of: "Get photos" inherits the passport renewal's
+    # deadline and priority. Its own deadline or priority still wins when it is tighter (TIME-323).
+    deadlines = [d for d in (_as_utc(task.due_at), _as_utc(parent.due_at if parent else None)) if d]
+    due = min(deadlines).isoformat() if deadlines else None
+    priority = min(task.priority, parent.priority) if parent is not None else task.priority
     src = getattr(task, "source", None)
     source = src if src in ("notion", "reminder", "calendar", "manual") else "manual"
     # Carry the library classification through: the scoring fits reason about the broad category
@@ -99,7 +108,7 @@ def _to_task_item(task: Task) -> TaskItem:
         id=str(task.id),
         title=task.title,
         source=source,
-        priority=_priority(task.priority),
+        priority=_priority(priority),
         status=_status(task.status),
         estimated_minutes=task.estimated_minutes,
         due_date=due,
@@ -168,7 +177,10 @@ async def build_user_context(
     work_start = prefs.work_start_hour if prefs else 9
     work_end = prefs.work_end_hour if prefs else 17
 
-    task_items = [_to_task_item(t) for t in candidate_tasks]
+    # A step inherits its parent's deadline and priority, so the parents are loaded too (TIME-323).
+    parent_ids = {t.parent_task_id for t in candidate_tasks if t.parent_task_id is not None}
+    parents = {p.id: p for p in await TaskRepository(db).get_many(parent_ids, user.id)}
+    task_items = [_to_task_item(t, parents.get(t.parent_task_id)) for t in candidate_tasks]
     task_map = {str(t.id): t for t in candidate_tasks}
 
     snapshot = get_time_snapshot(

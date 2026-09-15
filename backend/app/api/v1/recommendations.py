@@ -21,6 +21,7 @@ from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.learned_preferences_service import LearnedPreferencesService
 from app.services.recommendation_service import RecommendationService
+from app.services.task_graph import TaskGraphService
 from app.repositories.recommendation_swap_repository import RecommendationSwapRepository
 from app.services.recommendation.swap_context import ORIGIN_EXPLICIT, build_swap_context
 from app.services.user_service import UserService
@@ -62,6 +63,10 @@ async def get_recommendations(
     # Calendar meetings are commitments, not to-dos — drop them from the candidate pool (they still
     # block time via today_tasks / the synced events below).
     all_pending = [t for t in all_pending if t.id not in suppressed_ids and t.source != "calendar"]
+    # The same rule as Now: nothing still waiting on another task, and no parent whose steps are still
+    # open (TIME-323).
+    graph = TaskGraphService(db)
+    all_pending = graph.recommendable(all_pending, await graph.annotate(all_pending))
 
     # Calendar meetings block usable time alongside scheduled tasks.
     events = await SyncedCalendarEventRepository(db).list_window(user.id, now, now + timedelta(days=1))
@@ -78,12 +83,14 @@ async def get_recommendations(
     meal_status = await MealRepository(db).get_today_status(user.id, now, user_timezone=user_tz)
     skipped_meals = [meal for meal, status in meal_status.items() if status == "skipped"]
 
+    shown = ([best_task] if best_task else []) + list(alternatives)
+    payloads = {p.id: p for p in await graph.responses(shown)}
     return RecommendationResponse(
         best=RecommendationItem(
-            task=TaskResponse.model_validate(best_task),
+            task=payloads[best_task.id],
             why=why or "",
         ) if best_task else None,
-        alternatives=[TaskResponse.model_validate(t) for t in alternatives],
+        alternatives=[payloads[t.id] for t in alternatives],
         usable_minutes=usable_minutes,
         skipped_meals=skipped_meals,
     )
@@ -214,6 +221,14 @@ async def submit_swap(
         raise HTTPException(status_code=404, detail="Task not found")
     if rejected.id == chosen.id:
         raise HTTPException(status_code=400, detail="Cannot swap a task for itself")
+    # Pinning something that is still waiting on another task, or a parent whose steps are still
+    # open, would make Now insist on work the user can't start yet (TIME-323).
+    info = await TaskGraphService(db).annotate([chosen])
+    if info.is_blocked(chosen.id):
+        waits = ", ".join(f"“{ref.title}”" for ref in info.blocked_by[chosen.id])
+        raise HTTPException(status_code=409, detail=f"That one is waiting on {waits}.")
+    if info.has_open_steps(chosen.id):
+        raise HTTPException(status_code=409, detail="Pick one of its steps instead.")
 
     now = datetime.now(timezone.utc)
     tz = user_timezone_of(user)

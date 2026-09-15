@@ -122,8 +122,17 @@ async def suggested_slot(
         for e in events if not e.all_day
     ]
 
+    # Not before what this task waits for (TIME-323). A task waiting on something untimed has no
+    # sensible time yet, so say that rather than guess one.
+    waits_until, untimed = await TaskGraphService(db).waits_until(task)
+    if untimed:
+        return SuggestedSlotOut(
+            fits=False, duration_minutes=duration,
+            message=f"This waits for “{untimed[0].title}”, which doesn't have a time yet.",
+        )
+    not_before = max(now, waits_until) if waits_until is not None else now
     slot = SchedulingService(ws, we).find_slot_multiday(
-        now, duration, busy, tz, not_before=now, max_days=SLOT_SEARCH_DAYS
+        now, duration, busy, tz, not_before=not_before, max_days=SLOT_SEARCH_DAYS
     )
     if slot is None:
         return SuggestedSlotOut(

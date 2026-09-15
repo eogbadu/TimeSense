@@ -31,6 +31,7 @@ from app.services.energy_service import EnergyService
 from app.services.recommendation_explainer import build_explanation
 from app.services.recommendation_service import RecommendationService
 from app.services.scheduling_service import SchedulingService
+from app.services.task_graph import TaskGraphService
 from app.services.usable_time_service import UsableTimeService
 from app.services.task_resolution import awaiting_resolution_ids, days_overdue
 from app.services.user_service import UserService
@@ -341,12 +342,17 @@ async def get_now(
     # Confidence just reflects how strong the top pick's engine score is (single source of truth).
     confidence = score_to_confidence(best_meta["score"] if best_meta else 0.0)
     event_id = await _record_now_impression(db, user, ranked[0], confidence, best_meta)
+    # Everything shown goes through the graph serializer, so a step carries its parent's title for the
+    # "RENEW PASSPORT · STEP 1 OF 3" label (TIME-323).
+    shown = {t.id: t for t in ranked[:3]}
+    shown.update({t.id: t for t in ranked if str(t.id) in stale_ids})
+    payloads = {p.id: p for p in await TaskGraphService(db).responses(list(shown.values()))}
     return NowResponse(
         greeting=_greeting(local_now),
         usable_minutes=usable_minutes,
         context=context,
-        best_task=TaskResponse.model_validate(ranked[0]),
-        alternatives=[TaskResponse.model_validate(t) for t in ranked[1:3]],
+        best_task=payloads[ranked[0].id],
+        alternatives=[payloads[t.id] for t in ranked[1:3]],
         confidence=confidence,
         moment=_moment(local_now, ranked, now),
         feasibility=_feasibility(
@@ -355,15 +361,17 @@ async def get_now(
             if user.preferences else (8, 21),
         ),
         recommendation_event_id=event_id,
-        awaiting_resolution=_awaiting_resolution(ranked, stale_ids, now, user_tz),
+        awaiting_resolution=_awaiting_resolution(ranked, stale_ids, now, user_tz, payloads),
     )
 
 
-def _awaiting_resolution(ranked, stale_ids: set, now: datetime, user_tz: str) -> list:
+def _awaiting_resolution(
+    ranked, stale_ids: set, now: datetime, user_tz: str, payloads: dict | None = None
+) -> list:
     """The demoted stale tasks, most overdue first, so the client leads with the worst offender."""
     out = [
         AwaitingResolution(
-            task=TaskResponse.model_validate(t),
+            task=payloads[t.id] if payloads else TaskResponse.model_validate(t),
             days_overdue=days_overdue(t.due_at, now, user_tz),
         )
         for t in ranked

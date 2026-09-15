@@ -94,6 +94,16 @@ Every decision below was put to the user and settled in a planning session befor
   Concurrent requests that each pass the loop check can still form a loop together. That was accepted rather than locked against: both tasks show as waiting in Today, and "Don't wait" clears it.
   Date: 2026-09-15
 
+- Decision (technical, TIME-323): **A step scores with the earlier of its own and its parent's deadline, and the stronger of the two priorities.** Every path that picks a task (candidate gathering, legacy recommendations, the push offer, the assistant) applies `recommendable` separately.
+  Reason:
+  - "Get photos" for a passport due Friday is due Friday, even though the step itself was never given a date. A step's own tighter values must still win.
+  - The four paths don't share code, and a filter on one path would have left the other three suggesting blocked work.
+  Date: 2026-09-15
+
+- Decision (technical, TIME-323): **A task waiting on something with no time is never auto-placed, and its suggested slot says why instead of guessing.**
+  Reason: any time chosen would be a fiction. It could land before the prerequisite happens, and it would block a real slot in the user's day.
+  Date: 2026-09-15
+
 ## App Store listing name (2026-09-02, TIME-318)
 
 - Decision: The App Store listing name is **"TimeSense: Time Assistant"**. The name under the icon

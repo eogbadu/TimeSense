@@ -19,15 +19,20 @@
 
 - TIME-321 (PR #362): `TaskRepository._settle_graph` (parent finishes and reopens with its steps; steps close with the parent), `StepService` (`attach`/`detach`/`create_steps`), `POST /tasks/{id}/steps`.
 
-**Current:** TIME-322 (Jira TIME-2356), branch `feature/TIME-322-prerequisites-do-this-after`.
-- `PrerequisiteService`: loop check includes each step's inherited wait on its parent; a step can't wait for its own parent; group ordering can't be removed as a wait.
-- `POST` and `DELETE /tasks/{id}/prerequisites`.
-- **Next:** TIME-323 (Jira TIME-2357), engine + scheduling respect the graph:
-  - apply `TaskGraphService.recommendable` in `candidate_gather`, legacy `/recommendations`, `push_service` time-block offer, and `google_assistant._best_task`
-  - swap to a blocked task or a parent → 409
-  - scoring inheritance in `context_builder`
-  - scheduling `not_before`
-  - parent title in push and assistant text
+- TIME-322 (PR #363): `PrerequisiteService` (loop check includes each step's inherited wait on its parent), `POST`/`DELETE /tasks/{id}/prerequisites`.
+
+**Current:** TIME-323 (Jira TIME-2357), branch `feature/TIME-323-engine-respects-graph`.
+- The `recommendable` filter runs on every path that picks a task: candidate gathering, legacy recommendations, the push offer, and the assistant.
+- Swap returns 409 for a waiting task or a parent.
+- A step inherits its parent's deadline and priority.
+- `TaskGraphService.waits_until` feeds auto-placement and the suggested slot.
+- The parent is named in Now payloads, push titles and voice replies.
+- **Next:** TIME-324 (Jira TIME-2358). `GET /timeline/today/plan` nests steps under their parent:
+  - one entry per group, using `response_with_steps`
+  - fetch the parents of timed steps
+  - drop cancelled steps
+  - the group's start is its next open step's start
+- **After TIME-326, pause for the user** before the iOS tickets.
 
 **Working notes for this batch:**
 - **Pytest output always goes to a log file.** A local pytest process can stay alive after printing its summary, and a pipe into `tail` then never returns.

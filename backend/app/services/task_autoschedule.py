@@ -20,6 +20,7 @@ from app.core.localtime import local_today, resolve_zone, user_timezone_of
 from app.repositories.task_repository import TaskRepository
 from app.services.scheduling_service import SchedulingService
 from app.services.task_duration_service import TaskDurationEstimator
+from app.services.task_graph import TaskGraphService
 from app.services.user_service import UserService
 
 
@@ -71,7 +72,12 @@ async def autoschedule_task(db: AsyncSession, task: Task, now: datetime | None =
         work_end_hour=prefs.work_end_hour if prefs else 21,
     )
 
-    slot = scheduler.find_slot(now, task.estimated_minutes, busy, user_tz)
+    # Never before what the task waits for. A task after an untimed prerequisite stays untimed; one
+    # after a timed prerequisite is placed once that prerequisite ends (TIME-323).
+    waits_until, untimed = await TaskGraphService(db).waits_until(task)
+    if untimed:
+        return False
+    slot = scheduler.find_slot(now, task.estimated_minutes, busy, user_tz, not_before=waits_until)
     if slot is None:
         return False
 

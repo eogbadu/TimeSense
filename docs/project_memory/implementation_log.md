@@ -1,5 +1,31 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-323 Recommendations and scheduling respect steps and prerequisites (Jira TIME-2357)
+
+This is the ticket where waits and steps start to change what the user sees. TimeSense no longer suggests a task that is still waiting on an unfinished one, or a parent whose steps are still open; it suggests the next step instead and names the parent. Scheduling no longer places a task before what it waits for.
+
+**Every surface that picks a task was checked separately**, because they don't share one code path:
+- **`gather_candidate_tasks`** now applies `TaskGraphService.recommendable`. That one filter covers `/now`, `/now/why`, `/now/recommendation` and the engine's proactive push.
+  - The swap pin in `_engine_rank_tasks` is looked up in the already-filtered list, so a pinned task that becomes blocked is not forced to the top. A test pins this; no code change was needed.
+- **`GET /recommendations`** (legacy `TaskScorer` path) filters its own pending list.
+- **`push_service.offer_time_block_for_user`** filters its own pending list.
+- **`google_assistant._best_task`** filters its own active list.
+- **`POST /recommendations/swap`** returns 409 when the chosen task is waiting ("That one is waiting on “…”") or has open steps.
+
+**The parent is named everywhere a step is shown:**
+- **`/now`:** `best_task`, `alternatives` and `awaiting_resolution` go through the graph serializer, so `parent_title` and `position` are present for iOS's eyebrow label. `_awaiting_resolution` accepts an optional payload map, and the fallback is unchanged.
+- **Push:** the offer title reads "Block time for “Get photos” (Renew passport)?", and the engine push title "Next for Renew passport: …". Both add `data.parent_title`.
+- **Voice:** "Do Get photos, for Renew passport next."
+
+**Scoring:** `context_builder` loads the candidates' parents in one query. `_to_task_item(task, parent)` uses the earlier of the two deadlines and the stronger of the two priorities, so a step of an urgent task ranks as urgent while its own tighter values still win.
+
+**Scheduling:** new `TaskGraphService.waits_until(task)` returns the latest scheduled end among unmet prerequisites (its own and its parent's), plus a list of any that have no time.
+- **`autoschedule_task`:** returns False while anything the task waits for is untimed. Otherwise it passes `not_before` to `find_slot`.
+- **`suggested-slot`:** does the same with `find_slot_multiday`. For an untimed wait it answers `fits: false` and names what the task is waiting for.
+- **Capture's own auto-placement:** unchanged. A just-captured task has no waits yet, and joining a group later goes through `StepService.attach`, which moves the slot.
+
+**Verified:** 15 new tests in `tests/test_engine_respects_graph.py`. The targeted and full-suite results are in the PR.
+
 ## 2026-09-15 — TIME-322 Prerequisites: "Do this after" between any two tasks (Jira TIME-2356)
 
 A task can now wait for any other task. The wait is stored in `task_prerequisites` with `origin='manual'`, the same table ordered steps already write to. That keeps a single rule for "waits for" when TIME-323 wires the engine up.
