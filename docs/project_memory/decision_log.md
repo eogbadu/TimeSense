@@ -82,6 +82,18 @@ Every decision below was put to the user and settled in a planning session befor
   - How long "the whole group" took says nothing about any one kind of task, so it would teach the estimator nothing.
   Date: 2026-09-15
 
+- Decision (technical, TIME-322): **Three rules for waits between tasks.**
+  - The loop check counts the wait a step inherits from its parent as a link.
+  - A step can't wait for the task it belongs to.
+  - A group's step ordering can't be removed through "Don't wait".
+  Reason:
+  - A step waits for whatever its parent waits for. So "a parent waits for its own step", or "X waits for a step whose parent waits for X", is a real loop even though no single edge forms one. Checking edges alone would let it through, and both tasks would be blocked forever.
+  - A parent only finishes when its steps do, so a step waiting for its parent could never start.
+  - Re-chaining rewrites sequence edges on every change to the group, so removing one would silently come back. Order is a property of the group and is changed there.
+
+  Concurrent requests that each pass the loop check can still form a loop together. That was accepted rather than locked against: both tasks show as waiting in Today, and "Don't wait" clears it.
+  Date: 2026-09-15
+
 ## App Store listing name (2026-09-02, TIME-318)
 
 - Decision: The App Store listing name is **"TimeSense: Time Assistant"**. The name under the icon

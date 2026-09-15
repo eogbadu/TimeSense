@@ -10,7 +10,8 @@ from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.task_repository import TaskRepository
-from app.schemas.task import StepsCreate, TaskCreate, TaskResponse, TaskUpdate
+from app.schemas.task import PrerequisiteCreate, StepsCreate, TaskCreate, TaskResponse, TaskUpdate
+from app.services.prerequisite_service import PrerequisiteService
 from app.services.scheduling_service import SchedulingService
 from app.services.step_service import StepError
 from app.services.task_duration_service import TaskDurationEstimator
@@ -179,6 +180,44 @@ async def add_steps(
     except StepError as exc:
         raise _refused(exc) from exc
     return await TaskGraphService(task_svc.repo.db).response_with_steps(parent)
+
+
+@router.post(
+    "/{task_id}/prerequisites", response_model=TaskResponse, status_code=status.HTTP_201_CREATED
+)
+async def add_prerequisite(
+    task_id: UUID,
+    body: PrerequisiteCreate,
+    current_user: CurrentUser,
+    user_svc: UserService = Depends(get_user_service),
+    db: AsyncSession = Depends(get_db),
+) -> TaskResponse:
+    """"Do this after…": this task waits until the other one is done (TIME-322). Returns this task,
+    whose `blocked_by` now names what it waits for. A wait that would create a loop is refused with 409."""
+    user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
+    try:
+        task = await PrerequisiteService(db).add(user.id, task_id, body.prerequisite_task_id)
+    except StepError as exc:
+        raise _refused(exc) from exc
+    return await TaskGraphService(db).response(task)
+
+
+@router.delete(
+    "/{task_id}/prerequisites/{prerequisite_task_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def remove_prerequisite(
+    task_id: UUID,
+    prerequisite_task_id: UUID,
+    current_user: CurrentUser,
+    user_svc: UserService = Depends(get_user_service),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """"Don't wait": this task stops waiting for the other one (TIME-322)."""
+    user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
+    try:
+        await PrerequisiteService(db).remove(user.id, task_id, prerequisite_task_id)
+    except StepError as exc:
+        raise _refused(exc) from exc
 
 
 class DurationPromptResponse(BaseModel):

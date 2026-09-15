@@ -1,5 +1,28 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-322 Prerequisites: "Do this after" between any two tasks (Jira TIME-2356)
+
+A task can now wait for any other task. The wait is stored in `task_prerequisites` with `origin='manual'`, the same table ordered steps already write to. That keeps a single rule for "waits for" when TIME-323 wires the engine up.
+
+**`PrerequisiteService`** (`app/services/prerequisite_service.py`):
+- **`add`** refuses:
+  - a task waiting for itself (400)
+  - another user's task, which returns 404 so its existence isn't disclosed
+  - a calendar event on either side (422)
+  - a step waiting for its own parent (422). The parent only finishes when its steps do, so that wait could never end.
+  - an 11th wait on one task (422)
+  - a loop (409)
+
+  A wait that already exists is a no-op.
+- **`remove`** is "Don't wait". It returns 404 for a wait that doesn't exist, and 422 when the wait is a group's step ordering: re-chaining would put that edge straight back, so the order is changed on the group instead.
+- **`_would_loop`** runs a breadth-first search from the prerequisite across all of the user's waits, plus one extra link from each step to its parent, because a step inherits its parent's waits. Without that link, "Renew passport waits for its own step Get photos" passes a plain edge check and then blocks the step forever. `TaskRepository.parent_links` supplies the step → parent map in one query.
+
+**API:** `POST /tasks/{id}/prerequisites` returns the annotated task, whose `blocked_by` names what it waits for. `DELETE /tasks/{id}/prerequisites/{prerequisite_id}` removes a wait.
+
+**Deliberately left alone:** two concurrent requests could both pass the loop check and together form a loop. Both tasks would then show as waiting in Today, where "Don't wait" clears it. No locking was added.
+
+**Verified:** 17 new tests in `tests/test_task_prerequisites.py`. Targeted and full-suite results are in the PR.
+
 ## 2026-09-15 — TIME-321 Steps: attach, create, move, and auto-complete the parent (Jira TIME-2355)
 
 Steps now work end to end in the API.

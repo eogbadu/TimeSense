@@ -1,5 +1,22 @@
 # Change Summary
 
+## 2026-09-15 — TIME-322 Prerequisites: "Do this after" (Jira TIME-2356)
+
+**What changed:**
+- **`app/services/prerequisite_service.py` (new):** `add` and `remove`, plus a loop check that includes the wait each step inherits from its parent.
+- **`TaskRepository.parent_links`:** step → parent map.
+- **`PrerequisiteCreate` schema.**
+- **Routes:** `POST /tasks/{id}/prerequisites` and `DELETE /tasks/{id}/prerequisites/{prerequisite_id}`.
+
+**Why:** the user asked that some tasks be finished before others are recommended, including between tasks in different groups.
+
+**Verified:** 17 new tests. Targeted and full-suite results are in the PR.
+
+**Not done:**
+- Waits are not yet respected by the engine or by scheduling (TIME-323).
+- No iOS picker yet (TIME-328).
+- No CHANGELOG entry: not reachable from an app yet.
+
 ## 2026-09-15 — TIME-321 Steps: attach, create, move, and auto-complete the parent (Jira TIME-2355)
 
 **What changed:**
