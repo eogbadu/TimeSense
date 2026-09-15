@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.localtime import local_day_bounds, local_today, user_timezone_of
 from app.core.security import CurrentUser
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
-from app.repositories.task_repository import TaskRepository
+from app.repositories.task_repository import OPEN_STATUSES, TaskRepository
 from app.schemas.task import TaskResponse
 from app.services.task_graph import TaskGraphService
 from app.services.user_service import UserService
@@ -98,15 +98,41 @@ async def get_today_plan(
     day_start, day_end = local_day_bounds(for_date, tz)
     events = await SyncedCalendarEventRepository(db).list_window(user.id, day_start, day_end)
 
-    task_payloads = await TaskGraphService(db).responses(tasks)
-    entries = [
-        TimelineEntry(
-            kind="task", id=str(t.id), title=t.title,
-            start=t.scheduled_start, end=t.scheduled_end,
+    # Steps sit inside their group rather than as rows of their own: "Renew passport, 1 of 3" with
+    # its steps underneath (TIME-324). A step timed today brings its parent into the plan even when
+    # the parent itself has no time today. There is no new entry kind, so an older client simply shows
+    # the group as an ordinary task row.
+    by_id = {t.id: t for t in tasks}
+    missing_parents = {t.parent_task_id for t in tasks if t.parent_task_id is not None} - by_id.keys()
+    for parent in await repo.get_many(missing_parents, user.id):
+        if parent.source != "calendar":
+            by_id[parent.id] = parent
+    rows = [t for t in by_id.values() if t.parent_task_id is None or t.parent_task_id not in by_id]
+    # A cancelled step is no longer part of its group.
+    steps_by_parent = {
+        parent_id: [s for s in steps if s.status != "cancelled"]
+        for parent_id, steps in (await repo.steps_for([t.id for t in rows])).items()
+    }
+    nested = [s for steps in steps_by_parent.values() for s in steps]
+    payloads = {p.id: p for p in await TaskGraphService(db).responses(rows + nested)}
+
+    entries = []
+    for t in rows:
+        payload, start, end = payloads[t.id], t.scheduled_start, t.scheduled_end
+        steps = steps_by_parent.get(t.id, [])
+        if steps:
+            payload = payload.model_copy(update={"steps": [payloads[s.id] for s in steps]})
+            # A group sits in the day wherever its next open step does.
+            upcoming = next(
+                (s for s in steps if s.status in OPEN_STATUSES and s.scheduled_start is not None), None
+            )
+            if upcoming is not None:
+                start, end = upcoming.scheduled_start, upcoming.scheduled_end
+        entries.append(TimelineEntry(
+            kind="task", id=str(t.id), title=t.title, start=start, end=end,
             source=t.source, task=payload,
-        )
-        for t, payload in zip(tasks, task_payloads)
-    ] + [
+        ))
+    entries += [
         TimelineEntry(
             kind="event", id=f"{e.source}:{e.external_id}", title=e.title,
             start=e.starts_at, end=e.ends_at, source=e.source, location=e.location,

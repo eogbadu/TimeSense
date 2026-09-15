@@ -21,17 +21,13 @@
 
 - TIME-322 (PR #363): `PrerequisiteService` (loop check includes each step's inherited wait on its parent), `POST`/`DELETE /tasks/{id}/prerequisites`.
 
-**Current:** TIME-323 (Jira TIME-2357), branch `feature/TIME-323-engine-respects-graph`.
-- The `recommendable` filter runs on every path that picks a task: candidate gathering, legacy recommendations, the push offer, and the assistant.
-- Swap returns 409 for a waiting task or a parent.
-- A step inherits its parent's deadline and priority.
-- `TaskGraphService.waits_until` feeds auto-placement and the suggested slot.
-- The parent is named in Now payloads, push titles and voice replies.
-- **Next:** TIME-324 (Jira TIME-2358). `GET /timeline/today/plan` nests steps under their parent:
-  - one entry per group, using `response_with_steps`
-  - fetch the parents of timed steps
-  - drop cancelled steps
-  - the group's start is its next open step's start
+- TIME-323 (PR #364): every recommendation path filters waiting tasks and parents with open steps; swap 409; steps inherit parent urgency; `waits_until` gates scheduling; parent named in Now, push and voice.
+
+**Current:** TIME-324 (Jira TIME-2358), branch `feature/TIME-324-today-plan-nests-steps`. `GET /timeline/today/plan` returns one entry per group with steps nested in order. A step timed today brings its parent in. Cancelled steps are dropped. The group sits at its next open timed step.
+- **Next:** TIME-325 (Jira TIME-2359), AI steps:
+  - `_PARSE_SYSTEM` gains `steps`, `steps_in_order` and `parent_match_id`, the last chosen from up to 40 supplied open tasks. `max_tokens` rises to about 700, and each part is parsed in its own `try`.
+  - `CaptureRequest.parent_task_id`.
+  - `POST /tasks/{id}/breakdown`, `GET /tasks/{id}/step-position`, and `suggest_parent`.
 - **After TIME-326, pause for the user** before the iOS tickets.
 
 **Working notes for this batch:**

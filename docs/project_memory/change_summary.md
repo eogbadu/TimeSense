@@ -1,5 +1,19 @@
 # Change Summary
 
+## 2026-09-15 — TIME-324 Today plan nests steps under their parent (Jira TIME-2358)
+
+**What changed:** `GET /timeline/today/plan` returns one entry per group, with its steps nested in order.
+- A step scheduled today brings its parent into the plan.
+- Cancelled steps are left out.
+- The group sits at its next open, timed step.
+- `GET /timeline/today` is unchanged (flat).
+
+**Why:** Today should read "Renew passport, 1 of 3" with the steps underneath, not three unrelated rows.
+
+**Verified:** 5 new tests. Results are in the PR.
+
+**Not done:** iOS rendering (TIME-327). No CHANGELOG entry yet, because the app doesn't show groups until then.
+
 ## 2026-09-15 — TIME-323 Recommendations and scheduling respect steps and prerequisites (Jira TIME-2357)
 
 **What changed:**
