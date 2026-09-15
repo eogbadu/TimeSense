@@ -12,6 +12,46 @@ def _verify(u=USER):
                  return_value={"uid": u.uid, "email": u.email, "role": u.role, "email_verified": True})
 
 
+def _now_at(hour: int):
+    """Pin the clock /now reads to today at `hour` UTC (the test user's timezone)."""
+    from datetime import datetime, timezone
+
+    fixed = datetime.now(timezone.utc).replace(hour=hour, minute=0, second=0, microsecond=0)
+
+    class _Fixed(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed if tz is not None else fixed.replace(tzinfo=None)
+
+    return patch("app.api.v1.now.datetime", _Fixed)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("hour", [2, 9, 13, 19, 23])
+async def test_errand_without_maps_never_leads_at_any_hour(client, db_session, hour):
+    """TIME-331: in the evening the low-energy penalty (TIME-288) sank the report below an errand
+    we can't verify, so this guarantee only held until about 18:00."""
+    from app.services.user_service import UserService
+    from app.models.task import Task
+
+    user, _ = await UserService(db_session).get_or_create_user(USER.uid, USER.email)
+    db_session.add_all([
+        Task(user_id=user.id, title="Write the report", status="pending", priority=3),
+        Task(user_id=user.id, title="Buy groceries at the store", status="pending", priority=3),
+    ])
+    await db_session.flush()
+
+    with _verify(), _now_at(hour):
+        await client.post("/api/v1/location/place", headers={"Authorization": "Bearer t"},
+                          json={"place_name": None, "is_home": False})
+        out = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+        await client.post("/api/v1/location/place", headers={"Authorization": "Bearer t"},
+                          json={"place_name": "Home", "is_home": True})
+        home = await client.get("/api/v1/now", headers={"Authorization": "Bearer t"})
+    assert "groceries" not in out.json()["best_task"]["title"].lower()
+    assert "groceries" not in home.json()["best_task"]["title"].lower()
+
+
 @pytest.mark.anyio
 async def test_place_update_and_signal(client, db_session):
     from app.services.user_service import UserService

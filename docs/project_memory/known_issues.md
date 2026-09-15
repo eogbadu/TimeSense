@@ -9,13 +9,13 @@ Weeks saved before TIME-330 compared tasks finished that week with tasks added t
 
 **Still by design:** a week is a snapshot taken when it is generated, the Monday after it ends. A task added that week and finished later still counts as not done, unless the recalculation is run again.
 
-## Three more backend tests fail on main (found during TIME-330, 2026-09-15, evening local time)
+## RESOLVED by TIME-331 — three backend tests failed on main after 18:00 UTC (found during TIME-330, 2026-09-15)
 
-These tests fail on a clean `main` checkout as well as on the TIME-330 branch, both in the full suite and when run alone:
-- `test_location::test_errand_without_maps_never_leads`: "Buy groceries at the store" came out as the best task.
-- `test_push_service::test_pushes_after_cooldown_elapses` and `test_null_sender_records_nothing_delivered`: no push recommendation is produced.
+Seen at 15:24 EDT (19:24 UTC), not in the evening local time as first written. The test user has no timezone, so it runs in UTC.
 
-The push tests were already logged as intermittent, but the location test is newly seen failing. Clock dependence (they failed in the evening, like the completion-learning pair tests near midnight) is a guess that hasn't been investigated. If that's the cause, the fix is a fixed "now" in the tests.
+**Cause:** TIME-288 (bisected to `bb6a73e`). Energy became a budget that depletes over the day, which lowers scores after about 18:00 in the user's timezone.
+- **Push tests.** An overdue priority-1 task scores 79 in the day but 74 after that, just under the push threshold of 75, so no push is made. The tests had the wrong assumption: they are about cooldown and delivery, not energy. They now pass a fixed 10:00 UTC `now`.
+- **Location test.** The low-energy penalty (30) sank "Write the report" below an errand we can't verify, whose penalty was only 20. That broke a product rule, so the product was fixed: the penalty for an unverifiable trip is now 55 (decision_log). A new test pins `/now`'s clock at 02, 09, 13, 19 and 23 UTC.
 
 ## No client can review Notion imports, so "Import both" has nowhere to live (found in TIME-329, 2026-09-15)
 
@@ -78,17 +78,15 @@ Each of these also fails on `main` with no local changes, so the failures come f
 - `test_integrations_oauth.py::test_notion_authorize_503_when_unconfigured` gets 200. The repo-root `.env` has Notion configured, and the test assumes it is not.
 
 **Date or clock** (seen at about 00:30–01:30 local):
-- `test_insights_series.py::test_weekly_workouts_buckets_running_miles` (`assert 1 == 2`)
+- `test_insights_series.py::test_weekly_workouts_buckets_running_miles` (`assert 1 == 2`). **Resolved by TIME-331:** its runs were "1 and 2 days ago", which is last week on Mondays and Tuesdays. They now go inside the current week.
 - `test_completion_learning.py::test_completing_a_different_task_records_the_pair`
 - `test_completion_learning.py::test_the_pair_is_never_pinned`
 - `test_completion_learning.py::test_a_burst_of_completions_cannot_invent_a_preference`
   - These three need the impression and the completion in the same part of day. That breaks when "now" is near a boundary.
 
-**Intermittent** (failed in one full run and passed in the next, same code):
-- `test_push_service.py::test_pushes_after_cooldown_elapses`
-- `test_push_service.py::test_null_sender_records_nothing_delivered`
+**Resolved by TIME-331:** `test_push_service.py::test_pushes_after_cooldown_elapses` and `test_null_sender_records_nothing_delivered`. These were not intermittent: they depended on the hour (see the TIME-331 entry above).
 
-None of these has been investigated or ticketed. When judging a branch, compare against the same tests on `main` at the same hour.
+The rest have not been investigated yet. When judging a branch, compare against the same tests on `main` at the same hour.
 
 ## "TimeSense" is unavailable as an App Store name — do not retry it (TIME-318, 2026-09-02)
 
@@ -266,7 +264,7 @@ Mac, yet distribution export succeeds — the distribution certificate is cloud-
   so the suite is runnable offline end-to-end. Worth its own ticket.
 
 
-## OPEN (seen 2026-07-17): 3 time-of-day-dependent test failures on main
+## OPEN (seen 2026-07-17): 3 time-of-day-dependent test failures on main — push tests RESOLVED by TIME-331 (2026-09-15); `test_now_recommendation` still open (passed at 19:24 UTC on 2026-09-15)
 - `tests/test_now_recommendation.py::test_recommendation_for_task_includes_related_task_id` (expects
   domain `task`, gets `context_switch`) and `tests/test_push_service.py::test_pushes_after_cooldown_elapses`
   + `::test_null_sender_records_nothing_delivered` (push returns None) fail depending on the wall-clock

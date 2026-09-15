@@ -583,6 +583,14 @@ Every decision below was put to the user and settled in a planning session befor
   quotes them are rewritten.
   Date: 2026-09-15 (TIME-330)
 
+- Decision: An errand whose trip can't be verified never leads, at any hour
+  Reason: Without maps or a location, TimeSense can't tell whether the place is open or the trip
+  fits, and that matters most in the evening. The old +20 penalty was outweighed by TIME-288's
+  low-energy penalty (+30) on demanding work, so groceries led after about 18:00. Raised to +55, the
+  weight already used to suppress errands before a meeting. The user chose this over keeping the
+  scoring and pinning the test to the morning.
+  Date: 2026-09-15 (TIME-331)
+
 ## Deferred Decisions
 
 - Decision: Gmail / Apple Mail integration

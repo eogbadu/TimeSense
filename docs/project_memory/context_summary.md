@@ -7,6 +7,14 @@
 - `POST /api/v1/admin/insights/recalculate` corrects saved weeks.
 - **After deploying, the user runs it once on Render.**
 
+**Current:** TIME-331 (Jira TIME-2365), branch `feature/TIME-331-fix-failing-main-tests`. Three tests failed on `main` after about 18:00 UTC because TIME-288's energy depletes over the day:
+- **Push tests:** now pin a daytime `now`.
+- **Unverifiable errand:** the penalty was raised from 20 to 55, so it never leads (a product fix the user chose).
+
+- **Weekly-workouts test:** `test_insights_series` placed its runs "1 and 2 days ago", which fails on Mondays and Tuesdays. The runs now go inside the current week.
+
+Still failing, with different causes: the `test_completion_learning` pair tests near midnight, and the `.env`-dependent Notion test.
+
 **Previous:** the steps & prerequisites batch (TIME-319..329, Jira TIME-2353..2363) is complete and merged. Its details follow.
 
 **Features.** The user asked for two:

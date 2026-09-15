@@ -1,5 +1,12 @@
 # Phase Status
 
+## Failing tests on main (TIME-331) — 2026-09-15
+
+- [x] Push cooldown and null-sender tests pin a daytime clock (the cause was TIME-288's energy depletion)
+- [x] An unverifiable errand never leads at any hour (penalty 20 → 55), with a clock-pinned regression test
+- [x] `test_insights_series` weekly workouts puts its runs inside the current week (it failed on Mondays and Tuesdays)
+- [ ] Still open, with different causes: the `test_completion_learning` pair tests near midnight, and the `.env`-dependent Notion test
+
 ## Insights fix (TIME-330) — 2026-09-15
 
 - [x] Completion rate counts the same tasks on both sides (tasks added that week)

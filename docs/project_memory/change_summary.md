@@ -1,5 +1,19 @@
 # Change Summary
 
+## 2026-09-15 — TIME-331 three backend tests that failed on main (Jira TIME-2365)
+
+**What changed:**
+- **Recommendations:** an errand whose trip TimeSense can't verify (no maps, or no location) now takes a 55-point penalty instead of 20, so it never leads at any hour.
+- **Push tests:** both pin a daytime clock.
+- **Location test:** a new clock-pinned version runs at five hours.
+
+**Why:** since TIME-288, energy depletes over the day. After about 18:00 in the user's timezone this pushed an overdue task just under the push threshold, which broke two tests that aren't about energy. It also let groceries beat a demanding task in the evening, which broke the rule that an unverifiable errand never leads.
+
+**Verified:**
+- The location and push files pass, 19 tests.
+- With the old penalty restored, the new test fails at 19:00.
+- The full suite result is in the PR.
+
 ## 2026-09-15 — TIME-330 Insights completion rate and chart bounds (Jira TIME-2364)
 
 **What changed:**

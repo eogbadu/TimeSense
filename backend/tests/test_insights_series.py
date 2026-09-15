@@ -56,16 +56,20 @@ async def test_daily_activity_returns_points_in_window(db_session):
 async def test_weekly_workouts_buckets_running_miles(db_session):
     user = await _user(db_session)
     now = datetime.now(timezone.utc)
+    # "1 and 2 days ago" is last week on a Monday or Tuesday, so the runs go between this Monday
+    # 00:00 and now instead, at a third and two thirds of the way (TIME-331).
+    monday = datetime.combine(now.date() - timedelta(days=now.weekday()), datetime.min.time(), tzinfo=timezone.utc)
+    elapsed = now - monday
 
-    def _run(days_ago: int, meters: float) -> WorkoutSession:
-        started = now - timedelta(days=days_ago)
+    def _run(fraction: float, meters: float) -> WorkoutSession:
+        started = monday + elapsed * fraction
         return WorkoutSession(
-            user_id=user.id, external_id=f"w{days_ago}", workout_type="running",
+            user_id=user.id, external_id=f"w{fraction}", workout_type="running",
             started_at=started, ended_at=started + timedelta(minutes=30),
             duration_minutes=30, distance_meters=meters,
         )
 
-    db_session.add_all([_run(1, 5 * _MILE), _run(2, 3 * _MILE)])  # two runs this week
+    db_session.add_all([_run(1 / 3, 5 * _MILE), _run(2 / 3, 3 * _MILE)])  # two runs this week
     await db_session.flush()
 
     points = await InsightsSeriesService(db_session).weekly_workouts(user.id, weeks=8)
