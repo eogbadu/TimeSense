@@ -1,5 +1,27 @@
 # Change Summary
 
+## 2026-09-15 — TIME-328 iOS task detail sheet, task picker, and Break this down (Jira TIME-2362)
+
+**What changed:**
+- **`TaskDetailSheet` (new):**
+  - steps: add, swipe to delete, and "Break this down" with toggled suggestions
+  - "Part of": "Remove", or "Make it a step of…" followed by a "Before …?" placement offer
+  - "Waits for": "Don't wait", or "Do this after…"
+  - server refusals shown inline
+- **`TaskPickerView` (new):** searchable picker. The candidate rules in `StepLabels` keep out choices the server would refuse.
+- **Today:**
+  - one sheet enum
+  - titles open details
+  - context menus have "Details", "Break this down…", "Make it a step of…" and "Do this after…"
+  - refreshing no longer blanks the plan
+- **Now:** tapping the step label opens the group's details.
+
+**Why:** reshaping a task by hand needed somewhere to happen, and steps discovered late needed a place in their group.
+
+**Verified:** 4 new XCTests. Build and test results are in the PR.
+
+**Not done:** Capture "Part of…" chip, capture result states, and Notion "Import both" (TIME-329).
+
 ## 2026-09-15 — TIME-327 iOS step groups, step labels and waiting rows (Jira TIME-2361)
 
 **What changed:**

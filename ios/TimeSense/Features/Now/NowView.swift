@@ -191,7 +191,9 @@ struct NowView: View {
                                                  estimatedMinutes: task.estimatedMinutes)
                         },
                         onCancelTimer: { viewModel.cancelTimer(taskId: task.id) },
-                        onSnooze: { Task { await viewModel.snooze(taskId: task.id) } }
+                        onSnooze: { Task { await viewModel.snooze(taskId: task.id) } },
+                        // Steps finished or reshaped in the group's details change what Now should say.
+                        onGroupClosed: { Task { await viewModel.load() } }
                     )
 
                     if let feasibility = ctx.feasibility, !feasibility.fits {
@@ -540,6 +542,11 @@ private struct BestNextActionCard: View {
     let onStart: () -> Void
     let onCancelTimer: () -> Void
     let onSnooze: () -> Void
+    /// Called when the group's details sheet closes, so Now can reflect anything changed there.
+    var onGroupClosed: () -> Void = {}
+
+    /// The group whose details are open, after the step label was tapped (TIME-328).
+    @State private var openGroupId: String?
 
     var body: some View {
         let style = taskCategoryStyle(for: task.title)
@@ -549,7 +556,15 @@ private struct BestNextActionCard: View {
             footer
         }
         .heroCardChrome(glow: accent)
+        .sheet(item: Binding(
+            get: { openGroupId.map(GroupSheetID.init) },
+            set: { openGroupId = $0?.id }
+        )) { item in
+            TaskDetailHost(taskId: item.id, onClose: onGroupClosed)
+        }
     }
+
+    private struct GroupSheetID: Identifiable { let id: String }
 
     // Dark hero with a domain-coloured glow + glowing tinted glyph + dark signal pills.
     private func heroHeader(style: TaskCategoryStyle, accent: Color) -> some View {
@@ -570,7 +585,7 @@ private struct BestNextActionCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     // "RENEW PASSPORT · STEP 1 OF 3": a step alone doesn't say what it is for (TIME-327).
-                    StepEyebrow(task: task, tint: accent)
+                    StepEyebrow(task: task, tint: accent, onOpenGroup: { openGroupId = $0 })
                     Text(task.title)
                         .font(DesignTokens.Typography.title.weight(.bold))
                         .foregroundStyle(DesignTokens.Color.onHero)
@@ -630,18 +645,33 @@ private struct BestNextActionCard: View {
 struct StepEyebrow: View {
     let task: NowTask
     let tint: Color
+    /// Called with the group's id when the label is tapped, if opening the group is possible (TIME-328).
+    var onOpenGroup: ((String) -> Void)? = nil
 
     var body: some View {
         if let eyebrow = task.eyebrow {
-            Text(eyebrow)
+            let label = Text(eyebrow)
                 .font(DesignTokens.Typography.caption.weight(.semibold))
                 .tracking(0.6)
                 .foregroundStyle(tint)
                 .lineLimit(1)
-                .accessibilityLabel(
-                    StepLabels.spokenEyebrow(parentTitle: task.parentTitle, stepNumber: task.stepNumber,
-                                             stepCount: task.parentStepCount) ?? eyebrow
-                )
+            let spoken = StepLabels.spokenEyebrow(parentTitle: task.parentTitle, stepNumber: task.stepNumber,
+                                                  stepCount: task.parentStepCount) ?? eyebrow
+            if let onOpenGroup, let groupId = task.parentTaskId {
+                Button { onOpenGroup(groupId) } label: {
+                    HStack(spacing: 4) {
+                        label
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(tint)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(spoken)
+                .accessibilityHint("Shows every step")
+            } else {
+                label.accessibilityLabel(spoken)
+            }
         }
     }
 }

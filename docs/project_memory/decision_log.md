@@ -100,6 +100,17 @@ Every decision below was put to the user and settled in a planning session befor
   - The four paths don't share code, and a filter on one path would have left the other three suggesting blocked work.
   Date: 2026-09-15
 
+- Decision (technical, TIME-328): **Tasks are shaped by hand in one detail sheet, reached by tapping a title or from a context menu.**
+  - The pickers are filtered by client rules that mirror the server's refusals, and anything the server still refuses is shown in its own words.
+  - Today's sheets share one enum.
+  - A refresh keeps the plan on screen.
+  Reason:
+  - Scattering "Break this down", "Make it a step of…" and "Do this after…" across menus and alerts would make shaping a task feel like a job. One sheet keeps it findable and short.
+  - Offering only choices that will succeed avoids a refusal after every other tap. The server stays the authority for loops the client can't see.
+  - Two `.sheet` modifiers on one view node means only one ever presents.
+  - Blanking the plan on refresh would empty an open sheet in the middle of an edit.
+  Date: 2026-09-15
+
 - Decision (technical, TIME-327): **"STEP n OF m" is counted by the server among the group's live steps, and iOS words steps and waits in one pure `StepLabels` enum.**
   - A step only offers "Don't wait" for its own manual waits.
   - Finishing a group with open steps is confirmed first.

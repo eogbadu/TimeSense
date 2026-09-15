@@ -104,6 +104,7 @@ struct NowTask: Decodable, Identifiable {
     let dueAt: Date?
     // When the recommendation is a step, the task it belongs to (TIME-327). Optional, so an older
     // response still decodes.
+    let parentTaskId: String?
     let parentTitle: String?
     let stepNumber: Int?
     let parentStepCount: Int?
@@ -112,6 +113,7 @@ struct NowTask: Decodable, Identifiable {
         case id, title, status, priority
         case estimatedMinutes = "estimated_minutes"
         case dueAt = "due_at"
+        case parentTaskId = "parent_task_id"
         case parentTitle = "parent_title"
         case stepNumber = "step_number"
         case parentStepCount = "parent_step_count"

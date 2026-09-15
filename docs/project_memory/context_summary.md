@@ -31,14 +31,17 @@
 
 **Backend finished with TIME-326 (PR #367).** The user resumed the batch on 2026-09-15 with the same merge rules: merge each PR once its tests are green.
 
-**Current:** TIME-327 (Jira TIME-2361), branch `feature/TIME-327-ios-step-groups`.
-- Today renders groups (`StepGroupRow`/`StepRow`), dims waiting rows, and has context-menu actions.
-- Now shows a step label ("RENEW PASSPORT · STEP 1 OF 3").
-- The widget and Siri name a step's parent.
-- Wording and selection live in `StepLabels`, with XCTests.
-- Backend: `TaskResponse.step_number` and `parent_step_count`.
-- **Next:** TIME-328 (Jira TIME-2362): task detail sheet, task picker ("Do this after…", "Make it a step of…"), Break this down UI, and tapping the step label to open the group. Merge the Today sheets into one enum there.
-- **Then:** TIME-329 (Jira TIME-2363): Capture "Part of…" chip and result states, and Notion "Import both".
+- TIME-327 (PR #368): Today renders groups and waiting rows; Now's step label; widget and Siri name the parent; `StepLabels`; backend `step_number` / `parent_step_count`.
+
+**Current:** TIME-328 (Jira TIME-2362), branch `feature/TIME-328-ios-task-detail`.
+- `TaskDetailSheet`: steps, Break this down, Part of (with a "Before …?" placement offer), Waits for.
+- `TaskPickerView`, with candidate rules in `StepLabels`.
+- Today uses a single sheet enum; tapping a title opens details.
+- On Now, tapping the step label opens the group through `TaskDetailHost`.
+- **Next:** TIME-329 (Jira TIME-2363), the last ticket in the batch:
+  - Capture: "Part of…" chip (`TaskPickerView`, sent as `parent_task_id`)
+  - capture result states: "Added to X · Undo", "Before …?", a one-tap "Part of X?" for `suggested_parent`, and a steps tile
+  - Notion pending rows: "Part of X · Import both" (`parent_pending_item_id`)
 
 **iOS project note:** new Swift files must be added to `project.pbxproj`. The project lists files explicitly and has no synchronized groups, so use the `xcodeproj` gem (Ruby).
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-15 — Task details, Break this down, and "Do this after" (TIME-328)
+
+### Added
+- **Tap any task in Today to see its details.** From there you can:
+  - Add or remove steps.
+  - Move the task into another task ("Make it a step of…") or take it out again.
+  - Choose what it waits for ("Do this after…").
+- **"Break this down."** TimeSense suggests steps for a task. Keep the ones you want; nothing is added until you choose.
+- **A late step lands in the right place.** When you add a step to a task whose steps happen in order, TimeSense suggests where it fits ("Before Fill out the form?").
+- **Tap the step label on Now** ("RENEW PASSPORT · STEP 1 OF 3") to see every step.
+
+### Changed
+- **Refreshing Today no longer blanks the screen.**
+
 ## 2026-09-15 — See the steps, and what each task is waiting for (TIME-327)
 
 ### Added

@@ -1,5 +1,45 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-328 iOS task detail sheet, task picker, and Break this down (Jira TIME-2362)
+
+iOS had no screen for a single task. `Features/Today/TaskDetailSheet.swift` is that screen (medium and large detents), kept deliberately short. Most steps are still meant to come from Capture or "Break this down".
+
+**Sections:**
+- **Header:** the step label when the task is a step, then title and time.
+- **Errors:** a refusal from the server appears inline in the server's own words, via `StepLabels.message(for:)`. It reads FastAPI's `{"detail": "…"}`; validation lists and other errors get "That didn't work. Please try again."
+- **"Before …?" offer:** after a task joins a group, `GET /tasks/{id}/step-position` is asked. If it names a step, the sheet offers "Before “Fill out the form”? · Yes / No particular order". Yes PATCHes `position`, using the target step's current `position` from the reloaded plan. `TimelineTask` now decodes `position`.
+- **Part of:**
+  - For a step: the group's name, with "Remove".
+  - For a task that can join a group: "Make it a step of…", which pushes `TaskPickerView`.
+- **Steps** (only on a task that isn't a step):
+  - swipe a step to delete it
+  - an inline "Add a step" field
+  - **Break this down:** a spinner, then suggestions as toggles (all on), then "Add N steps" with the suggested order. If nothing comes back: "Couldn't suggest steps. Add your own above." If the model judges the task already a single action: "This already looks like a single step."
+- **Waits for:**
+  - "Don't wait" on waits the task owns.
+  - Waits it doesn't own are labelled "Step order" or "Via <group>".
+  - "Do this after…" pushes the picker.
+
+**`Features/Shared/TaskPickerView.swift`:** a searchable list used for both pickers, showing a system empty state when nothing matches. Candidates come from pure rules, so the server's refusals are rare:
+- `StepLabels.waitCandidates` excludes the task itself, what it already waits for, its own group and steps, anything already waiting on it (a direct loop), and finished tasks.
+- `parentCandidates` offers only open tasks that aren't steps, excludes the task's current group, and is empty for a task that has steps.
+
+**`TodayViewModel` actions:**
+- New: `addSteps(drafts, sequential)`, `breakdown`, `makeStep`, `suggestedPlace`, `place(stepId, before)`, `wait`, `deleteStep`.
+- Now return a refusal message: `removeFromGroup`, `stopWaiting`, `addStep`, all through `perform`, which reloads the plan either way.
+- `load()` shows its spinner only on the first load. A refresh no longer blanks the plan, which would have emptied an open sheet mid-edit.
+
+**Today:**
+- **One sheet enum.** Scheduling and details present through a single `TodaySheet` `.sheet(item:)`. The duration sheet stays on the outer view node, as before.
+- **Opening details:** tap a task's, group's or step's title (the check circle is still completion), or choose "Details" from any context menu.
+- **Menus:** "Break this down…", "Make it a step of…" and "Do this after…" open the sheet, where the choice is made.
+
+**Now:** the step label on the best-action card and on Today's AI card is now a button ("›"). It opens `TaskDetailHost`, which loads its own copy of today's plan. Closing it reloads Now.
+
+**Project file:** `TaskDetailSheet.swift` and `TaskPickerView.swift` are registered in the TimeSense target with the `xcodeproj` gem.
+
+**Verified:** 4 new XCTests in `StepGroupTests` cover both pickers' rules, search, picker captions, and error wording. iOS build and test results are in the PR.
+
 ## 2026-09-15 — TIME-327 iOS shows step groups, what a step belongs to, and what a task waits for (Jira TIME-2361)
 
 First iOS ticket of the steps & prerequisites batch. The backend has returned groups and waits since TIME-324/325; the app now shows them.
