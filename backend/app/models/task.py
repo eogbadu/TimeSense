@@ -4,11 +4,22 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Float, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    false,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, TimestampMixin, UUIDMixin, utc_now
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -16,6 +27,11 @@ if TYPE_CHECKING:
 
 class Task(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "tasks"
+    __table_args__ = (
+        CheckConstraint(
+            "parent_task_id IS NULL OR parent_task_id <> id", name="ck_tasks_parent_not_self"
+        ),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -64,6 +80,23 @@ class Task(UUIDMixin, TimestampMixin, Base):
     location_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
     location_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     location_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Steps (TIME-320). A task is standalone, a parent, or a step of exactly one parent — never
+    # deeper, which the service layer enforces because a CHECK cannot look at another row. CASCADE
+    # covers a hard delete (account erasure); a soft delete is a status change, handled in the
+    # repository.
+    parent_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tasks.id", ondelete="CASCADE", name="fk_tasks_parent_task_id"),
+        nullable=True,
+        index=True,
+    )
+    # Order within the parent, 0-based. Null for a standalone task.
+    position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Set on a parent whose steps must happen in order. The order itself lives in task_prerequisites
+    # as sequence edges, so the engine has one rule for "waits for" rather than two.
+    steps_sequential: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
 
     user: Mapped[User] = relationship("User", back_populates="tasks")
     reminders: Mapped[list[InternalReminder]] = relationship(
@@ -98,3 +131,38 @@ class InternalReminder(UUIDMixin, TimestampMixin, Base):
 
     def __repr__(self) -> str:
         return f"<InternalReminder id={self.id} type={self.type} status={self.status}>"
+
+
+class TaskPrerequisite(Base):
+    """"task_id waits for prerequisite_task_id" (TIME-320).
+
+    One table serves both features: ordered steps write origin='sequence' edges, and "Do this after…"
+    writes origin='manual' ones. Re-chaining a group rewrites only its sequence edges, never the ones the
+    user set. The CHECKs sit here as well as in the migration so the SQLite test schema enforces them."""
+
+    __tablename__ = "task_prerequisites"
+    __table_args__ = (
+        CheckConstraint("task_id <> prerequisite_task_id", name="ck_task_prerequisites_not_self"),
+        CheckConstraint("origin IN ('sequence', 'manual')", name="ck_task_prerequisites_origin"),
+    )
+
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True
+    )
+    prerequisite_task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    origin: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="manual", server_default="manual"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<TaskPrerequisite {self.task_id} waits for {self.prerequisite_task_id} ({self.origin})>"
+        )

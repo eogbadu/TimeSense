@@ -9,7 +9,7 @@ Two user-requested features on one model:
 Ordered steps write the "waits for" edges automatically. The plan was settled with the user; the 12 decisions are recorded with TIME-320. There are 11 tickets, Jira TIME-2353..2363.
 
 - [x] TIME-319 capture prompt local time (bug found while planning; the prompt is rewritten later in the batch)
-- [ ] TIME-320 data model + task graph read layer
+- [x] TIME-320 data model + task graph read layer (migration `c4d5e6f0a1b2`)
 - [ ] TIME-321 steps: attach/create/move, auto-complete parent
 - [ ] TIME-322 prerequisites ("Do this after")
 - [ ] TIME-323 recommendations + scheduling respect the graph

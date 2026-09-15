@@ -13,6 +13,7 @@ from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 from app.services.scheduling_service import SchedulingService
 from app.services.task_duration_service import TaskDurationEstimator
+from app.services.task_graph import TaskGraphService
 from app.services.task_library import is_known_type
 from app.core.localtime import user_timezone_of
 from app.services.task_service import TaskService
@@ -38,7 +39,7 @@ async def create_task(
 ) -> TaskResponse:
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
     task = await task_svc.create_task(user.id, body, user_timezone=user_timezone_of(user))
-    return TaskResponse.model_validate(task)
+    return await TaskGraphService(task_svc.repo.db).response(task)
 
 
 @router.get("", response_model=list[TaskResponse])
@@ -51,7 +52,7 @@ async def list_tasks(
 ) -> list[TaskResponse]:
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
     tasks = await task_svc.list_tasks(user.id, status=status_filter, for_date=date_filter)
-    return [TaskResponse.model_validate(t) for t in tasks]
+    return await TaskGraphService(task_svc.repo.db).responses(tasks)
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
@@ -65,7 +66,7 @@ async def get_task(
     task = await task_svc.get_task(task_id, user.id)
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
-    return TaskResponse.model_validate(task)
+    return await TaskGraphService(task_svc.repo.db).response(task)
 
 
 SLOT_SEARCH_DAYS = 3
@@ -148,7 +149,7 @@ async def unschedule_task(
     task.auto_scheduled = False
     await db.commit()
     await db.refresh(task)
-    return TaskResponse.model_validate(task)
+    return await TaskGraphService(task_svc.repo.db).response(task)
 
 
 class DurationPromptResponse(BaseModel):
@@ -236,7 +237,7 @@ async def update_task(
     )
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
-    return TaskResponse.model_validate(task)
+    return await TaskGraphService(task_svc.repo.db).response(task)
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,5 +1,37 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-320 Steps and prerequisites data model, plus the task graph read layer (Jira TIME-2354)
+
+This adds the storage both features share, and one read layer every task response now goes through. There is no user-visible behaviour yet: the new response fields are additive and empty until TIME-321/322 create steps and waits.
+
+**Schema.** Migration `c4d5e6f0a1b2`, off `b2c3d4e5f0a1`:
+- `tasks` gains three columns:
+  - `parent_task_id`: named self-FK, CASCADE, indexed, with CHECK not self
+  - `position`
+  - `steps_sequential`: NOT NULL with a server default, so the ALTER succeeds on populated tables
+- New table `task_prerequisites`: `(task_id, prerequisite_task_id)` as the PK, plus `user_id` and `origin` (`sequence` or `manual`). It has a CHECK that a task can't wait for itself, a CHECK on `origin`, and indexes on the prerequisite and the user.
+- The CHECKs are declared both in the migration and in the models' `__table_args__`, so the SQLite test schema enforces them too.
+- There are no ORM relationships for steps or edges. The code uses explicit bulk queries instead, which avoids async lazy loads.
+
+**Read layer: `app/services/task_graph.py`.**
+- **`annotate(tasks)`** computes step counts, unmet prerequisites with titles, and missing parents. It uses at most 3 queries, however long the list; a test pins this.
+  - A step inherits its parent's unmet prerequisites.
+  - A prerequisite is met when it is `done` or `cancelled`; `in_progress` still blocks.
+- **`recommendable`** is the one definition of "TimeSense may suggest this". It excludes tasks that are waiting, parents with open steps, and steps whose parent is finished or deleted. TIME-323 wires it in.
+- **`responses`** is the single `TaskResponse` serializer. The task routes, both timeline endpoints and capture (including the dedupe path) now use it.
+- **`TaskPrerequisiteRepository`** provides `unmet_for`, `edges_for_user`, `add` (idempotent), `remove` and `rechain_steps`. Re-chaining drops only sequence edges that touch the group's steps, including one pointing at a step that just moved out. It then chains the non-cancelled steps in order, and never touches manual edges.
+- **`TaskRepository`** gains `get_many`, `step_counts` (`COUNT … FILTER`), `steps_for` and `next_position`.
+
+**Three things found along the way:**
+- **Hand-written revision ID collision.** The first ID I chose, `c3d4e5f6a7b8`, already belonged to `add_consent_records`. Alembic reported "Cycle is detected in revisions" and "present more than once". Pytest never runs migrations, so only the Postgres round-trip caught it. Logged in known_issues.
+- **`MissingGreenlet` when serializing after autoflush.** The graph queries autoflush whatever the request changed first (for example, `get_task`'s backfill). The flush expires `updated_at`, which the server sets, and pydantic then lazy-loaded it outside async IO. `responses` now refreshes any row with expired attributes before serializing.
+- **Privacy export coverage.** The export-coverage test flagged `task_prerequisites` as a user-scoped table missing from `_USER_DATA`, so it was added. Account deletion with a parent, its steps and an edge is covered by a new test and erases cleanly.
+
+**Verified:**
+- `tests/test_task_graph.py` (11 new) and `tests/test_privacy.py` all pass.
+- Migration upgrade → downgrade → upgrade on a scratch Postgres database (`timesense_migtest`, not the dev DB). The constraint and index names match the models.
+- Full backend suite result is in the PR.
+
 ## 2026-09-15 — TIME-319 Capture's parse prompt always told the LLM the user's local time was UTC (Jira TIME-2353)
 
 First ticket of the **steps & prerequisites batch** (TIME-319..329 → Jira TIME-2353..2363, all

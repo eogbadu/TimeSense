@@ -1,5 +1,54 @@
 # Known Issues
 
+## Alembic revision IDs are hand-written and can collide — grep before choosing one (TIME-320, 2026-09-15)
+
+TIME-320's migration was first given `c3d4e5f6a7b8`, which already belonged to `add_consent_records`.
+
+**What Alembic reported:** "Cycle is detected in revisions (…every revision…)" and "Revision c3d4e5f6a7b8 is present more than once". Neither message names the real cause.
+
+**Why tests didn't catch it:** pytest builds its schema with `create_all` and never runs migrations, so the whole suite was green. Only the Postgres round-trip caught it. The migration is now `c4d5e6f0a1b2`.
+
+**Before naming a migration**, confirm the ID is unused:
+
+```bash
+grep -rn "<candidate-id>" backend/migrations/versions
+```
+
+## A local pytest process can stay alive after printing its summary (2026-09-15)
+
+**Symptom:**
+- On this Mac, `python -m pytest …` sometimes prints its final summary and then never exits: 0% CPU, one thread, no sockets.
+- A run piped into `tail` or `grep` then never returns, because the pipe never closes.
+- It happened with 4 tests as readily as with the full suite. The cause was not found.
+
+**Workaround:** redirect to a log file and read the summary from it:
+
+```bash
+pytest … > log 2>&1
+```
+
+Adding `-o faulthandler_timeout=120` has also let runs exit. Kill any leftover process with `pgrep -f "python -m pytest"`.
+
+## Some backend tests fail on main depending on the clock or the local .env (found 2026-09-15)
+
+Each of these also fails on `main` with no local changes, so the failures come from when and where the suite runs, not from recent work:
+
+**Environment:**
+- `test_integrations_oauth.py::test_notion_authorize_503_when_unconfigured` gets 200. The repo-root `.env` has Notion configured, and the test assumes it is not.
+
+**Date or clock** (seen at about 00:30–01:30 local):
+- `test_insights_series.py::test_weekly_workouts_buckets_running_miles` (`assert 1 == 2`)
+- `test_completion_learning.py::test_completing_a_different_task_records_the_pair`
+- `test_completion_learning.py::test_the_pair_is_never_pinned`
+- `test_completion_learning.py::test_a_burst_of_completions_cannot_invent_a_preference`
+  - These three need the impression and the completion in the same part of day. That breaks when "now" is near a boundary.
+
+**Intermittent** (failed in one full run and passed in the next, same code):
+- `test_push_service.py::test_pushes_after_cooldown_elapses`
+- `test_push_service.py::test_null_sender_records_nothing_delivered`
+
+None of these has been investigated or ticketed. When judging a branch, compare against the same tests on `main` at the same hour.
+
 ## "TimeSense" is unavailable as an App Store name — do not retry it (TIME-318, 2026-09-02)
 
 App Store Connect rejects it: *"The app name you entered is already being used."* Apple's check is

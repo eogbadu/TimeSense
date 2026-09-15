@@ -70,4 +70,25 @@ class TaskResponse(BaseModel):
     # Derived, not client-settable — deliberately absent from TaskUpdate (TIME-316).
     completed_at: datetime | None = None
 
+    # Steps and prerequisites (TIME-320). Derived and additive: a client that ignores them sees the
+    # task it always saw. Filled by TaskGraphService; `steps` only where a response nests them.
+    parent_task_id: uuid.UUID | None = None
+    parent_title: str | None = None
+    position: int | None = None
+    step_count: int = 0
+    open_step_count: int = 0
+    blocked_by: list["TaskRef"] = []
+    steps: list["TaskResponse"] = []
+    suggested_parent: "TaskRef | None" = None
+
     model_config = {"from_attributes": True}
+
+
+class TaskRef(BaseModel):
+    """Just enough of another task to name it: what this one waits for, or where it may belong."""
+
+    id: uuid.UUID
+    title: str
+
+
+TaskResponse.model_rebuild()

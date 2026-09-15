@@ -85,6 +85,38 @@ async def test_delete_account_erases_user_and_cascades(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_delete_account_erases_steps_and_prerequisites(client, db_session):
+    """TIME-320 added a self-referencing CASCADE on tasks. The ORM deletes user.tasks row by row, so the
+    database can remove a step before the ORM's own DELETE reaches it — that must still erase cleanly."""
+    from sqlalchemy import select
+
+    from app.models.task import TaskPrerequisite
+
+    user = await _seed_user_with_data(db_session, USER)
+    user_id = user.id
+    parent = Task(user_id=user_id, title="Renew passport", steps_sequential=True)
+    db_session.add(parent)
+    await db_session.flush()
+    photos = Task(user_id=user_id, title="Get photos", parent_task_id=parent.id, position=0)
+    mail = Task(user_id=user_id, title="Mail it", parent_task_id=parent.id, position=1)
+    db_session.add_all([photos, mail])
+    await db_session.flush()
+    db_session.add(TaskPrerequisite(
+        task_id=mail.id, prerequisite_task_id=photos.id, user_id=user_id, origin="sequence",
+    ))
+    await db_session.flush()
+
+    with _mock_verify(USER):
+        r = await client.delete("/api/v1/privacy/account?confirm=true", headers=_auth_headers())
+    assert r.status_code == 204
+
+    assert (await db_session.execute(select(Task).where(Task.user_id == user_id))).scalars().all() == []
+    assert (await db_session.execute(
+        select(TaskPrerequisite).where(TaskPrerequisite.user_id == user_id)
+    )).scalars().all() == []
+
+
+@pytest.mark.anyio
 async def test_delete_requires_confirm(client, db_session):
     await _seed_user_with_data(db_session, USER)
     with _mock_verify(USER):
