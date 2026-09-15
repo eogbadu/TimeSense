@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-15 — Capture understands your time zone (TIME-319)
+
+### Fixed
+- **"Tonight", "this evening" and "tomorrow morning" are now read in your own time zone.** Capture
+  was telling its language model that your local time was UTC. Outside the UK, relative times could
+  land on the wrong day, especially late in the evening.
+
 ## 2026-09-02 — Ready to hand to testers (TIME-317)
 
 ### Fixed

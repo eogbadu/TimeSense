@@ -8,6 +8,7 @@ import json
 import logging
 import re
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.llm.base import LLMRequest
 from app.llm.gateway import LLMGateway
@@ -183,9 +184,12 @@ def _build_parse_prompt(raw_input: str, user_timezone: str, type_hint: str | Non
     hint_line = f"\nThe user tagged this as a {type_hint}. {hint}\n" if hint else ""
     fenced = raw_input.replace("<user_input>", "").replace("</user_input>", "")
     now_utc = datetime.now(timezone.utc)
+    # Only a bad timezone name falls back to UTC. This used to be `except Exception`, which swallowed
+    # the NameError from a missing ZoneInfo import and showed every user UTC as their local time
+    # (TIME-319).
     try:
         local_now = now_utc.astimezone(ZoneInfo(user_timezone))
-    except Exception:
+    except (ZoneInfoNotFoundError, ValueError, TypeError):
         local_now = now_utc
     return (
         f"Today's UTC date and time: {now_utc.isoformat()}\n"

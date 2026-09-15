@@ -1,5 +1,6 @@
 """Capture endpoint tests — LLM gateway is always mocked, no real API calls."""
 import json
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -279,6 +280,30 @@ def test_build_parse_prompt_fences_input_and_strips_spoofed_tags():
     # The spoofed closing tag from the raw input must be stripped so it can't break out of the fence.
     assert prompt.count("</user_input>") == 1
     assert "ignore rules" in prompt  # kept as data, just fenced
+
+
+class _FrozenDateTime(datetime):
+    """03:30 UTC on Tuesday 2026-09-15 is 23:30 the previous evening in New York (EDT)."""
+
+    @classmethod
+    def now(cls, tz=None):
+        return datetime(2026, 9, 15, 3, 30, tzinfo=timezone.utc)
+
+
+def test_build_parse_prompt_states_the_users_local_time_not_utc(monkeypatch):
+    # TIME-319: ZoneInfo was never imported, the NameError was swallowed, and every user was told
+    # their local time was UTC — so "tonight" was resolved on the wrong day for this user.
+    from app.services import capture_service
+    monkeypatch.setattr(capture_service, "datetime", _FrozenDateTime)
+    prompt = capture_service._build_parse_prompt("call mom tonight", "America/New_York", None)
+    assert "User's LOCAL date and time: Monday 2026-09-14 23:30" in prompt
+
+
+def test_build_parse_prompt_unknown_timezone_falls_back_to_utc(monkeypatch):
+    from app.services import capture_service
+    monkeypatch.setattr(capture_service, "datetime", _FrozenDateTime)
+    prompt = capture_service._build_parse_prompt("call mom tonight", "Not/AZone", None)
+    assert "User's LOCAL date and time: Tuesday 2026-09-15 03:30" in prompt
 
 
 @pytest.mark.anyio
