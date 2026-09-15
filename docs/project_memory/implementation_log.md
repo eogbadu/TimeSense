@@ -1,5 +1,33 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-331 three backend tests that failed on main (Jira TIME-2365)
+
+The failing tests were:
+- `test_location::test_errand_without_maps_never_leads`
+- `test_push_service::test_pushes_after_cooldown_elapses`
+- `test_push_service::test_null_sender_records_nothing_delivered`
+
+They failed on clean `main` and on the commit before TIME-319, and passed at TIME-283.
+
+**Cause (bisect):** `bb6a73e`, TIME-288, where energy became a budget that depletes. Neither test pins "now", and the test user's timezone is UTC. A diagnostic scored the push task at fixed hours:
+- 03:00, 19:00 and 23:00 UTC: 74, not eligible
+- 09:00 and 13:00 UTC: 79, eligible
+
+The push threshold is 75.
+
+**Push tests (test bug):** they check cooldown and delivery, not energy. Both now pass a `_daytime_now()` (today 10:00 UTC) into `push_for_user`. The assertions are unchanged.
+
+**Location test (product bug, the user's choice):** in the evening the low-energy penalty (+30, which TIME-288 intends to hit late in the day) sank "Write the report" below "Buy groceries at the store". That errand's only guard, when the trip can't be verified (`LOCATION_DATA_MISSING` / `MAPS_API_UNAVAILABLE`), was +20. It is now +55 in `scoring/penalties.py`, the same weight as suppressing an errand before a meeting.
+- **New test:** `test_errand_without_maps_never_leads_at_any_hour` pins `/now`'s clock (patching `app.api.v1.now.datetime`) at 02, 09, 13, 19 and 23 UTC. With the old penalty restored it fails at 19:00, so it catches the bug.
+- **Existing test:** unchanged.
+- **`select.py`:** uses these codes only for explanation text, so nothing else depended on the penalty size.
+
+**`test_insights_series::test_weekly_workouts_buckets_running_miles` (also fixed):** it was the only other failure in the suite not caused by `.env`. It put two runs "1 and 2 days ago" and expected both in this week, which is false on Mondays and Tuesdays. The runs now go a third and two thirds of the way between this Monday 00:00 UTC and now. The assertions are unchanged.
+
+**Other clock-sensitive tests the ticket asked about** (causes differ, so they were left and logged):
+- The `test_completion_learning` pair tests near midnight: part-of-day boundary.
+- `test_now_recommendation::test_recommendation_for_task_includes_related_task_id`: passed at this hour.
+
 ## 2026-09-15 — TIME-330 Insights completion rate and chart bounds (Jira TIME-2364)
 
 The user reported that Insights showed incorrect metrics and the completion rate chart went outside its card.

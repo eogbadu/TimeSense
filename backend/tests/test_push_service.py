@@ -12,6 +12,13 @@ pytestmark = pytest.mark.anyio
 USER_UID = "push-1"
 
 
+def _daytime_now() -> datetime:
+    """Today at 10:00 UTC. Since TIME-288 energy depletes over the day, so after about 18:00 in the
+    test user's timezone (UTC) an overdue task scores 74 and falls just under the push threshold of
+    75. Tests about cooldown and delivery must not depend on the hour they run at (TIME-331)."""
+    return datetime.now(timezone.utc).replace(hour=10, minute=0, second=0, microsecond=0)
+
+
 class _StubSender:
     """Records every send; always 'delivers'."""
     def __init__(self): self.sent = []
@@ -86,7 +93,7 @@ async def test_pushes_after_cooldown_elapses(db_session):
     user = await _user(db_session)
     await _register(db_session, user)
     await _urgent_task(db_session, user)
-    now = datetime.now(timezone.utc)
+    now = _daytime_now()
 
     await PushNotificationRepository(db_session).record(
         user_id=user.id, action_type="deadline_task", title="x", body="y",
@@ -185,7 +192,7 @@ async def test_null_sender_records_nothing_delivered(db_session):
     user = await _user(db_session)
     await _register(db_session, user)
     await _urgent_task(db_session, user)
-    rec = await ProactivePushService(db_session).push_for_user(user, NullPushSender())
+    rec = await ProactivePushService(db_session).push_for_user(user, NullPushSender(), now=_daytime_now())
     # eligible + not in cooldown → a push record is made, but 0 delivered
     assert rec is not None
     from app.repositories.push_notification_repository import PushNotificationRepository

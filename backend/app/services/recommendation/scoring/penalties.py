@@ -77,7 +77,11 @@ def compute_penalty(c: CandidateAction, ctx: UserContext) -> float:
     if "PLACE_CLOSED_NOW" in codes:
         penalty += 40
     if "LOCATION_DATA_MISSING" in codes or "MAPS_API_UNAVAILABLE" in codes:
-        penalty += 20  # can't confirm a real trip → don't let it win confidently
+        # Can't confirm a real trip (or that the place is open), so an errand must not lead. At 20
+        # this was outweighed in the evening: the TIME-288 low-energy penalty (30) sank demanding
+        # work below an unverifiable errand. Same weight as suppressing an errand before a meeting
+        # (TIME-331).
+        penalty += 55
 
     # Recently 'disagreed' with this exact task → demote it (don't hide): enough to drop below
     # other candidates so a different recommendation surfaces, but it stays rankable and reappears.

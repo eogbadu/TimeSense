@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-15 — Errands TimeSense can't check stay out of first place (TIME-331)
+
+### Fixed
+- **No more "Buy groceries" as your top pick in the evening when TimeSense can't check the trip.** Without maps it can't tell whether the store is open or the drive fits. Once your energy dipped late in the day, such an errand could still come first. Now it never does.
+- **Backend tests no longer depend on the hour they run.**
+
 ## 2026-09-15 — Insights numbers add up (TIME-330)
 
 ### Fixed
