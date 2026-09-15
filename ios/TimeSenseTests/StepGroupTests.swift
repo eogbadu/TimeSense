@@ -117,4 +117,70 @@ final class StepGroupTests: XCTestCase {
         XCTAssertEqual(offered.map(\.id), [])
         XCTAssertEqual(StepLabels.swapCandidates(from: entries, excluding: "none").map(\.id), ["bank"])
     }
+
+    // MARK: - Pickers and refusals (TIME-328)
+
+    /// Renew passport (with its steps), Pay contractor (waiting on an invoice not in the plan),
+    /// Call the bank, and a finished task.
+    private func plan() throws -> [TimelineEntry] {
+        try decode("""
+        [
+          {"kind":"task","id":"p","title":"Renew passport","start":null,"end":null,"location":null,"task":\(group)},
+          {"kind":"task","id":"pay","title":"Pay contractor","start":null,"end":null,"location":null,
+           "task":\(task("pay", "Pay contractor", extra: #","blocked_by":[{"id":"i","title":"Get invoice"}]"#))},
+          {"kind":"task","id":"bank","title":"Call the bank","start":null,"end":null,"location":null,
+           "task":\(task("bank", "Call the bank"))},
+          {"kind":"task","id":"old","title":"Old errand","start":null,"end":null,"location":null,
+           "task":\(task("old", "Old errand", status: "done"))}
+        ]
+        """)
+    }
+
+    func testDoThisAfterOffersOpenTasksAndNeverALoopOrItsOwnGroup() throws {
+        let entries = try plan()
+        let bank = try XCTUnwrap(StepLabels.findTask("bank", in: entries))
+        XCTAssertEqual(StepLabels.waitCandidates(for: bank, in: entries).map(\.id), ["p", "s2", "s3", "pay"])
+
+        // Mail it already waits for the form, and can't wait for its own group or a finished step.
+        let mail = try XCTUnwrap(StepLabels.findTask("s3", in: entries))
+        XCTAssertEqual(StepLabels.waitCandidates(for: mail, in: entries).map(\.id), ["pay", "bank"])
+
+        // The form is waited on by Mail it, so offering Mail it would make the two wait on each other.
+        let form = try XCTUnwrap(StepLabels.findTask("s2", in: entries))
+        XCTAssertFalse(StepLabels.waitCandidates(for: form, in: entries).map(\.id).contains("s3"))
+    }
+
+    func testMakeItAStepOfOffersOnlyTasksThatCanHoldSteps() throws {
+        let entries = try plan()
+        let bank = try XCTUnwrap(StepLabels.findTask("bank", in: entries))
+        XCTAssertEqual(StepLabels.parentCandidates(for: bank, in: entries).map(\.id), ["p", "pay"])
+
+        let passport = try XCTUnwrap(StepLabels.findTask("p", in: entries))
+        XCTAssertTrue(StepLabels.parentCandidates(for: passport, in: entries).isEmpty,
+                      "a task with steps can't become a step")
+
+        let form = try XCTUnwrap(StepLabels.findTask("s2", in: entries))
+        XCTAssertEqual(StepLabels.parentCandidates(for: form, in: entries).map(\.id), ["pay", "bank"])
+    }
+
+    func testSearchMatchesTheTitleOrTheGroup() throws {
+        let all = StepLabels.allTasks(in: try plan())
+        XCTAssertEqual(StepLabels.search(all, for: "FORM").map(\.id), ["s2"])
+        XCTAssertEqual(StepLabels.search(all, for: "passport").map(\.id), ["p", "s1", "s2", "s3"])
+        XCTAssertEqual(StepLabels.search(all, for: "  ").count, all.count)
+        XCTAssertEqual(StepLabels.pickerDetail(for: all[0]), "1 of 3 steps")
+        XCTAssertEqual(StepLabels.pickerDetail(for: all[2]), "Part of Renew passport")
+    }
+
+    func testARefusalIsShownInTheServersOwnWords() {
+        let loop = APIError.serverError(409, Data(#"{"detail":"That would make these tasks wait on each other."}"#.utf8))
+        XCTAssertEqual(StepLabels.message(for: loop), "That would make these tasks wait on each other.")
+
+        let full = APIError.validationError(Data(#"{"detail":"A task can have at most 12 steps."}"#.utf8))
+        XCTAssertEqual(StepLabels.message(for: full), "A task can have at most 12 steps.")
+
+        let schema = APIError.validationError(Data(#"{"detail":[{"loc":["body"],"msg":"field required"}]}"#.utf8))
+        XCTAssertEqual(StepLabels.message(for: schema), "That didn't work. Please try again.")
+        XCTAssertEqual(StepLabels.message(for: APIError.unauthorized), "That didn't work. Please try again.")
+    }
 }

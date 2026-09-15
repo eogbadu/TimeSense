@@ -5,7 +5,8 @@ struct TodayView: View {
     @StateObject private var viewModel = TodayViewModel()
     @ObservedObject private var calendar = CalendarSyncService.shared
     @ObservedObject private var router = DeepLinkRouter.shared
-    @State private var scheduleDraft: ScheduleDraft?
+    /// Scheduling and task details share one sheet slot, so they can never compete (TIME-328).
+    @State private var sheet: TodaySheet?
     /// A group the user is finishing while steps are still open — confirmed first (TIME-327).
     @State private var groupToComplete: TimelineTask?
     /// The task "Add a step" was chosen on, and the step being typed.
@@ -27,8 +28,13 @@ struct TodayView: View {
             .background(CosmicBackground())
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
-            .sheet(item: $scheduleDraft) { draft in
-                eventEditorSheet(for: draft)
+            .sheet(item: $sheet) { item in
+                switch item {
+                case .schedule(let draft):
+                    eventEditorSheet(for: draft)
+                case .detail(let taskId):
+                    TaskDetailSheet(viewModel: viewModel, taskId: taskId)
+                }
             }
         }
         .task {
@@ -42,8 +48,8 @@ struct TodayView: View {
             }
         }
         // Raised after completing a task, while the assistant is still learning that type. Attached
-        // out here because `scheduleDraft`'s sheet is already on the inner Group — two .sheet
-        // modifiers on one view node and only one of them ever presents.
+        // out here because the other sheet is already on the inner Group — two .sheet modifiers on one
+        // view node and only one of them ever presents.
         .sheet(item: $viewModel.durationPrompt) { prompt in
             DurationFeedbackSheet(
                 prompt: prompt,
@@ -63,7 +69,7 @@ struct TodayView: View {
                     router.route = nil
                     guard await calendar.ensureWriteAccess() else { return }
                     let slot = await viewModel.suggestedSlot(taskId: taskId, estimatedMinutes: nil)
-                    scheduleDraft = ScheduleDraft(id: taskId, title: title, start: slot.start, end: slot.end)
+                    sheet = .schedule(ScheduleDraft(id: taskId, title: title, start: slot.start, end: slot.end))
                 }
             }
         }
@@ -78,7 +84,8 @@ struct TodayView: View {
                     sectionHeader("AI Recommended Now")
                     AIRecommendedCard(
                         task: best,
-                        load: { await viewModel.fetchExplanation(taskId: best.id) }
+                        load: { await viewModel.fetchExplanation(taskId: best.id) },
+                        onOpenGroup: { groupId in sheet = .detail(taskId: groupId) }
                     )
                 }
 
@@ -109,9 +116,9 @@ struct TodayView: View {
                                 let slot = await viewModel.suggestedSlot(
                                     taskId: task.id, estimatedMinutes: task.estimatedMinutes
                                 )
-                                scheduleDraft = ScheduleDraft(
+                                sheet = .schedule(ScheduleDraft(
                                     id: task.id, title: task.title, start: slot.start, end: slot.end
-                                )
+                                ))
                             }
                         },
                         onCompleteGroup: { group in
@@ -129,7 +136,8 @@ struct TodayView: View {
                         onRemoveFromGroup: { step in Task { await viewModel.removeFromGroup(step) } },
                         onStopWaiting: { task, ref in
                             Task { await viewModel.stopWaiting(task: task, for: ref) }
-                        }
+                        },
+                        onOpenDetail: { task in sheet = .detail(taskId: task.id) }
                     )
                 }
             }
@@ -177,7 +185,7 @@ struct TodayView: View {
             event: calendar.makeDraftEvent(title: draft.title, start: draft.start, end: draft.end),
             eventStore: calendar.eventStore
         ) { saved in
-            scheduleDraft = nil
+            sheet = nil
             if saved { Task { await calendar.syncIfAuthorized() } }
         }
         .ignoresSafeArea()
@@ -188,6 +196,20 @@ struct TodayView: View {
             .font(DesignTokens.Typography.headline)
             .foregroundColor(DesignTokens.Color.accent)
             .padding(.horizontal, DesignTokens.Spacing.xs)
+    }
+}
+
+/// Today's sheets. One `.sheet(item:)` presents them all, because two sheet modifiers on the same view
+/// and only one ever appears (TIME-328).
+private enum TodaySheet: Identifiable {
+    case schedule(ScheduleDraft)
+    case detail(taskId: String)
+
+    var id: String {
+        switch self {
+        case .schedule(let draft): return "schedule-\(draft.id)"
+        case .detail(let taskId): return "detail-\(taskId)"
+        }
     }
 }
 
@@ -221,6 +243,7 @@ private struct DateSummaryRow: View {
 private struct AIRecommendedCard: View {
     let task: NowTask
     let load: () async -> RecommendationExplanation?
+    let onOpenGroup: (String) -> Void
 
     var body: some View {
         let style = taskCategoryStyle(for: task.title)
@@ -237,7 +260,7 @@ private struct AIRecommendedCard: View {
                 }
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        StepEyebrow(task: task, tint: accent)
+                        StepEyebrow(task: task, tint: accent, onOpenGroup: onOpenGroup)
                         Text(task.title)
                             .font(DesignTokens.Typography.title.weight(.bold))
                             .foregroundStyle(DesignTokens.Color.onHero)
@@ -295,6 +318,7 @@ private struct SmartPlanCard: View {
     let onAddStep: (TimelineTask) -> Void
     let onRemoveFromGroup: (TimelineTask) -> Void
     let onStopWaiting: (TimelineTask, TaskRef) -> Void
+    let onOpenDetail: (TimelineTask) -> Void
 
     private var groups: [(name: String, entries: [TimelineEntry])] {
         let order = ["Morning", "Afternoon", "Evening", "Anytime"]
@@ -357,7 +381,8 @@ private struct SmartPlanCard: View {
                                     onRecordDuration: onRecordDuration,
                                     onRemoveFromGroup: onRemoveFromGroup,
                                     onStopWaiting: onStopWaiting,
-                                    onAddStep: { onAddStep(task) }
+                                    onAddStep: { onAddStep(task) },
+                                    onOpenDetail: onOpenDetail
                                 )
                             } else {
                                 taskRow(task)
@@ -385,8 +410,11 @@ private struct SmartPlanCard: View {
                         perform: { onToggle(task) }),
             onDelete: { onDelete(task.id) }
         ) {
-            SmartPlanRow(task: task, onToggle: { onToggle(task) })
+            SmartPlanRow(task: task, onToggle: { onToggle(task) }, onOpenDetail: { onOpenDetail(task) })
                 .contextMenu {
+                    Button { onOpenDetail(task) } label: {
+                        Label("Details", systemImage: "info.circle")
+                    }
                     if done {
                         Button { onRecordDuration(task) } label: {
                             Label("How long did that take?", systemImage: "stopwatch")
@@ -399,6 +427,16 @@ private struct SmartPlanCard: View {
                             Button { onAddStep(task) } label: {
                                 Label("Add a step", systemImage: "list.bullet.indent")
                             }
+                            // These open the task's details, where the choice is made (TIME-328).
+                            Button { onOpenDetail(task) } label: {
+                                Label("Break this down…", systemImage: "sparkles")
+                            }
+                            Button { onOpenDetail(task) } label: {
+                                Label("Make it a step of…", systemImage: "arrow.down.right.square")
+                            }
+                        }
+                        Button { onOpenDetail(task) } label: {
+                            Label("Do this after…", systemImage: "arrow.turn.down.right")
                         }
                         ForEach(task.waitsFor) { ref in
                             Button { onStopWaiting(task, ref) } label: {
@@ -423,6 +461,7 @@ private struct StepGroupRow: View {
     let onRemoveFromGroup: (TimelineTask) -> Void
     let onStopWaiting: (TimelineTask, TaskRef) -> Void
     let onAddStep: () -> Void
+    let onOpenDetail: (TimelineTask) -> Void
 
     @State private var expanded = true
 
@@ -437,9 +476,18 @@ private struct StepGroupRow: View {
             ) {
                 header
                     .contextMenu {
+                        Button { onOpenDetail(group) } label: {
+                            Label("Details", systemImage: "info.circle")
+                        }
                         if !done {
                             Button(action: onAddStep) {
                                 Label("Add a step", systemImage: "list.bullet.indent")
+                            }
+                            Button { onOpenDetail(group) } label: {
+                                Label("Break this down…", systemImage: "sparkles")
+                            }
+                            Button { onOpenDetail(group) } label: {
+                                Label("Do this after…", systemImage: "arrow.turn.down.right")
                             }
                             ForEach(group.waitsFor) { ref in
                                 Button { onStopWaiting(group, ref) } label: {
@@ -453,7 +501,8 @@ private struct StepGroupRow: View {
             if expanded {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     ForEach(group.groupSteps) { step in
-                        StepRow(step: step, onToggle: { onToggleStep(step) })
+                        StepRow(step: step, onToggle: { onToggleStep(step) },
+                                onOpenDetail: { onOpenDetail(step) })
                             .contextMenu { stepMenu(step) }
                     }
                 }
@@ -489,6 +538,10 @@ private struct StepGroupRow: View {
                     }
                 }
             }
+            .contentShape(Rectangle())
+            .onTapGesture { onOpenDetail(group) }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Shows details")
             Spacer(minLength: 0)
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() }
@@ -508,6 +561,9 @@ private struct StepGroupRow: View {
 
     @ViewBuilder
     private func stepMenu(_ step: TimelineTask) -> some View {
+        Button { onOpenDetail(step) } label: {
+            Label("Details", systemImage: "info.circle")
+        }
         if step.status == "done" {
             Button { onRecordDuration(step) } label: {
                 Label("How long did that take?", systemImage: "stopwatch")
@@ -515,6 +571,9 @@ private struct StepGroupRow: View {
         } else {
             Button { onRemoveFromGroup(step) } label: {
                 Label("Remove from group", systemImage: "arrow.up.forward.square")
+            }
+            Button { onOpenDetail(step) } label: {
+                Label("Do this after…", systemImage: "arrow.turn.down.right")
             }
             ForEach(StepLabels.removableWaits(for: step, in: group)) { ref in
                 Button { onStopWaiting(step, ref) } label: {
@@ -532,6 +591,7 @@ private struct StepGroupRow: View {
 private struct StepRow: View {
     let step: TimelineTask
     let onToggle: () -> Void
+    let onOpenDetail: () -> Void
 
     var body: some View {
         let done = step.status == "done"
@@ -562,6 +622,10 @@ private struct StepRow: View {
                         .foregroundColor(DesignTokens.Color.textSecondary)
                 }
             }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onOpenDetail)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Shows details")
             Spacer(minLength: 0)
         }
         .opacity(step.isWaiting ? 0.55 : 1)
@@ -703,6 +767,7 @@ private struct SwipeableRow<Content: View>: View {
 private struct SmartPlanRow: View {
     let task: TimelineTask
     let onToggle: () -> Void
+    let onOpenDetail: () -> Void
 
     var body: some View {
         let style = taskCategoryStyle(for: task.title)
@@ -734,6 +799,11 @@ private struct SmartPlanRow: View {
                         .foregroundColor(DesignTokens.Color.textSecondary)
                 }
             }
+            // The title opens the task's details; the circle stays completion (TIME-328).
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onOpenDetail)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Shows details")
             Spacer(minLength: 0)
         }
         // Still visible, so nothing seems to have gone missing, but plainly not something to do yet.

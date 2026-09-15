@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09C18334D5191C1A5545842D /* TaskPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8783624F3D3534A8DE38949B /* TaskPickerView.swift */; };
 		0FABB452D1E4F020AAF09896 /* UsableTimeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA6630C19CFCE153E6A22BD /* UsableTimeWidget.swift */; };
 		139CC16BB770927E35C73A16 /* HealthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEFDF748BAAB394AB39A6521 /* HealthService.swift */; };
 		1790B0431C0A702E3C4D3A8F /* BestNextActionWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */; };
@@ -22,6 +23,7 @@
 		52BDFC5568770624F97DA818 /* TimeSenseWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36EB356DF40246D524569A1 /* TimeSenseWidgetBundle.swift */; };
 		56A356B25C25BEB8CD534EE2 /* InsightsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F22CD5D75BA658BEA67CA349 /* InsightsViewModel.swift */; };
 		5F913504C123E85B497873BE /* DueDateLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3C124886471F1B1CFDD214 /* DueDateLabelTests.swift */; };
+		60043B22AEA02EC6945F432F /* TaskDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 411B79A33C9A9D7A9AE87904 /* TaskDetailSheet.swift */; };
 		6CD4FF6DFF50C030900D4212 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B1E8B7D3AE0CA4FC53BB095C /* GoogleSignIn */; };
 		6DE9467AEC6AECB4110CB3C0 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DesignTokens.swift */; };
 		6F341198DDE522BD07556E0F /* LearnedAssumptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D44E62F60C5377281196BE9F /* LearnedAssumptionsView.swift */; };
@@ -119,6 +121,7 @@
 		3AF2C9C92FEC1E46674899DC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3EB3BCF8932A4D3E59E6DE68 /* AppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		3FA88F58BA84E09F833DCD97 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		411B79A33C9A9D7A9AE87904 /* TaskDetailSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TaskDetailSheet.swift; sourceTree = "<group>"; };
 		4AC9046CC1824BBE8217F24B /* SettingsScreens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsScreens.swift; sourceTree = "<group>"; };
 		53053C84F6BDAB4CB9AC5592 /* TimeSenseWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = TimeSenseWidget.entitlements; sourceTree = "<group>"; };
 		5652B19156DB21CFDB4A9433 /* BestNextActionWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BestNextActionWidget.swift; sourceTree = "<group>"; };
@@ -133,6 +136,7 @@
 		7B2E4D1A0C3F95228EAB0206 /* DurationFeedbackTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DurationFeedbackTests.swift; path = DurationFeedbackTests.swift; sourceTree = "<group>"; };
 		7C87520488C546B3D4CEAC56 /* TaskTimerStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TaskTimerStore.swift; path = Time/TaskTimerStore.swift; sourceTree = "<group>"; };
 		7FAA2C64ED43B5EA57A49D6E /* TimeSense.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = TimeSense.entitlements; sourceTree = "<group>"; };
+		8783624F3D3534A8DE38949B /* TaskPickerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TaskPickerView.swift; sourceTree = "<group>"; };
 		93CE28242CAC4A705027F3A1 /* TimezoneSyncService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimezoneSyncService.swift; path = Time/TimezoneSyncService.swift; sourceTree = "<group>"; };
 		9539D6C350476B61BFFABF6B /* StepGroupTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StepGroupTests.swift; sourceTree = "<group>"; };
 		96EAA7D53E61D55370B71BB4 /* AwaitingResolutionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AwaitingResolutionTests.swift; path = AwaitingResolutionTests.swift; sourceTree = "<group>"; };
@@ -252,6 +256,7 @@
 			isa = PBXGroup;
 			children = (
 				7B2E4D1A0C3F95228EAB0204 /* DurationFeedbackSheet.swift */,
+				8783624F3D3534A8DE38949B /* TaskPickerView.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -403,6 +408,7 @@
 				A2000008 /* TodayView.swift */,
 				A2000031 /* TodayViewModel.swift */,
 				A2000032 /* TimelineCard.swift */,
+				411B79A33C9A9D7A9AE87904 /* TaskDetailSheet.swift */,
 			);
 			path = Today;
 			sourceTree = "<group>";
@@ -690,6 +696,8 @@
 				7B2E4D1A0C3F95228EAB0201 /* DurationFeedback.swift in Sources */,
 				7B2E4D1A0C3F95228EAB0203 /* DurationFeedbackSheet.swift in Sources */,
 				7E46624020F1C6FE92245222 /* DueDateLabel.swift in Sources */,
+				60043B22AEA02EC6945F432F /* TaskDetailSheet.swift in Sources */,
+				09C18334D5191C1A5545842D /* TaskPickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

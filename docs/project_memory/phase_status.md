@@ -18,7 +18,7 @@ Ordered steps write the "waits for" edges automatically. The plan was settled wi
 - [x] TIME-326 Notion sub-items + Blocked by (migration `d5e6f0a1b2c3`)
 - **Backend complete. Paused here for the user to try the API before the iOS tickets (their instruction).**
 - [x] TIME-327 iOS step groups, parent eyebrow on Now, blocked rows
-- [ ] TIME-328 iOS detail sheet, task picker, Break this down
+- [x] TIME-328 iOS detail sheet, task picker, Break this down
 - [ ] TIME-329 iOS Capture "Part of…", Notion "Import both"
 
 ## iOS release preparation (TIME-317) — 2026-09-02
