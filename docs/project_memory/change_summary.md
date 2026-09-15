@@ -1,5 +1,22 @@
 # Change Summary
 
+## 2026-09-15 — TIME-319 Capture prompt shows the user's real local time (Jira TIME-2353)
+
+**What changed:**
+- `backend/app/services/capture_service.py`:
+  - Imports `ZoneInfo` and `ZoneInfoNotFoundError`. `ZoneInfo` was used and never imported.
+  - The except around the local-time line now catches only bad-timezone errors, not `Exception`.
+- `backend/tests/test_capture.py`: two tests using a frozen clock. New York at 03:30 UTC shows 23:30 the previous day; an unknown zone falls back to UTC.
+- `scripts/create_jira_tickets.py`: definitions for the whole steps & prerequisites batch, TIME-319..329.
+
+**Why:** the swallowed `NameError` meant the LLM was always told the user's local time was UTC. Relative phrases like "tonight" and "tomorrow morning" were read against the wrong clock.
+
+**Verified:**
+- Full backend suite passes.
+- Mutation check: with `ZoneInfo` removed from the module, the prompt builder now raises instead of returning UTC.
+
+**Not done:** no prompt, schema or max_tokens changes. TIME-325 owns those.
+
 ## 2026-09-02 — TIME-318 Settle the App Store listing name (Jira TIME-2352)
 
 **What changed:**

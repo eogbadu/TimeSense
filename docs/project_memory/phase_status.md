@@ -1,5 +1,25 @@
 # Phase Status
 
+## Steps & prerequisites (TIME-319..329) — IN PROGRESS, started 2026-09-15
+
+Two user-requested features on one model:
+- **Steps:** a task can have steps, one level deep.
+- **Prerequisites:** a task can wait for another task.
+
+Ordered steps write the "waits for" edges automatically. The plan was settled with the user; the 12 decisions are recorded with TIME-320. There are 11 tickets, Jira TIME-2353..2363.
+
+- [x] TIME-319 capture prompt local time (bug found while planning; the prompt is rewritten later in the batch)
+- [ ] TIME-320 data model + task graph read layer
+- [ ] TIME-321 steps: attach/create/move, auto-complete parent
+- [ ] TIME-322 prerequisites ("Do this after")
+- [ ] TIME-323 recommendations + scheduling respect the graph
+- [ ] TIME-324 Today plan nests steps
+- [ ] TIME-325 AI steps (capture detection, parent match, Break this down, placement)
+- [ ] TIME-326 Notion sub-items + Blocked by
+- [ ] TIME-327 iOS step groups, parent eyebrow on Now, blocked rows
+- [ ] TIME-328 iOS detail sheet, task picker, Break this down
+- [ ] TIME-329 iOS Capture "Part of…", Notion "Import both"
+
 ## iOS release preparation (TIME-317) — 2026-09-02
 
 The repository now produces an artifact App Store Connect will accept. `scripts/testflight_build.sh`

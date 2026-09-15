@@ -1,5 +1,29 @@
 # Context Summary
 
+**Last updated:** 2026-09-15. **Steps & prerequisites batch started** (TIME-319..329 → Jira TIME-2353..2363).
+
+**Features.** The user asked for two:
+- A task can have **steps** (sub-tasks).
+- A task can **wait for** another task (prerequisites).
+
+**Plan settled with the user** (full plan in the TIME-320 decision_log entry once it lands):
+- **Structure:** one level only. One edge table, "B waits for A", serves both ordered steps and "Do this after…".
+- **Where steps come from:** AI-first (capture detection, "Break this down"), and can be added later ("add X to Y", a "Part of…" chip, "Make it a step of…").
+- **What the user sees:** the parent auto-completes; blocked tasks are dimmed "After: X" in Today and never recommended.
+- **Now:** the card names the parent in an eyebrow label.
+- **Notion:** keeps its sub-item and Blocked by relations.
+
+**Current:** TIME-319 (Jira TIME-2353), branch `feature/TIME-319-capture-prompt-local-time`.
+- Fixes the capture prompt's missing `ZoneInfo` import. The swallowed NameError showed every user UTC as their local time.
+- **Next:** TIME-320 (Jira TIME-2354), the data model and the task graph read layer.
+
+**How the user wants this batch run (confirmed 2026-09-15, applies to this batch only):**
+- Merge each ticket's PR once its tests are green, move Jira to Done, and start the next ticket from main.
+- **Pause after TIME-326** (end of backend + Notion) so the user can try the API before the iOS tickets (TIME-327..329).
+- Re-confirm both at the start of any new session.
+
+**Earlier state still true:** TestFlight's Apple-account steps are owned by the user (below). The TIME-316 and TIME-314 on-device sign-offs are still outstanding.
+
 **Last updated:** 2026-09-02 — **TIME-317 (Jira TIME-2351) TestFlight release preparation.** The
 repository can now produce an artifact App Store Connect will accept, proven end to end: a signed
 `.ipa` under `Apple Distribution: Born Royal LLC (WB5NV894N5)`, version 1.0.0.
@@ -161,6 +185,18 @@ status, user search, invite codes, subscriptions, feedback review. `npm run buil
 both clean.
 
 ## Jira Key Mapping (recent — see decision_log.md/implementation_log.md for full history)
+- **STEPS & PREREQUISITES BATCH (planned 2026-09-15)** logical TIME-319..329 → Jira **TIME-2353..2363**, in order and read from the creation output:
+  - 319=2353 capture prompt local time
+  - 320=2354 data model + graph read layer
+  - 321=2355 steps
+  - 322=2356 prerequisites
+  - 323=2357 engine + scheduling
+  - 324=2358 Today plan nesting
+  - 325=2359 AI steps
+  - 326=2360 Notion relations
+  - 327=2361 iOS groups/eyebrow/blocked
+  - 328=2362 iOS detail sheet + picker
+  - 329=2363 iOS Capture + Notion import both
 - **TIME-316 → Jira TIME-2350** (complete any task in Today + duration + silent off-recommendation learning; 2026-09-01). Depends on TIME-286/287/294/296/298.
 - **TIME-315 → Jira TIME-2349** (waveform reacts to your voice; 2026-08-31) — PR #355, still OPEN.
 - **TIME-314 → Jira TIME-2348** (voice capture never heard the microphone; device feedback 2026-08-31). NOTE: the Jira key was read from the creation output, not inferred.

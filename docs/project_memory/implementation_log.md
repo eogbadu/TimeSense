@@ -1,5 +1,30 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-319 Capture's parse prompt always told the LLM the user's local time was UTC (Jira TIME-2353)
+
+First ticket of the **steps & prerequisites batch** (TIME-319..329 → Jira TIME-2353..2363, all
+created 2026-09-15; plan summarised in decision_log.md with TIME-320). Found while planning that
+batch, which rewrites the same prompt.
+
+`_build_parse_prompt` computed the "User's LOCAL date and time" line with `ZoneInfo(user_timezone)`,
+but `capture_service.py` never imported `ZoneInfo`. The `NameError` landed in a bare
+`except Exception` that exists to handle bad timezone names, so it fell back to UTC **for every
+user, every capture**. Nothing failed and nothing logged. A New York user capturing "call mom
+tonight" at 23:30 was shown to the model as 03:30 the next day.
+
+Fix: import `ZoneInfo`/`ZoneInfoNotFoundError`, and narrow the except to
+`(ZoneInfoNotFoundError, ValueError, TypeError)`: the errors a bad name, an empty or path-like key,
+or `None` actually raise. A coding error in that block now surfaces instead of degrading silently.
+
+Tests freeze the module's clock at 03:30 UTC and assert the New York prompt reads
+`Monday 2026-09-14 23:30`, which crosses the day boundary on purpose. They also check that an unknown
+zone still produces the UTC line. Separate mutation check: deleting `ZoneInfo` from the module now
+raises `NameError` rather than passing.
+
+Why green tests missed it: no test ever asserted the local-time line for a non-UTC zone, and the
+deterministic repairs downstream (implicit deadlines, midnight repair) hid most of the visible
+damage.
+
 ## 2026-09-02 — TIME-318 Settle the App Store listing name (Jira TIME-2352)
 
 The first step of the TestFlight checklist failed on its first field: *"The app name you entered is
