@@ -44,14 +44,40 @@ class NotionTaskSource(TaskSourceProvider):
             title = _extract_title(props)
             if not title:
                 continue  # skip untitled rows
+            parent_id, blocked_by = _extract_relations(props)
             tasks.append(
                 SourceTask(
                     external_id=page.get("id", ""),
                     title=title,
                     due=_extract_due(props),
+                    parent_external_id=parent_id,
+                    prerequisite_external_ids=blocked_by,
                 )
             )
         return tasks
+
+
+# The names Notion gives the relations its "Sub-items" and "Dependencies" features create, plus the
+# obvious renames. Only relation properties are considered, so a text column called "Parent" is ignored.
+_PARENT_NAMES = {"parent item", "parent", "parent task"}
+_BLOCKED_BY_NAMES = {"blocked by", "depends on", "waiting on"}
+
+
+def _extract_relations(properties: dict) -> tuple[str | None, list[str]]:
+    """The page this row is a sub-item of, and the pages it is blocked by (TIME-326). A database
+    without those relations gives (None, [])."""
+    parent_id: str | None = None
+    blocked_by: list[str] = []
+    for name, prop in properties.items():
+        if prop.get("type") != "relation":
+            continue
+        ids = [r.get("id") for r in prop.get("relation", []) if r.get("id")]
+        key = name.strip().casefold()
+        if key in _PARENT_NAMES and ids and parent_id is None:
+            parent_id = ids[0]
+        elif key in _BLOCKED_BY_NAMES:
+            blocked_by.extend(i for i in ids if i not in blocked_by)
+    return parent_id, blocked_by
 
 
 def _extract_title(properties: dict) -> str:

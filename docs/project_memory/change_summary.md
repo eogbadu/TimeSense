@@ -1,5 +1,22 @@
 # Change Summary
 
+## 2026-09-15 — TIME-326 Notion import keeps sub-items and Blocked by (Jira TIME-2360)
+
+**What changed:**
+- **Scan:** reads Notion's "Parent item" and "Blocked by" relations and stores them on the import item (migration `d5e6f0a1b2c3`).
+- **Import:** links in both directions. Sub-items become steps and "Blocked by" becomes waits, whichever side is imported first. Links TimeSense can't represent are skipped without failing the import.
+- **Pending list:** adds `parent_title_hint` and `parent_pending_item_id`, for "Import both".
+- **Import response:** may carry `suggested_parent`, which is never applied.
+
+**Why:** structure the user already built in Notion shouldn't have to be rebuilt in TimeSense.
+
+**Verified:** 12 new tests, plus a Postgres migration round-trip. Results are in the PR.
+
+**Not done:**
+- The iOS "Import both" UI (TIME-329).
+- Writing back to Notion.
+- Apple Reminders (TIME-027 is unbuilt; its subtasks will import flat).
+
 ## 2026-09-15 — TIME-325 AI steps (Jira TIME-2359)
 
 **What changed:**

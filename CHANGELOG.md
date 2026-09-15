@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-15 — Notion imports keep their structure (TIME-326)
+
+### Changed
+- **Sub-items and dependencies come with your Notion tasks.** A Notion sub-item becomes a step of its parent task. A task "Blocked by" another waits for it in TimeSense too. This works in whichever order you import them.
+
 ## 2026-09-15 — Capture understands steps (TIME-325)
 
 ### Added

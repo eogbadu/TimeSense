@@ -9,7 +9,7 @@ directly. Read-only — imported items ALWAYS require explicit user approval bef
 (enforced in the service layer, not here).
 """
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 
@@ -21,6 +21,11 @@ class SourceTask:
     title: str
     notes: str | None = None
     due: datetime | None = None
+    # Structure the source already holds (TIME-326): the item this one is a sub-item of, and the items
+    # it is blocked by. Kept as the source's own ids; they become steps and waits only once both sides
+    # have been imported.
+    parent_external_id: str | None = None
+    prerequisite_external_ids: list[str] = field(default_factory=list)
 
 
 class TaskSourceProvider(ABC):

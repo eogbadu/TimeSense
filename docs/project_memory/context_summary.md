@@ -25,16 +25,18 @@
 
 - TIME-324 (PR #365): the Today plan nests steps under their parent.
 
-**Current:** TIME-325 (Jira TIME-2359), branch `feature/TIME-325-ai-steps`.
-- Capture recognises steps, "add X to Y" (parent chosen from the user's open tasks), and an unstated likely match (`suggested_parent`, never applied), all in one model call.
-- The "Part of…" chip (`CaptureRequest.parent_task_id`) wins over the model.
-- `POST /tasks/{id}/breakdown` and `GET /tasks/{id}/step-position` are in place.
-- **Interim:** the current iOS build shows a captured group as one row in Today until TIME-327.
-- **Next:** TIME-326 (Jira TIME-2360), Notion keeps sub-items and Blocked by:
-  - migration for `notion_import_items.external_parent_id` / `external_prereq_ids`
-  - link resolution in both directions on import
-  - "Import both" data
-- **After TIME-326, pause for the user** before the iOS tickets.
+- TIME-325 (PR #366): capture detects steps, "add X to Y" and a likely parent in one model call; the "Part of…" chip; `POST /tasks/{id}/breakdown`; `GET /tasks/{id}/step-position`.
+
+**Current:** TIME-326 (Jira TIME-2360), branch `feature/TIME-326-notion-relations`. Notion "Parent item" and "Blocked by" relations are stored (migration `d5e6f0a1b2c3`) and linked in both directions on import. Pending items carry "Import both" hints, and an import may return `suggested_parent`.
+
+**PAUSED after TIME-326, as the user asked.** The backend for steps and prerequisites is complete. The user tries the API before the iOS tickets:
+- TIME-327 (Jira TIME-2361): iOS step groups, parent eyebrow on Now, blocked rows.
+- TIME-328 (Jira TIME-2362): detail sheet, task picker, Break this down.
+- TIME-329 (Jira TIME-2363): Capture "Part of…", Notion "Import both".
+
+Interim until TIME-327: the current iOS build shows a captured group as one row in Today (see known_issues.md).
+
+**Production note:** migrations `c4d5e6f0a1b2` (TIME-320) and `d5e6f0a1b2c3` (TIME-326) must run on the deployed database before the new backend serves traffic. The Render deploy runs `alembic upgrade head`; confirm that on the next deploy.
 
 **Working notes for this batch:**
 - **Pytest output always goes to a log file.** A local pytest process can stay alive after printing its summary, and a pipe into `tail` then never returns.
