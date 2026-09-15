@@ -11,6 +11,8 @@ struct CaptureView: View {
     @State private var locationQuery = ""
     @State private var pickedLocation: PlaceSearchResult?
     @State private var placeSearchTask: Task<Void, Never>?
+    /// The "Part of…" picker (TIME-329).
+    @State private var showPartOfPicker = false
     @FocusState private var isInputFocused: Bool
 
     private let chips: [(label: String, icon: String, color: Color)] = [
@@ -46,6 +48,7 @@ struct CaptureView: View {
 
                     inputBox
                     chipsRow
+                    partOfRow
                     if let chip = selectedChip { contextualInput(for: chip) }
                     captureButton
                     statusView
@@ -93,6 +96,25 @@ struct CaptureView: View {
             }
             .animation(DesignTokens.Animation.standard, value: selectedChip)
             .animation(DesignTokens.Animation.standard, value: viewModel.lastCaptured?.id)
+            .animation(DesignTokens.Animation.standard, value: viewModel.lastCaptured?.parentTaskId)
+            .animation(DesignTokens.Animation.standard, value: viewModel.placeOffer)
+        }
+        .sheet(isPresented: $showPartOfPicker) {
+            NavigationStack {
+                TaskPickerView(
+                    title: "Part of…",
+                    prompt: "What you capture next joins the task you pick.",
+                    candidates: StepLabels.captureParentCandidates(in: viewModel.planEntries)
+                ) { parent in
+                    viewModel.partOf = parent
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { showPartOfPicker = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
         }
     }
 
@@ -258,6 +280,46 @@ struct CaptureView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// "Part of…": say which task this capture belongs to, rather than relying on the wording
+    /// (TIME-329). It is its own row because it isn't a kind of capture like the chips above.
+    private var partOfRow: some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            if let parent = viewModel.partOf {
+                Label("Part of \(parent.title)", systemImage: "list.bullet")
+                    .font(DesignTokens.Typography.footnote.weight(.medium))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .padding(.horizontal, DesignTokens.Spacing.md)
+                    .padding(.vertical, DesignTokens.Spacing.sm)
+                    .background(Capsule().fill(DesignTokens.Color.accent))
+                Button { viewModel.partOf = nil } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Not part of \(parent.title)")
+            } else {
+                Button {
+                    isInputFocused = false
+                    Task {
+                        await viewModel.loadPlanForPicker()
+                        showPartOfPicker = true
+                    }
+                } label: {
+                    Label("Part of…", systemImage: "list.bullet")
+                        .font(DesignTokens.Typography.footnote.weight(.medium))
+                        .foregroundColor(DesignTokens.Color.accent)
+                        .padding(.horizontal, DesignTokens.Spacing.md)
+                        .padding(.vertical, DesignTokens.Spacing.sm)
+                        .background(Capsule().fill(DesignTokens.Color.accent.opacity(0.14)))
+                        .overlay(Capsule().stroke(DesignTokens.Color.accent.opacity(0.5), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
     private var captureButton: some View {
         Button {
             Task { await submitCapture() }
@@ -286,9 +348,99 @@ struct CaptureView: View {
     @ViewBuilder
     private var detectSection: some View {
         if let task = viewModel.lastCaptured {
+            groupingCard(task)
             detectedSection(task)
         } else {
             capabilitySection
+        }
+    }
+
+    /// Where the capture landed (TIME-329): in an existing task (with Undo, and a place in its order when
+    /// the steps are ordered), as a new task with steps, or as a task that may belong to another.
+    @ViewBuilder
+    private func groupingCard(_ task: CapturedTask) -> some View {
+        if let parentTitle = task.parentTitle {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    Label("Added to \(parentTitle)", systemImage: "list.bullet")
+                        .font(DesignTokens.Typography.callout.weight(.semibold))
+                        .foregroundColor(DesignTokens.Color.textPrimary)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                    Button("Undo") { Task { await viewModel.undoJoin() } }
+                        .font(DesignTokens.Typography.callout.weight(.semibold))
+                }
+                if let before = viewModel.placeOffer {
+                    Divider()
+                    Text("Before “\(before.title)”?")
+                        .font(DesignTokens.Typography.callout)
+                        .foregroundColor(DesignTokens.Color.textPrimary)
+                    HStack(spacing: DesignTokens.Spacing.sm) {
+                        Button("Yes") { Task { await viewModel.acceptPlace() } }
+                            .buttonStyle(.borderedProminent)
+                        Button("No particular order") { viewModel.declinePlace() }
+                            .buttonStyle(.bordered)
+                    }
+                }
+                followUpError
+            }
+            .padding(DesignTokens.Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .cardStyle()
+            .transition(.opacity)
+        } else if !task.capturedSteps.isEmpty {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                Label(task.capturedSteps.count == 1 ? "1 step" : "\(task.capturedSteps.count) steps",
+                      systemImage: "list.number")
+                    .font(DesignTokens.Typography.callout.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                ForEach(Array(task.capturedSteps.enumerated()), id: \.element.id) { index, step in
+                    HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Spacing.sm) {
+                        Text("\(index + 1).")
+                            .monospacedDigit()
+                            .foregroundColor(DesignTokens.Color.textSecondary)
+                        Text(step.title)
+                            .foregroundColor(DesignTokens.Color.textPrimary)
+                        Spacer(minLength: 0)
+                        if let minutes = step.estimatedMinutes {
+                            Text("~\(minutes) min")
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundColor(DesignTokens.Color.textSecondary)
+                        }
+                    }
+                    .font(DesignTokens.Typography.callout)
+                }
+            }
+            .padding(DesignTokens.Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .cardStyle()
+            .transition(.opacity)
+        } else if let suggested = task.suggestedParent, !viewModel.suggestionDismissed {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                Text("Part of “\(suggested.title)”?")
+                    .font(DesignTokens.Typography.callout.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.textPrimary)
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    Button("Add to it") { Task { await viewModel.acceptSuggestion() } }
+                        .buttonStyle(.borderedProminent)
+                    Button("No") { viewModel.suggestionDismissed = true }
+                        .buttonStyle(.bordered)
+                }
+                followUpError
+            }
+            .padding(DesignTokens.Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .cardStyle()
+            .transition(.opacity)
+        }
+    }
+
+    @ViewBuilder
+    private var followUpError: some View {
+        if let message = viewModel.followUpError {
+            Text(message)
+                .font(DesignTokens.Typography.footnote)
+                .foregroundColor(DesignTokens.Color.destructive)
         }
     }
 

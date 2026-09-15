@@ -1,5 +1,18 @@
 # Known Issues
 
+## No client can review Notion imports, so "Import both" has nowhere to live (found in TIME-329, 2026-09-15)
+
+The Notion import flow works through the API only:
+- `POST /notion/scan` creates pending items.
+- `GET /notion/pending` lists them.
+- `POST /notion/items/{id}/import` or `/dismiss` handles each one.
+
+iOS (Settings ▸ Connections) and web (`/app/connections`) can only **connect** Notion. Neither shows pending items, so a user of the apps never reaches the import step at all.
+
+TIME-326 made imports keep Notion's sub-items and "Blocked by" relations, and the pending list returns `parent_title_hint` and `parent_pending_item_id` for an "Import both" offer. The UI half of TIME-329 was deferred for that reason.
+
+**To finish it:** a ticket for a Notion import review screen (pick a database, list pending pages, Import / Dismiss, and Import both).
+
 ## RESOLVED by TIME-327 — the iOS build showed a captured group as one row in Today (TIME-325)
 
 The app now renders the group's steps, their progress and what each waits for. What follows describes the interim state as it was, for builds before TIME-327.

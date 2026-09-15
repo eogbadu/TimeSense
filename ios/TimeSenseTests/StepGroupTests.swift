@@ -183,4 +183,35 @@ final class StepGroupTests: XCTestCase {
         XCTAssertEqual(StepLabels.message(for: schema), "That didn't work. Please try again.")
         XCTAssertEqual(StepLabels.message(for: APIError.unauthorized), "That didn't work. Please try again.")
     }
+
+    // MARK: - Capture (TIME-329)
+
+    private func captured(_ extra: String) -> String {
+        #"{"id":"c","title":"Get photos","status":"pending","priority":3,"estimated_minutes":15,"scheduled_start":null,"scheduled_end":null,"due_at":null,"auto_scheduled":false,"source":"capture"\#(extra)}"#
+    }
+
+    func testACaptureSaysWhereItLanded() throws {
+        let joined: CapturedTask = try decode(captured(#","parent_task_id":"p","parent_title":"Renew passport","steps":[],"suggested_parent":null"#))
+        XCTAssertEqual(joined.parentTitle, "Renew passport")
+        XCTAssertTrue(joined.capturedSteps.isEmpty)
+        XCTAssertNil(joined.suggestedParent)
+
+        let group: CapturedTask = try decode(captured(#","parent_task_id":null,"steps":[{"id":"s1","title":"Get photos","estimated_minutes":15,"blocked_by":[]},{"id":"s2","title":"Mail it","estimated_minutes":null,"blocked_by":[{"id":"s1","title":"Get photos"}]}]"#))
+        XCTAssertEqual(group.capturedSteps.map(\.title), ["Get photos", "Mail it"])
+        XCTAssertEqual(group.capturedSteps[1].blockedBy, [TaskRef(id: "s1", title: "Get photos")])
+
+        let suggested: CapturedTask = try decode(captured(#","suggested_parent":{"id":"p","title":"Renew passport"}"#))
+        XCTAssertEqual(suggested.suggestedParent, TaskRef(id: "p", title: "Renew passport"))
+    }
+
+    func testACaptureFromBeforeGroupsExistedStillDecodes() throws {
+        let old: CapturedTask = try decode(captured(""))
+        XCTAssertNil(old.parentTitle)
+        XCTAssertTrue(old.capturedSteps.isEmpty)
+        XCTAssertNil(old.suggestedParent)
+    }
+
+    func testPartOfOffersTodaysOpenTasksThatArentSteps() throws {
+        XCTAssertEqual(StepLabels.captureParentCandidates(in: try plan()).map(\.id), ["p", "pay", "bank"])
+    }
 }

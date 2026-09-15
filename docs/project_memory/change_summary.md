@@ -1,5 +1,22 @@
 # Change Summary
 
+## 2026-09-15 — TIME-329 iOS Capture adds to a group (Jira TIME-2363)
+
+**What changed:**
+- **Capture "Part of…" chip:** picks one of today's open tasks and sends it as `parent_task_id`.
+- **Capture result card:**
+  - "Added to X · Undo", with a "Before …? · Yes / No particular order" offer for groups whose steps are in order
+  - a numbered list of the steps the capture created
+  - "Part of X? · Add to it / No" for a suggested parent
+- **Model:** `CapturedTask` decodes the grouping fields, all optional.
+- **Refusals** are shown inline in the server's words.
+
+**Why:** the user should see where a capture landed, and be able to put it somewhere else, without organizing anything.
+
+**Verified:** 3 new XCTests. Build and test results are in the PR.
+
+**Not done:** Notion "Import both" is deferred, because no client has a Notion import review screen yet (known_issues).
+
 ## 2026-09-15 — TIME-328 iOS task detail sheet, task picker, and Break this down (Jira TIME-2362)
 
 **What changed:**
