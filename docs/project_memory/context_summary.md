@@ -13,13 +13,15 @@
 - **Now:** the card names the parent in an eyebrow label.
 - **Notion:** keeps its sub-item and Blocked by relations.
 
-**Done:** TIME-319 (PR #360, Jira TIME-2353 Done). The capture prompt now states the user's real local time.
+**Done:**
+- TIME-319 (PR #360): the capture prompt states the user's local time.
+- TIME-320 (PR #361): migration `c4d5e6f0a1b2`, `TaskPrerequisite`, and `TaskGraphService` (`annotate`/`recommendable`/`responses`), with additive response fields.
 
-**Current:** TIME-320 (Jira TIME-2354), branch `feature/TIME-320-task-steps-prerequisites-model`.
-- Migration `c4d5e6f0a1b2`: `tasks.parent_task_id`/`position`/`steps_sequential`, and a new `task_prerequisites` table.
-- `app/services/task_graph.py`: `annotate`, `recommendable`, and `responses`, the single `TaskResponse` serializer.
-- Additive response fields.
-- **Next:** TIME-321 (Jira TIME-2355). Steps: attach, create, move, and parent auto-complete. The status cascade goes in `TaskRepository`, because three paths write `done` directly.
+**Current:** TIME-321 (Jira TIME-2355), branch `feature/TIME-321-steps-attach-autocomplete`.
+- `TaskRepository._settle_graph`: the parent finishes and reopens with its steps, and the steps close with the parent.
+- `StepService` (`attach`/`detach`/`create_steps`).
+- `POST /tasks/{id}/steps`; `TaskCreate` and `TaskUpdate` group fields.
+- **Next:** TIME-322 (Jira TIME-2356), `PrerequisiteService` + endpoints, with cycle detection over `edges_for_user`.
 
 **Working notes for this batch:**
 - **Pytest output always goes to a log file.** A local pytest process can stay alive after printing its summary, and a pipe into `tail` then never returns.

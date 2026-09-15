@@ -1,5 +1,48 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-321 Steps: attach, create, move, and auto-complete the parent (Jira TIME-2355)
+
+Steps now work end to end in the API.
+
+**The status rules live in `TaskRepository._settle_graph`**, called from `update` and `soft_delete` whenever the status actually changes. Three paths write `done` straight through the repository (`TaskService`, `POST /recommendations/feedback`, the Google Assistant webhook), and soft delete writes `cancelled`. There is a test for each path.
+- **A step changes:**
+  - Deleting it re-chains the group first.
+  - If no steps are left open and at least one still counts, an open parent becomes `done`, with `completed_at` stamped.
+  - If a step is open again, a `done` parent goes back to `pending` and `completed_at` is set to `None` directly, because `update()` ignores None values.
+  - If every step was deleted, the parent is not touched and becomes a plain task.
+- **A parent is marked done or deleted:** its open steps follow, with `completed_at` stamped on each one that finishes, and any pin on those steps is released.
+- **Learning:** `record_completion` only ever sees the task the user finished. A cascaded parent never reaches it, and a mocked-learner test pins that.
+
+**`StepService`** (`app/services/step_service.py`):
+- **`attach` is the only way a task joins a group.** It checks, in order:
+  - both tasks have the same owner (404 otherwise)
+  - the task isn't being attached to itself (400)
+  - the parent is open and isn't a step itself (422)
+  - neither task is a calendar task (422)
+  - the task has no steps of its own (422)
+  - the group stays within 12 steps (422)
+
+  It renumbers positions 0..n-1 around the requested index, clamping one that is out of range, and gives the task the parent's priority only if it still has the default of 3. Both the old and the new group are re-chained.
+- **`detach`** removes a task from its group and re-chains what's left.
+- **`create_steps`** estimates each step's duration with `TaskDurationEstimator` unless one was given, copies the parent's priority and source, appends the steps after any existing ones, and sets `steps_sequential` only when asked.
+- **Slot hand-off.** If TimeSense auto-placed the parent, that time is cleared and `autoschedule_task` places the first open step instead. A time the user set is left exactly where it is.
+
+**API:**
+- **Adding steps:** new `POST /tasks/{id}/steps` returns the parent with its steps nested, through `TaskGraphService.response_with_steps`.
+- **`TaskCreate`** accepts either `parent_task_id` or `steps`, never both; the validator rejects the pair. With a parent, the parent is checked before the task is created, so a refused request leaves no stray task.
+- **`TaskUpdate`** accepts `parent_task_id` and `position`. The service reads `model_fields_set`, because `exclude_none` would otherwise make "leave the group" (null) look the same as "field not sent".
+- **Errors:** a `StepError` becomes 400, 404 or 422.
+- **`duration-prompt`** returns `ask=false` for any task that has steps.
+
+**Insights:**
+- `count_completed_in_range` skips a done task that still has uncancelled steps, so a finished group is not counted twice.
+- `count_created_in_range` excludes steps: breaking one task into five is not five captures.
+
+**Verified:**
+- 20 new tests in `tests/test_task_steps.py`.
+- A targeted run over the steps, graph, privacy, feedback, assistant, tasks, capture and insights suites: 139 passed. The 1 failure also fails on main.
+- The full suite result is in the PR.
+
 ## 2026-09-15 — TIME-320 Steps and prerequisites data model, plus the task graph read layer (Jira TIME-2354)
 
 This adds the storage both features share, and one read layer every task response now goes through. There is no user-visible behaviour yet: the new response fields are additive and empty until TIME-321/322 create steps and waits.

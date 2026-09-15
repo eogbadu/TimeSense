@@ -1,5 +1,31 @@
 # Change Summary
 
+## 2026-09-15 — TIME-321 Steps: attach, create, move, and auto-complete the parent (Jira TIME-2355)
+
+**What changed:**
+- **`TaskRepository._settle_graph`** runs on every status change through `update` and `soft_delete`:
+  - finishing the last step finishes the parent
+  - reopening a step reopens the parent
+  - finishing or deleting a parent closes its open steps and releases their pins
+  - deleting a step re-chains the group
+- **`app/services/step_service.py` (new):** `attach`, `detach`, `create_steps`, and `StepError`.
+- **API:**
+  - new `POST /tasks/{id}/steps`
+  - `POST /tasks` accepts `parent_task_id` or `steps`
+  - `PATCH /tasks/{id}` accepts `parent_task_id` (null leaves the group) and `position`
+  - `duration-prompt` never asks about a parent
+- **Insights:** a finished group is counted once, through its steps, and steps are not counted as captures.
+
+**Why:** the user asked for steps, including adding them to tasks that already exist. The group rules have to hold whichever of the three `done`-writing paths finishes a step.
+
+**Verified:** 20 new tests. The targeted run of the related suites passes apart from one failure that also fails on main. The full suite result is in the PR.
+
+**Not done:**
+- Waits between tasks: TIME-322.
+- Now and push still ignore waits and open steps until TIME-323.
+- No Today nesting (TIME-324), no AI steps (TIME-325), no client changes.
+- No CHANGELOG entry: steps aren't reachable from any app yet.
+
 ## 2026-09-15 — TIME-320 Steps and prerequisites data model + task graph read layer (Jira TIME-2354)
 
 **What changed:**

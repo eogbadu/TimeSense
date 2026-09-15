@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.task import Task
 from app.models.user import User
 from app.repositories.task_repository import TaskRepository
-from app.schemas.task import TaskCreate, TaskUpdate
+from app.schemas.task import StepDraft, TaskCreate, TaskUpdate
 from app.services.implicit_deadline import repair_midnight
+from app.services.step_service import StepError, StepService
 from app.services.task_backfill import TaskBackfillService
 from app.services.task_completion_service import TaskCompletionService
 
@@ -19,6 +21,7 @@ class TaskService:
         self.repo = TaskRepository(db)
         self.backfill = TaskBackfillService(db)
         self.completion = TaskCompletionService(db)
+        self.steps = StepService(db)
 
     async def create_task(
         self,
@@ -27,7 +30,16 @@ class TaskService:
         auto_scheduled: bool = False,
         user_timezone: str = "UTC",
     ) -> Task:
-        return await self.repo.create(
+        """Raises StepError when the group asked for is refused (TIME-321)."""
+        parent = None
+        if body.parent_task_id is not None:
+            parent = await self.repo.get_by_id(body.parent_task_id, user_id)
+            if parent is None:
+                raise StepError(404, "Task not found.")
+            # Checked before creating, so a refused group leaves no stray task behind.
+            StepService.check_can_hold_steps(parent)
+
+        task = await self.repo.create(
             user_id=user_id,
             title=body.title,
             description=body.description,
@@ -49,6 +61,16 @@ class TaskService:
             task_type=body.task_type,
             difficulty=body.difficulty,
         )
+        if parent is not None:
+            await self.steps.attach(task, parent)
+        if body.steps:
+            await self.steps.create_steps(task, body.steps, sequential=body.steps_sequential)
+        return task
+
+    async def add_steps(
+        self, parent: Task, drafts: Sequence[StepDraft], sequential: bool | None = None
+    ) -> list[Task]:
+        return await self.steps.create_steps(parent, drafts, sequential=sequential)
 
     async def get_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
         task = await self.repo.get_by_id(task_id, user_id)
@@ -77,8 +99,14 @@ class TaskService:
         user: User | None = None,
     ) -> Task | None:
         """`user` is needed only to learn from a completion (TIME-316); without it the task still
-        updates exactly as before, just silently."""
+        updates exactly as before, just silently. Raises StepError when a group move is refused."""
         fields = body.model_dump(exclude_none=True)
+        # Joining or leaving a group is not a plain column write: it is validated and the group's
+        # ordering is rebuilt. An explicit null means "take it out of its group", which exclude_none
+        # would hide, so the fields actually sent are read instead (TIME-321).
+        moves_group = "parent_task_id" in body.model_fields_set
+        new_parent_id = fields.pop("parent_task_id", None)
+        position = fields.pop("position", None)
         # Rescheduling a stale task (TIME-309) goes through here, so the same midnight repair has to
         # apply — otherwise "give it a new date of tomorrow" produces a deadline that is already
         # past for all of tomorrow.
@@ -93,9 +121,23 @@ class TaskService:
 
         task = await self.repo.update(task_id, user_id, **fields)
 
+        if task is not None and (moves_group or position is not None):
+            await self._move(task, new_parent_id if moves_group else task.parent_task_id, position)
+
+        # Only the task the user finished is learned from. A parent that finishes because its last
+        # step did is closed inside the repository and never reaches this line.
         if task is not None and user is not None and not was_done and task.status == "done":
             await self.completion.record_completion(user, task)
         return task
 
     async def delete_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         return await self.repo.soft_delete(task_id, user_id)
+
+    async def _move(self, task: Task, parent_id: uuid.UUID | None, position: int | None) -> None:
+        if parent_id is None:
+            await self.steps.detach(task)
+            return
+        parent = await self.repo.get_by_id(parent_id, task.user_id)
+        if parent is None:
+            raise StepError(404, "Task not found.")
+        await self.steps.attach(task, parent, position)
