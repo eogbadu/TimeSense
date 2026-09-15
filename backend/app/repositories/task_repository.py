@@ -5,10 +5,16 @@ from datetime import date, datetime, timezone
 
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.localtime import local_day_bounds
 from app.services.task_library import resolve_classification
 from app.models.task import Task
+from app.repositories.recommendation_swap_repository import RecommendationSwapRepository
+from app.repositories.task_prerequisite_repository import TaskPrerequisiteRepository
+
+# Still to do. No client sets `in_progress` today, but every reader treats it as open.
+OPEN_STATUSES = ("pending", "in_progress")
 
 
 class TaskRepository:
@@ -150,7 +156,8 @@ class TaskRepository:
         task = await self.get_by_id(task_id, user_id)
         if task is None:
             return None
-        was_done = task.status == "done"
+        old_status = task.status
+        was_done = old_status == "done"
         for field, value in kwargs.items():
             if value is not None:
                 setattr(task, field, value)
@@ -161,6 +168,7 @@ class TaskRepository:
         if task.status == "done" and not was_done and task.completed_at is None:
             task.completed_at = datetime.now(timezone.utc)
         await self.db.flush()
+        await self._settle_graph(task, old_status)
         await self.db.refresh(task)
         return task
 
@@ -168,18 +176,65 @@ class TaskRepository:
         task = await self.get_by_id(task_id, user_id)
         if task is None:
             return False
+        old_status = task.status
         task.status = "cancelled"
         await self.db.flush()
+        await self._settle_graph(task, old_status)
         return True
+
+    async def _settle_graph(self, task: Task, old_status: str) -> None:
+        """Keep a group consistent after a status change (TIME-321).
+
+        This lives here rather than in TaskService for the same reason the completed_at stamp does:
+        three paths write `done` straight through this repository (TaskService, POST
+        /recommendations/feedback and the Google Assistant webhook), and soft delete writes
+        `cancelled`. A rule enforced one layer up would silently not apply to two of them.
+        """
+        if task.status == old_status:
+            return
+        now = datetime.now(timezone.utc)
+
+        if task.parent_task_id is not None:
+            parent = await self.get_by_id(task.parent_task_id, task.user_id)
+            if parent is None:
+                return
+            if task.status == "cancelled":
+                # Close the gap, or cancelling step 2 of 3 would unblock step 3 while step 1 is open.
+                await TaskPrerequisiteRepository(self.db).rechain_steps(parent)
+            live, still_open = (await self.step_counts([parent.id])).get(parent.id, (0, 0))
+            if still_open == 0 and live > 0 and parent.status in OPEN_STATUSES:
+                # The parent only held its steps, so finishing the last one finishes it. There is no
+                # prompt, and nothing is learned from it: the user finished steps, not another task.
+                parent.status = "done"
+                parent.completed_at = parent.completed_at or now
+            elif still_open > 0 and parent.status == "done":
+                parent.status = "pending"
+                parent.completed_at = None  # set directly: update() skips None values
+        elif task.status in ("done", "cancelled"):
+            closed = []
+            for step in (await self.steps_for([task.id])).get(task.id, []):
+                if step.status in OPEN_STATUSES:
+                    step.status = task.status
+                    if task.status == "done":
+                        step.completed_at = now
+                    closed.append(step.id)
+            # A pin on a step that just closed would keep recommending finished work for hours.
+            swaps = RecommendationSwapRepository(self.db)
+            for step_id in closed:
+                await swaps.release_pin(task.user_id, step_id)
+        await self.db.flush()
 
     async def count_created_in_range(
         self, user_id: uuid.UUID, start: datetime, end: datetime
     ) -> int:
-        """Tasks (excluding cancelled) created in [start, end) — a proxy for capture volume."""
+        """Tasks (excluding cancelled) created in [start, end) — a proxy for capture volume.
+
+        Steps are left out: breaking one task into five is not five captures (TIME-321)."""
         result = await self.db.execute(
             select(func.count()).select_from(Task).where(
                 Task.user_id == user_id,
                 Task.status != "cancelled",
+                Task.parent_task_id.is_(None),
                 Task.created_at >= start,
                 Task.created_at < end,
             )
@@ -193,12 +248,22 @@ class TaskRepository:
 
         Uses the real `completed_at` where it exists and falls back to `updated_at` for rows
         finished before that column did (TIME-316), so historic counts keep working while new ones
-        stop drifting every time a done task is edited."""
+        stop drifting every time a done task is edited.
+
+        A parent with steps is not counted. Its steps are the work, and counting the parent as well
+        would credit the same work twice when the group finishes by itself (TIME-321)."""
         completed = func.coalesce(Task.completed_at, Task.updated_at)
+        step = aliased(Task)
+        has_steps = (
+            select(step.id)
+            .where(step.parent_task_id == Task.id, step.status != "cancelled")
+            .exists()
+        )
         result = await self.db.execute(
             select(func.count()).select_from(Task).where(
                 Task.user_id == user_id,
                 Task.status == "done",
+                ~has_steps,
                 completed >= start,
                 completed < end,
             )

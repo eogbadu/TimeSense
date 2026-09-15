@@ -105,6 +105,16 @@ class TaskGraphService:
     async def response(self, task: Task) -> TaskResponse:
         return (await self.responses([task]))[0]
 
+    async def response_with_steps(self, parent: Task) -> TaskResponse:
+        """The parent with its steps nested in order, annotated together in one pass. Cancelled steps
+        are left out: a deleted step is no longer part of the group."""
+        steps = [
+            s for s in (await self.tasks.steps_for([parent.id])).get(parent.id, [])
+            if s.status != "cancelled"
+        ]
+        payloads = await self.responses([parent, *steps])
+        return payloads[0].model_copy(update={"steps": payloads[1:]})
+
     @staticmethod
     def _response(task: Task, info: GraphInfo) -> TaskResponse:
         parent = info.parent_of(task)

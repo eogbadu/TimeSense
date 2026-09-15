@@ -10,8 +10,9 @@ from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.task_repository import TaskRepository
-from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
+from app.schemas.task import StepsCreate, TaskCreate, TaskResponse, TaskUpdate
 from app.services.scheduling_service import SchedulingService
+from app.services.step_service import StepError
 from app.services.task_duration_service import TaskDurationEstimator
 from app.services.task_graph import TaskGraphService
 from app.services.task_library import is_known_type
@@ -30,6 +31,10 @@ def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     return UserService(db)
 
 
+def _refused(exc: StepError) -> HTTPException:
+    return HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
 @router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(
     body: TaskCreate,
@@ -38,7 +43,10 @@ async def create_task(
     user_svc: UserService = Depends(get_user_service),
 ) -> TaskResponse:
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
-    task = await task_svc.create_task(user.id, body, user_timezone=user_timezone_of(user))
+    try:
+        task = await task_svc.create_task(user.id, body, user_timezone=user_timezone_of(user))
+    except StepError as exc:
+        raise _refused(exc) from exc
     return await TaskGraphService(task_svc.repo.db).response(task)
 
 
@@ -152,6 +160,27 @@ async def unschedule_task(
     return await TaskGraphService(task_svc.repo.db).response(task)
 
 
+@router.post("/{task_id}/steps", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+async def add_steps(
+    task_id: UUID,
+    body: StepsCreate,
+    current_user: CurrentUser,
+    task_svc: TaskService = Depends(get_task_service),
+    user_svc: UserService = Depends(get_user_service),
+) -> TaskResponse:
+    """Add steps to a task, after any it already has. Returns the task with all its steps, in order
+    (TIME-321)."""
+    user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
+    parent = await task_svc.get_task(task_id, user.id)
+    if parent is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+    try:
+        await task_svc.add_steps(parent, body.steps, sequential=body.sequential)
+    except StepError as exc:
+        raise _refused(exc) from exc
+    return await TaskGraphService(task_svc.repo.db).response_with_steps(parent)
+
+
 class DurationPromptResponse(BaseModel):
     ask: bool
     # `category` predates TIME-286 and is kept for existing clients; both fields now carry the
@@ -176,6 +205,11 @@ async def duration_prompt(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
     ask, task_type = await TaskDurationEstimator(db).should_ask(user.id, task.title, task.task_type)
+    # A parent's steps were the work. How long "the whole group" took says nothing about a type of
+    # task, so it is never asked (TIME-321).
+    live_steps, _open = (await task_svc.repo.step_counts([task.id])).get(task.id, (0, 0))
+    if live_steps > 0:
+        ask = False
     return DurationPromptResponse(ask=ask, category=task_type, task_type=task_type)
 
 
@@ -232,9 +266,12 @@ async def update_task(
     user_svc: UserService = Depends(get_user_service),
 ) -> TaskResponse:
     user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
-    task = await task_svc.update_task(
-        task_id, user.id, body, user_timezone=user_timezone_of(user), user=user
-    )
+    try:
+        task = await task_svc.update_task(
+            task_id, user.id, body, user_timezone=user_timezone_of(user), user=user
+        )
+    except StepError as exc:
+        raise _refused(exc) from exc
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
     return await TaskGraphService(task_svc.repo.db).response(task)

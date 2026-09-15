@@ -10,7 +10,7 @@ Ordered steps write the "waits for" edges automatically. The plan was settled wi
 
 - [x] TIME-319 capture prompt local time (bug found while planning; the prompt is rewritten later in the batch)
 - [x] TIME-320 data model + task graph read layer (migration `c4d5e6f0a1b2`)
-- [ ] TIME-321 steps: attach/create/move, auto-complete parent
+- [x] TIME-321 steps: attach/create/move, auto-complete parent
 - [ ] TIME-322 prerequisites ("Do this after")
 - [ ] TIME-323 recommendations + scheduling respect the graph
 - [ ] TIME-324 Today plan nests steps

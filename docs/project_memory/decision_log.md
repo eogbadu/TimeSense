@@ -66,6 +66,22 @@ Every decision below was put to the user and settled in a planning session befor
   - Annotation runs a fixed number of queries, however long the list, and a test pins that.
   Date: 2026-09-15
 
+- Decision (technical, TIME-321): **The group's status rules live in `TaskRepository._settle_graph`, not in `TaskService`.** They are: the last step finishes the parent, reopening a step reopens it, a finished or deleted parent closes its open steps, and deleting a step re-chains the group.
+  Reason: three paths write `done` straight through the repository: `TaskService`, `POST /recommendations/feedback`, and the Google Assistant webhook. Soft delete writes `cancelled`. A rule enforced one layer up would silently skip two of them. That is the same reasoning that put TIME-316's `completed_at` stamp there, and each path has its own test.
+  Date: 2026-09-15
+
+- Decision (technical, TIME-321): **Every way a task joins a group goes through `StepService.attach`.**
+  - A joining task takes the parent's priority only if it still has the default of 3.
+  - Positions are renumbered 0..n-1 on every move.
+  - A time TimeSense auto-placed on the parent goes to the first open step; a time the user set is never moved.
+  - A parent's own completion is never learned from, and no duration question is asked about it.
+
+  Reason:
+  - A step of an urgent task is urgent, but a priority someone chose deliberately must survive the move.
+  - Keeping the parent's slot and scheduling its steps would book the same work twice.
+  - How long "the whole group" took says nothing about any one kind of task, so it would teach the estimator nothing.
+  Date: 2026-09-15
+
 ## App Store listing name (2026-09-02, TIME-318)
 
 - Decision: The App Store listing name is **"TimeSense: Time Assistant"**. The name under the icon
