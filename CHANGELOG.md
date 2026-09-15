@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-15 — Capture understands steps (TIME-325)
+
+### Added
+- **List the steps and TimeSense keeps them together.** "Renew passport: get photos, fill out the form, then mail it" becomes one task with three steps, in the order you said. TimeSense suggests them one at a time.
+- **Add a step to something you already have.** "Add get photos to renew passport" puts it with that task instead of creating a separate one.
+
+### Known limitation
+- **The app doesn't show the steps yet.** Until the next app update, a task with steps appears as a single row in Today, and finishing that row finishes all of its steps. Now already suggests the steps one by one.
+
 ## 2026-09-15 — Tasks that wait for other tasks (TIME-323)
 
 ### Changed

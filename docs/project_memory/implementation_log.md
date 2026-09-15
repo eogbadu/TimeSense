@@ -1,5 +1,47 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-325 AI steps: capture detects steps and parents, Break this down, suggested placement (Jira TIME-2359)
+
+Steps can now come from what the user says, rather than from organizing.
+
+**Capture parse** (`CaptureService.parse`, one LLM call as before):
+- **Prompt input.** The prompt gets an `<open_tasks>` block listing up to 40 of the user's open standalone tasks and parents, newest first (`TaskRepository.open_tasks_for_matching`). Fence tags are stripped from titles, the same way they are from the input.
+- **Four new schema fields:**
+  - `steps`: only when the user explicitly lists actions toward one outcome, at most 8.
+  - `steps_in_order`: accepted only if it is literally `true`.
+  - `parent_task_id`: only on an explicit reference, such as "add X to Y" or "for Y, …".
+  - `related_task_id`: an obvious match the user didn't state.
+- **Folded into the same call.** The likely-match suggestion comes back with the parse, so a capture never pays for a second model call.
+- **Output handling.**
+  - `max_tokens` went from 256 to 700. At 256 a list of steps is cut off, and the parse falls back entirely.
+  - Grouping is read separately from the task itself (`_parse_grouping`), so bad output for steps never costs the title, the dates, or the other fields.
+  - Only ids present in the supplied list are accepted.
+  - If both a parent and steps come back, the parent wins, because a step can't have steps.
+
+**`POST /capture`:**
+- **Chip.** `CaptureRequest.parent_task_id` is the "Part of…" chip. It overrides the model and skips sending the open-task list.
+- **Parent checks.** Every parent is checked before anything is created (`_refusal_to_join`): it must exist, be able to hold steps, and have fewer than 12 of them. A refused chip returns its error. A refused model match falls back to a plain task.
+- **Auto-placement.** Grouped captures skip the old pre-creation placement. After creation, the joining step, or the new group's first open step, goes through `autoschedule_task`, which respects waits (TIME-323). The parent never gets a slot of its own.
+- **Response.** The response nests the new group's steps. `suggested_parent` is filled in only for an ungrouped capture, and is never applied.
+
+**Break this down.** `POST /tasks/{id}/breakdown` uses `StepSuggestionService.breakdown`:
+- It returns 2–7 suggested steps and whether they are in order, and saves nothing.
+- There is no rule-based fallback. A model failure returns `available: false`.
+- A step, a finished task, or a calendar task returns 422 before the model is ever called.
+- It uses the capture rate limit.
+
+**Late step placement.** `GET /tasks/{id}/step-position?parent_id=` returns the existing open step the new one should come before, or nulls for "at the end".
+- An unordered group is never sent to the model.
+- A failure also returns nulls.
+
+**Shared parsing.** `parse_step_drafts` turns untrusted model output into clean `StepDraft`s for both capture and breakdown. It drops malformed items, removes duplicates, and keeps only plausible minutes.
+
+**Interim effect on the current iOS build** (logged in known_issues):
+- The Today plan nests steps, and iOS doesn't render `steps` until TIME-327. A captured group shows as a single row there, although Now does recommend its steps.
+- Swiping Done on that row finishes the whole group.
+
+**Verified:** 16 new tests in `tests/test_ai_steps.py`, all with a mocked model. Targeted and full-suite results are in the PR.
+
 ## 2026-09-15 — TIME-324 Today plan nests steps under their parent (Jira TIME-2358)
 
 `GET /timeline/today/plan` now returns one `kind:"task"` entry per group, with `task.steps` filled in position order. Steps no longer appear as rows of their own.

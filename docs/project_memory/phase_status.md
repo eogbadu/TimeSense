@@ -14,7 +14,7 @@ Ordered steps write the "waits for" edges automatically. The plan was settled wi
 - [x] TIME-322 prerequisites ("Do this after")
 - [x] TIME-323 recommendations + scheduling respect the graph
 - [x] TIME-324 Today plan nests steps
-- [ ] TIME-325 AI steps (capture detection, parent match, Break this down, placement)
+- [x] TIME-325 AI steps (capture detection, parent match, Break this down, placement)
 - [ ] TIME-326 Notion sub-items + Blocked by
 - [ ] TIME-327 iOS step groups, parent eyebrow on Now, blocked rows
 - [ ] TIME-328 iOS detail sheet, task picker, Break this down

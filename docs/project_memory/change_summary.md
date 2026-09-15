@@ -1,5 +1,26 @@
 # Change Summary
 
+## 2026-09-15 — TIME-325 AI steps (Jira TIME-2359)
+
+**What changed:**
+- **Capture** now recognises:
+  - a list of actions, and creates the group with its steps, ordered only when the user gave an order;
+  - "add X to Y" for one of the user's open tasks, and attaches the new task to it;
+  - an obvious but unstated match, which is returned as `suggested_parent` and never applied.
+- **"Part of…" chip:** `CaptureRequest.parent_task_id`, which wins over the model.
+- **New `POST /tasks/{id}/breakdown`:** suggested steps, nothing saved. If the model fails it returns `available: false`, with no rule-based fallback.
+- **New `GET /tasks/{id}/step-position`:** where a late step belongs in an ordered group.
+- **New `app/services/step_suggestion_service.py`:** breakdown, position, and `parse_step_drafts`.
+- **`TaskRepository.open_tasks_for_matching`** added. The `TaskCreate.suggested_parent_task_id` field is transient.
+
+**Why:** steps are meant to come from TimeSense, not from the user organizing.
+
+**Verified:** 16 new tests with a mocked model. Results are in the PR.
+
+**Not done:**
+- Notion relations (TIME-326).
+- iOS rendering of groups, the chip and the suggestion (TIME-327..329). Until then, the current iOS build shows a captured group as one row in Today.
+
 ## 2026-09-15 — TIME-324 Today plan nests steps under their parent (Jira TIME-2358)
 
 **What changed:** `GET /timeline/today/plan` returns one entry per group, with its steps nested in order.

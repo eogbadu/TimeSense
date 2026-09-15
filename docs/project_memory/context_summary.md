@@ -23,11 +23,17 @@
 
 - TIME-323 (PR #364): every recommendation path filters waiting tasks and parents with open steps; swap 409; steps inherit parent urgency; `waits_until` gates scheduling; parent named in Now, push and voice.
 
-**Current:** TIME-324 (Jira TIME-2358), branch `feature/TIME-324-today-plan-nests-steps`. `GET /timeline/today/plan` returns one entry per group with steps nested in order. A step timed today brings its parent in. Cancelled steps are dropped. The group sits at its next open timed step.
-- **Next:** TIME-325 (Jira TIME-2359), AI steps:
-  - `_PARSE_SYSTEM` gains `steps`, `steps_in_order` and `parent_match_id`, the last chosen from up to 40 supplied open tasks. `max_tokens` rises to about 700, and each part is parsed in its own `try`.
-  - `CaptureRequest.parent_task_id`.
-  - `POST /tasks/{id}/breakdown`, `GET /tasks/{id}/step-position`, and `suggest_parent`.
+- TIME-324 (PR #365): the Today plan nests steps under their parent.
+
+**Current:** TIME-325 (Jira TIME-2359), branch `feature/TIME-325-ai-steps`.
+- Capture recognises steps, "add X to Y" (parent chosen from the user's open tasks), and an unstated likely match (`suggested_parent`, never applied), all in one model call.
+- The "Part of…" chip (`CaptureRequest.parent_task_id`) wins over the model.
+- `POST /tasks/{id}/breakdown` and `GET /tasks/{id}/step-position` are in place.
+- **Interim:** the current iOS build shows a captured group as one row in Today until TIME-327.
+- **Next:** TIME-326 (Jira TIME-2360), Notion keeps sub-items and Blocked by:
+  - migration for `notion_import_items.external_parent_id` / `external_prereq_ids`
+  - link resolution in both directions on import
+  - "Import both" data
 - **After TIME-326, pause for the user** before the iOS tickets.
 
 **Working notes for this batch:**

@@ -100,6 +100,18 @@ Every decision below was put to the user and settled in a planning session befor
   - The four paths don't share code, and a filter on one path would have left the other three suggesting blocked work.
   Date: 2026-09-15
 
+- Decision (technical, TIME-325): **Capture finds steps, a named parent and a likely parent in the same single model call that parses the task.**
+  - The model sees only the user's 40 newest open standalone tasks and parents, as fenced data, and only ids from that list are accepted.
+  - An order is accepted only when the model returns literally `true`.
+  - A parent the model names but that can't take a step falls back to a plain task. The same refusal from the chip is returned to the user as an error.
+  - Breakdown and step position are separate calls, made only when the user asks.
+  Reason:
+  - A second call on every capture would double latency and cost for a suggestion most captures don't have.
+  - Restricting ids to the supplied list means injected text can't reach another user's task or invent one.
+  - An invented order would block steps the user can do in any order.
+  - The user's words are never lost to a refused guess; only the user's own explicit choice is ever refused back to them.
+  Date: 2026-09-15
+
 - Decision (technical, TIME-323): **A task waiting on something with no time is never auto-placed, and its suggested slot says why instead of guessing.**
   Reason: any time chosen would be a fiction. It could land before the prerequisite happens, and it would block a real slot in the user's day.
   Date: 2026-09-15
