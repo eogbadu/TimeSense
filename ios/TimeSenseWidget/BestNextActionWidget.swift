@@ -11,6 +11,13 @@ struct BestNextActionWidgetView: View {
                 .foregroundStyle(.secondary)
 
             if let task = entry.snapshot.bestTask {
+                // A step on its own doesn't say what it is for (TIME-327).
+                if let parent = task.parentTitle, !parent.isEmpty {
+                    Text(parent.uppercased())
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 Text(task.title)
                     .font(DesignTokens.Typography.headline)
                     .foregroundStyle(.primary)

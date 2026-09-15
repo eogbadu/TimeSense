@@ -1,6 +1,8 @@
 # Known Issues
 
-## The current iOS build shows a captured group as one row in Today (TIME-325, until TIME-327)
+## RESOLVED by TIME-327 — the iOS build showed a captured group as one row in Today (TIME-325)
+
+The app now renders the group's steps, their progress and what each waits for. What follows describes the interim state as it was, for builds before TIME-327.
 
 Since TIME-324/325 the backend creates groups from capture ("renew passport: get photos, then mail it") and nests their steps inside the Today plan entry's `task.steps`. The iOS app decodes `TimelineTask` without `steps` until TIME-327, so:
 - **Today:** the group shows as a single row, "Renew passport", and its steps don't appear.

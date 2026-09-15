@@ -1,5 +1,27 @@
 # Change Summary
 
+## 2026-09-15 — TIME-327 iOS step groups, step labels and waiting rows (Jira TIME-2361)
+
+**What changed:**
+- **Today:**
+  - A group shows once with its steps inset, a "1 of 3 steps" progress capsule, and a collapse control.
+  - Swiping Done on a group confirms first when steps are still open.
+  - Waiting rows are dimmed with "After: <title>".
+  - Context menus: Add a step, Don't wait for…, Remove from group, Delete step.
+- **Now:**
+  - The best-action card (and Today's AI card) show "RENEW PASSPORT · STEP 1 OF 3".
+  - Alternatives and the swap picker name a step's parent.
+  - The swap picker offers steps rather than groups, and nothing that is waiting.
+- **Widget and Siri** name a step's parent.
+- **`StepLabels`:** pure wording and selection helpers, covered by 9 new XCTests.
+- **Backend:** `TaskResponse.step_number` and `parent_step_count`, counted among live steps.
+
+**Why:** a step on its own ("Get photos") didn't say what it was for, and a waiting task looked like one you could start.
+
+**Verified:** results are in the PR.
+
+**Not done:** detail sheet, task picker, Break this down UI and eyebrow tap (TIME-328); Capture chip and Notion Import both (TIME-329).
+
 ## 2026-09-15 — TIME-326 Notion import keeps sub-items and Blocked by (Jira TIME-2360)
 
 **What changed:**

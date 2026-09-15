@@ -250,3 +250,19 @@ async def test_today_plan_task_payload_shows_what_it_waits_for(client, db_sessio
     tasks = {e["title"]: e["task"] for e in r.json() if e["kind"] == "task"}
     assert tasks["Pay contractor"]["blocked_by"] == [{"id": str(invoice.id), "title": "Get invoice"}]
     assert tasks["Get invoice"]["blocked_by"] == []
+
+
+@pytest.mark.anyio
+async def test_a_step_knows_its_number_among_the_groups_live_steps(db_session):
+    # TIME-327: "STEP 2 OF 2" must not count a deleted step, or the label says "STEP 3 OF 2".
+    user = await _user(db_session)
+    parent = await _task(db_session, user, "Renew passport")
+    await _task(db_session, user, "Old idea", parent_task_id=parent.id, position=0, status="cancelled")
+    photos = await _task(db_session, user, "Get photos", parent_task_id=parent.id, position=1)
+    mail = await _task(db_session, user, "Mail it", parent_task_id=parent.id, position=2)
+
+    responses = await TaskGraphService(db_session).responses([mail, photos, parent])
+
+    assert [(r.title, r.step_number, r.parent_step_count) for r in responses] == [
+        ("Mail it", 2, 2), ("Get photos", 1, 2), ("Renew passport", None, 0),
+    ]

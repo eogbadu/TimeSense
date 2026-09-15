@@ -27,6 +27,9 @@ class GraphInfo:
     step_total: dict[uuid.UUID, int] = field(default_factory=dict)
     step_open: dict[uuid.UUID, int] = field(default_factory=dict)
     parents: dict[uuid.UUID, Task] = field(default_factory=dict)
+    # For steps: their 1-based place among the group's live steps, and how many live steps there are.
+    step_number: dict[uuid.UUID, int] = field(default_factory=dict)
+    parent_step_count: dict[uuid.UUID, int] = field(default_factory=dict)
 
     def is_blocked(self, task_id: uuid.UUID) -> bool:
         return bool(self.blocked_by.get(task_id))
@@ -46,7 +49,8 @@ class TaskGraphService:
 
     async def annotate(self, tasks: Iterable[Task]) -> GraphInfo:
         """Graph facts for a list of tasks in a fixed number of queries, however long the list:
-        step counts, unmet prerequisites, and (only if some are missing) the parents."""
+        step counts, unmet prerequisites, and (only when some tasks are steps) their parents and their
+        groups' steps."""
         tasks = list(tasks)
         if not tasks:
             return GraphInfo()
@@ -60,16 +64,24 @@ class TaskGraphService:
 
         counts = await self.tasks.step_counts(by_id.keys())
         unmet = await self.edges.unmet_for(set(by_id) | set(parents))
+        # "STEP 2 OF 3" needs each step's live siblings (TIME-327).
+        siblings = await self.tasks.steps_for(parents.keys()) if parents else {}
 
         info = GraphInfo(parents=parents)
         for t in tasks:
             info.step_total[t.id], info.step_open[t.id] = counts.get(t.id, (0, 0))
             waits = list(unmet.get(t.id, []))
-            # A step waits for whatever its whole group waits for: "Get photos" can't start before the
-            # passport renewal itself is unblocked.
             if t.parent_task_id in parents:
+                # A step waits for whatever its whole group waits for: "Get photos" can't start before
+                # the passport renewal itself is unblocked.
                 seen = {prereq_id for prereq_id, _ in waits}
                 waits += [w for w in unmet.get(t.parent_task_id, []) if w[0] not in seen]
+                # A deleted step is no longer part of the group, so it counts for neither the number
+                # nor the total.
+                live = [s.id for s in siblings.get(t.parent_task_id, []) if s.status != "cancelled"]
+                if t.id in live:
+                    info.step_number[t.id] = live.index(t.id) + 1
+                info.parent_step_count[t.id] = len(live)
             if waits:
                 info.blocked_by[t.id] = [TaskRef(id=i, title=title) for i, title in waits]
         return info
@@ -144,6 +156,8 @@ class TaskGraphService:
         return TaskResponse.model_validate(task).model_copy(
             update={
                 "parent_title": parent.title if parent is not None else None,
+                "step_number": info.step_number.get(task.id),
+                "parent_step_count": info.parent_step_count.get(task.id, 0),
                 "step_count": info.step_total.get(task.id, 0),
                 "open_step_count": info.step_open.get(task.id, 0),
                 "blocked_by": info.blocked_by.get(task.id, []),

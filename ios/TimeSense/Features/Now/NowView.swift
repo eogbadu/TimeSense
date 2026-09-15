@@ -569,6 +569,8 @@ private struct BestNextActionCard: View {
 
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
+                    // "RENEW PASSPORT · STEP 1 OF 3": a step alone doesn't say what it is for (TIME-327).
+                    StepEyebrow(task: task, tint: accent)
                     Text(task.title)
                         .font(DesignTokens.Typography.title.weight(.bold))
                         .foregroundStyle(DesignTokens.Color.onHero)
@@ -622,6 +624,27 @@ private struct BestNextActionCard: View {
     }
 }
 
+
+/// The small label above a step's title on a hero card: "RENEW PASSPORT · STEP 1 OF 3" (TIME-327).
+/// It shows nothing for an ordinary task.
+struct StepEyebrow: View {
+    let task: NowTask
+    let tint: Color
+
+    var body: some View {
+        if let eyebrow = task.eyebrow {
+            Text(eyebrow)
+                .font(DesignTokens.Typography.caption.weight(.semibold))
+                .tracking(0.6)
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .accessibilityLabel(
+                    StepLabels.spokenEyebrow(parentTitle: task.parentTitle, stepNumber: task.stepNumber,
+                                             stepCount: task.parentStepCount) ?? eyebrow
+                )
+        }
+    }
+}
 
 private func priorityLabel(_ p: Int) -> String {
     p <= 2 ? "High" : (p == 3 ? "Medium" : "Low")
@@ -1001,8 +1024,10 @@ private struct OptionRow: View {
     }
 
     private func subtitle(style: TaskCategoryStyle) -> String {
-        if let m = task.estimatedMinutes { return "\(m) min  ·  \(style.descriptor)" }
-        return style.descriptor
+        // A step says what it is part of first; its category matters less than that (TIME-327).
+        let lead = task.parentTitle.map { "\($0)  ·  " } ?? ""
+        if let m = task.estimatedMinutes { return "\(lead)\(m) min  ·  \(style.descriptor)" }
+        return lead + style.descriptor
     }
 }
 
@@ -1348,8 +1373,12 @@ struct SwapPickerSheet: View {
                                         .font(DesignTokens.Typography.callout)
                                         .foregroundColor(DesignTokens.Color.textPrimary)
                                         .lineLimit(2)
-                                    if let minutes = task.estimatedMinutes {
-                                        Text("~\(minutes) min")
+                                    // A step says what it is part of (TIME-327).
+                                    let detail = [task.parentTitle, task.estimatedMinutes.map { "~\($0) min" }]
+                                        .compactMap { $0 }
+                                        .joined(separator: "  ·  ")
+                                    if !detail.isEmpty {
+                                        Text(detail)
                                             .font(DesignTokens.Typography.footnote)
                                             .foregroundColor(DesignTokens.Color.textSecondary)
                                     }

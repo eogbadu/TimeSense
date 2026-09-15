@@ -29,12 +29,18 @@
 
 **Current:** TIME-326 (Jira TIME-2360), branch `feature/TIME-326-notion-relations`. Notion "Parent item" and "Blocked by" relations are stored (migration `d5e6f0a1b2c3`) and linked in both directions on import. Pending items carry "Import both" hints, and an import may return `suggested_parent`.
 
-**PAUSED after TIME-326, as the user asked.** The backend for steps and prerequisites is complete. The user tries the API before the iOS tickets:
-- TIME-327 (Jira TIME-2361): iOS step groups, parent eyebrow on Now, blocked rows.
-- TIME-328 (Jira TIME-2362): detail sheet, task picker, Break this down.
-- TIME-329 (Jira TIME-2363): Capture "Part of…", Notion "Import both".
+**Backend finished with TIME-326 (PR #367).** The user resumed the batch on 2026-09-15 with the same merge rules: merge each PR once its tests are green.
 
-Interim until TIME-327: the current iOS build shows a captured group as one row in Today (see known_issues.md).
+**Current:** TIME-327 (Jira TIME-2361), branch `feature/TIME-327-ios-step-groups`.
+- Today renders groups (`StepGroupRow`/`StepRow`), dims waiting rows, and has context-menu actions.
+- Now shows a step label ("RENEW PASSPORT · STEP 1 OF 3").
+- The widget and Siri name a step's parent.
+- Wording and selection live in `StepLabels`, with XCTests.
+- Backend: `TaskResponse.step_number` and `parent_step_count`.
+- **Next:** TIME-328 (Jira TIME-2362): task detail sheet, task picker ("Do this after…", "Make it a step of…"), Break this down UI, and tapping the step label to open the group. Merge the Today sheets into one enum there.
+- **Then:** TIME-329 (Jira TIME-2363): Capture "Part of…" chip and result states, and Notion "Import both".
+
+**iOS project note:** new Swift files must be added to `project.pbxproj`. The project lists files explicitly and has no synchronized groups, so use the `xcodeproj` gem (Ruby).
 
 **Production note:** migrations `c4d5e6f0a1b2` (TIME-320) and `d5e6f0a1b2c3` (TIME-326) must run on the deployed database before the new backend serves traffic. The Render deploy runs `alembic upgrade head`; confirm that on the next deploy.
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-15 — See the steps, and what each task is waiting for (TIME-327)
+
+### Added
+- **Tasks with steps show their steps in Today.** "Renew passport" appears once, with "1 of 3 steps" and each step underneath. Tick steps off one at a time.
+- **Now says what a step is for.** Above the suggestion you'll see "RENEW PASSPORT · STEP 1 OF 3". The widget and Siri name the task too.
+- **Waiting tasks look different.** A task that can't start yet is dimmed, with "After: Get invoice" underneath.
+- **Quick actions on any task:** add a step, stop waiting for something, or take a step out of its group.
+
+### Changed
+- **Finishing a task with steps checks first.** TimeSense asks before it marks the remaining steps done.
+- **"What would you rather do?" only offers things you can start now.**
+
 ## 2026-09-15 — Notion imports keep their structure (TIME-326)
 
 ### Changed

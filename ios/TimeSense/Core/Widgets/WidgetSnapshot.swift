@@ -8,6 +8,9 @@ struct WidgetSnapshot: Codable {
         let id: String
         let title: String
         let estimatedMinutes: Int?
+        /// The task this one is a step of, if any (TIME-327). Optional with a default, so a snapshot
+        /// saved before it existed still decodes.
+        var parentTitle: String? = nil
     }
 
     struct Event: Codable {
