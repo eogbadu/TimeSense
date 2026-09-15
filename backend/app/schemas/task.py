@@ -55,6 +55,9 @@ class TaskCreate(BaseModel):
     parent_task_id: uuid.UUID | None = None
     steps: list[StepDraft] = Field(default_factory=list, max_length=MAX_STEPS_PER_TASK)
     steps_sequential: bool = True
+    # Transient, from capture (TIME-325): an open task this looks like part of, although the user didn't
+    # say so. Shown as a one-tap suggestion and never applied; not stored.
+    suggested_parent_task_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def _one_level_only(self) -> "TaskCreate":

@@ -335,3 +335,24 @@ class TaskRepository:
             )
         )
         return {step_id: parent_id for step_id, parent_id in result.all()}
+
+    async def open_tasks_for_matching(
+        self, user_id: uuid.UUID, limit: int = 40
+    ) -> list[tuple[uuid.UUID, str]]:
+        """(id, title) of the user's open tasks that a new capture could be a step of, newest first.
+
+        Only standalone tasks and parents qualify, never steps or calendar events. The list is what
+        capture offers the model when it decides whether "add get photos to renew passport" names an
+        existing task (TIME-325)."""
+        result = await self.db.execute(
+            select(Task.id, Task.title)
+            .where(
+                Task.user_id == user_id,
+                Task.parent_task_id.is_(None),
+                Task.status.in_(OPEN_STATUSES),
+                Task.source != "calendar",
+            )
+            .order_by(Task.created_at.desc())
+            .limit(limit)
+        )
+        return [(task_id, title) for task_id, title in result.all()]

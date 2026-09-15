@@ -1,5 +1,14 @@
 # Known Issues
 
+## The current iOS build shows a captured group as one row in Today (TIME-325, until TIME-327)
+
+Since TIME-324/325 the backend creates groups from capture ("renew passport: get photos, then mail it") and nests their steps inside the Today plan entry's `task.steps`. The iOS app decodes `TimelineTask` without `steps` until TIME-327, so:
+- **Today:** the group shows as a single row, "Renew passport", and its steps don't appear.
+- **Swiping Done on that row:** finishes the whole group and all its open steps. That's correct behaviour, but the user can't see what they're finishing.
+- **Now:** already recommends the steps one at a time ("Get photos"), without the parent label until TIME-327.
+
+This is intended as an interim state, and it ends with TIME-327. The batch pauses after TIME-326 for the user to try the API first.
+
 ## Alembic revision IDs are hand-written and can collide — grep before choosing one (TIME-320, 2026-09-15)
 
 TIME-320's migration was first given `c3d4e5f6a7b8`, which already belonged to `add_consent_records`.

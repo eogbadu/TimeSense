@@ -7,13 +7,23 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import capture_rate_limit
 from app.core.security import CurrentUser
+from app.llm.gateway import LLMGateway, get_llm_gateway
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
-from app.repositories.task_repository import TaskRepository
-from app.schemas.task import PrerequisiteCreate, StepsCreate, TaskCreate, TaskResponse, TaskUpdate
+from app.repositories.task_repository import OPEN_STATUSES, TaskRepository
+from app.schemas.task import (
+    PrerequisiteCreate,
+    StepDraft,
+    StepsCreate,
+    TaskCreate,
+    TaskResponse,
+    TaskUpdate,
+)
 from app.services.prerequisite_service import PrerequisiteService
 from app.services.scheduling_service import SchedulingService
-from app.services.step_service import StepError
+from app.services.step_service import StepError, StepService
+from app.services.step_suggestion_service import StepSuggestionService
 from app.services.task_duration_service import TaskDurationEstimator
 from app.services.task_graph import TaskGraphService
 from app.services.task_library import is_known_type
@@ -227,6 +237,78 @@ async def remove_prerequisite(
         await PrerequisiteService(db).remove(user.id, task_id, prerequisite_task_id)
     except StepError as exc:
         raise _refused(exc) from exc
+
+
+class BreakdownOut(BaseModel):
+    # False when the model couldn't answer. The app then offers to add steps by hand.
+    available: bool
+    steps: list[StepDraft]
+    sequential: bool
+
+
+@router.post(
+    "/{task_id}/breakdown", response_model=BreakdownOut, dependencies=[Depends(capture_rate_limit)]
+)
+async def break_down_task(
+    task_id: UUID,
+    current_user: CurrentUser,
+    task_svc: TaskService = Depends(get_task_service),
+    user_svc: UserService = Depends(get_user_service),
+    gateway: LLMGateway = Depends(get_llm_gateway),
+) -> BreakdownOut:
+    """"Break this down": suggested steps for a task. Nothing is saved. The app adds only the steps the
+    user keeps, through POST /tasks/{id}/steps (TIME-325)."""
+    user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
+    task = await task_svc.get_task(task_id, user.id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+    try:
+        StepService.check_can_hold_steps(task)
+    except StepError as exc:
+        raise _refused(exc) from exc
+    suggestion = await StepSuggestionService(gateway).breakdown(task)
+    return BreakdownOut(
+        available=suggestion.available, steps=suggestion.steps, sequential=suggestion.sequential
+    )
+
+
+class StepPositionOut(BaseModel):
+    # The step the new one should come before. Both null means "at the end".
+    before_step_id: UUID | None = None
+    before_step_title: str | None = None
+
+
+@router.get(
+    "/{task_id}/step-position",
+    response_model=StepPositionOut,
+    dependencies=[Depends(capture_rate_limit)],
+)
+async def suggest_step_position(
+    task_id: UUID,
+    current_user: CurrentUser,
+    parent_id: UUID = Query(...),
+    task_svc: TaskService = Depends(get_task_service),
+    user_svc: UserService = Depends(get_user_service),
+    gateway: LLMGateway = Depends(get_llm_gateway),
+) -> StepPositionOut:
+    """Where a step joining an ordered group probably belongs ("Before Fill out the form?"). This is only
+    a suggestion: the app moves the step with PATCH position after the user agrees (TIME-325). An
+    unordered group has no order to fit into, so the model isn't asked."""
+    user, _ = await user_svc.get_or_create_user(current_user.uid, current_user.email or "")
+    task = await task_svc.get_task(task_id, user.id)
+    parent = await task_svc.get_task(parent_id, user.id)
+    if task is None or parent is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+    if not parent.steps_sequential:
+        return StepPositionOut()
+    siblings = [
+        s for s in (await task_svc.repo.steps_for([parent.id])).get(parent.id, [])
+        if s.id != task.id and s.status in OPEN_STATUSES
+    ]
+    before = await StepSuggestionService(gateway).suggest_position(parent, siblings, task.title)
+    if before is None:
+        return StepPositionOut()
+    return StepPositionOut(before_step_id=before.id, before_step_title=before.title)
 
 
 class DurationPromptResponse(BaseModel):
