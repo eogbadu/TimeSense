@@ -204,3 +204,59 @@ class TaskRepository:
             )
         )
         return result.scalar_one()
+
+    # ── Steps (TIME-320) ──────────────────────────────────────────────────────
+    # Bulk reads only: Today and Now annotate whole lists, so a per-task query would multiply.
+
+    async def get_many(
+        self, task_ids: Iterable[uuid.UUID], user_id: uuid.UUID | None = None
+    ) -> list[Task]:
+        ids = list(set(task_ids))
+        if not ids:
+            return []
+        q = select(Task).where(Task.id.in_(ids))
+        if user_id is not None:
+            q = q.where(Task.user_id == user_id)
+        result = await self.db.execute(q)
+        return list(result.scalars().all())
+
+    async def step_counts(
+        self, parent_ids: Iterable[uuid.UUID]
+    ) -> dict[uuid.UUID, tuple[int, int]]:
+        """(steps that still count, steps still open) per parent, in one query. A cancelled step counts
+        for neither: once deleted it is no longer part of the group."""
+        ids = list(set(parent_ids))
+        if not ids:
+            return {}
+        result = await self.db.execute(
+            select(
+                Task.parent_task_id,
+                func.count(Task.id).filter(Task.status != "cancelled"),
+                func.count(Task.id).filter(Task.status.in_(("pending", "in_progress"))),
+            )
+            .where(Task.parent_task_id.in_(ids))
+            .group_by(Task.parent_task_id)
+        )
+        return {parent_id: (total, open_) for parent_id, total, open_ in result.all()}
+
+    async def steps_for(self, parent_ids: Iterable[uuid.UUID]) -> dict[uuid.UUID, list[Task]]:
+        """Each parent's steps in position order, in one query."""
+        ids = list(set(parent_ids))
+        if not ids:
+            return {}
+        result = await self.db.execute(
+            select(Task)
+            .where(Task.parent_task_id.in_(ids))
+            .order_by(Task.parent_task_id, Task.position.nulls_last(), Task.created_at)
+        )
+        steps: dict[uuid.UUID, list[Task]] = {}
+        for step in result.scalars().all():
+            steps.setdefault(step.parent_task_id, []).append(step)
+        return steps
+
+    async def next_position(self, parent_id: uuid.UUID) -> int:
+        result = await self.db.execute(
+            select(func.max(Task.position)).where(Task.parent_task_id == parent_id)
+        )
+        current = result.scalar_one()
+        return 0 if current is None else current + 1

@@ -1,5 +1,29 @@
 # Change Summary
 
+## 2026-09-15 — TIME-320 Steps and prerequisites data model + task graph read layer (Jira TIME-2354)
+
+**What changed:**
+- **Migration `c4d5e6f0a1b2`:**
+  - Adds `tasks.parent_task_id`, `position` and `steps_sequential`.
+  - Adds a new `task_prerequisites` table ("task_id waits for prerequisite_task_id", `origin` sequence|manual).
+  - CHECKs stop a task from being its own parent or its own prerequisite.
+- **`app/models/task.py`:** the new columns and the `TaskPrerequisite` model, registered in `models/__init__.py`.
+- **`app/repositories/task_prerequisite_repository.py` (new):** `unmet_for`, `edges_for_user`, `add`, `remove`, `rechain_steps`.
+- **`app/repositories/task_repository.py`:** `get_many`, `step_counts`, `steps_for`, `next_position`.
+- **`app/services/task_graph.py` (new):** `annotate`, `recommendable`, `responses`.
+- **`app/schemas/task.py`:** additive `TaskResponse` fields `parent_task_id`, `parent_title`, `position`, `step_count`, `open_step_count`, `blocked_by`, `steps`, `suggested_parent`, plus the new `TaskRef`.
+- **Task routes, timeline endpoints and capture:** now serialize through `TaskGraphService.responses`.
+- **Privacy:** the export includes `task_prerequisites`. Account deletion is tested with parents, steps and edges.
+
+**Why:** both requested features need this storage, and every task response needs the same graph fields. Without a single serializer, `blocked_by` would be silently empty on whichever endpoint was missed.
+
+**Verified:**
+- 11 new graph tests and the privacy suite pass.
+- The migration round-trips on scratch Postgres.
+- The full suite result is in the PR.
+
+**Not done:** status cascade, and endpoints to create steps or waits (TIME-321/322). Engine filtering (TIME-323). Today plan nesting (TIME-324). No client changes. No CHANGELOG entry, since nothing user-visible changes yet.
+
 ## 2026-09-15 — TIME-319 Capture prompt shows the user's real local time (Jira TIME-2353)
 
 **What changed:**

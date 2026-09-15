@@ -1,5 +1,71 @@
 # Decision Log
 
+## Steps and prerequisites (2026-09-15, planned with the user; recorded with TIME-320)
+
+The user asked for two features:
+- A task can have sub-tasks.
+- Some tasks must be finished before others are recommended.
+
+Every decision below was put to the user and settled in a planning session before any code. Each one is written to stay clear of "No Projects at launch" and of "never make the user organize".
+
+- Decision: **Steps are one level deep.** A task can have steps; a step cannot have steps. There are no milestones, boards or Projects tab. Any standalone task becomes a parent when it gets its first step.
+  Reason: this covers "Renew passport: photos, form, mail it" without turning TimeSense into a project manager. One-level nesting is enforced in the service layer, because a CHECK cannot see another row.
+  Date: 2026-09-15
+
+- Decision: **One mechanism for "must come before":** an edge "B waits for A" in `task_prerequisites`. Ordered steps write these edges automatically (`origin='sequence'`). "Do this after…" writes one between any two tasks, steps included (`origin='manual'`).
+  Reason:
+  - The engine has one rule to apply: skip anything with an unfinished prerequisite.
+  - The `origin` column lets a group re-chain its own ordering without ever overwriting what the user set.
+  - A second "sequential steps" code path would have needed its own tests and its own consistency with the first.
+  Date: 2026-09-15
+
+- Decision: **A prerequisite is met when it is `done` or `cancelled`. `in_progress` still blocks.**
+  Reason: soft delete sets `cancelled`, so a deleted task must not hold its dependents hostage forever. Starting something is not finishing it. Inside an ordered group, cancelling a middle step re-chains the group, so the last step waits on the first rather than unblocking early.
+  Date: 2026-09-15
+
+- Decision: **Steps are AI-first, with manual edits.** Capture detects an explicit list of actions. "Break this down" suggests steps, which are saved only once approved. Steps can still be added or removed by hand. Breakdown has no deterministic fallback.
+  Reason: this follows the product rule that TimeSense does the organizing. A made-up breakdown is worse than none.
+  Date: 2026-09-15
+
+- Decision: **Steps can be added later to any existing task.** There are three ways: say it ("add get photos to renew passport"), use the "Part of…" chip in Capture, or pick "Make it a step of…" / "Remove from group" on any task.
+  Reason: raised by the user. People think of steps after the fact, or don't know a task has steps until they hit one, and imports arrive one row at a time.
+  Date: 2026-09-15
+
+- Decision: **A step added late to an ordered group gets a suggested position, which the user confirms** ("Before Fill form?"), or the user picks "No particular order".
+  Reason: appending at the end is often wrong, because a late-discovered step is usually a prerequisite.
+  Date: 2026-09-15
+
+- Decision: **Grouping is suggested, never applied automatically.** When a new captured or imported task looks related to an open task, TimeSense offers a one-tap "Part of Renew passport?".
+  Reason: a silent wrong grouping hides a task inside the wrong parent. A wrong suggestion costs nothing.
+  Date: 2026-09-15
+
+- Decision: **Blocked tasks stay visible in Today, dimmed, labelled "After: <title>". Now never recommends them.**
+  Reason: hiding them makes the user wonder where a task went.
+  Date: 2026-09-15
+
+- Decision: **A parent finishes by itself when its last open step is done.** There is no prompt, no duration question and no learning signal for the parent.
+  Reason: the parent only holds its steps, so there is nothing left to do. Asking would be one more tap for nothing.
+  Date: 2026-09-15
+
+- Decision: **A step always names its parent.** The Now card shows an eyebrow label above the title: "RENEW PASSPORT · STEP 1 OF 3". Push notifications, the widget, the swap list and assistant replies carry the same context.
+  Reason: raised by the user. "Get photos" on its own does not say what it is for.
+  Date: 2026-09-15
+
+- Decision: **Notion's sub-item and "Blocked by" relations are kept on import.** Importing a sub-item whose parent is not in TimeSense yet offers "Import both". Links resolve whenever both tasks exist.
+  Reason: throwing away structure the user already built in Notion would make them rebuild it here.
+  Date: 2026-09-15
+
+- Decision: **Apple Reminders subtasks will import flat.** The grouping suggestion covers them.
+  Reason: EventKit is believed not to expose Reminders' subtasks. This must be verified when TIME-027 is built.
+  Date: 2026-09-15
+
+- Decision (technical, TIME-320): **Every task response goes through `TaskGraphService.responses`.** `recommendable` is the single definition of what may be suggested. There are no ORM relationships for steps or edges, only explicit bulk queries.
+  Reason:
+  - A serializer per endpoint would leave `blocked_by` silently empty wherever one was missed.
+  - Async lazy loads raise `MissingGreenlet`.
+  - Annotation runs a fixed number of queries, however long the list, and a test pins that.
+  Date: 2026-09-15
+
 ## App Store listing name (2026-09-02, TIME-318)
 
 - Decision: The App Store listing name is **"TimeSense: Time Assistant"**. The name under the icon

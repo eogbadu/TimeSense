@@ -15,6 +15,7 @@ from app.repositories.synced_calendar_event_repository import SyncedCalendarEven
 from app.core.localtime import local_today, resolve_zone, user_timezone_of
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
+from app.services.task_graph import TaskGraphService
 from app.services.analytics_service import AnalyticsService
 from app.services.capture_service import CaptureService
 from app.services.scheduling_service import SchedulingService
@@ -128,7 +129,7 @@ async def capture(
             "task_captured", user_id=user.id,
             properties={"source": "capture", "was_deduped": True},
         )
-        return TaskResponse.model_validate(duplicate)
+        return await TaskGraphService(db).response(duplicate)
 
     parser = CaptureService(gateway)
     task_create = await parser.parse(body.raw_input, user_timezone=body.user_timezone, type_hint=body.type_hint)
@@ -207,4 +208,4 @@ async def capture(
             "was_deduped": False,
         },
     )
-    return TaskResponse.model_validate(task)
+    return await TaskGraphService(db).response(task)

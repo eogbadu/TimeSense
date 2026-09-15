@@ -41,7 +41,7 @@ from app.models.slack import SlackActionItem, SlackIntegration
 from app.models.sleep_wake import SleepWakeEvent
 from app.models.subscription import Subscription
 from app.models.synced_calendar_event import SyncedCalendarEvent
-from app.models.task import InternalReminder, Task
+from app.models.task import InternalReminder, Task, TaskPrerequisite
 from app.models.task_duration import TaskDurationEstimate
 from app.models.task_duration_observation import TaskDurationObservation
 from app.models.teams import TeamsActionItem, TeamsIntegration
@@ -67,6 +67,7 @@ _USER_DATA: list[tuple[str, type, object]] = [
     ("onboarding", OnboardingState, OnboardingState.user_id),
     ("assistant_personality", AssistantPersonality, AssistantPersonality.user_id),
     ("tasks", Task, Task.user_id),
+    ("task_prerequisites", TaskPrerequisite, TaskPrerequisite.user_id),  # TIME-320
     ("internal_reminders", InternalReminder, InternalReminder.user_id),
     ("meals", MealEvent, MealEvent.user_id),
     ("sleep_wake_events", SleepWakeEvent, SleepWakeEvent.user_id),

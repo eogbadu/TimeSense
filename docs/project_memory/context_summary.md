@@ -13,9 +13,17 @@
 - **Now:** the card names the parent in an eyebrow label.
 - **Notion:** keeps its sub-item and Blocked by relations.
 
-**Current:** TIME-319 (Jira TIME-2353), branch `feature/TIME-319-capture-prompt-local-time`.
-- Fixes the capture prompt's missing `ZoneInfo` import. The swallowed NameError showed every user UTC as their local time.
-- **Next:** TIME-320 (Jira TIME-2354), the data model and the task graph read layer.
+**Done:** TIME-319 (PR #360, Jira TIME-2353 Done). The capture prompt now states the user's real local time.
+
+**Current:** TIME-320 (Jira TIME-2354), branch `feature/TIME-320-task-steps-prerequisites-model`.
+- Migration `c4d5e6f0a1b2`: `tasks.parent_task_id`/`position`/`steps_sequential`, and a new `task_prerequisites` table.
+- `app/services/task_graph.py`: `annotate`, `recommendable`, and `responses`, the single `TaskResponse` serializer.
+- Additive response fields.
+- **Next:** TIME-321 (Jira TIME-2355). Steps: attach, create, move, and parent auto-complete. The status cascade goes in `TaskRepository`, because three paths write `done` directly.
+
+**Working notes for this batch:**
+- **Pytest output always goes to a log file.** A local pytest process can stay alive after printing its summary, and a pipe into `tail` then never returns.
+- **Migrations are checked on a scratch Postgres database**, `timesense_migtest`, created 2026-09-15 and never the dev DB: `DATABASE_URL=postgresql+asyncpg://ekeleogbadu@localhost:5432/timesense_migtest alembic upgrade head`.
 
 **How the user wants this batch run (confirmed 2026-09-15, applies to this batch only):**
 - Merge each ticket's PR once its tests are green, move Jira to Done, and start the next ticket from main.

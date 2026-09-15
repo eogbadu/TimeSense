@@ -13,6 +13,7 @@ from app.core.security import CurrentUser
 from app.repositories.synced_calendar_event_repository import SyncedCalendarEventRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse
+from app.services.task_graph import TaskGraphService
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/timeline", tags=["timeline"])
@@ -47,7 +48,7 @@ async def get_today_timeline(
         tasks = tasks + untimed
 
     tasks.sort(key=lambda t: t.scheduled_start or datetime.max.replace(tzinfo=timezone.utc))
-    return [TaskResponse.model_validate(t) for t in tasks]
+    return await TaskGraphService(db).responses(tasks)
 
 
 class TimelineEntry(BaseModel):
@@ -97,13 +98,14 @@ async def get_today_plan(
     day_start, day_end = local_day_bounds(for_date, tz)
     events = await SyncedCalendarEventRepository(db).list_window(user.id, day_start, day_end)
 
+    task_payloads = await TaskGraphService(db).responses(tasks)
     entries = [
         TimelineEntry(
             kind="task", id=str(t.id), title=t.title,
             start=t.scheduled_start, end=t.scheduled_end,
-            source=t.source, task=TaskResponse.model_validate(t),
+            source=t.source, task=payload,
         )
-        for t in tasks
+        for t, payload in zip(tasks, task_payloads)
     ] + [
         TimelineEntry(
             kind="event", id=f"{e.source}:{e.external_id}", title=e.title,
