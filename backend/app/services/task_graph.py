@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterable
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 
 from sqlalchemy import inspect
@@ -114,6 +115,28 @@ class TaskGraphService:
         ]
         payloads = await self.responses([parent, *steps])
         return payloads[0].model_copy(update={"steps": payloads[1:]})
+
+    async def waits_until(self, task: Task) -> tuple[datetime | None, list[TaskRef]]:
+        """When this task could start, as far as what it waits for is concerned (TIME-323).
+
+        Returns the latest scheduled end among its unmet prerequisites, including those it inherits
+        from its parent, together with the prerequisites that have no time at all. Nothing sensible can
+        be scheduled after something untimed, so callers leave such a task unplaced."""
+        waiting_ids = [task.id] + ([task.parent_task_id] if task.parent_task_id else [])
+        unmet = await self.edges.unmet_for(waiting_ids)
+        prerequisite_ids = {prereq_id for refs in unmet.values() for prereq_id, _ in refs}
+        if not prerequisite_ids:
+            return None, []
+        latest: datetime | None = None
+        untimed: list[TaskRef] = []
+        for prereq in await self.tasks.get_many(prerequisite_ids, task.user_id):
+            end = prereq.scheduled_end or prereq.scheduled_start
+            if end is None:
+                untimed.append(TaskRef(id=prereq.id, title=prereq.title))
+                continue
+            end = end if end.tzinfo else end.replace(tzinfo=timezone.utc)
+            latest = end if latest is None or end > latest else latest
+        return latest, untimed
 
     @staticmethod
     def _response(task: Task, info: GraphInfo) -> TaskResponse:

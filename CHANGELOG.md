@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-15 — Tasks that wait for other tasks (TIME-323)
+
+### Changed
+- **TimeSense no longer suggests something you can't start yet.** A task that is waiting on another unfinished task stays out of "what should I do now", voice suggestions and notifications until what it waits for is done.
+- **For a task with steps, TimeSense suggests the next step and says what it is for.** For example: "Get photos, for Renew passport". Each step counts as urgent as the task it belongs to.
+- **Times are planned in order.** TimeSense won't place a task, or suggest a time for it, before the task it waits for is finished. If that task has no time yet, it tells you so instead of guessing.
+
 ## 2026-09-15 — Capture understands your time zone (TIME-319)
 
 ### Fixed

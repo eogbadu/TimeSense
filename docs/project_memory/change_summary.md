@@ -1,5 +1,20 @@
 # Change Summary
 
+## 2026-09-15 — TIME-323 Recommendations and scheduling respect steps and prerequisites (Jira TIME-2357)
+
+**What changed:**
+- **Filter applied everywhere a task is picked:** `TaskGraphService.recommendable` runs in candidate gathering (Now plus engine push), the legacy recommendations list, the push time-block offer, and the Google Assistant.
+- **Swap:** choosing a waiting task or a parent returns 409.
+- **Parent named:** Now payloads, both push titles and the voice replies name a step's parent.
+- **Scoring:** a step inherits its parent's deadline and priority when those are tighter.
+- **Scheduling:** new `TaskGraphService.waits_until`. Auto-placement and `suggested-slot` never place a task before what it waits for, and leave it unplaced behind an untimed prerequisite.
+
+**Why:** this is what makes "some tasks must be done before others are recommended" true for the user.
+
+**Verified:** 15 new tests. Targeted and full-suite results are in the PR.
+
+**Not done:** Today nesting (TIME-324), AI steps (TIME-325), iOS (TIME-327+). The optional "everything left is waiting" copy on Now and a boost for tasks that unblock others are not included either.
+
 ## 2026-09-15 — TIME-322 Prerequisites: "Do this after" (Jira TIME-2356)
 
 **What changed:**

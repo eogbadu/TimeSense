@@ -31,6 +31,7 @@ from app.services.recommendation.maps.factory import get_maps_provider
 from app.services.recommendation.maps.maps_skill_service import MapsSkillService
 from app.services.recommendation.types import Recommendation
 from app.services.scheduling_service import SchedulingService
+from app.services.task_graph import TaskGraphService
 
 COOLDOWN = timedelta(minutes=45)
 OFFER_HORIZON_DAYS = 3
@@ -81,15 +82,23 @@ class ProactivePushService:
             return None
 
         data = {"type": "recommendation"}
+        title = rec.title
         if rec.related_entity_ids:
             data["task_id"] = rec.related_entity_ids[0]
+            # "Next for Renew passport: …". A step on its own doesn't say what it is for (TIME-323).
+            task = next((t for t in candidates if str(t.id) == rec.related_entity_ids[0]), None)
+            if task is not None and task.parent_task_id is not None:
+                parent = await TaskRepository(self.db).get_by_id(task.parent_task_id, user.id)
+                if parent is not None:
+                    title = f"Next for {parent.title}: {rec.title}"
+                    data["parent_title"] = parent.title
         delivered = 0
         for token in tokens:
-            if await sender.send(token, rec.title, rec.message, collapse_id=rec.action_type, data=data):
+            if await sender.send(token, title, rec.message, collapse_id=rec.action_type, data=data):
                 delivered += 1
 
         await push_repo.record(
-            user_id=user.id, action_type=rec.action_type, title=rec.title,
+            user_id=user.id, action_type=rec.action_type, title=title,
             body=rec.message, sent_at=now, delivered_count=delivered,
         )
         await self.db.commit()
@@ -113,7 +122,11 @@ class ProactivePushService:
                 return None
 
         pending = await TaskRepository(self.db).list_by_user(user.id, status="pending", limit=200)
-        unscheduled = [t for t in pending if t.scheduled_start is None]
+        graph = TaskGraphService(self.db)
+        info = await graph.annotate(pending)
+        # Offer time only for something that can be started now: not a task still waiting on another,
+        # and not a parent whose steps are the real work (TIME-323).
+        unscheduled = [t for t in graph.recommendable(pending, info) if t.scheduled_start is None]
 
         def _overdue(t) -> bool:
             return t.due_at is not None and _utc(t.due_at) < now
@@ -153,10 +166,15 @@ class ProactivePushService:
             day = "tomorrow"
         else:
             day = local.strftime("%A")
-        title = f"Block time for “{task.title}”?"
+        # A step on its own doesn't say what it is for, so its parent is named (TIME-323).
+        parent = info.parent_of(task)
+        label = f"“{task.title}” ({parent.title})" if parent is not None else f"“{task.title}”"
+        title = f"Block time for {label}?"
         body = f"You have a free {duration}-min slot {day} at {when}. Want to schedule it?"
 
         data = {"type": "offer_time_block", "task_id": str(task.id), "task_title": task.title}
+        if parent is not None:
+            data["parent_title"] = parent.title
         delivered = 0
         for token in tokens:
             if await sender.send(token, title, body, collapse_id="offer_time_block", data=data):
