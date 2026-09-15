@@ -9,6 +9,14 @@ Weeks saved before TIME-330 compared tasks finished that week with tasks added t
 
 **Still by design:** a week is a snapshot taken when it is generated, the Monday after it ends. A task added that week and finished later still counts as not done, unless the recalculation is run again.
 
+## Three more backend tests fail on main (found during TIME-330, 2026-09-15, evening local time)
+
+These tests fail on a clean `main` checkout as well as on the TIME-330 branch, both in the full suite and when run alone:
+- `test_location::test_errand_without_maps_never_leads`: "Buy groceries at the store" came out as the best task.
+- `test_push_service::test_pushes_after_cooldown_elapses` and `test_null_sender_records_nothing_delivered`: no push recommendation is produced.
+
+The push tests were already logged as intermittent, but the location test is newly seen failing. Clock dependence (they failed in the evening, like the completion-learning pair tests near midnight) is a guess that hasn't been investigated. If that's the cause, the fix is a fixed "now" in the tests.
+
 ## No client can review Notion imports, so "Import both" has nowhere to live (found in TIME-329, 2026-09-15)
 
 The Notion import flow works through the API only:
