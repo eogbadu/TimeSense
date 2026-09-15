@@ -102,11 +102,24 @@ struct NowTask: Decodable, Identifiable {
     let estimatedMinutes: Int?
     let priority: Int
     let dueAt: Date?
+    // When the recommendation is a step, the task it belongs to (TIME-327). Optional, so an older
+    // response still decodes.
+    let parentTitle: String?
+    let stepNumber: Int?
+    let parentStepCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, title, status, priority
         case estimatedMinutes = "estimated_minutes"
         case dueAt = "due_at"
+        case parentTitle = "parent_title"
+        case stepNumber = "step_number"
+        case parentStepCount = "parent_step_count"
+    }
+
+    /// "RENEW PASSPORT · STEP 1 OF 3", or nil for an ordinary task.
+    var eyebrow: String? {
+        StepLabels.eyebrow(parentTitle: parentTitle, stepNumber: stepNumber, stepCount: parentStepCount)
     }
 }
 
@@ -222,7 +235,8 @@ final class NowViewModel: ObservableObject, DurationPrompting {
         var snapshot = WidgetSnapshot.load() ?? .empty
         snapshot.usableMinutes = ctx.usableMinutes
         snapshot.bestTask = ctx.bestTask.map {
-            WidgetSnapshot.Task(id: $0.id, title: $0.title, estimatedMinutes: $0.estimatedMinutes)
+            WidgetSnapshot.Task(id: $0.id, title: $0.title, estimatedMinutes: $0.estimatedMinutes,
+                                parentTitle: $0.parentTitle)
         }
         snapshot.updatedAt = Date()
         snapshot.save()
@@ -314,17 +328,15 @@ final class NowViewModel: ObservableObject, DurationPrompting {
     }
 
     /// Today's actionable tasks, for the "what would you rather do?" picker. Calendar meetings are
-    /// filtered out — they're read-only blocks and aren't recommendable anyway (TIME-279/281).
+    /// filtered out — they're read-only blocks and aren't recommendable anyway (TIME-279/281). A group
+    /// offers its steps rather than itself, and nothing still waiting is offered, because the server
+    /// refuses to pin either (TIME-323/327).
     func swapCandidates(excluding taskId: String) async -> [TimelineTask] {
         let today = DateFormatter.swapPickerDay.string(from: Date())
         guard let entries: [TimelineEntry] = try? await APIClient.shared.get(
             "/api/v1/timeline/today/plan?date=\(today)"
         ) else { return [] }
-        return entries.compactMap { entry -> TimelineTask? in
-            guard !entry.isEvent, let task = entry.task else { return nil }
-            guard task.id != taskId, task.status != "done", task.status != "cancelled" else { return nil }
-            return task
-        }
+        return StepLabels.swapCandidates(from: entries, excluding: taskId)
     }
 
     /// "Not that — this instead." Records the swap and pins the chosen task, then reloads so the

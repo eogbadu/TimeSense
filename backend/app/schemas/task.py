@@ -115,6 +115,10 @@ class TaskResponse(BaseModel):
     parent_task_id: uuid.UUID | None = None
     parent_title: str | None = None
     position: int | None = None
+    # For a step: its place among the group's live steps (1-based) and how many there are, for
+    # "STEP 1 OF 3". Cancelled steps count for neither (TIME-327).
+    step_number: int | None = None
+    parent_step_count: int = 0
     step_count: int = 0
     open_step_count: int = 0
     blocked_by: list["TaskRef"] = []

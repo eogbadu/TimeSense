@@ -22,8 +22,10 @@ struct WhatToDoNextIntent: AppIntent {
             guard let task = ctx.bestTask else {
                 return .result(dialog: "You're all caught up — nothing on your plate right now.")
             }
+            // "Do Get photos, for Renew passport next." A step alone doesn't say what it is for (TIME-327).
+            let spoken = StepLabels.spoken(title: task.title, parentTitle: task.parentTitle)
             return .result(dialog: IntentDialog(
-                "Do \(task.title) next. You have \(ctx.usableMinutes) minutes of usable time."
+                "Do \(spoken) next. You have \(ctx.usableMinutes) minutes of usable time."
             ))
         } catch {
             return .result(dialog: IntentDialog(stringLiteral: friendlyMessage(error)))
@@ -67,7 +69,8 @@ struct StartFocusIntent: AppIntent {
             guard let task = ctx.bestTask else {
                 return .result(dialog: "Nothing to focus on right now — you're all caught up.")
             }
-            return .result(dialog: IntentDialog("Focusing on \(task.title). Let's go."))
+            let spoken = StepLabels.spoken(title: task.title, parentTitle: task.parentTitle)
+            return .result(dialog: IntentDialog("Focusing on \(spoken). Let's go."))
         } catch {
             return .result(dialog: IntentDialog(stringLiteral: friendlyMessage(error)))
         }

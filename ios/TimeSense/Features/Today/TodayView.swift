@@ -6,6 +6,11 @@ struct TodayView: View {
     @ObservedObject private var calendar = CalendarSyncService.shared
     @ObservedObject private var router = DeepLinkRouter.shared
     @State private var scheduleDraft: ScheduleDraft?
+    /// A group the user is finishing while steps are still open — confirmed first (TIME-327).
+    @State private var groupToComplete: TimelineTask?
+    /// The task "Add a step" was chosen on, and the step being typed.
+    @State private var addStepTarget: TimelineTask?
+    @State private var newStepTitle = ""
 
     var body: some View {
         NavigationStack {
@@ -108,6 +113,22 @@ struct TodayView: View {
                                     id: task.id, title: task.title, start: slot.start, end: slot.end
                                 )
                             }
+                        },
+                        onCompleteGroup: { group in
+                            // Finishing a group finishes its open steps too, so that is confirmed first.
+                            if group.openSteps.isEmpty {
+                                Task { await viewModel.completeGroup(group) }
+                            } else {
+                                groupToComplete = group
+                            }
+                        },
+                        onAddStep: { task in
+                            newStepTitle = ""
+                            addStepTarget = task
+                        },
+                        onRemoveFromGroup: { step in Task { await viewModel.removeFromGroup(step) } },
+                        onStopWaiting: { task, ref in
+                            Task { await viewModel.stopWaiting(task: task, for: ref) }
                         }
                     )
                 }
@@ -115,8 +136,37 @@ struct TodayView: View {
             .padding(.horizontal, DesignTokens.Spacing.lg)
             .padding(.top, DesignTokens.Spacing.sm)
             .padding(.bottom, 96)   // clear the custom tab bar (content can scroll under it in the pager)
+            .confirmationDialog(
+                groupToComplete.map { StepLabels.completeGroupPrompt(openSteps: $0.openSteps.count) } ?? "",
+                isPresented: Binding(
+                    get: { groupToComplete != nil },
+                    set: { if !$0 { groupToComplete = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: groupToComplete
+            ) { group in
+                Button("Mark all done") { Task { await viewModel.completeGroup(group) } }
+                Button("Cancel", role: .cancel) {}
+            }
         }
         .refreshable { await viewModel.load() }
+        .alert(
+            "Add a step",
+            isPresented: Binding(
+                get: { addStepTarget != nil },
+                set: { if !$0 { addStepTarget = nil } }
+            ),
+            presenting: addStepTarget
+        ) { target in
+            TextField("What's the step?", text: $newStepTitle)
+            Button("Add") {
+                let title = newStepTitle
+                Task { await viewModel.addStep(to: target, title: title) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { target in
+            Text("Part of “\(target.title)”")
+        }
     }
 
     /// Native "add event" editor pre-filled with the engine-suggested block, for the user to review
@@ -187,6 +237,7 @@ private struct AIRecommendedCard: View {
                 }
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
+                        StepEyebrow(task: task, tint: accent)
                         Text(task.title)
                             .font(DesignTokens.Typography.title.weight(.bold))
                             .foregroundStyle(DesignTokens.Color.onHero)
@@ -240,6 +291,10 @@ private struct SmartPlanCard: View {
     let onDelete: (String) -> Void
     let onRecordDuration: (TimelineTask) -> Void
     let onSchedule: (TimelineTask) -> Void
+    let onCompleteGroup: (TimelineTask) -> Void
+    let onAddStep: (TimelineTask) -> Void
+    let onRemoveFromGroup: (TimelineTask) -> Void
+    let onStopWaiting: (TimelineTask, TaskRef) -> Void
 
     private var groups: [(name: String, entries: [TimelineEntry])] {
         let order = ["Morning", "Afternoon", "Evening", "Anytime"]
@@ -292,28 +347,20 @@ private struct SmartPlanCard: View {
                 VStack(spacing: DesignTokens.Spacing.md) {
                     ForEach(group.entries) { entry in
                         if let task = entry.task {
-                            let done = task.status == "done"
-                            SwipeableRow(
-                                leading: done
-                                    ? .init(title: "How long?", icon: "stopwatch",
-                                            color: DesignTokens.Color.accent,
-                                            perform: { onRecordDuration(task) })
-                                    : .init(title: "Done", icon: "checkmark", color: .green,
-                                            perform: { onToggle(task) }),
-                                onDelete: { onDelete(task.id) }
-                            ) {
-                                SmartPlanRow(task: task, onToggle: { onToggle(task) })
-                                    .contextMenu {
-                                        if done {
-                                            Button { onRecordDuration(task) } label: {
-                                                Label("How long did that take?", systemImage: "stopwatch")
-                                            }
-                                        } else {
-                                            Button { onSchedule(task) } label: {
-                                                Label("Find a time & add to calendar", systemImage: "calendar.badge.plus")
-                                            }
-                                        }
-                                    }
+                            if task.isGroup {
+                                StepGroupRow(
+                                    group: task,
+                                    onCompleteGroup: { onCompleteGroup(task) },
+                                    onDeleteGroup: { onDelete(task.id) },
+                                    onToggleStep: onToggle,
+                                    onDeleteStep: { step in onDelete(step.id) },
+                                    onRecordDuration: onRecordDuration,
+                                    onRemoveFromGroup: onRemoveFromGroup,
+                                    onStopWaiting: onStopWaiting,
+                                    onAddStep: { onAddStep(task) }
+                                )
+                            } else {
+                                taskRow(task)
                             }
                         } else {
                             // Calendar meeting: read-only busy block (no swipe/toggle/schedule).
@@ -325,6 +372,213 @@ private struct SmartPlanCard: View {
         }
         .padding(DesignTokens.Spacing.lg)
         .cardStyle()
+    }
+
+    private func taskRow(_ task: TimelineTask) -> some View {
+        let done = task.status == "done"
+        return SwipeableRow(
+            leading: done
+                ? .init(title: "How long?", icon: "stopwatch",
+                        color: DesignTokens.Color.accent,
+                        perform: { onRecordDuration(task) })
+                : .init(title: "Done", icon: "checkmark", color: .green,
+                        perform: { onToggle(task) }),
+            onDelete: { onDelete(task.id) }
+        ) {
+            SmartPlanRow(task: task, onToggle: { onToggle(task) })
+                .contextMenu {
+                    if done {
+                        Button { onRecordDuration(task) } label: {
+                            Label("How long did that take?", systemImage: "stopwatch")
+                        }
+                    } else {
+                        Button { onSchedule(task) } label: {
+                            Label("Find a time & add to calendar", systemImage: "calendar.badge.plus")
+                        }
+                        if task.parentTaskId == nil {
+                            Button { onAddStep(task) } label: {
+                                Label("Add a step", systemImage: "list.bullet.indent")
+                            }
+                        }
+                        ForEach(task.waitsFor) { ref in
+                            Button { onStopWaiting(task, ref) } label: {
+                                Label("Don't wait for \(ref.title)", systemImage: "arrow.right.circle")
+                            }
+                        }
+                    }
+                }
+        }
+    }
+}
+
+/// A task with steps, shown once: the task, how far along it is, and its steps inset underneath
+/// (TIME-327). Finishing the task finishes its open steps too, so the swipe asks first.
+private struct StepGroupRow: View {
+    let group: TimelineTask
+    let onCompleteGroup: () -> Void
+    let onDeleteGroup: () -> Void
+    let onToggleStep: (TimelineTask) -> Void
+    let onDeleteStep: (TimelineTask) -> Void
+    let onRecordDuration: (TimelineTask) -> Void
+    let onRemoveFromGroup: (TimelineTask) -> Void
+    let onStopWaiting: (TimelineTask, TaskRef) -> Void
+    let onAddStep: () -> Void
+
+    @State private var expanded = true
+
+    private var done: Bool { group.status == "done" }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+            SwipeableRow(
+                leading: done ? nil : .init(title: "Done", icon: "checkmark", color: .green,
+                                            perform: onCompleteGroup),
+                onDelete: onDeleteGroup
+            ) {
+                header
+                    .contextMenu {
+                        if !done {
+                            Button(action: onAddStep) {
+                                Label("Add a step", systemImage: "list.bullet.indent")
+                            }
+                            ForEach(group.waitsFor) { ref in
+                                Button { onStopWaiting(group, ref) } label: {
+                                    Label("Don't wait for \(ref.title)", systemImage: "arrow.right.circle")
+                                }
+                            }
+                        }
+                    }
+            }
+
+            if expanded {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    ForEach(group.groupSteps) { step in
+                        StepRow(step: step, onToggle: { onToggleStep(step) })
+                            .contextMenu { stepMenu(step) }
+                    }
+                }
+                .padding(.leading, 52)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            ZStack {
+                Circle().fill(DesignTokens.Color.accent.opacity(0.16)).frame(width: 40, height: 40)
+                Image(systemName: done ? "checkmark" : "list.bullet")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.accent)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(group.title)
+                    .font(DesignTokens.Typography.callout.weight(.semibold))
+                    .foregroundColor(done ? DesignTokens.Color.textSecondary : DesignTokens.Color.textPrimary)
+                    .strikethrough(done)
+                    .lineLimit(1)
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    Text(StepLabels.progress(done: group.doneStepCount, total: group.groupSteps.count))
+                        .font(DesignTokens.Typography.caption.weight(.semibold))
+                        .foregroundColor(DesignTokens.Color.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(DesignTokens.Color.accent.opacity(0.14)))
+                    if !done, let caption = StepLabels.waitingCaption(group.waitsFor) {
+                        WaitingCaption(text: caption)
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() }
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(DesignTokens.Color.textSecondary)
+                    .rotationEffect(.degrees(expanded ? 0 : -90))
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(expanded ? "Hide steps" : "Show steps")
+        }
+        .opacity(group.isWaiting ? 0.55 : 1)
+    }
+
+    @ViewBuilder
+    private func stepMenu(_ step: TimelineTask) -> some View {
+        if step.status == "done" {
+            Button { onRecordDuration(step) } label: {
+                Label("How long did that take?", systemImage: "stopwatch")
+            }
+        } else {
+            Button { onRemoveFromGroup(step) } label: {
+                Label("Remove from group", systemImage: "arrow.up.forward.square")
+            }
+            ForEach(StepLabels.removableWaits(for: step, in: group)) { ref in
+                Button { onStopWaiting(step, ref) } label: {
+                    Label("Don't wait for \(ref.title)", systemImage: "arrow.right.circle")
+                }
+            }
+        }
+        Button(role: .destructive) { onDeleteStep(step) } label: {
+            Label("Delete step", systemImage: "trash")
+        }
+    }
+}
+
+/// One step inside a group: a check circle, the step, and what it is waiting on.
+private struct StepRow: View {
+    let step: TimelineTask
+    let onToggle: () -> Void
+
+    var body: some View {
+        let done = step.status == "done"
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            Button(action: onToggle) {
+                Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundColor(done ? .green : DesignTokens.Color.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            // Same rule as a task row: nothing left to complete, and no second duration question.
+            .disabled(done)
+            .accessibilityLabel(done ? "\(step.title), done" : "Mark \(step.title) done")
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(step.title)
+                    .font(DesignTokens.Typography.subheadline.weight(.medium))
+                    .foregroundColor(done ? DesignTokens.Color.textSecondary : DesignTokens.Color.textPrimary)
+                    .strikethrough(done)
+                    .lineLimit(2)
+                if !done, let caption = StepLabels.waitingCaption(step.waitsFor) {
+                    WaitingCaption(text: caption)
+                } else if let start = step.scheduledStart, !done {
+                    Text(start.formatted(date: .omitted, time: .shortened))
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .opacity(step.isWaiting ? 0.55 : 1)
+    }
+}
+
+/// "⌛ After: Get invoice". Read aloud as "Waiting on Get invoice".
+private struct WaitingCaption: View {
+    let text: String
+
+    var body: some View {
+        Label(text, systemImage: "hourglass")
+            .labelStyle(.titleAndIcon)
+            .font(DesignTokens.Typography.caption)
+            .foregroundColor(DesignTokens.Color.textSecondary)
+            .lineLimit(1)
+            .accessibilityLabel(text.replacingOccurrences(of: "After:", with: "Waiting on"))
     }
 }
 
@@ -471,12 +725,19 @@ private struct SmartPlanRow: View {
                     .foregroundColor(done ? DesignTokens.Color.textSecondary : DesignTokens.Color.textPrimary)
                     .strikethrough(done)
                     .lineLimit(1)
-                Text(timeLine)
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundColor(DesignTokens.Color.textSecondary)
+                // A task that can't start yet says what it is waiting on, instead of a time (TIME-327).
+                if task.isWaiting, let caption = StepLabels.waitingCaption(task.waitsFor) {
+                    WaitingCaption(text: caption)
+                } else {
+                    Text(timeLine)
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(DesignTokens.Color.textSecondary)
+                }
             }
             Spacer(minLength: 0)
         }
+        // Still visible, so nothing seems to have gone missing, but plainly not something to do yet.
+        .opacity(task.isWaiting ? 0.55 : 1)
     }
 
     private var timeLine: String {

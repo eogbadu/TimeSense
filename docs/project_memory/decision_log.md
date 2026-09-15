@@ -100,6 +100,17 @@ Every decision below was put to the user and settled in a planning session befor
   - The four paths don't share code, and a filter on one path would have left the other three suggesting blocked work.
   Date: 2026-09-15
 
+- Decision (technical, TIME-327): **"STEP n OF m" is counted by the server among the group's live steps, and iOS words steps and waits in one pure `StepLabels` enum.**
+  - A step only offers "Don't wait" for its own manual waits.
+  - Finishing a group with open steps is confirmed first.
+  - Waiting rows are dimmed, never hidden.
+  Reason:
+  - A position counted on the phone would include deleted steps ("STEP 3 OF 2"), and the phone doesn't always have the siblings in hand (Now shows one task).
+  - One enum keeps Now, Today, the widget and Siri saying the same thing, and makes the wording testable without a screen.
+  - Group ordering and inherited waits aren't the step's own, so offering to remove them would only produce a refusal.
+  - Finishing a group also finishes its steps, which the user can't see from the swipe.
+  Date: 2026-09-15
+
 - Decision (technical, TIME-326): **Notion relations are stored as page ids on the import item and linked whenever both sides have been imported, in either order.**
   - Links TimeSense can't represent are skipped and never fail the import. These are a sub-item of a sub-item, and dependency loops.
   - Relations are recognised only on relation-type properties, matched by Notion's default names and obvious renames.

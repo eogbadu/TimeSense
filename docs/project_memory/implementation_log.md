@@ -1,5 +1,51 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-327 iOS shows step groups, what a step belongs to, and what a task waits for (Jira TIME-2361)
+
+First iOS ticket of the steps & prerequisites batch. The backend has returned groups and waits since TIME-324/325; the app now shows them.
+
+**Today** (`Features/Today/TodayView.swift`):
+- **Groups.** A task with steps renders as `StepGroupRow`:
+  - a list glyph and the task title
+  - a "1 of 3 steps" capsule
+  - a collapse chevron
+  - the steps inset underneath as `StepRow`s: check circle, title, and time or waiting caption
+- **Completing steps and groups.**
+  - A step's check circle goes through the existing `markDone`, so the duration prompt still works per step.
+  - Swiping Done on the group asks `StepLabels.completeGroupPrompt` in a `confirmationDialog` when steps are still open. `TodayViewModel.completeGroup` then PATCHes the parent, and the server closes the steps. There is no duration question, and step timers are stopped.
+- **Waiting rows.** Any row that is waiting renders at 0.55 opacity, with an hourglass and "After: <title>" (`WaitingCaption`). VoiceOver reads it as "Waiting on …".
+- **Context menus:**
+  - "Add a step" (alert with a text field → `POST /tasks/{id}/steps`)
+  - "Don't wait for …" (`DELETE /tasks/{id}/prerequisites/{prereq}`)
+  - on a step: "Remove from group" (PATCH with an explicit `parent_task_id: null` via `LeaveGroup`, because synthesized encoding drops nil), plus "Delete step"
+  - A step only offers "Don't wait" for its own manual waits (`StepLabels.removableWaits`). Its group ordering and anything inherited from the parent would be refused.
+
+**Now** (`Features/Now/NowView.swift`, `NowViewModel.swift`):
+- **Step label.** `StepEyebrow` shows "RENEW PASSPORT · STEP 1 OF 3" above the title on the best-action card, with a spoken VoiceOver label. It also appears on Today's "AI Recommended" card.
+- **Alternatives and swap picker.** A step's parent leads its caption.
+- **Swap candidates.** `StepLabels.swapCandidates` offers a group's open steps instead of the group, and nothing that is waiting. The server refuses both since TIME-323.
+
+**Widget and Siri:**
+- `WidgetSnapshot.Task.parentTitle`, optional with a default so older saved snapshots still decode, feeds a caption above the task in the Do Next widget.
+- The WhatToDoNext and StartFocus intents say "Get photos, for Renew passport".
+
+**Shared logic.** Wording and selection live in `StepLabels`, a pure enum in `TodayViewModel.swift`, so they are unit-tested.
+- `TimelineTask` gains parent, step, count, `blocked_by` and nested `steps` fields.
+- `NowTask` gains the parent fields.
+- Every new field is optional, so older payloads still decode.
+
+**A small backend addition was required.** A step in `/now` knew its parent but not "STEP n OF m".
+- `TaskGraphService.annotate` now loads the groups' steps, adding one query and only when some tasks are steps.
+- `TaskResponse` gains `step_number` (1-based among live steps) and `parent_step_count`. A cancelled sibling counts for neither, so the label never reads "STEP 3 OF 2". A test pins this.
+
+**Deferred to TIME-328:** tapping the eyebrow to open the group, and merging the Today sheets into one enum. No new sheets were added here, so the existing two-sheet arrangement is untouched.
+
+**Project file.** `StepGroupTests.swift` is registered with the `xcodeproj` gem. The gem also re-sorted a few existing entries, with no other changes.
+
+**Verified:** results are in the PR.
+- iOS: `xcodebuild test` on iPhone 16, with 9 new XCTests.
+- Backend: graph tests plus the full suite.
+
 ## 2026-09-15 — TIME-326 Notion import keeps sub-items and Blocked by relations (Jira TIME-2360)
 
 Notion databases can already say that a row is a sub-item of another row, or that it is blocked by others. Import used to keep only the title and due date. It now keeps that structure.
