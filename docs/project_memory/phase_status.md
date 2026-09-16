@@ -1,5 +1,11 @@
 # Phase Status
 
+## Failing tests on main (TIME-332) — 2026-09-15
+
+- [x] Completion-learning tests keep the recommendation inside the current part of day
+- [x] New tests: the pair is recorded just after all six boundaries, and a recommendation from the previous part teaches nothing
+- [ ] Only the `.env`-dependent Notion test still fails locally (it passes with Notion settings blanked)
+
 ## Failing tests on main (TIME-331) — 2026-09-15
 
 - [x] Push cooldown and null-sender tests pin a daytime clock (the cause was TIME-288's energy depletion)
@@ -12,7 +18,7 @@
 - [x] Completion rate counts the same tasks on both sides (tasks added that week)
 - [x] Admin recalculation for saved weeks
 - [x] iOS percent charts stay inside their cards
-- [ ] Run `POST /api/v1/admin/insights/recalculate` on Render after deploy (user)
+- [x] Ran `POST /api/v1/admin/insights/recalculate` on production, 2026-09-15: checked 8 saved weeks, corrected 4
 
 ## Steps & prerequisites (TIME-319..329) — IN PROGRESS, started 2026-09-15
 

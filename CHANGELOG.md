@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-15 — Tests no longer depend on the clock (TIME-332)
+
+### Fixed
+- **The last time-dependent test failures.** What TimeSense learns when you finish something other than its suggestion is grouped by part of the day. The tests assumed "five minutes ago" was always the same part, so they failed just after 5am, 8am, 11am, 2pm, 5pm and 9pm. No change to the app itself.
+
 ## 2026-09-15 — Errands TimeSense can't check stay out of first place (TIME-331)
 
 ### Fixed

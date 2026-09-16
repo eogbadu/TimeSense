@@ -62,12 +62,54 @@ async def _user_row(db_session) -> User:
     return (await db_session.execute(select(User).where(User.firebase_uid == USER.uid))).scalar_one()
 
 
-async def _show(db_session, user, task_id, *, ago: timedelta = timedelta(minutes=5)):
-    """Record that `task_id` was the recommendation on the Now screen `ago` ago."""
+# The part-of-day boundaries the pairing rule uses (time_service.part_of_day). The test user has no
+# timezone, so these are UTC hours.
+_PART_BOUNDARIES = (5, 8, 11, 14, 17, 21)
+
+
+def _part_start(moment: datetime) -> datetime:
+    """The start of the part of day `moment` falls in."""
+    started = [h for h in _PART_BOUNDARIES if h <= moment.hour]
+    if not started:  # before 05:00 — night began at 21:00 yesterday
+        return moment.replace(hour=21, minute=0, second=0, microsecond=0) - timedelta(days=1)
+    return moment.replace(hour=started[-1], minute=0, second=0, microsecond=0)
+
+
+def _fixed_now(hour: int, minute: int = 2) -> datetime:
+    """Today at `hour:minute` UTC."""
+    return datetime.now(timezone.utc).replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+
+def _clock(fixed: datetime):
+    """Pin the clock the completion service reads. It takes no `now` from the route, so this is the
+    only way to choose the hour a completion is judged at (TIME-332)."""
+
+    class _Fixed(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed if tz is not None else fixed.replace(tzinfo=None)
+
+    return patch("app.services.task_completion_service.datetime", _Fixed)
+
+
+async def _show(db_session, user, task_id, *, ago: timedelta = timedelta(minutes=5),
+                now: datetime | None = None, same_part: bool = True):
+    """Record that `task_id` was the recommendation on the Now screen `ago` ago.
+
+    The impression is kept inside the CURRENT part of day by default. A pair only teaches when the
+    recommendation and the completion share one, so a flat five minutes back landed in the previous
+    part whenever the suite ran in the first five minutes after 05:00, 08:00, 11:00, 14:00, 17:00 or
+    21:00 — five minutes in every three hours where these tests failed (TIME-332). Pass
+    `same_part=False` for a deliberately stale impression.
+    """
+    now = now or datetime.now(timezone.utc)
+    shown_at = now - ago
+    if same_part:
+        shown_at = max(shown_at, _part_start(now) + timedelta(seconds=1))
     event = await RecommendationEventRepository(db_session).record_impression(
         user_id=user.id, task_id=uuid.UUID(task_id), surface="now", confidence=0.8,
     )
-    event.created_at = datetime.now(timezone.utc) - ago
+    event.created_at = shown_at
     await db_session.flush()
     return event
 
@@ -173,6 +215,26 @@ async def test_a_burst_of_completions_cannot_invent_a_preference(client, db_sess
     assert len(await _swaps(db_session)) == 1, "one recommendation can teach at most once"
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("hour", _PART_BOUNDARIES)
+async def test_the_pair_is_recorded_just_after_a_part_of_day_boundary(client, db_session, hour):
+    """TIME-332: two minutes past a boundary, a recommendation dated five minutes back sat in the
+    previous part of day, so nothing was learned and these tests failed."""
+    fixed = _fixed_now(hour)
+    with _verify(), _clock(fixed):
+        await _grant_analytics(client)
+        recommended = await _task(client, "Write the report")
+        actually_did = await _task(client, "Buy groceries")
+        user = await _user_row(db_session)
+        await _show(db_session, user, recommended, now=fixed)
+        await _complete(client, actually_did)
+
+    rows = await _swaps(db_session)
+    assert len(rows) == 1
+    assert str(rows[0].rejected_task_id) == recommended
+    assert str(rows[0].chosen_task_id) == actually_did
+
+
 # ── Bounds ────────────────────────────────────────────────────────────────────
 
 @pytest.mark.anyio
@@ -183,10 +245,32 @@ async def test_a_stale_recommendation_teaches_nothing(client, db_session):
         recommended = await _task(client, "Write the report")
         actually_did = await _task(client, "Buy groceries")
         user = await _user_row(db_session)
-        await _show(db_session, user, recommended, ago=timedelta(hours=6))
+        await _show(db_session, user, recommended, ago=timedelta(hours=6), same_part=False)
         await _complete(client, actually_did)
 
     assert await _swaps(db_session) == []
+
+
+@pytest.mark.anyio
+async def test_a_recommendation_from_the_previous_part_of_day_teaches_nothing(client, db_session):
+    """`_swap_signals` buckets by part of day, so a pair straddling a boundary would be filed under a
+    context that never existed. Ten minutes back is well inside the 90-minute lookback, so this
+    isolates the boundary rule — and it is the exact shape that used to break the tests above
+    whenever the suite ran just after a boundary (TIME-332)."""
+    fixed = _fixed_now(14)  # 14:02 is afternoon; ten minutes earlier is still midday
+    with _verify(), _clock(fixed):
+        await _grant_analytics(client)
+        recommended = await _task(client, "Write the report")
+        actually_did = await _task(client, "Buy groceries")
+        user = await _user_row(db_session)
+        event = await _show(db_session, user, recommended, ago=timedelta(minutes=10),
+                            now=fixed, same_part=False)
+        await _complete(client, actually_did)
+
+    assert await _swaps(db_session) == []
+    await db_session.refresh(event)
+    # The impression WAS found and closed; only the pairing stopped, at the part-of-day check.
+    assert event.outcome == OUTCOME_SUPERSEDED
 
 
 @pytest.mark.anyio
