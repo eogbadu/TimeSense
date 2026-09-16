@@ -2,12 +2,18 @@
 
 **Last updated:** 2026-09-15.
 
-**Current:** TIME-330 (Jira TIME-2364), branch `feature/TIME-330-insights-completion-rate`. It fixes the Insights completion rate, which compared tasks finished that week with tasks added that week and could pass 100%, and keeps the completion chart inside its card.
+**Done:** TIME-330 (Jira TIME-2364, PR #371). It fixes the Insights completion rate, which compared tasks finished that week with tasks added that week and could pass 100%, and keeps the completion chart inside its card.
 - New definition: of the tasks added that week, how many are done.
 - `POST /api/v1/admin/insights/recalculate` corrects saved weeks.
-- **After deploying, the user runs it once on Render.**
+- **Ran on production 2026-09-15:** it checked 8 saved weeks and corrected 4. No admin account exists; it was run with a temporary Firebase ops user holding the admin role, deleted straight after (see implementation_log).
 
-**Current:** TIME-331 (Jira TIME-2365), branch `feature/TIME-331-fix-failing-main-tests`. Three tests failed on `main` after about 18:00 UTC because TIME-288's energy depletes over the day:
+**Done:** TIME-331 (Jira TIME-2365, PR #372). The full suite is green (1089 passed) with Notion settings blanked.
+
+**Current:** TIME-332 (Jira TIME-2366), branch `feature/TIME-332-completion-learning-clock`. Three `test_completion_learning` tests failed within five minutes after a part-of-day boundary (05, 08, 11, 14, 17, 21 UTC), because `_show` dated the recommendation five minutes back and `_same_part_of_day` then refused to pair it. The helper now keeps the impression inside the current part, with new tests at every boundary. This branch also carries the memory updates pending from the TIME-330 production recalculation, and the TIME-331/332 ticket definitions.
+
+**Also in this branch:** the suite could reach a real model, because `get_llm_gateway()` builds a real client whenever its singleton is None and `.env` has a key. An autouse `_no_real_llm` fixture in `tests/conftest.py` now pins a no-op gateway per test. A new test that needs a reply must mock it.
+
+**No known clock-dependent test failures remain.** With the key present the suite is 1096 passed; only the `.env`-dependent Notion test fails, and it passes with Notion settings blanked. Three tests failed on `main` after about 18:00 UTC because TIME-288's energy depletes over the day:
 - **Push tests:** now pin a daytime `now`.
 - **Unverifiable errand:** the penalty was raised from 20 to 55, so it never leads (a product fix the user chose).
 

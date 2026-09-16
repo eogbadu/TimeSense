@@ -1,5 +1,23 @@
 # Change Summary
 
+## 2026-09-15 — TIME-332 completion-learning tests at a part-of-day boundary (Jira TIME-2366)
+
+**What changed:** tests only. The helper that dates a recommendation now keeps it inside the current part of day, and the tests can pin the clock the completion service reads.
+
+**Why:** what TimeSense learns from a completion is bucketed by part of day, so a recommendation from five minutes ago fell in the previous bucket just after 05:00, 08:00, 11:00, 14:00, 17:00 or 21:00. Three tests failed for five minutes in every three hours.
+
+**Added:** the pair is still recorded just after every boundary, and a recommendation from the previous part of day teaches nothing.
+
+**Also fixed, found while verifying:** the suite could reach a real model. Any test after one that reset the LLM singleton made live calls, because the repo-root `.env` has an API key, and a duration test then compared a live answer with the library's number. An autouse fixture now pins a no-op model for every test.
+
+**Verified:** the file passes 23 tests. With the old behaviour restored the new boundary test fails 6 of 6.
+
+## 2026-09-15 — Production: Insights recalculation run (TIME-330 follow-up)
+
+**What changed:** production's saved weekly insights were recounted with the TIME-330 definition. 8 weeks were checked and 4 corrected. No code changed.
+
+**How:** a temporary Firebase ops user with the admin role called `POST /api/v1/admin/insights/recalculate` once and was deleted straight after. Its token is confirmed rejected.
+
 ## 2026-09-15 — TIME-331 three backend tests that failed on main (Jira TIME-2365)
 
 **What changed:**

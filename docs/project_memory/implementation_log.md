@@ -1,5 +1,48 @@
 # Implementation Log
 
+## 2026-09-15 — TIME-332 completion-learning tests at a part-of-day boundary (Jira TIME-2366)
+
+Last of the clock-dependent failures found in TIME-330 and TIME-331.
+
+**Cause:** `TaskCompletionService._record` only pairs a completion with a recommendation when both fall in the same part of day (`_same_part_of_day`, the buckets `_swap_signals` uses). The test helper `_show` dated the recommendation a flat five minutes before now, so in the first five minutes after 05:00, 08:00, 11:00, 14:00, 17:00 or 21:00 UTC the two straddled a boundary, no swap was written, and three tests failed: `test_completing_a_different_task_records_the_pair`, `test_the_pair_is_never_pinned` and `test_a_burst_of_completions_cannot_invent_a_preference`. Five minutes in every three hours.
+
+**Test bug, not a product bug.** The rule is deliberate (TIME-316), so the tests were wrong to assume "five minutes ago" is always the same part of day.
+
+**Fix in `tests/test_completion_learning.py`:**
+- `_show` keeps the impression inside the current part of day: `max(now - ago, part_start + 1s)`. `_part_start` handles night, which begins at 21:00 the previous day.
+- `_show` takes a `now`, and `same_part=False` for a deliberately stale impression.
+- `_clock(fixed)` pins the clock the service reads by patching `app.services.task_completion_service.datetime`. The route passes no `now`, so this is the only way in. `latest_open_impression` has no upper time bound, so a pinned clock still finds the impression.
+- `test_a_stale_recommendation_teaches_nothing` passes `same_part=False`, so its 6-hour-old impression still teaches nothing.
+
+**Second bug, found while verifying: the suite was not hermetic.** The full suite failed on `test_task_duration::test_capture_fills_estimate_from_lookup` — 15 minutes where the library says 30.
+- `get_llm_gateway()` builds a REAL client whenever the singleton is None and an API key is set, and several test files reset it to None when they finish. The repo-root `.env` has `OPENAI_API_KEY`, so later tests made live model calls, and this test compared a live answer with the library's number.
+- Evidence: branch with the key, 1 failed twice, 105s. Branch with `OPENAI_API_KEY=` blank, 1096 passed, 52s. `main` with the key passed once — luck, not correctness.
+- **Fix:** an autouse `_no_real_llm` fixture in `tests/conftest.py` pins a no-op gateway for every test and clears it after. Tests that want a reply still call `set_llm_gateway` themselves.
+- After it: 1096 passed with the key present, in 54s. The runtime drop is the live calls disappearing.
+- The TIME-332 Jira scope was widened to cover this before merging.
+
+**New tests:**
+- `test_the_pair_is_recorded_just_after_a_part_of_day_boundary`, parametrized over all six boundaries at :02. With the old `_show` behaviour restored it fails 6 of 6, so it catches the bug.
+- `test_a_recommendation_from_the_previous_part_of_day_teaches_nothing`: pins 14:02 with the recommendation at 13:52, inside the 90-minute lookback. It asserts no swap and that the impression was still marked superseded, which proves the pairing stopped at the boundary check rather than the lookback. This locks the product rule that used to be implicit.
+
+## 2026-09-15 — Production: Insights recalculation run (TIME-330 follow-up)
+
+**Deploy:** Render deploys `main` by itself; nothing was triggered by hand.
+- A signed-out `POST /api/v1/admin/insights/recalculate` on `https://timesense-api.onrender.com` returned 401, not 404, so the TIME-330 code was live. Health returned 200.
+- It is not confirmed which commit is serving. There is no Render CLI or API key here, so check the dashboard to see whether TIME-331 (`84f2797`) has deployed.
+
+**Recalculation:** `{"checked": 8, "changed": 4}`, HTTP 200.
+
+**How it was authenticated (the user chose this):** no production admin account exists. `require_admin` reads the Firebase token's `role` claim, and nothing in the repo grants it.
+1. A scratch script (not committed) loaded the service account from the local `.env` with `app.core.firebase`. It's the same project as production, `timesense-eb7ec`.
+2. It minted a custom token for a throwaway uid, `timesense-ops-recalc-1789502973`, with `{"role": "admin"}`, and exchanged it for an ID token with the iOS app's web API key.
+3. It called the endpoint once.
+4. It deleted that Firebase user. Afterwards, the same token got 401 from `/api/v1/admin/health`, because the API verifies with `check_revoked=True`.
+
+No token or secret was printed or stored.
+
+**Next time** an admin call is needed, repeat this, or decide on a permanent admin account.
+
 ## 2026-09-15 — TIME-331 three backend tests that failed on main (Jira TIME-2365)
 
 The failing tests were:

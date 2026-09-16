@@ -1,6 +1,16 @@
 # Known Issues
 
-## Saved Insights weeks keep their pre-TIME-330 numbers until the recalculation runs (TIME-330, 2026-09-15)
+## RESOLVED by TIME-332 — the test suite could reach a real model (found 2026-09-15)
+
+`get_llm_gateway()` builds a REAL client whenever its singleton is None and an API key is configured, and several test files reset that singleton to None when they finish. Every developer machine has `OPENAI_API_KEY` in the repo-root `.env`, so tests after such a reset made live calls.
+
+- **Symptom:** `test_task_duration::test_capture_fills_estimate_from_lookup` failed with 15 minutes where the library says 30 — the live model's number. It failed or passed depending on what the model said that run, on `main` as much as on a branch, so a green suite was partly luck.
+- **Fix:** the autouse `_no_real_llm` fixture in `tests/conftest.py` pins a no-op gateway for every test. Tests that want a reply still set their own mock.
+- **Watch for:** a new test that needs a model reply must mock it; otherwise it now gets the no-op provider, which raises.
+
+## RESOLVED 2026-09-15 — Saved Insights weeks kept their pre-TIME-330 numbers until the recalculation ran (TIME-330)
+
+**Resolution:** the recalculation ran on production on 2026-09-15 and returned `{"checked": 8, "changed": 4}`. The text below describes the state before that.
 
 Weeks saved before TIME-330 compared tasks finished that week with tasks added that week, so some show more done than added.
 
@@ -79,14 +89,11 @@ Each of these also fails on `main` with no local changes, so the failures come f
 
 **Date or clock** (seen at about 00:30–01:30 local):
 - `test_insights_series.py::test_weekly_workouts_buckets_running_miles` (`assert 1 == 2`). **Resolved by TIME-331:** its runs were "1 and 2 days ago", which is last week on Mondays and Tuesdays. They now go inside the current week.
-- `test_completion_learning.py::test_completing_a_different_task_records_the_pair`
-- `test_completion_learning.py::test_the_pair_is_never_pinned`
-- `test_completion_learning.py::test_a_burst_of_completions_cannot_invent_a_preference`
-  - These three need the impression and the completion in the same part of day. That breaks when "now" is near a boundary.
+- **Resolved by TIME-332:** `test_completion_learning.py::test_completing_a_different_task_records_the_pair`, `::test_the_pair_is_never_pinned` and `::test_a_burst_of_completions_cannot_invent_a_preference`. They need the impression and the completion in the same part of day, and `_show` dated the recommendation five minutes back, so in the first five minutes after a boundary (05, 08, 11, 14, 17, 21 — not the hours first written here) the two fell either side of it. The impression now stays inside the current part, and new tests cover every boundary.
 
 **Resolved by TIME-331:** `test_push_service.py::test_pushes_after_cooldown_elapses` and `test_null_sender_records_nothing_delivered`. These were not intermittent: they depended on the hour (see the TIME-331 entry above).
 
-The rest have not been investigated yet. When judging a branch, compare against the same tests on `main` at the same hour.
+Only the `.env` case above is left: every clock- and date-dependent failure here was investigated and fixed in TIME-331 and TIME-332.
 
 ## "TimeSense" is unavailable as an App Store name — do not retry it (TIME-318, 2026-09-02)
 
