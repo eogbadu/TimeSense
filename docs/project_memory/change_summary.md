@@ -8,6 +8,8 @@
 
 **Added:** the pair is still recorded just after every boundary, and a recommendation from the previous part of day teaches nothing.
 
+**Also fixed, found while verifying:** the suite could reach a real model. Any test after one that reset the LLM singleton made live calls, because the repo-root `.env` has an API key, and a duration test then compared a live answer with the library's number. An autouse fixture now pins a no-op model for every test.
+
 **Verified:** the file passes 23 tests. With the old behaviour restored the new boundary test fails 6 of 6.
 
 ## 2026-09-15 — Production: Insights recalculation run (TIME-330 follow-up)

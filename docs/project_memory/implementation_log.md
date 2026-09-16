@@ -14,6 +14,13 @@ Last of the clock-dependent failures found in TIME-330 and TIME-331.
 - `_clock(fixed)` pins the clock the service reads by patching `app.services.task_completion_service.datetime`. The route passes no `now`, so this is the only way in. `latest_open_impression` has no upper time bound, so a pinned clock still finds the impression.
 - `test_a_stale_recommendation_teaches_nothing` passes `same_part=False`, so its 6-hour-old impression still teaches nothing.
 
+**Second bug, found while verifying: the suite was not hermetic.** The full suite failed on `test_task_duration::test_capture_fills_estimate_from_lookup` — 15 minutes where the library says 30.
+- `get_llm_gateway()` builds a REAL client whenever the singleton is None and an API key is set, and several test files reset it to None when they finish. The repo-root `.env` has `OPENAI_API_KEY`, so later tests made live model calls, and this test compared a live answer with the library's number.
+- Evidence: branch with the key, 1 failed twice, 105s. Branch with `OPENAI_API_KEY=` blank, 1096 passed, 52s. `main` with the key passed once — luck, not correctness.
+- **Fix:** an autouse `_no_real_llm` fixture in `tests/conftest.py` pins a no-op gateway for every test and clears it after. Tests that want a reply still call `set_llm_gateway` themselves.
+- After it: 1096 passed with the key present, in 54s. The runtime drop is the live calls disappearing.
+- The TIME-332 Jira scope was widened to cover this before merging.
+
 **New tests:**
 - `test_the_pair_is_recorded_just_after_a_part_of_day_boundary`, parametrized over all six boundaries at :02. With the old `_show` behaviour restored it fails 6 of 6, so it catches the bug.
 - `test_a_recommendation_from_the_previous_part_of_day_teaches_nothing`: pins 14:02 with the recommendation at 13:52, inside the 90-minute lookback. It asserts no swap and that the impression was still marked superseded, which proves the pairing stopped at the boundary check rather than the lookback. This locks the product rule that used to be implicit.

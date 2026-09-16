@@ -26,6 +26,27 @@ def _reset_rate_limiters():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _no_real_llm():
+    """The suite must never reach a real model.
+
+    `get_llm_gateway()` builds a REAL client whenever the singleton is None and an API key is
+    configured, and several test files reset the singleton to None when they finish. On a machine
+    whose `.env` has `OPENAI_API_KEY` — every developer machine — later tests therefore made live
+    calls, and `test_task_duration::test_capture_fills_estimate_from_lookup` saw the model's number
+    (15) instead of the library's (30). It failed or passed depending on what the model said that
+    run, on `main` as much as on a branch (TIME-332).
+
+    Tests that want a specific reply still call `set_llm_gateway` themselves; this only decides what
+    an un-mocked test gets.
+    """
+    from app.llm.gateway import LLMGateway, _NoOpProvider, set_llm_gateway
+
+    set_llm_gateway(LLMGateway(provider=_NoOpProvider()))
+    yield
+    set_llm_gateway(None)  # type: ignore[arg-type]
+
+
 @pytest.fixture
 async def db_engine():
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)

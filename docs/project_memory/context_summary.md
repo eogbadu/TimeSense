@@ -11,7 +11,9 @@
 
 **Current:** TIME-332 (Jira TIME-2366), branch `feature/TIME-332-completion-learning-clock`. Three `test_completion_learning` tests failed within five minutes after a part-of-day boundary (05, 08, 11, 14, 17, 21 UTC), because `_show` dated the recommendation five minutes back and `_same_part_of_day` then refused to pair it. The helper now keeps the impression inside the current part, with new tests at every boundary. This branch also carries the memory updates pending from the TIME-330 production recalculation, and the TIME-331/332 ticket definitions.
 
-**No known clock-dependent test failures remain.** Locally only the `.env`-dependent Notion test fails; it passes with Notion settings blanked. Three tests failed on `main` after about 18:00 UTC because TIME-288's energy depletes over the day:
+**Also in this branch:** the suite could reach a real model, because `get_llm_gateway()` builds a real client whenever its singleton is None and `.env` has a key. An autouse `_no_real_llm` fixture in `tests/conftest.py` now pins a no-op gateway per test. A new test that needs a reply must mock it.
+
+**No known clock-dependent test failures remain.** With the key present the suite is 1096 passed; only the `.env`-dependent Notion test fails, and it passes with Notion settings blanked. Three tests failed on `main` after about 18:00 UTC because TIME-288's energy depletes over the day:
 - **Push tests:** now pin a daytime `now`.
 - **Unverifiable errand:** the penalty was raised from 20 to 55, so it never leads (a product fix the user chose).
 

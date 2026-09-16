@@ -12261,6 +12261,7 @@ TICKETS = [
                 "Fix the tests so the recommendation and the completion always share a part of day: either pin the clock the service reads, or place the impression inside the current part of day instead of a flat five minutes back",
                 "Keep `test_a_stale_recommendation_teaches_nothing` honest: it relies on a 6-hour-old impression NOT pairing, so it must still fail for the right reason, not because of a boundary",
                 "Add a check that runs these tests at several pinned times, including just after each boundary",
+                "Scope added 2026-09-15 while verifying: the suite is not hermetic. get_llm_gateway() builds a REAL client whenever the singleton is None and an API key is set, and several test files reset it to None when they finish, so on any machine whose .env has OPENAI_API_KEY later tests made live model calls. test_task_duration::test_capture_fills_estimate_from_lookup then saw the model's number (15) instead of the library's (30) and failed or passed depending on the answer, on main as much as on a branch. Fix: an autouse conftest fixture pins a no-op gateway for every test; tests that want a reply still set their own mock",
                 "Remove the entry from known_issues.md once fixed",
                 "Carry the project-memory updates already pending on main from the TIME-330 production recalculation (they cannot be committed to main directly)",
             ]),

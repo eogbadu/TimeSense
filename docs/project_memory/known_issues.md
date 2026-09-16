@@ -1,5 +1,13 @@
 # Known Issues
 
+## RESOLVED by TIME-332 — the test suite could reach a real model (found 2026-09-15)
+
+`get_llm_gateway()` builds a REAL client whenever its singleton is None and an API key is configured, and several test files reset that singleton to None when they finish. Every developer machine has `OPENAI_API_KEY` in the repo-root `.env`, so tests after such a reset made live calls.
+
+- **Symptom:** `test_task_duration::test_capture_fills_estimate_from_lookup` failed with 15 minutes where the library says 30 — the live model's number. It failed or passed depending on what the model said that run, on `main` as much as on a branch, so a green suite was partly luck.
+- **Fix:** the autouse `_no_real_llm` fixture in `tests/conftest.py` pins a no-op gateway for every test. Tests that want a reply still set their own mock.
+- **Watch for:** a new test that needs a model reply must mock it; otherwise it now gets the no-op provider, which raises.
+
 ## RESOLVED 2026-09-15 — Saved Insights weeks kept their pre-TIME-330 numbers until the recalculation ran (TIME-330)
 
 **Resolution:** the recalculation ran on production on 2026-09-15 and returned `{"checked": 8, "changed": 4}`. The text below describes the state before that.
